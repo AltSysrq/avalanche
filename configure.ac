@@ -10,10 +10,17 @@ AM_CONFIG_HEADER([config.h])
 
 # Checks for programs.
 AC_PROG_CC
+AC_PROG_CC_C99
 AM_PROG_CC_C_O
 
 # Checks for libraries.
 AC_SEARCH_LIBS([sin], [c m])
+AC_SEARCH_LIBS([GC_init], [gc], [],
+               [AC_MSG_ERROR(
+[The gc library could not be found. Make sure libgc[-dev] is installed.])])
+
+# Checks for header files
+AC_CHECK_HEADERS([gc.h gc/gc.h])
 
 # Checks for typedefs, structures, and compiler characteristics.
 AC_HEADER_STDBOOL
