@@ -21,6 +21,7 @@ AC_SEARCH_LIBS([GC_init], [gc], [],
 
 # Checks for header files
 AC_CHECK_HEADERS([gc.h gc/gc.h])
+AC_CHECK_HEADERS([err.h bsd/err.h sysexits.h bsd/sysexits.h bsd/string.h])
 
 # Checks for typedefs, structures, and compiler characteristics.
 AC_HEADER_STDBOOL

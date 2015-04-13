@@ -46,7 +46,13 @@ AVA_BEGIN_DECLS
 
 /******************** MEMORY MANAGEMENT ********************/
 /**
- * Allocates and returns a block of memory of at least the given size.
+ * Initialises the Avalanche heap. This should be called once, at the start of
+ * the process.
+ */
+void ava_heap_init(void);
+/**
+ * Allocates and returns a block of memory of at least the given size. The
+ * memory is initialised to zeroes.
  *
  * There is no way to explicitly free this memory; it will be released
  * automatically when no GC-visible pointers remain.
@@ -55,7 +61,8 @@ AVA_BEGIN_DECLS
  */
 void* ava_alloc(size_t) AVA_ATTRIBUTE_MALLOC;
 /**
- * Allocates and returns a block of memory of at least the given size.
+ * Allocates and returns a block of memory of at least the given size. The
+ * memory is initialised to zeroes.
  *
  * The caller may not store any pointers in this memory.
  *
