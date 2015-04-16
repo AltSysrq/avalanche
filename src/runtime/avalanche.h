@@ -29,9 +29,11 @@
 #define AVA_AVALANCHE_H_
 
 #if defined(__GNUC__) || defined(__clang__)
-#define AVA_ATTRIBUTE_MALLOC __attribute__((malloc))
+#define AVA_MALLOC __attribute__((malloc))
+#define AVA_PURE __attribute__((pure))
 #else
-#define AVA_ATTRIBUTE_MALLOC
+#define AVA_MALLOC
+#define AVA_PURE
 #endif
 
 #ifdef __cplusplus
@@ -43,6 +45,15 @@
 #endif
 
 AVA_BEGIN_DECLS
+
+/**
+ * The maximum depth of a rope. This value is not useful to clients; it merely
+ * determines the structures of some values.
+ *
+ * This puts an effective maximum string size of fib(64-2) = 3.7TB. (Where
+ * fib(0) = 0, fib(1) = 1.)
+ */
+#define AVA_MAX_ROPE_DEPTH 64
 
 /******************** MEMORY MANAGEMENT ********************/
 /**
@@ -59,7 +70,7 @@ void ava_heap_init(void);
  *
  * If memory allocation fails, the process is aborted.
  */
-void* ava_alloc(size_t) AVA_ATTRIBUTE_MALLOC;
+void* ava_alloc(size_t) AVA_MALLOC;
 /**
  * Allocates and returns a block of memory of at least the given size. The
  * memory is initialised to zeroes.
@@ -71,7 +82,7 @@ void* ava_alloc(size_t) AVA_ATTRIBUTE_MALLOC;
  *
  * If memory allocation fails, the process is aborted.
  */
-void* ava_alloc_atomic(size_t) AVA_ATTRIBUTE_MALLOC;
+void* ava_alloc_atomic(size_t) AVA_MALLOC;
 /**
  * Allocates and returns a block of memory of at least the given size.
  *
@@ -81,7 +92,7 @@ void* ava_alloc_atomic(size_t) AVA_ATTRIBUTE_MALLOC;
  *
  * If memory allocation fails, the process is aborted.
  */
-void* ava_alloc_unmanaged(size_t) AVA_ATTRIBUTE_MALLOC;
+void* ava_alloc_unmanaged(size_t) AVA_MALLOC;
 /**
  * Frees the given memory allocated from ava_alloc_unmanaged().
  */
@@ -92,7 +103,14 @@ void ava_free_unmanaged(void*);
  *
  * If memory allocation fails, the process is aborted.
  */
-void* ava_clone(const void*restrict, size_t) AVA_ATTRIBUTE_MALLOC;
+void* ava_clone(const void*restrict, size_t) AVA_MALLOC;
+/**
+ * Performs an ava_alloc_atomic() with the given size, then copies that many
+ * bytes from the given source pointer into the new memory before returning it.
+ *
+ * If memory allocation fails, the process is aborted.
+ */
+void* ava_clone_atomic(const void*restrict, size_t) AVA_MALLOC;
 /**
  * Syntax sugar for calling ava_alloc() with the size of the selected type and
  * casting it to a pointer to that type.
@@ -165,7 +183,7 @@ typedef struct ava_rope_s ava_rope;
  */
 typedef union {
   ava_ascii9_string ascii9;
-  const ava_rope* rope;
+  const ava_rope*restrict rope;
 } ava_string;
 
 /**
@@ -275,7 +293,7 @@ extern const ava_return_code_info ava_rc_continue;
 /**
  * Standard return code indicating the called code wishes its caller to return.
  */
-extern const ava_return_code_return;
+extern const ava_return_code_info ava_return_code_return;
 
 /**
  * Convenience for `const ava_return_code_info*`.
@@ -288,7 +306,7 @@ typedef const ava_return_code_info* ava_return_code;
  * Stack traces are not normally heap-allocated, and so usually have more
  * restricted lifetimes.
  */
-typedef struct {
+typedef struct ava_stack_trace_s {
   /**
    * A human-readable indication of the location in code of this particular
    * stack trace element, excluding line number.
@@ -303,7 +321,7 @@ typedef struct {
    * The stack frame above this one on the stack. The pointee is not guaranteed
    * to have a lifetime that exceeds that of this stack trace element.
    */
-  const ava_stack_trace*restrict next;
+  const struct ava_stack_trace_s*restrict next;
 } ava_stack_trace;
 
 /**
@@ -397,6 +415,11 @@ struct ava_rope_s {
    */
   size_t external_size;
   /**
+   * The depth of this node. Leaves have depth zero; Concats have a depth one
+   * greater than the maximum depth of either branch.
+   */
+  unsigned depth;
+  /**
    * The value of this node. If both concat_right is non-NULL, it is a Concat;
    * otherwise, it is a Leaf. ASCII9 and array-based leaves can be
    * distinguished by bit0 of leaf9, similarly to ascii9/rope strings.
@@ -444,6 +467,7 @@ struct ava_rope_s {
       .rope = &(ava_rope) {                     \
         .length = sizeof(text)-1,               \
         .external_size = 0,                     \
+        .depth = 0,                             \
         .v = {                                  \
           .leafv = (text);                      \
         },                                      \
@@ -469,7 +493,7 @@ struct ava_rope_s {
  *
  * Equivalent to ava_string_of_shared_bytes(str, strlen(str)).
  */
-ava_string ava_string_of_shared_cstring(const char* str);
+ava_string ava_string_of_shared_cstring(const char* str) AVA_PURE;
 /**
  * Returns an ava_string whose contents are that of the given NUL-terminated
  * string. The ava_string will hold no references to the original string, so it
@@ -477,11 +501,11 @@ ava_string ava_string_of_shared_cstring(const char* str);
  *
  * Equivalent to ava_string_of_bytes(str, strlen(str)).
  */
-ava_string ava_string_of_cstring(const char* str);
+ava_string ava_string_of_cstring(const char* str) AVA_PURE;
 /**
  * Returns an ava_string whose contents is the one character given.
  */
-ava_string ava_string_of_char(char);
+ava_string ava_string_of_char(char) AVA_PURE;
 /**
  * Returns an ava_string whose contents are that of the given byte-buffer,
  * which need not be NUL-terminated and may contain NUL characters, and whose
@@ -489,14 +513,14 @@ ava_string ava_string_of_char(char);
  * managed by the GC; the ava_string will maintain references into it when
  * beneficial.
  */
-ava_string ava_string_of_shared_bytes(const char*, size_t);
+ava_string ava_string_of_shared_bytes(const char*, size_t) AVA_PURE;
 /**
  * Returns an ava_string whose contents are that of the given byte-buffer,
  * which need not be NUL-terminated and may contain NUL characters, and whose
  * length is the specified buffer size. The ava_string will not reference the
  * buffer after creation, so the buffer need not be GC-managed or immutable.
  */
-ava_string ava_string_of_bytes(const char*, size_t);
+ava_string ava_string_of_bytes(const char*, size_t) AVA_PURE;
 /**
  * Returns a GC-managed C string which holds the string contents of the given
  * ava_string. No special handling of embedded NUL characters occurs.
@@ -507,7 +531,7 @@ ava_string ava_string_of_bytes(const char*, size_t);
  * The caller may mutate the returned C string if it so desires. No storage is
  * guaranteed to exist beyond the terminating NUL byte.
  */
-char* ava_string_to_cstring(ava_string);
+char* ava_string_to_cstring(ava_string) AVA_PURE;
 /**
  * Returns a C string which holds the string contents of the given ava_string.
  * No special handling of embedded NUL characters occurs.
@@ -526,7 +550,8 @@ char* ava_string_to_cstring(ava_string);
  * @return A C string containing str's contents, which may or may not be the
  * input buffer.
  */
-char* ava_string_to_cstring_buff(char* buff, size_t sz, ava_string str);
+char* ava_string_to_cstring_buff(
+  char* buff, size_t sz, ava_string str);
 /**
  * Returns a C string which holds the string contents of the given ava_string.
  * No special handling of embedded NUL characters occurs.
@@ -543,10 +568,10 @@ char* ava_string_to_cstring_buff(char* buff, size_t sz, ava_string str);
  * guaranteed that the return value and (*buffptr) has at least (*szptr) bytes
  * of storage after this call returns.
  *
- * @param buffptr A pointer to a temporary buffer to use if possible. If
- * (*buffptr) is NULL, a new buffer is allocated unconditionally.
- * @param szptr A pointer to the size of (*buffptr). If (*buffptr) is NULL, the
- * value of (*szptr) is ignored.
+ * @param buffptr A pointer to a temporary buffer to use if possible. May be
+ * NULL.
+ * @param szptr A pointer to the size of (*buffptr); ignored if (*buffptr) is
+ * NULL.
  * @param str The string to convert.
  * @return A C string containing str's contents, which is equal to the value of
  * (*buffptr) after return.
@@ -555,11 +580,21 @@ char* ava_string_to_cstring_tmpbuff(char** buffptr, size_t* szptr,
                                     ava_string str);
 
 /**
+ * Copies the characters in str, starting at start, inclusive, and ending at
+ * end, exclusive, into the given byte buffer.
+ *
+ * Behaviour is undefined if start > end, or if either is greater than the
+ * length of the string.
+ */
+void ava_string_to_bytes(void*restrict dst, ava_string str,
+                         size_t start, size_t end);
+
+/**
  * Returns the length, in bytes, of the given string.
  *
  * Complexity: O(1)
  */
-size_t ava_string_length(ava_string);
+size_t ava_string_length(ava_string) AVA_PURE;
 /**
  * Returns the character at the given index within the given string.
  *
@@ -568,7 +603,7 @@ size_t ava_string_length(ava_string);
  *
  * Complexity: O(log(n))
  */
-char ava_string_index(ava_string, size_t);
+char ava_string_index(ava_string, size_t) AVA_PURE;
 /**
  * Returns the contents of the given string between the begin index, inclusive,
  * and the end index, exclusive.
@@ -578,13 +613,13 @@ char ava_string_index(ava_string, size_t);
  *
  * Complexity: Amortized O(log(n))
  */
-ava_string ava_string_substr(ava_string, size_t begin, size_t end);
+ava_string ava_string_slice(ava_string, size_t begin, size_t end) AVA_PURE;
 /**
  * Produces a string containing the values of both strings concatenated.
  *
  * Complexity: Amortized O(1)
  */
-ava_string ava_string_concat(ava_string, ava_string);
+ava_string ava_string_concat(ava_string, ava_string) AVA_PURE;
 
 /**
  * An iterator into an ava_string, allowing efficient linear access to string
@@ -612,7 +647,7 @@ typedef struct {
   struct {
     const ava_rope* rope;
     size_t offset;
-  } stack[sizeof(size_t)*8];
+  } stack[AVA_MAX_ROPE_DEPTH];
   unsigned top;
   size_t real_index, logical_index;
   int oob;
@@ -642,7 +677,7 @@ void ava_string_iterator_move(ava_string_iterator* it,
 /**
  * Returns whether the given iterator is valid.
  */
-int ava_string_iterator_valid(const ava_string_iterator*);
+int ava_string_iterator_valid(const ava_string_iterator*) AVA_PURE;
 /**
  * Returns the character pointed to by the given string iterator.
  *
@@ -650,13 +685,13 @@ int ava_string_iterator_valid(const ava_string_iterator*);
  * otherwise defined. (Ie, no particular value will be returned, but the
  * process won't segfault.)
  */
-char ava_string_iterator_get(const ava_string_iterator*);
+char ava_string_iterator_get(const ava_string_iterator*) AVA_PURE;
 /**
  * Returns the current logical index of the given string iterator.
  *
  * This will be beyond the string boundaries for invalid iterators.
  */
-size_t ava_string_iterator_index(const ava_string_iterator*);
+size_t ava_string_iterator_index(const ava_string_iterator*) AVA_PURE;
 
 AVA_END_DECLS
 

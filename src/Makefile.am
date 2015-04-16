@@ -3,6 +3,8 @@ AUTOMAKE_OPTIONS = subdir-objects
 
 lib_LTLIBRARIES = libavart.la
 bin_PROGRAMS = bootstrap-avac
-libavart_la_SOURCES = runtime/alloc.c
+libavart_la_SOURCES = \
+runtime/alloc.c \
+runtime/string.c
 bootstrap_avac_SOURCES = bootstrap/main.c
 bootstrap_avac_LDADD = libavart.la

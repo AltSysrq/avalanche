@@ -42,6 +42,8 @@
 
 #include "bsd.h"
 
+#include "avalanche.h"
+
 static inline void* ava_oom_if_null(void* ptr) {
   if (!ptr)
     errx(EX_UNAVAILABLE, "out of memory");
@@ -71,6 +73,12 @@ void ava_free_unmanaged(void* ptr) {
 
 void* ava_clone(const void*restrict src, size_t sz) {
   void* dst = ava_alloc(sz);
+  memcpy(dst, src, sz);
+  return dst;
+}
+
+void* ava_clone_atomic(const void*restrict src, size_t sz) {
+  void* dst = ava_alloc_atomic(sz);
   memcpy(dst, src, sz);
   return dst;
 }
