@@ -46,15 +46,6 @@
 
 AVA_BEGIN_DECLS
 
-/**
- * The maximum depth of a rope. This value is not useful to clients; it merely
- * determines the structures of some values.
- *
- * This puts an effective maximum string size of fib(64-2) = 3.7TB. (Where
- * fib(0) = 0, fib(1) = 1.)
- */
-#define AVA_MAX_ROPE_DEPTH 64
-
 /******************** MEMORY MANAGEMENT ********************/
 /**
  * Initialises the Avalanche heap. This should be called once, at the start of
@@ -165,25 +156,54 @@ typedef union {
  * which are extremely common.
  */
 typedef unsigned long long ava_ascii9_string;
+
 /**
- * An arbitrary byte string of any number of characters. The exact internal
- * format is undefined.
+ * The common header shared by all heap-allocated strings.
+ *
+ * (The term "heap-allocated" is technically a misnomer, since some heap
+ * strings have static storage.)
  */
-typedef struct ava_rope_s ava_rope;
+typedef struct {
+  /**
+   * If this is an ava_flat_string, the non-zero length of the string, in
+   * bytes. If zero, this is an ava_bxstring (not in the public API).
+   */
+  size_t length;
+} ava_heap_string;
+
+/**
+ * A heap-allocated string represented by a flat array of bytes.
+ */
+typedef struct {
+  ava_heap_string header;
+
+  /**
+   * The number of bytes in the heap that are held in memory due to the data
+   * pointer. If data is off-heap, this will be zero.
+   *
+   * This is used to evaluate whether substrings should copy their data or
+   * continue referencing the parent string.
+   */
+  size_t allocation_size;
+  /**
+   * The character data for this string.
+   */
+  const char*restrict data;
+} ava_flat_string;
 
 /**
  * The primary Avalanche string type.
  *
  * The encoding of the string can be identified by testing bit 0 of the ascii9
- * field; if it is zero, the string is a rope or absent. If it is 1, the string
- * is an ascii9 string.
+ * field; if it is zero, the string is heap-allocated or absent. If it is 1,
+ * the string is an ascii9 string.
  *
  * A string is said to be "absent" if the ascii9 field identifies the string as
- * a rope and the rope field is NULL.
+ * heap-allocated and the rope field is NULL.
  */
 typedef union {
   ava_ascii9_string ascii9;
-  const ava_rope*restrict rope;
+  const ava_heap_string*restrict heap;
 } ava_string;
 
 /**
@@ -384,77 +404,9 @@ typedef ava_return_code (*ava_function)(
     )
 
 /**
- * This is an internal structure. It is only present in the header to permit
- * static intialisation. While the structure is documented, there is no
- * guarantee that the documented semantics will be preserved.
- *
- * A rope is a string data structure which supports very efficient
- * concatenation (very common in Tcl and Avalanche) and splitting at the cost
- * of reduced direct-indexing performance. It is represented as a tree of
- * Concats, which always have two children but no text, and Leaves, which have
- * no children but do have text.
- *
- * See also http://citeseer.ist.psu.edu/viewdoc/download?doi=10.1.1.14.9450&rep=rep1&type=pdf
+ * The empty string.
  */
-struct ava_rope_s {
-  /**
-   * The length of the string represented by this rope node.
-   *
-   * The "weight" described in some contexts can be obtained by looking at the
-   * length of v.concat_left.
-   */
-  size_t length;
-  /**
-   * The size, in terms of external memory usage, of this rope node. ASCII9
-   * leaves have a size of 0; flat array leaves have a size equal to the size
-   * of the backing array, if allocated on the heap. Concats have a size equal
-   * to the sum of the sizes of their children.
-   *
-   * This value is used to choose between pointing into the original array or
-   * copying to a new, smaller array on substring operations.
-   */
-  size_t external_size;
-  /**
-   * The depth of this node. Leaves have depth zero; Concats have a depth one
-   * greater than the maximum depth of either branch.
-   */
-  unsigned depth;
-  /**
-   * The value of this node. If both concat_right is non-NULL, it is a Concat;
-   * otherwise, it is a Leaf. ASCII9 and array-based leaves can be
-   * distinguished by bit0 of leaf9, similarly to ascii9/rope strings.
-   */
-  union {
-    /**
-     * Leaves with 9 or fewer non-NUL ASCII characters are usually packed into
-     * an ascii9 string to save space and allocations.
-     *
-     * This field contains the node's value if concat_right is NULL and bit 0
-     * of v.leaf9 is set.
-     */
-    ava_ascii9_string leaf9;
-    /**
-     * Leaves that cannot be packed into an ASCII9 string are instead allocated
-     * as a flat array. This array are not NUL-terminated. The number of
-     * characters is equal to the length of the rope node.
-     *
-     * This field contains the node's value if concat_right is NULL and bit 0
-     * of v.leaf9 is clear.
-     */
-    const char*restrict leafv;
-    /**
-     * The left branch of a Concat.
-     *
-     * The node is a Concat iff concat_right is non-NULL.
-     */
-    const ava_rope*restrict concat_left;
-  } v;
-  /**
-   * If non-NULL, this node is a Concat, and this value points to its right
-   * branch.
-   */
-  const ava_rope*restrict concat_right;
-};
+#define AVA_EMPTY_STRING ((ava_string) { .ascii9 = 1 })
 
 /**
  * Expands to a static initialiser for an ava_string containing the given
@@ -462,17 +414,17 @@ struct ava_rope_s {
  *
  * Note that this value MUST be assigned to a variable/constant with static
  * storage, or behaviour is undefined on systems with 32-bit pointers.
+ *
+ * text may not be the empty string.
  */
-#define AVA_STATIC_STRING(text) ((ava_string) { \
-      .rope = &(ava_rope) {                     \
-        .length = sizeof(text)-1,               \
-        .external_size = 0,                     \
-        .depth = 0,                             \
-        .v = {                                  \
-          .leafv = (text);                      \
-        },                                      \
-        .concat_right = NULL,                   \
-      }                                         \
+#define AVA_STATIC_STRING(text) ((ava_string) {                 \
+      .heap = (const ava_heap_string*)&(ava_flat_string) {      \
+        .header = {                                             \
+          .length = sizeof(text)-1,                             \
+        },                                                      \
+        .allocation_size = 0,                                   \
+        .data = text,                                           \
+      }                                                         \
     })
 
 /**
@@ -626,32 +578,9 @@ ava_string ava_string_concat(ava_string, ava_string) AVA_PURE;
  * elements.
  *
  * Iterators can safely be copied via assignment.
- *
- * Implementation details:
- *
- * The iterator is a stack of ropes, the top of which is a leaf. Every other
- * stack element is the direct parent of the one below it. Each stack element
- * tracks its offset within the rope; for leaves, this is simply the
- * byte/character offset. For Concats, 0 indicates the left branch, and 1 the
- * right branch. (We can't derive the information by looking at the children,
- * because a Concat could have the same rope for both children.)
- *
- * Out-of-bounds iterators are represented by setting the oob flag in addition
- * to placing the iterator at the nearest valid index to the out-of-bounds
- * location.
- *
- * ASCII9 strings are converted into a single rope node stored within the
- * iterator.
  */
 typedef struct {
-  struct {
-    const ava_rope* rope;
-    size_t offset;
-  } stack[AVA_MAX_ROPE_DEPTH];
-  unsigned top;
-  size_t real_index, logical_index;
-  int oob;
-  ava_rope tmprope;
+  /* TODO */
 } ava_string_iterator;
 
 /**

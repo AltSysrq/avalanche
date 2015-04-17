@@ -34,35 +34,39 @@
 
 #include "avalanche.h"
 
-/* Size under which non-flat ropes are not produced */
-#define ROPE_NONFLAT_THRESH (2 * sizeof(ava_rope))
+#define BXS_ORDER 16
+/* Size under which non-flat strings are not produced */
+#define NONFLAT_THRESH (64 - sizeof(ava_flat_string))
+
+typedef struct {
+  ava_string child;
+  size_t offset;
+} ava_bxs_child;
+
+/**
+ * Dynamic strings longer th an NONFLAT_THRESH are stored in "B+ Strings",
+ * which are very similar to B+ Trees. The implementation is generally simpler
+ * since insertions and deletions can only occur at the ends.
+ */
+typedef struct {
+  ava_heap_string header;
+
+  size_t composite_length;
+  unsigned short num_children;
+  short is_leaf;
+  ava_bxs_child children[];
+} ava_bxs;
 
 static int ava_string_can_encode_ascii9(const char*, size_t);
 static ava_ascii9_string ava_ascii9_encode(const char*, size_t);
-static void ava_rope_flatten_into(char*restrict dst, const ava_rope*restrict);
 static void ava_ascii9_decode(char*restrict dst, ava_ascii9_string);
 static void ava_ascii9_to_bytes(void*restrict dst, ava_ascii9_string,
                                 size_t, size_t);
-static void ava_rope_to_bytes(void*restrict dst, const ava_rope*restrict,
-                              size_t, size_t);
 static size_t ava_ascii9_length(ava_ascii9_string);
 static char ava_ascii9_index(ava_ascii9_string, size_t);
-static char ava_rope_index(const ava_rope*restrict, size_t);
-static const ava_rope* ava_rope_concat_of(const ava_rope*restrict,
-                                          const ava_rope*restrict);
 static ava_ascii9_string ava_ascii9_concat(ava_ascii9_string,
                                            ava_ascii9_string);
-static const ava_rope* ava_rope_of(ava_string);
-static const ava_rope* ava_rope_rebalance(const ava_rope*restrict);
-static void ava_rope_rebalance_iterate(
-  const ava_rope*restrict[AVA_MAX_ROPE_DEPTH],
-  const ava_rope*restrict);
-static const ava_rope* ava_rope_rebalance_flush(
-  const ava_rope*restrict[AVA_MAX_ROPE_DEPTH], unsigned, unsigned);
-static int ava_rope_is_balanced(const ava_rope*restrict);
-static unsigned ava_bif(size_t);
 static ava_ascii9_string ava_ascii9_slice(ava_ascii9_string, size_t, size_t);
-static const ava_rope* ava_rope_slice(const ava_rope*restrict, size_t, size_t);
 
 static int ava_string_can_encode_ascii9(const char* str,
                                         size_t sz) {
