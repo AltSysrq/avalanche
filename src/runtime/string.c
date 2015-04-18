@@ -31,6 +31,7 @@
 
 #include <string.h>
 #include <stdlib.h>
+#include <assert.h>
 
 #include "avalanche.h"
 
@@ -52,6 +53,8 @@ static inline int ava_rope_is_concat(const ava_rope*restrict rope) {
   return rope->concat_right > ROPE_FORMAT_LEAF9;
 }
 
+static unsigned ilog2(size_t);
+static unsigned ilog2_ceil(size_t);
 static int ava_string_can_encode_ascii9(const char*, size_t);
 static ava_ascii9_string ava_ascii9_encode(const char*, size_t);
 static void ava_rope_flatten_into(char*restrict dst, const ava_rope*restrict);
@@ -70,10 +73,46 @@ static const ava_rope* ava_rope_concat_of(const ava_rope*restrict,
 static ava_ascii9_string ava_ascii9_concat(ava_ascii9_string,
                                            ava_ascii9_string);
 static const ava_rope* ava_rope_of(ava_string);
-static int ava_rope_concat_would_be_strongly_balanced(
+static int ava_rope_concat_is_strongly_balanced(
   const ava_rope*restrict, const ava_rope*restrict);
+static int ava_rope_concat_is_weakly_balanced(
+  const ava_rope*restrict, const ava_rope*restrict);
+static const ava_rope* ava_rope_ensure_balanced_concat(
+  const ava_rope*restrict, const ava_rope*restrict);
+static unsigned ava_rope_unbalance(const ava_rope*restrict);
+static const ava_rope* ava_rope_rebalance(const ava_rope*restrict);
+static const ava_rope* ava_rope_extract_perfect(
+  const ava_rope*restrict, unsigned depth, unsigned begin, unsigned end);
+
 static ava_ascii9_string ava_ascii9_slice(ava_ascii9_string, size_t, size_t);
 static const ava_rope* ava_rope_slice(const ava_rope*restrict, size_t, size_t);
+
+static unsigned ilog2(size_t v) {
+  /* From http://graphics.stanford.edu/~seander/bithacks.html#IntegerLog.
+   *
+   * Adapted to be more readable since GCC/Clang can be relied to optimise away
+   * the redundant stores.
+   */
+  unsigned r, s;
+
+  r = 0;
+  s = (v > 0xFFFFFFFFULL) << 5; v >>= s; r |= s;
+  s = (v > 0x0000FFFFULL) << 4; v >>= s; r |= s;
+  s = (v > 0x000000FFULL) << 3; v >>= s; r |= s;
+  s = (v > 0x0000000FULL) << 2; v >>= s; r |= s;
+  s = (v > 0x00000003ULL) << 1; v >>= s; r |= s;
+  r |= v >> 1;
+  return r;
+}
+
+static unsigned ilog2_ceil(size_t v) {
+  unsigned l = ilog2(v);
+
+  if (v > (1ULL << l))
+    ++l;
+
+  return l;
+}
 
 static int ava_string_can_encode_ascii9(const char* str,
                                         size_t sz) {
@@ -406,39 +445,95 @@ static const ava_rope* ava_rope_of(ava_string str) {
 
 static const ava_rope* ava_rope_concat(const ava_rope*restrict left,
                                        const ava_rope*restrict right) {
-  const ava_rope*restrict concat;
-
   /* If a trivial concat is balanced, just do that */
-  if (ava_rope_concat_would_be_strongly_balanced(left, right))
+  if (ava_rope_concat_is_strongly_balanced(left, right))
     return ava_rope_concat_of(left, right);
 
   /* Would be unbalanced if done trivially. See if one can be passed down a
-   * branch of the other. (This optimises for linear concatenations of shallow
-   * strings.)
+   * branch of the other. If that itself produces an unbalanced result (which
+   * would recurse infinitely if the second concat went back to this function),
+   * rebalance the whole thing.
    */
   /* a->depth > b->depth guarantees that a is a concat */
   if (left->depth > right->depth) {
-    concat = ava_rope_concat_of(
+    return ava_rope_ensure_balanced_concat(
       left->v.concat_left,
       ava_rope_concat(left->concat_right, right));
   } else if (right->depth > left->depth) {
-    concat = ava_rope_concat_of(
+    return ava_rope_ensure_balanced_concat(
       ava_rope_concat(left, right->v.concat_left),
       right->concat_right);
   } else {
-    /* Fall back to trivial and let a rebalance do its thing */
-    concat = ava_rope_concat_of(left, right);
+    /* Unreachable */
+    abort();
   }
-
-  return concat;
 }
 
-static int ava_rope_concat_would_be_strongly_balanced(
+static int ava_rope_concat_is_strongly_balanced(
   const ava_rope*restrict left, const ava_rope*restrict right
 ) {
   unsigned depth = left->depth > right->depth? left->depth : right->depth;
 
   return (1uLL << depth) <= (left->leaves + right->leaves)*2;
+}
+
+static int ava_rope_concat_is_weakly_balanced(
+  const ava_rope*restrict left, const ava_rope*restrict right
+) {
+  unsigned depth = left->depth > right->depth? left->depth : right->depth;
+
+  return (1uLL << depth) <= (left->leaves + right->leaves)*16;
+}
+
+static const ava_rope* ava_rope_ensure_balanced_concat(
+  const ava_rope*restrict left, const ava_rope*restrict right
+) {
+  while (!ava_rope_concat_is_weakly_balanced(left, right)) {
+    if (ava_rope_unbalance(left) > ava_rope_unbalance(right))
+      left = ava_rope_rebalance(left);
+    else
+      right = ava_rope_rebalance(right);
+  }
+
+  return ava_rope_concat_of(left, right);
+}
+
+static unsigned ava_rope_unbalance(const ava_rope*restrict rope) {
+  return rope->depth - ilog2_ceil(rope->leaves);
+}
+
+static const ava_rope* ava_rope_rebalance(const ava_rope*restrict rope) {
+  unsigned ideal_depth = ilog2_ceil(rope->leaves);
+  unsigned ideal_leaves = 1u << ideal_depth;
+  return ava_rope_concat_of(
+    ava_rope_extract_perfect(rope, ideal_depth-1,
+                             0, ideal_leaves/2),
+    ava_rope_extract_perfect(rope, ideal_depth-1,
+                             ideal_leaves/2, rope->leaves));
+}
+
+static const ava_rope* ava_rope_extract_perfect(
+  const ava_rope*restrict rope, unsigned depth,
+  unsigned begin, unsigned end
+) {
+  if (0 == begin && rope->leaves == end && rope->depth <= depth)
+    return rope;
+
+  assert(ava_rope_is_concat(rope));
+
+  if (end <= rope->v.concat_left->leaves)
+    return ava_rope_extract_perfect(rope->v.concat_left, depth, begin, end);
+
+  if (begin >= rope->v.concat_left->leaves)
+    return ava_rope_extract_perfect(
+      rope->concat_right, depth,
+      begin - rope->v.concat_left->leaves,
+      end - rope->v.concat_left->leaves);
+
+  unsigned mid = (begin + end) / 2;
+  return ava_rope_concat_of(
+    ava_rope_extract_perfect(rope, depth-1, begin, mid),
+    ava_rope_extract_perfect(rope, depth-1, mid, end));
 }
 
 static ava_ascii9_string ava_ascii9_slice(ava_ascii9_string str,
