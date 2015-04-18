@@ -369,7 +369,7 @@ typedef ava_return_code (*ava_function)(
   (((ava_ascii9_string)((ch) & 0x7F)) << (57 - (ix)*7))
 #define _AVA_STRCHR(str,ix) ((ix) < sizeof(str)? (str)[ix] : 0)
 #define _AVA_ASCII9_ENCODE_STRCHR(str,ix)       \
-  _AVA_ASCII9_ENCODE_CHAR(_AVA_STRCHR((str), (ix)))
+  _AVA_ASCII9_ENCODE_CHAR(_AVA_STRCHR((str), (ix)), (ix))
 #define _AVA_ASCII9_ENCODE_STR(str) (           \
     1                                           \
     | _AVA_ASCII9_ENCODE_STRCHR((str), 0)       \
@@ -420,17 +420,16 @@ struct ava_rope_s {
    */
   unsigned depth;
   /**
-   * The value of this node. If both concat_right is non-NULL, it is a Concat;
+   * The value of this node. If concat_right is greater than 1, it is a Concat;
    * otherwise, it is a Leaf. ASCII9 and array-based leaves can be
-   * distinguished by bit0 of leaf9, similarly to ascii9/rope strings.
+   * distinguished by bit0 of concat_right, a 1 indicating ASCII9 and a 0
+   * indicating a flat array. (The zero bit of leaf9 cannot be used for this
+   * purpose, sine leafv does not have any particular alignment.)
    */
   union {
     /**
      * Leaves with 9 or fewer non-NUL ASCII characters are usually packed into
      * an ascii9 string to save space and allocations.
-     *
-     * This field contains the node's value if concat_right is NULL and bit 0
-     * of v.leaf9 is set.
      */
     ava_ascii9_string leaf9;
     /**
@@ -457,23 +456,41 @@ struct ava_rope_s {
 };
 
 /**
+ * The empty string.
+ */
+#define AVA_EMPTY_STRING ((ava_string) { .ascii9 = 1 })
+
+/**
+ * Produces an ava_string containing the given rope.
+ */
+static inline ava_string ava_string_of_rope(const ava_rope*restrict rope) {
+  ava_string str;
+
+  str.ascii9 = 0;
+  str.rope = rope;
+  return str;
+}
+
+/**
  * Expands to a static initialiser for an ava_string containing the given
  * constant string.
  *
- * Note that this value MUST be assigned to a variable/constant with static
- * storage, or behaviour is undefined on systems with 32-bit pointers.
+ * Note that this is not an expression; it defines a static constant with the
+ * chosen name.
  */
-#define AVA_STATIC_STRING(text) ((ava_string) { \
-      .rope = &(ava_rope) {                     \
-        .length = sizeof(text)-1,               \
-        .external_size = 0,                     \
-        .depth = 0,                             \
-        .v = {                                  \
-          .leafv = (text);                      \
-        },                                      \
-        .concat_right = NULL,                   \
-      }                                         \
-    })
+#define AVA_STATIC_STRING(name, text)           \
+  static const ava_rope name##__rope = {        \
+    .length = sizeof(text) - 1,                 \
+    .depth = 0,                                 \
+    .v = {                                      \
+      .leafv = (text)                           \
+    },                                          \
+    .concat_right = NULL,                       \
+  };                                            \
+  static const ava_string name = {              \
+    .rope = &name##__rope                       \
+  }
+
 
 /**
  * Expands to an initialiser for an ava_string containing the given constant

@@ -37,6 +37,21 @@
 /* Size under which non-flat ropes are not produced */
 #define ROPE_NONFLAT_THRESH (2 * sizeof(ava_rope))
 
+#define ROPE_FORMAT_LEAFV ((const ava_rope*restrict)0)
+#define ROPE_FORMAT_LEAF9 ((const ava_rope*restrict)1)
+
+static inline int ava_rope_is_leafv(const ava_rope*restrict rope) {
+  return ROPE_FORMAT_LEAFV == rope->concat_right;
+}
+
+static inline int ava_rope_is_leaf9(const ava_rope*restrict rope) {
+  return ROPE_FORMAT_LEAF9 == rope->concat_right;
+}
+
+static inline int ava_rope_is_concat(const ava_rope*restrict rope) {
+  return rope->concat_right > ROPE_FORMAT_LEAF9;
+}
+
 static int ava_string_can_encode_ascii9(const char*, size_t);
 static ava_ascii9_string ava_ascii9_encode(const char*, size_t);
 static void ava_rope_flatten_into(char*restrict dst, const ava_rope*restrict);
@@ -117,9 +132,8 @@ ava_string ava_string_of_shared_bytes(const char* str, size_t sz) {
     rope->length = sz;
     rope->external_size = sz;
     rope->depth = 0;
-    rope->v.leaf9 = 0;
     rope->v.leafv = str;
-    rope->concat_right = NULL;
+    rope->concat_right = ROPE_FORMAT_LEAFV;
     s.rope = rope;
   }
 
@@ -138,9 +152,8 @@ ava_string ava_string_of_bytes(const char* str, size_t sz) {
     rope->length = sz;
     rope->external_size = sz;
     rope->depth = 0;
-    rope->v.leaf9 = 0;
     rope->v.leafv = ava_clone_atomic(str, sz);
-    rope->concat_right = NULL;
+    rope->concat_right = ROPE_FORMAT_LEAFV;
     s.rope = rope;
   }
 
@@ -180,13 +193,13 @@ static void ava_ascii9_decode(char*restrict dst, ava_ascii9_string s) {
 static void ava_rope_flatten_into(char*restrict dst, const ava_rope* rope) {
   tail_call:
 
-  if (rope->concat_right) {
+  if (ava_rope_is_concat(rope)) {
     ava_rope_flatten_into(dst, rope->v.concat_left);
 
     dst += rope->v.concat_left->length;
     rope = rope->concat_right;
     goto tail_call;
-  } else if (rope->v.leaf9 & 1) {
+  } else if (ava_rope_is_leaf9(rope)) {
     ava_ascii9_decode(dst, rope->v.leaf9);
   } else {
     memcpy(dst, rope->v.leafv, rope->length);
@@ -225,7 +238,7 @@ static void ava_ascii9_to_bytes(void*restrict dst, ava_ascii9_string str,
 
 static void ava_rope_to_bytes(void*restrict dst, const ava_rope*restrict rope,
                               size_t start, size_t end) {
-  if (rope->concat_right) {
+  if (ava_rope_is_concat(rope)) {
     if (end < rope->v.concat_left->length) {
       ava_rope_to_bytes(dst, rope->v.concat_left, start, end);
     } else if (start >= rope->concat_right->length) {
@@ -239,7 +252,7 @@ static void ava_rope_to_bytes(void*restrict dst, const ava_rope*restrict rope,
                         rope->concat_right,
                         0, end - rope->v.concat_left->length);
     }
-  } else if (rope->v.leaf9 & 1) {
+  } else if (ava_rope_is_leaf9(rope)) {
     ava_ascii9_to_bytes(dst, rope->v.leaf9, start, end);
   } else {
     memcpy(dst, rope->v.leafv + start, end - start);
@@ -283,11 +296,11 @@ size_t ava_string_length(ava_string str) {
 }
 
 static char ava_ascii9_index(ava_ascii9_string str, size_t ix) {
-  return (str >> ix*7) & 0x7F;
+  return (str >> (1 + (8 - ix)*7)) & 0x7F;
 }
 
 static char ava_rope_index(const ava_rope*restrict rope, size_t ix) {
-  while (rope->concat_right) {
+  while (ava_rope_is_concat(rope)) {
     if (ix >= rope->v.concat_left->length) {
       ix -= rope->v.concat_left->length;
       rope = rope->concat_right;
@@ -296,7 +309,7 @@ static char ava_rope_index(const ava_rope*restrict rope, size_t ix) {
     }
   }
 
-  if (rope->v.leaf9 & 1)
+  if (ava_rope_is_leaf9(rope))
     return ava_ascii9_index(rope->v.leaf9, ix);
   else
     return rope->v.leafv[ix];
@@ -384,6 +397,7 @@ static const ava_rope* ava_rope_of(ava_string str) {
     rope->external_size = 0;
     rope->depth = 0;
     rope->v.leaf9 = str.ascii9;
+    rope->concat_right = ROPE_FORMAT_LEAF9;
     return rope;
   } else {
     return str.rope;
@@ -412,20 +426,6 @@ static int ava_rope_is_balanced(const ava_rope*restrict rope) {
 
 static const ava_rope* ava_rope_rebalance(const ava_rope*restrict root) {
   const ava_rope*restrict accum[AVA_MAX_ROPE_DEPTH];
-  const ava_rope*restrict new_left, *restrict new_right;
-
-  if (ava_rope_is_balanced(root)) return root;
-
-  /* In the common case of concatting small strings to the end of a larger
-   * rope, the root will become unbalanced relatively frequently; each concat
-   * will increase the depth by 1, and the unbalanced depth will generally be
-   * 20..30. In such cases, prefer rebalancing the children first, and only
-   * rebalance the root if the root does not become balanced as a result.
-   */
-  new_left = ava_rope_rebalance(root->v.concat_left);
-  new_right = ava_rope_rebalance(root->concat_right);
-  if (new_left != root->v.concat_left || new_right != root->concat_right)
-    root = ava_rope_concat_of(new_left, new_right);
 
   if (ava_rope_is_balanced(root)) return root;
 
@@ -442,7 +442,7 @@ static void ava_rope_rebalance_iterate(
   unsigned clear, bif;
   int is_slot_free;
 
-  if (rope->concat_right) {
+  if (ava_rope_is_concat(rope)) {
     ava_rope_rebalance_iterate(accum, rope->v.concat_left);
     ava_rope_rebalance_iterate(accum, rope->concat_right);
     return;
@@ -455,8 +455,12 @@ static void ava_rope_rebalance_iterate(
 
     /* Ensure all slots below the target are free */
     is_slot_free = 1;
-    for (; clear <= bif && is_slot_free; ++clear)
-      is_slot_free &= !accum[clear];
+    for (; clear <= bif; ++clear) {
+      if (accum[clear]) {
+        is_slot_free = 0;
+        break;
+      }
+    }
 
     if (is_slot_free) {
       /* Free, done with this element */
@@ -498,8 +502,8 @@ static const ava_rope* ava_rope_rebalance_flush(
 
 static ava_ascii9_string ava_ascii9_slice(ava_ascii9_string str,
                                           size_t begin, size_t end) {
-  str >>= 7 * begin;
-  str &= ~0LL >> (9 - end + begin) * 7;
+  str <<= 7 * begin;
+  str &= 0xFFFFFFFFFFFFFFFELL << (9 - end + begin) * 7;
   str |= 1;
   return str;
 }
@@ -511,7 +515,8 @@ static const ava_rope* ava_rope_slice(const ava_rope*restrict rope,
   if (0 == begin && rope->length == end)
     return rope;
 
-  if (rope->concat_right) {
+  if (ava_rope_is_concat(rope)) {
+    /* If one side alone can handle the split, simply delegate */
     if (begin >= rope->v.concat_left->length)
       return ava_rope_slice(
         rope->concat_right,
@@ -522,13 +527,45 @@ static const ava_rope* ava_rope_slice(const ava_rope*restrict rope,
       return ava_rope_slice(
         rope->v.concat_left, begin, end);
 
-    return ava_rope_rebalance(
-      ava_rope_concat_of(
-        ava_rope_slice(
-          rope->v.concat_left, begin, rope->v.concat_left->length),
-        ava_rope_slice(
-          rope->concat_right, 0, end - rope->v.concat_left->length)));
-  } else if (rope->v.leaf9 & 1) {
+    /* The string will straddle the two sides. Coalesce eagerly if too small. */
+    if (end - begin <= 9) {
+      char c9[9];
+      ava_rope_to_bytes(c9, rope, begin, end);
+
+      if (ava_string_can_encode_ascii9(c9, end - begin)) {
+        ava_rope* ret = AVA_NEW(ava_rope);
+        *ret = (ava_rope) {
+          .length = end - begin,
+          .external_size = 0,
+          .depth = 0,
+          .v = { .leaf9 = ava_ascii9_encode(c9, end - begin) },
+          .concat_right = ROPE_FORMAT_LEAF9
+        };
+        return ret;
+      }
+    }
+
+    if (end - begin < ROPE_NONFLAT_THRESH) {
+      char* strdat = ava_alloc_atomic(end - begin);
+      ava_rope_to_bytes(strdat, rope, begin, end);
+
+      ava_rope* ret = AVA_NEW(ava_rope);
+      *ret = (ava_rope) {
+        .length = end - begin,
+        .external_size = end - begin,
+        .depth = 0,
+        .v = { .leafv = strdat },
+        .concat_right = ROPE_FORMAT_LEAFV
+      };
+      return ret;
+    }
+
+    return ava_rope_concat_of(
+      ava_rope_slice(
+        rope->v.concat_left, begin, rope->v.concat_left->length),
+      ava_rope_slice(
+        rope->concat_right, 0, end - rope->v.concat_left->length));
+  } else if (ava_rope_is_leaf9(rope)) {
     new = AVA_NEW(ava_rope);
     *new = *rope;
     new->v.leaf9 = ava_ascii9_slice(new->v.leaf9, begin, end);
@@ -553,36 +590,22 @@ ava_string ava_string_slice(ava_string str, size_t begin, size_t end) {
 
   if (str.ascii9 & 1) {
     ret.ascii9 = ava_ascii9_slice(str.ascii9, begin, end);
-  } else {
-    ret.ascii9 = 0;
+    return ret;
+  }
 
-    /* If the result is too small to justify the rope overhead, flatten. */
-    if (end - begin <= 9) {
-      char c9[9];
-      ava_rope_to_bytes(c9, str.rope, begin, end);
-      if (ava_string_can_encode_ascii9(c9, end - begin)) {
-        ret.ascii9 = ava_ascii9_encode(c9, end - begin);
-      } else {
-        ava_rope* rope = AVA_NEW(ava_rope);
-        rope->length = end - begin;
-        rope->external_size = end - begin;
-        rope->depth = 0;
-        rope->v.leafv = ava_clone_atomic(c9, end - begin);
-      }
-    } else if (end - begin < ROPE_NONFLAT_THRESH) {
-      char* strdat = ava_alloc_atomic(end - begin);
-      ava_rope_to_bytes(strdat, str.rope, begin, end);
+  ret.ascii9 = 0;
 
-      ava_rope* rope = AVA_NEW(ava_rope);
-      rope->length = end - begin;
-      rope->external_size = end - begin;
-      rope->depth = 0;
-      rope->v.leafv = strdat;
-      ret.rope = rope;
-    } else {
-      ret.rope = ava_rope_slice(str.rope, begin, end);
+  /* Convert to an ASCII9 string if possible */
+  if (end - begin <= 9) {
+    char c9[9];
+    ava_rope_to_bytes(c9, str.rope, begin, end);
+    if (ava_string_can_encode_ascii9(c9, end - begin)) {
+      ret.ascii9 = ava_ascii9_encode(c9, end - begin);
+      return ret;
     }
   }
+
+  ret.rope = ava_rope_rebalance(ava_rope_slice(str.rope, begin, end));
 
   return ret;
 }

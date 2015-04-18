@@ -7,6 +7,7 @@ AC_CONFIG_MACRO_DIR([m4])
 LT_PREREQ([1.5])
 LT_INIT()
 AM_CONFIG_HEADER([config.h])
+PKG_PROG_PKG_CONFIG()
 
 # Checks for programs.
 AC_PROG_CC
@@ -14,6 +15,7 @@ AC_PROG_CC_C99
 AM_PROG_CC_C_O
 
 # Checks for libraries.
+PKG_CHECK_MODULES([CHECK], [check], [], [:])
 AC_SEARCH_LIBS([sin], [c m])
 AC_SEARCH_LIBS([GC_init], [gc], [],
                [AC_MSG_ERROR(
