@@ -63,6 +63,8 @@ static void ava_rope_to_bytes(void*restrict dst, const ava_rope*restrict,
 static size_t ava_ascii9_length(ava_ascii9_string);
 static char ava_ascii9_index(ava_ascii9_string, size_t);
 static char ava_rope_index(const ava_rope*restrict, size_t);
+static const ava_rope* ava_rope_concat(const ava_rope*restrict,
+                                       const ava_rope*restrict);
 static const ava_rope* ava_rope_concat_of(const ava_rope*restrict,
                                           const ava_rope*restrict);
 static ava_ascii9_string ava_ascii9_concat(ava_ascii9_string,
@@ -75,6 +77,8 @@ static void ava_rope_rebalance_iterate(
 static const ava_rope* ava_rope_rebalance_flush(
   const ava_rope*restrict[AVA_MAX_ROPE_DEPTH], unsigned, unsigned);
 static int ava_rope_is_balanced(const ava_rope*restrict);
+static int ava_rope_concat_would_be_balanced(const ava_rope*restrict,
+                                             const ava_rope*restrict);
 static unsigned ava_bif(size_t);
 static ava_ascii9_string ava_ascii9_slice(ava_ascii9_string, size_t, size_t);
 static const ava_rope* ava_rope_slice(const ava_rope*restrict, size_t, size_t);
@@ -385,8 +389,7 @@ ava_string ava_string_concat(ava_string a, ava_string b) {
   /* No special cases occurred, so just do a rope concat */
   ava_string ret;
   ret.ascii9 = 0;
-  ret.rope = ava_rope_rebalance(
-    ava_rope_concat_of(ava_rope_of(a), ava_rope_of(b)));
+  ret.rope = ava_rope_concat(ava_rope_of(a), ava_rope_of(b));
   return ret;
 }
 
@@ -402,6 +405,35 @@ static const ava_rope* ava_rope_of(ava_string str) {
   } else {
     return str.rope;
   }
+}
+
+static const ava_rope* ava_rope_concat(const ava_rope*restrict left,
+                                       const ava_rope*restrict right) {
+  const ava_rope*restrict concat;
+
+  /* If a trivial concat is balanced, just do that */
+  if (ava_rope_concat_would_be_balanced(left, right))
+    return ava_rope_concat_of(left, right);
+
+  /* Would be unbalanced if done trivially. See if one can be passed down a
+   * branch of the other. (This optimises for linear concatenations of shallow
+   * strings.)
+   */
+  /* a->depth > b->depth guarantees that a is a concat */
+  if (left->depth > right->depth) {
+    concat = ava_rope_concat_of(
+      left->v.concat_left,
+      ava_rope_concat(left->concat_right, right));
+  } else if (right->depth > left->depth) {
+    concat = ava_rope_concat_of(
+      ava_rope_concat(left, right->v.concat_left),
+      right->concat_right);
+  } else {
+    /* Fall back to trivial and let a rebalance do its thing */
+    concat = ava_rope_concat_of(left, right);
+  }
+
+  return ava_rope_rebalance(concat);
 }
 
 /* Inverse offset fibonacci function, where fib(0) == 0 and fib(1) == 1 */
@@ -422,6 +454,13 @@ static unsigned ava_bif(size_t sz) {
 static int ava_rope_is_balanced(const ava_rope*restrict rope) {
   /* The rope is considered balanced if fib(depth+2) <= length. */
   return rope->depth+2 <= ava_bif(rope->length) + 1;
+}
+
+static int ava_rope_concat_would_be_balanced(const ava_rope*restrict left,
+                                             const ava_rope*restrict right) {
+  unsigned depth = left->depth > right->depth? left->depth : right->depth;
+
+  return depth + 3 <= ava_bif(left->length + right->length) + 1;
 }
 
 static const ava_rope* ava_rope_rebalance(const ava_rope*restrict root) {
