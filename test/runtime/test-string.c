@@ -79,12 +79,42 @@ deftest(string_of_hello_produces_ascii9_string) {
   ck_assert_int_eq(5, ava_string_length(str));
 }
 
-deftest(indexing_works_for_ascii9_string) {
+deftest(ascii9_string_index) {
   ava_string str = AVA_ASCII9_STRING("123456789");
   unsigned i;
 
   for (i = 0; i < 9; ++i)
     ck_assert_int_eq(i + '1', ava_string_index(str, i));
+}
+
+deftest(flat_string_index) {
+  AVA_STATIC_STRING(str, "hello world");
+  unsigned i;
+
+  for (i = 0; i < 11; ++i)
+    ck_assert_int_eq("hello world"[i], ava_string_index(str, i));
+}
+
+deftest(rope_of_flat_index) {
+  ava_string str = ava_string_concat(
+    ava_string_of_shared_bytes(large_string, 128),
+    ava_string_of_shared_bytes(large_string + 128, 128));
+  unsigned i;
+
+  for (i = 0; i < 256; ++i)
+    ck_assert_int_eq(large_string[i], ava_string_index(str, i));
+}
+
+deftest(rope_of_flat_and_ascii9_index) {
+  ava_string left = ava_string_of_shared_bytes(large_string, 128);
+  ava_string right = ava_string_of_shared_bytes(large_string + 128, 5);
+  ava_string str = ava_string_concat(left, right);
+  unsigned i;
+
+  ck_assert(right.ascii9 & 1);
+
+  for (i = 0; i < 128 + 5; ++i)
+    ck_assert_int_eq(large_string[i], ava_string_index(str, i));
 }
 
 deftest(string_of_hello_world_produces_heap_string) {
@@ -159,6 +189,70 @@ deftest(ascii9_string_to_cstring_buff_overflow) {
 
   ck_assert_ptr_ne(buf, ret);
   ck_assert_str_eq("hello", ret);
+}
+
+deftest(ascii9_string_to_cstring_tmpbuff_null) {
+  char* buf = NULL, * ret;
+  size_t sz;
+
+  ret = ava_string_to_cstring_tmpbuff(&buf, &sz, AVA_ASCII9_STRING("hello"));
+  ck_assert_str_eq("hello", ret);
+  ck_assert_ptr_eq(buf, ret);
+  ck_assert_int_lt(5, sz);
+}
+
+deftest(ascii9_string_to_cstring_tmpbuff_fit) {
+  char init_buf[16];
+  char* buf = init_buf, * ret;
+  size_t sz = sizeof(init_buf);
+
+  ret = ava_string_to_cstring_tmpbuff(&buf, &sz, AVA_ASCII9_STRING("hello"));
+  ck_assert_str_eq("hello", ret);
+  ck_assert_ptr_eq(init_buf, buf);
+  ck_assert_ptr_eq(init_buf, ret);
+  ck_assert_int_eq(sizeof(init_buf), sz);
+}
+
+deftest(ascii9_string_to_cstring_tmpbuff_overflow) {
+  char init_buf[4];
+  char* buf = init_buf, * ret;
+  size_t sz = sizeof(init_buf);
+
+  ret = ava_string_to_cstring_tmpbuff(&buf, &sz, AVA_ASCII9_STRING("hello"));
+  ck_assert_str_eq("hello", ret);
+  ck_assert_ptr_ne(init_buf, ret);
+  ck_assert_ptr_eq(ret, buf);
+  ck_assert_int_lt(5, sz);
+}
+
+deftest(flat_string_to_cstring) {
+  AVA_STATIC_STRING(orig, "hello");
+
+  ck_assert_str_eq("hello", ava_string_to_cstring(orig));
+}
+
+deftest(rope_of_flat_and_ascii9_to_cstring) {
+  ava_string orig = ava_string_concat(
+    ava_string_of_shared_bytes(large_string, 256),
+    AVA_ASCII9_STRING("foo"));
+  char expected[256+3+1];
+
+  memcpy(expected, large_string, 256);
+  memcpy(expected + 256, "foo", sizeof("foo"));
+
+  ck_assert_str_eq(expected, ava_string_to_cstring(orig));
+}
+
+deftest(rope_of_flats_to_cstring) {
+  ava_string orig = ava_string_concat(
+    ava_string_of_shared_bytes(large_string, 256),
+    ava_string_of_shared_bytes(large_string + 256, 256));
+  char expected[513];
+
+  memcpy(expected, large_string, 512);
+  expected[513] = 0;
+
+  ck_assert_str_eq(expected, ava_string_to_cstring(orig));
 }
 
 deftest(ascii9_ascii9_to_ascii9_concat) {
@@ -383,4 +477,125 @@ deftest(rope_slice_to_rope_across_boundary) {
   ava_string str = ava_string_slice(orig, 128, 300);
 
   assert_matches_large_string(str, 128, 300);
+}
+
+deftest(rope_slice_to_rope_before_boundary) {
+  ava_string orig = ava_string_concat(
+    ava_string_of_shared_bytes(large_string, 256),
+    ava_string_of_shared_bytes(large_string + 256, 256));
+  ava_string str = ava_string_slice(orig, 128, 256);
+
+  assert_matches_large_string(str, 128, 256);
+  ck_assert_ptr_eq(NULL, str.rope->concat_right);
+}
+
+deftest(rope_slice_to_rope_after_boundary) {
+  ava_string orig = ava_string_concat(
+    ava_string_of_shared_bytes(large_string, 256),
+    ava_string_of_shared_bytes(large_string + 256, 256));
+  ava_string str = ava_string_slice(orig, 256, 384);
+
+  assert_matches_large_string(str, 256, 384);
+  ck_assert_ptr_eq(NULL, str.rope->concat_right);
+}
+
+deftest(rope_slice_to_rope_whole) {
+  ava_string orig = ava_string_concat(
+    ava_string_of_shared_bytes(large_string, 256),
+    ava_string_of_shared_bytes(large_string + 256, 256));
+  ava_string str = ava_string_slice(orig, 0, 512);
+
+  ck_assert_ptr_eq(orig.rope, str.rope);
+}
+
+deftest(rope_slice_to_flat_ascii9_pair) {
+  ava_string left_v = ava_string_of_shared_bytes(large_string, 256);
+  ava_string mid_9 = ava_string_of_shared_bytes(large_string + 256, 5);
+  ava_string right_v = ava_string_of_shared_bytes(large_string + 256 + 5, 256);
+  ava_string orig = ava_string_concat(
+    left_v, ava_string_concat(mid_9, right_v));
+  ava_string str = ava_string_slice(orig, 255, 265);
+
+  assert_matches_large_string(str, 255, 265);
+}
+
+deftest(rope_slice_across_ascii9) {
+  ava_string left_9 = ava_string_of_shared_bytes(large_string, 5);
+  ava_string right_v = ava_string_of_shared_bytes(large_string + 5, 256);
+  ava_string orig = ava_string_concat(left_9, right_v);
+  ava_string str = ava_string_slice(orig, 1, 255);
+
+  assert_matches_large_string(str, 1, 255);
+}
+
+deftest(ascii9_to_bytes_whole) {
+  char buf[9];
+  ava_string str = AVA_ASCII9_STRING("avalanche");
+
+  ava_string_to_bytes(buf, str, 0, sizeof(buf));
+  ck_assert_int_eq(0, memcmp("avalanche", buf, sizeof(buf)));
+}
+
+deftest(ascii9_to_bytes_slice) {
+  char buf[3];
+  ava_string str = AVA_ASCII9_STRING("avalanche");
+
+  ava_string_to_bytes(buf, str, 1, 1 + sizeof(buf));
+  ck_assert_int_eq(0, memcmp("val", buf, sizeof(buf)));
+}
+
+deftest(flat_to_bytes_whole) {
+  AVA_STATIC_STRING(str, "avalanche\303\237");
+  char buf[11];
+
+  ava_string_to_bytes(buf, str, 0, sizeof(buf));
+  ck_assert_int_eq(0, memcmp("avalanche\303\237", buf, sizeof(buf)));
+}
+
+deftest(flat_to_bytes_slice) {
+  AVA_STATIC_STRING(str, "avalanche\303\237");
+  char buf[4];
+
+  ava_string_to_bytes(buf, str, 1, 1 + sizeof(buf));
+  ck_assert_int_eq(0, memcmp("vala", buf, sizeof(buf)));
+}
+
+deftest(rope_to_bytes_whole) {
+  char buf[512];
+  ava_string str = ava_string_concat(
+    ava_string_of_shared_bytes(large_string, 256),
+    ava_string_of_shared_bytes(large_string + 256, 256));
+
+  ava_string_to_bytes(buf, str, 0, 512);
+  ck_assert_int_eq(0, memcmp(large_string, buf, sizeof(buf)));
+}
+
+deftest(rope_to_bytes_slice_before_boundary) {
+  char buf[256];
+  ava_string str = ava_string_concat(
+    ava_string_of_shared_bytes(large_string, 256),
+    ava_string_of_shared_bytes(large_string + 256, 256));
+
+  ava_string_to_bytes(buf, str, 0, 256);
+  ck_assert_int_eq(0, memcmp(large_string, buf, sizeof(buf)));
+}
+
+deftest(rope_to_bytes_slice_after_boundary) {
+  char buf[256];
+  ava_string str = ava_string_concat(
+    ava_string_of_shared_bytes(large_string, 256),
+    ava_string_of_shared_bytes(large_string + 256, 256));
+
+  ava_string_to_bytes(buf, str, 256, 512);
+  ck_assert_int_eq(0, memcmp(large_string + 256, buf, sizeof(buf)));
+}
+
+deftest(rope_to_bytes_slice_across_boundary) {
+  char buf[256];
+  ava_string str = ava_string_concat(
+    ava_string_of_shared_bytes(large_string, 256),
+    ava_string_of_shared_bytes(large_string + 256, 256));
+
+  ava_string_to_bytes(buf, str, 128, 384);
+  ck_assert_int_eq(0, memcmp(large_string + 128, buf, sizeof(buf)));
 }

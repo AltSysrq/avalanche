@@ -239,7 +239,7 @@ static void ava_ascii9_to_bytes(void*restrict dst, ava_ascii9_string str,
 static void ava_rope_to_bytes(void*restrict dst, const ava_rope*restrict rope,
                               size_t start, size_t end) {
   if (ava_rope_is_concat(rope)) {
-    if (end < rope->v.concat_left->length) {
+    if (end <= rope->v.concat_left->length) {
       ava_rope_to_bytes(dst, rope->v.concat_left, start, end);
     } else if (start >= rope->concat_right->length) {
       ava_rope_to_bytes(dst, rope->concat_right,
@@ -528,23 +528,6 @@ static const ava_rope* ava_rope_slice(const ava_rope*restrict rope,
         rope->v.concat_left, begin, end);
 
     /* The string will straddle the two sides. Coalesce eagerly if too small. */
-    if (end - begin <= 9) {
-      char c9[9];
-      ava_rope_to_bytes(c9, rope, begin, end);
-
-      if (ava_string_can_encode_ascii9(c9, end - begin)) {
-        ava_rope* ret = AVA_NEW(ava_rope);
-        *ret = (ava_rope) {
-          .length = end - begin,
-          .external_size = 0,
-          .depth = 0,
-          .v = { .leaf9 = ava_ascii9_encode(c9, end - begin) },
-          .concat_right = ROPE_FORMAT_LEAF9
-        };
-        return ret;
-      }
-    }
-
     if (end - begin < ROPE_NONFLAT_THRESH) {
       char* strdat = ava_alloc_atomic(end - begin);
       ava_rope_to_bytes(strdat, rope, begin, end);
@@ -569,6 +552,7 @@ static const ava_rope* ava_rope_slice(const ava_rope*restrict rope,
     new = AVA_NEW(ava_rope);
     *new = *rope;
     new->v.leaf9 = ava_ascii9_slice(new->v.leaf9, begin, end);
+    new->length = end - begin;
     return new;
   } else {
     new = AVA_NEW(ava_rope);
