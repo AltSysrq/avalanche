@@ -27,3 +27,6 @@ ltmain.sh
 *.lo
 *.t
 bootstrap-avac
+*.gcda
+*.gcno
+*.gcov
