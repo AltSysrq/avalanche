@@ -70,16 +70,8 @@ static const ava_rope* ava_rope_concat_of(const ava_rope*restrict,
 static ava_ascii9_string ava_ascii9_concat(ava_ascii9_string,
                                            ava_ascii9_string);
 static const ava_rope* ava_rope_of(ava_string);
-static const ava_rope* ava_rope_rebalance(const ava_rope*restrict);
-static void ava_rope_rebalance_iterate(
-  const ava_rope*restrict[AVA_MAX_ROPE_DEPTH],
-  const ava_rope*restrict);
-static const ava_rope* ava_rope_rebalance_flush(
-  const ava_rope*restrict[AVA_MAX_ROPE_DEPTH], unsigned, unsigned);
-static int ava_rope_is_balanced(const ava_rope*restrict);
-static int ava_rope_concat_would_be_node_balanced(
+static int ava_rope_concat_would_be_strongly_balanced(
   const ava_rope*restrict, const ava_rope*restrict);
-static unsigned ava_bif(size_t);
 static ava_ascii9_string ava_ascii9_slice(ava_ascii9_string, size_t, size_t);
 static const ava_rope* ava_rope_slice(const ava_rope*restrict, size_t, size_t);
 
@@ -417,7 +409,7 @@ static const ava_rope* ava_rope_concat(const ava_rope*restrict left,
   const ava_rope*restrict concat;
 
   /* If a trivial concat is balanced, just do that */
-  if (ava_rope_concat_would_be_node_balanced(left, right))
+  if (ava_rope_concat_would_be_strongly_balanced(left, right))
     return ava_rope_concat_of(left, right);
 
   /* Would be unbalanced if done trivially. See if one can be passed down a
@@ -438,111 +430,15 @@ static const ava_rope* ava_rope_concat(const ava_rope*restrict left,
     concat = ava_rope_concat_of(left, right);
   }
 
-  return ava_rope_rebalance(concat);
+  return concat;
 }
 
-/* Inverse offset fibonacci function, where fib(0) == 0 and fib(1) == 1 */
-static unsigned ava_bif(size_t sz) {
-  unsigned iterations = 0;
-  unsigned long long a = 0, b = 1, c;
-
-  while (sz >= a) {
-    ++iterations;
-    c = a + b;
-    a = b;
-    b = c;
-  }
-
-  return iterations;
-}
-
-static int ava_rope_is_balanced(const ava_rope*restrict rope) {
-  /* The rope is considered balanced if fib(depth+2) <= length. */
-  return rope->depth+2 <= ava_bif(rope->length) + 1;
-}
-
-static int ava_rope_concat_would_be_node_balanced(
+static int ava_rope_concat_would_be_strongly_balanced(
   const ava_rope*restrict left, const ava_rope*restrict right
 ) {
   unsigned depth = left->depth > right->depth? left->depth : right->depth;
 
-  return (1u << depth) <= (left->descendants + right->descendants)*2;
-}
-
-static const ava_rope* ava_rope_rebalance(const ava_rope*restrict root) {
-  const ava_rope*restrict accum[AVA_MAX_ROPE_DEPTH];
-
-  if (ava_rope_is_balanced(root)) return root;
-
-  /* Rebalance the whole rope */
-  memset((void*)accum, 0, sizeof(accum));
-  ava_rope_rebalance_iterate(accum, root);
-  return ava_rope_rebalance_flush(accum, 0, AVA_MAX_ROPE_DEPTH);
-}
-
-static void ava_rope_rebalance_iterate(
-  const ava_rope*restrict accum[AVA_MAX_ROPE_DEPTH],
-  const ava_rope*restrict rope
-) {
-  unsigned clear, bif;
-  int is_slot_free;
-
-  if (ava_rope_is_concat(rope)) {
-    ava_rope_rebalance_iterate(accum, rope->v.concat_left);
-    ava_rope_rebalance_iterate(accum, rope->concat_right);
-    return;
-  }
-
-  /* This is a leaf; insert it into the array */
-  clear = 0;
-  for (;;) {
-    bif = ava_bif(rope->length) - 1; /* -1 since size 0 never occurs */
-
-    /* Ensure all slots below the target are free */
-    is_slot_free = 1;
-    for (; clear <= bif; ++clear) {
-      if (accum[clear]) {
-        is_slot_free = 0;
-        break;
-      }
-    }
-
-    if (is_slot_free) {
-      /* Free, done with this element */
-      accum[bif] = rope;
-      break;
-    } else {
-      /* Not free. Produce a new rope by flushing the accumulator, create a
-       * Concat between that and this one, then repeat with the new, larger
-       * rope.
-       */
-      rope = ava_rope_concat_of(
-        ava_rope_rebalance_flush(accum, clear, bif+1), rope);
-      clear = bif;
-    }
-  }
-}
-
-static const ava_rope* ava_rope_rebalance_flush(
-  const ava_rope*restrict accum[AVA_MAX_ROPE_DEPTH],
-  unsigned start, unsigned end
-) {
-  const ava_rope*restrict right = NULL;
-  unsigned i;
-
-  for (i = start; i < end; ++i) {
-    if (accum[i]) {
-      if (right) {
-        right = ava_rope_concat_of(accum[i], right);
-      } else {
-        right = accum[i];
-      }
-
-      accum[i] = NULL;
-    }
-  }
-
-  return right;
+  return (1uLL << depth) <= (left->descendants + right->descendants)*2;
 }
 
 static ava_ascii9_string ava_ascii9_slice(ava_ascii9_string str,
@@ -635,7 +531,7 @@ ava_string ava_string_slice(ava_string str, size_t begin, size_t end) {
     }
   }
 
-  ret.rope = ava_rope_rebalance(ava_rope_slice(str.rope, begin, end));
+  ret.rope = ava_rope_slice(str.rope, begin, end);
 
   return ret;
 }
