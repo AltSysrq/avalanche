@@ -77,8 +77,8 @@ static void ava_rope_rebalance_iterate(
 static const ava_rope* ava_rope_rebalance_flush(
   const ava_rope*restrict[AVA_MAX_ROPE_DEPTH], unsigned, unsigned);
 static int ava_rope_is_balanced(const ava_rope*restrict);
-static int ava_rope_concat_would_be_balanced(const ava_rope*restrict,
-                                             const ava_rope*restrict);
+static int ava_rope_concat_would_be_node_balanced(
+  const ava_rope*restrict, const ava_rope*restrict);
 static unsigned ava_bif(size_t);
 static ava_ascii9_string ava_ascii9_slice(ava_ascii9_string, size_t, size_t);
 static const ava_rope* ava_rope_slice(const ava_rope*restrict, size_t, size_t);
@@ -136,6 +136,7 @@ ava_string ava_string_of_shared_bytes(const char* str, size_t sz) {
     rope->length = sz;
     rope->external_size = sz;
     rope->depth = 0;
+    rope->descendants = 0;
     rope->v.leafv = str;
     rope->concat_right = ROPE_FORMAT_LEAFV;
     s.rope = rope;
@@ -156,6 +157,7 @@ ava_string ava_string_of_bytes(const char* str, size_t sz) {
     rope->length = sz;
     rope->external_size = sz;
     rope->depth = 0;
+    rope->descendants = 0;
     rope->v.leafv = ava_clone_atomic(str, sz);
     rope->concat_right = ROPE_FORMAT_LEAFV;
     s.rope = rope;
@@ -339,6 +341,7 @@ static const ava_rope* ava_rope_concat_of(const ava_rope*restrict a,
     .length = a->length + b->length,
     .external_size = a->external_size + b->external_size,
     .depth = 1 + (a->depth > b->depth? a->depth : b->depth),
+    .descendants = 2 + a->descendants + b->descendants,
     .v = { .concat_left = a },
     .concat_right = b
   };
@@ -379,6 +382,7 @@ ava_string ava_string_concat(ava_string a, ava_string b) {
     rope->length = alen + blen;
     rope->external_size = alen + blen;
     rope->depth = 0;
+    rope->descendants = 0;
     rope->v.leafv = strdat;
 
     ret.ascii9 = 0;
@@ -399,6 +403,7 @@ static const ava_rope* ava_rope_of(ava_string str) {
     rope->length = ava_ascii9_length(str.ascii9);
     rope->external_size = 0;
     rope->depth = 0;
+    rope->descendants = 0;
     rope->v.leaf9 = str.ascii9;
     rope->concat_right = ROPE_FORMAT_LEAF9;
     return rope;
@@ -412,7 +417,7 @@ static const ava_rope* ava_rope_concat(const ava_rope*restrict left,
   const ava_rope*restrict concat;
 
   /* If a trivial concat is balanced, just do that */
-  if (ava_rope_concat_would_be_balanced(left, right))
+  if (ava_rope_concat_would_be_node_balanced(left, right))
     return ava_rope_concat_of(left, right);
 
   /* Would be unbalanced if done trivially. See if one can be passed down a
@@ -456,11 +461,12 @@ static int ava_rope_is_balanced(const ava_rope*restrict rope) {
   return rope->depth+2 <= ava_bif(rope->length) + 1;
 }
 
-static int ava_rope_concat_would_be_balanced(const ava_rope*restrict left,
-                                             const ava_rope*restrict right) {
+static int ava_rope_concat_would_be_node_balanced(
+  const ava_rope*restrict left, const ava_rope*restrict right
+) {
   unsigned depth = left->depth > right->depth? left->depth : right->depth;
 
-  return depth + 3 <= ava_bif(left->length + right->length) + 1;
+  return depth + 3 <= ava_bif(left->descendants + right->descendants) + 1;
 }
 
 static const ava_rope* ava_rope_rebalance(const ava_rope*restrict root) {
@@ -576,6 +582,7 @@ static const ava_rope* ava_rope_slice(const ava_rope*restrict rope,
         .length = end - begin,
         .external_size = end - begin,
         .depth = 0,
+        .descendants = 0,
         .v = { .leafv = strdat },
         .concat_right = ROPE_FORMAT_LEAFV
       };

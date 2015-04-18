@@ -420,6 +420,11 @@ struct ava_rope_s {
    */
   unsigned depth;
   /**
+   * The number of children, direct and indirect, of this node. Leaves have 0
+   * descendants.
+   */
+  unsigned descendants;
+  /**
    * The value of this node. If concat_right is greater than 1, it is a Concat;
    * otherwise, it is a Leaf. ASCII9 and array-based leaves can be
    * distinguished by bit0 of concat_right, a 1 indicating ASCII9 and a 0
