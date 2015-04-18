@@ -466,7 +466,7 @@ static int ava_rope_concat_would_be_node_balanced(
 ) {
   unsigned depth = left->depth > right->depth? left->depth : right->depth;
 
-  return depth + 3 <= ava_bif(left->descendants + right->descendants) + 1;
+  return (1u << depth) <= (left->descendants + right->descendants)*2;
 }
 
 static const ava_rope* ava_rope_rebalance(const ava_rope*restrict root) {
