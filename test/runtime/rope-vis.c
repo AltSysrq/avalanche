@@ -94,10 +94,21 @@ static void write_tree(FILE* out, ava_rope* rope, int is_live) {
   fprintf(out, "  \"%p\" [style=filled,fillcolor=%s,label=\"%d\"];\n",
           rope, is_live? "aquamarine" : "gold", rope->depth);
 
-  if (rope->v.concat_left->depth)
+  if (rope->v.concat_left->depth) {
     fprintf(out, "  \"%p\" -> \"%p\";\n", rope, (void*)rope->v.concat_left);
-  if (rope->concat_right->depth)
+  } else {
+    fprintf(out, "  \"%p-lleaf\" [style=filled,fillcolor=azure,label=\"0\"];\n",
+            rope);
+    fprintf(out, "  \"%p\" -> \"%p-lleaf\";\n", rope, rope);
+  }
+
+  if (rope->concat_right->depth) {
     fprintf(out, "  \"%p\" -> \"%p\";\n", rope, (void*)rope->concat_right);
+  } else {
+    fprintf(out, "  \"%p-rleaf\" [style=filled,fillcolor=azure,label=\"0\"];\n",
+            rope);
+    fprintf(out, "  \"%p\" -> \"%p-rleaf\";\n", rope, rope);
+  }
 
   set_mark(rope, 1);
 
