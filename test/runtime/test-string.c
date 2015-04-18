@@ -571,31 +571,31 @@ deftest(rope_to_bytes_whole) {
 }
 
 deftest(rope_to_bytes_slice_before_boundary) {
-  char buf[256];
+  char buf[128];
   ava_string str = ava_string_concat(
-    ava_string_of_shared_bytes(large_string, 256),
-    ava_string_of_shared_bytes(large_string + 256, 256));
+    ava_string_of_shared_bytes(large_string, 128),
+    ava_string_of_shared_bytes(large_string + 128, 256));
 
-  ava_string_to_bytes(buf, str, 0, 256);
+  ava_string_to_bytes(buf, str, 0, 128);
   ck_assert_int_eq(0, memcmp(large_string, buf, sizeof(buf)));
 }
 
 deftest(rope_to_bytes_slice_after_boundary) {
   char buf[256];
   ava_string str = ava_string_concat(
-    ava_string_of_shared_bytes(large_string, 256),
-    ava_string_of_shared_bytes(large_string + 256, 256));
+    ava_string_of_shared_bytes(large_string, 64),
+    ava_string_of_shared_bytes(large_string + 64, 256));
 
-  ava_string_to_bytes(buf, str, 256, 512);
-  ck_assert_int_eq(0, memcmp(large_string + 256, buf, sizeof(buf)));
+  ava_string_to_bytes(buf, str, 64, 64 + 256);
+  ck_assert_int_eq(0, memcmp(large_string + 64, buf, sizeof(buf)));
 }
 
 deftest(rope_to_bytes_slice_across_boundary) {
-  char buf[256];
+  char buf[128];
   ava_string str = ava_string_concat(
-    ava_string_of_shared_bytes(large_string, 256),
-    ava_string_of_shared_bytes(large_string + 256, 256));
+    ava_string_of_shared_bytes(large_string, 128),
+    ava_string_of_shared_bytes(large_string + 128, 256));
 
-  ava_string_to_bytes(buf, str, 128, 384);
+  ava_string_to_bytes(buf, str, 128, 256);
   ck_assert_int_eq(0, memcmp(large_string + 128, buf, sizeof(buf)));
 }

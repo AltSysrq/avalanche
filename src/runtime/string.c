@@ -245,7 +245,7 @@ static void ava_rope_to_bytes(void*restrict dst, const ava_rope*restrict rope,
   if (ava_rope_is_concat(rope)) {
     if (end <= rope->v.concat_left->length) {
       ava_rope_to_bytes(dst, rope->v.concat_left, start, end);
-    } else if (start >= rope->concat_right->length) {
+    } else if (start >= rope->v.concat_left->length) {
       ava_rope_to_bytes(dst, rope->concat_right,
                         start - rope->v.concat_left->length,
                         end - rope->v.concat_left->length);
