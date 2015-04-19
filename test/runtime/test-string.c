@@ -599,3 +599,25 @@ deftest(rope_to_bytes_slice_across_boundary) {
   ava_string_to_bytes(buf, str, 128, 256);
   ck_assert_int_eq(0, memcmp(large_string + 128, buf, sizeof(buf)));
 }
+
+deftest(rope_rebalance) {
+  /* Concat a bunch of poorly-balanced strings to force a rebalance. */
+  ava_string str = AVA_EMPTY_STRING;
+  unsigned i, j;
+
+  for (i = 0; i < 100; ++i) {
+    ava_string sub = AVA_EMPTY_STRING;
+    for (j = 0; j < 7; ++j) {
+      sub = ava_string_concat(
+        sub, ava_string_of_shared_bytes(
+          large_string + i*70+j*10, 10));
+    }
+
+    str = ava_string_concat(str, sub);
+  }
+
+  /* XXX The rebalance path is really hard to trigger with concats */
+  str = ava_string_optimise(str);
+
+  assert_matches_large_string(str, 0, 7000);
+}

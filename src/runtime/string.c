@@ -71,6 +71,7 @@ static ava_ascii9_string ava_ascii9_concat(ava_ascii9_string,
                                            ava_ascii9_string);
 static const ava_rope* ava_rope_of(ava_string);
 static const ava_rope* ava_rope_rebalance(const ava_rope*restrict);
+static const ava_rope* ava_rope_force_rebalance(const ava_rope*restrict);
 static void ava_rope_rebalance_iterate(
   const ava_rope*restrict[AVA_MAX_ROPE_DEPTH],
   const ava_rope*restrict);
@@ -469,10 +470,20 @@ static int ava_rope_concat_would_be_node_balanced(
   return (1u << depth) <= (left->descendants + right->descendants)*2;
 }
 
-static const ava_rope* ava_rope_rebalance(const ava_rope*restrict root) {
-  const ava_rope*restrict accum[AVA_MAX_ROPE_DEPTH];
+ava_string ava_string_optimise(ava_string str) {
+  if (str.ascii9 & 1) return str;
 
+  str.rope = ava_rope_force_rebalance(str.rope);
+  return str;
+}
+
+static const ava_rope* ava_rope_rebalance(const ava_rope*restrict root) {
   if (ava_rope_is_balanced(root)) return root;
+  else return ava_rope_force_rebalance(root);
+}
+
+static const ava_rope* ava_rope_force_rebalance(const ava_rope*restrict root) {
+  const ava_rope*restrict accum[AVA_MAX_ROPE_DEPTH];
 
   /* Rebalance the whole rope */
   memset((void*)accum, 0, sizeof(accum));

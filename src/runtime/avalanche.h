@@ -639,9 +639,20 @@ ava_string ava_string_slice(ava_string, size_t begin, size_t end) AVA_PURE;
 /**
  * Produces a string containing the values of both strings concatenated.
  *
- * Complexity: Amortized O(1)
+ * Complexity: Amortized O(log(n))
  */
 ava_string ava_string_concat(ava_string, ava_string) AVA_PURE;
+
+/**
+ * Optimises the given string for read access.
+ *
+ * This should only be done for newly-produced strings that are not expected to
+ * be sharing memory with anything else; otherwise, this will likely be
+ * counter-productive.
+ *
+ * Complexity: O(n)
+ */
+ava_string ava_string_optimise(ava_string) AVA_PURE;
 
 /**
  * An iterator into an ava_string, allowing efficient linear access to string
