@@ -51,8 +51,8 @@ int main(int argc, char** argv) {
 
   unsigned count = atoi(argv[1]);
   unsigned stride = atoi(argv[2]);
-  ava_string strings[count*count];
-  memset(strings, 0, sizeof(strings));
+  ava_string* strings = ava_alloc(sizeof(ava_string) * count * count);
+  memset(strings, 0, sizeof(ava_string) * count * count);
   make_strings(strings, count, stride);
 
   unsigned i;
