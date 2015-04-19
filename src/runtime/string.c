@@ -52,6 +52,12 @@ static inline int ava_rope_is_concat(const ava_rope*restrict rope) {
   return rope->concat_right > ROPE_FORMAT_LEAF9;
 }
 
+static ava_rope* ava_rope_new_concat(const ava_rope*restrict,
+                                     const ava_rope*restrict);
+static ava_rope* ava_rope_new_leafv(const char*restrict,
+                                    size_t length, size_t external_size);
+static ava_rope* ava_rope_new_leaf9(ava_ascii9_string);
+
 static int ava_string_can_encode_ascii9(const char*, size_t);
 static ava_ascii9_string ava_ascii9_encode(const char*, size_t);
 static void ava_rope_flatten_into(char*restrict dst, const ava_rope*restrict);
@@ -63,18 +69,23 @@ static void ava_rope_to_bytes(void*restrict dst, const ava_rope*restrict,
 static size_t ava_ascii9_length(ava_ascii9_string);
 static char ava_ascii9_index(ava_ascii9_string, size_t);
 static char ava_rope_index(const ava_rope*restrict, size_t);
+static const ava_rope* ava_rope_concat(const ava_rope*restrict,
+                                       const ava_rope*restrict);
 static const ava_rope* ava_rope_concat_of(const ava_rope*restrict,
                                           const ava_rope*restrict);
 static ava_ascii9_string ava_ascii9_concat(ava_ascii9_string,
                                            ava_ascii9_string);
 static const ava_rope* ava_rope_of(ava_string);
 static const ava_rope* ava_rope_rebalance(const ava_rope*restrict);
+static const ava_rope* ava_rope_force_rebalance(const ava_rope*restrict);
 static void ava_rope_rebalance_iterate(
   const ava_rope*restrict[AVA_MAX_ROPE_DEPTH],
   const ava_rope*restrict);
 static const ava_rope* ava_rope_rebalance_flush(
   const ava_rope*restrict[AVA_MAX_ROPE_DEPTH], unsigned, unsigned);
 static int ava_rope_is_balanced(const ava_rope*restrict);
+static int ava_rope_concat_would_be_node_balanced(
+  const ava_rope*restrict, const ava_rope*restrict);
 static unsigned ava_bif(size_t);
 static ava_ascii9_string ava_ascii9_slice(ava_ascii9_string, size_t, size_t);
 static const ava_rope* ava_rope_slice(const ava_rope*restrict, size_t, size_t);
@@ -108,6 +119,53 @@ static ava_ascii9_string ava_ascii9_encode(
   return accum;
 }
 
+static ava_rope* ava_rope_new_concat(const ava_rope*restrict a,
+                                     const ava_rope*restrict b) {
+  ava_rope* concat = AVA_NEW(ava_rope);
+
+  *concat = (ava_rope) {
+    .length = a->length + b->length,
+    .external_size = a->external_size + b->external_size,
+    .depth = 1 + (a->depth > b->depth? a->depth : b->depth),
+    .descendants = 2 + a->descendants + b->descendants,
+    .v = { .concat_left = a },
+    .concat_right = b
+  };
+
+  return concat;
+}
+
+static ava_rope* ava_rope_new_leafv(const char*restrict v,
+                                    size_t length, size_t external_size) {
+  ava_rope* r = AVA_NEW(ava_rope);
+
+  *r = (ava_rope) {
+    .length = length,
+    .external_size = external_size,
+    .depth = 0,
+    .descendants = 0,
+    .v = { .leafv = v },
+    .concat_right = ROPE_FORMAT_LEAFV
+  };
+
+  return r;
+}
+
+static ava_rope* ava_rope_new_leaf9(ava_ascii9_string s) {
+  ava_rope* r = AVA_NEW(ava_rope);
+
+  *r = (ava_rope) {
+    .length = ava_ascii9_length(s),
+    .external_size = 0,
+    .depth = 0,
+    .descendants = 0,
+    .v = { .leaf9 = s },
+    .concat_right = ROPE_FORMAT_LEAF9
+  };
+
+  return r;
+}
+
 ava_string ava_string_of_shared_cstring(const char* str) {
   return ava_string_of_shared_bytes(str, strlen(str));
 }
@@ -122,19 +180,12 @@ ava_string ava_string_of_char(char ch) {
 
 ava_string ava_string_of_shared_bytes(const char* str, size_t sz) {
   ava_string s;
-  ava_rope* rope;
 
   if (ava_string_can_encode_ascii9(str, sz)) {
     s.ascii9 = ava_ascii9_encode(str, sz);
   } else {
     s.ascii9 = 0;
-    rope = AVA_NEW(ava_rope);
-    rope->length = sz;
-    rope->external_size = sz;
-    rope->depth = 0;
-    rope->v.leafv = str;
-    rope->concat_right = ROPE_FORMAT_LEAFV;
-    s.rope = rope;
+    s.rope = ava_rope_new_leafv(str, sz, sz);
   }
 
   return s;
@@ -142,19 +193,13 @@ ava_string ava_string_of_shared_bytes(const char* str, size_t sz) {
 
 ava_string ava_string_of_bytes(const char* str, size_t sz) {
   ava_string s;
-  ava_rope* rope;
 
   if (ava_string_can_encode_ascii9(str, sz)) {
     s.ascii9 = ava_ascii9_encode(str, sz);
   } else {
     s.ascii9 = 0;
-    rope = AVA_NEW(ava_rope);
-    rope->length = sz;
-    rope->external_size = sz;
-    rope->depth = 0;
-    rope->v.leafv = ava_clone_atomic(str, sz);
-    rope->concat_right = ROPE_FORMAT_LEAFV;
-    s.rope = rope;
+    s.rope = ava_rope_new_leafv(ava_clone_atomic(str, sz),
+                                sz, sz);
   }
 
   return s;
@@ -241,7 +286,7 @@ static void ava_rope_to_bytes(void*restrict dst, const ava_rope*restrict rope,
   if (ava_rope_is_concat(rope)) {
     if (end <= rope->v.concat_left->length) {
       ava_rope_to_bytes(dst, rope->v.concat_left, start, end);
-    } else if (start >= rope->concat_right->length) {
+    } else if (start >= rope->v.concat_left->length) {
       ava_rope_to_bytes(dst, rope->concat_right,
                         start - rope->v.concat_left->length,
                         end - rope->v.concat_left->length);
@@ -330,16 +375,21 @@ static ava_ascii9_string ava_ascii9_concat(
 
 static const ava_rope* ava_rope_concat_of(const ava_rope*restrict a,
                                           const ava_rope*restrict b) {
-  ava_rope* concat = AVA_NEW(ava_rope);
-  *concat = (ava_rope) {
-    .length = a->length + b->length,
-    .external_size = a->external_size + b->external_size,
-    .depth = 1 + (a->depth > b->depth? a->depth : b->depth),
-    .v = { .concat_left = a },
-    .concat_right = b
-  };
+  /* Coalesce into a single node if proferable */
+  if (a->length + b->length <= 9 &&
+      ava_rope_is_leaf9(a) && ava_rope_is_leaf9(b))
+    return ava_rope_new_leaf9(ava_ascii9_concat(
+                                a->v.leaf9, b->v.leaf9));
 
-  return concat;
+  if (a->length + b->length <= ROPE_NONFLAT_THRESH) {
+    char* strdat = ava_alloc_atomic(a->length + b->length);
+    ava_rope_to_bytes(strdat, a, 0, a->length);
+    ava_rope_to_bytes(strdat + a->length, b, 0, b->length);
+    return ava_rope_new_leafv(strdat, a->length + b->length,
+                              a->length + b->length);
+  }
+
+  return ava_rope_new_concat(a, b);
 }
 
 ava_string ava_string_concat(ava_string a, ava_string b) {
@@ -362,46 +412,61 @@ ava_string ava_string_concat(ava_string a, ava_string b) {
   /* If the result will be too small to justify rope overhead, produce a flat
    * string.
    */
-  if (alen + blen < ROPE_NONFLAT_THRESH) {
+  if (alen + blen <= ROPE_NONFLAT_THRESH) {
     ava_string ret;
-    ava_rope* rope;
     char* strdat;
 
     strdat = ava_alloc_atomic(alen + blen);
     ava_string_to_bytes(strdat, a, 0, alen);
     ava_string_to_bytes(strdat + alen, b, 0, blen);
 
-    rope = AVA_NEW(ava_rope);
-    rope->length = alen + blen;
-    rope->external_size = alen + blen;
-    rope->depth = 0;
-    rope->v.leafv = strdat;
-
     ret.ascii9 = 0;
-    ret.rope = rope;
+    ret.rope = ava_rope_new_leafv(strdat, alen + blen, alen + blen);
     return ret;
   }
 
   /* No special cases occurred, so just do a rope concat */
   ava_string ret;
   ret.ascii9 = 0;
-  ret.rope = ava_rope_rebalance(
-    ava_rope_concat_of(ava_rope_of(a), ava_rope_of(b)));
+  ret.rope = ava_rope_concat(ava_rope_of(a), ava_rope_of(b));
   return ret;
 }
 
 static const ava_rope* ava_rope_of(ava_string str) {
   if (str.ascii9 & 1) {
-    ava_rope* rope = AVA_NEW(ava_rope);
-    rope->length = ava_ascii9_length(str.ascii9);
-    rope->external_size = 0;
-    rope->depth = 0;
-    rope->v.leaf9 = str.ascii9;
-    rope->concat_right = ROPE_FORMAT_LEAF9;
-    return rope;
+    return ava_rope_new_leaf9(str.ascii9);
   } else {
     return str.rope;
   }
+}
+
+static const ava_rope* ava_rope_concat(const ava_rope*restrict left,
+                                       const ava_rope*restrict right) {
+  const ava_rope*restrict concat;
+
+  /* If a trivial concat is balanced, just do that */
+  if (ava_rope_concat_would_be_node_balanced(left, right))
+    return ava_rope_concat_of(left, right);
+
+  /* Would be unbalanced if done trivially. See if one can be passed down a
+   * branch of the other. (This optimises for linear concatenations of shallow
+   * strings.)
+   */
+  /* a->depth > b->depth guarantees that a is a concat */
+  if (left->depth > right->depth) {
+    concat = ava_rope_concat_of(
+      left->v.concat_left,
+      ava_rope_concat(left->concat_right, right));
+  } else if (right->depth > left->depth) {
+    concat = ava_rope_concat_of(
+      ava_rope_concat(left, right->v.concat_left),
+      right->concat_right);
+  } else {
+    /* Fall back to trivial and let a rebalance do its thing */
+    concat = ava_rope_concat_of(left, right);
+  }
+
+  return ava_rope_rebalance(concat);
 }
 
 /* Inverse offset fibonacci function, where fib(0) == 0 and fib(1) == 1 */
@@ -424,10 +489,28 @@ static int ava_rope_is_balanced(const ava_rope*restrict rope) {
   return rope->depth+2 <= ava_bif(rope->length) + 1;
 }
 
-static const ava_rope* ava_rope_rebalance(const ava_rope*restrict root) {
-  const ava_rope*restrict accum[AVA_MAX_ROPE_DEPTH];
+static int ava_rope_concat_would_be_node_balanced(
+  const ava_rope*restrict left, const ava_rope*restrict right
+) {
+  unsigned depth = left->depth > right->depth? left->depth : right->depth;
 
+  return (1u << depth) <= (left->descendants + right->descendants)*2;
+}
+
+ava_string ava_string_optimise(ava_string str) {
+  if (str.ascii9 & 1) return str;
+
+  str.rope = ava_rope_force_rebalance(str.rope);
+  return str;
+}
+
+static const ava_rope* ava_rope_rebalance(const ava_rope*restrict root) {
   if (ava_rope_is_balanced(root)) return root;
+  else return ava_rope_force_rebalance(root);
+}
+
+static const ava_rope* ava_rope_force_rebalance(const ava_rope*restrict root) {
+  const ava_rope*restrict accum[AVA_MAX_ROPE_DEPTH];
 
   /* Rebalance the whole rope */
   memset((void*)accum, 0, sizeof(accum));
@@ -532,15 +615,7 @@ static const ava_rope* ava_rope_slice(const ava_rope*restrict rope,
       char* strdat = ava_alloc_atomic(end - begin);
       ava_rope_to_bytes(strdat, rope, begin, end);
 
-      ava_rope* ret = AVA_NEW(ava_rope);
-      *ret = (ava_rope) {
-        .length = end - begin,
-        .external_size = end - begin,
-        .depth = 0,
-        .v = { .leafv = strdat },
-        .concat_right = ROPE_FORMAT_LEAFV
-      };
-      return ret;
+      return ava_rope_new_leafv(strdat, end - begin, end - begin);
     }
 
     return ava_rope_concat_of(
@@ -549,11 +624,7 @@ static const ava_rope* ava_rope_slice(const ava_rope*restrict rope,
       ava_rope_slice(
         rope->concat_right, 0, end - rope->v.concat_left->length));
   } else if (ava_rope_is_leaf9(rope)) {
-    new = AVA_NEW(ava_rope);
-    *new = *rope;
-    new->v.leaf9 = ava_ascii9_slice(new->v.leaf9, begin, end);
-    new->length = end - begin;
-    return new;
+    return ava_rope_new_leaf9(ava_ascii9_slice(rope->v.leaf9, begin, end));
   } else {
     new = AVA_NEW(ava_rope);
     *new = *rope;
