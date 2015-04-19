@@ -25,7 +25,8 @@ The canonical boolean values are `true` and `false`. `yes` and `on` are also
 understood to mean `true`; `no` and `off` are also understood to mean `false`.
 None of these are case-sensitive. All strings interpretable as non-zero,
 non-NaN numbers are considered true; strings interpretable as zero or NaN are
-false. Other strings are not interpretable as booleans.
+false. The empty string is false. Other strings are not interpretable as
+booleans.
 
 ### Integers
 
@@ -33,7 +34,7 @@ Integers are numeric strings not containing a decimal point. By default, they
 are in base-10; the prefices `0b`, `0o`, and `0x` can be used to select binary,
 octal, and hexadecimal, respectively, case-insensitive. Non-numeric boolean
 strings can also be considered integers, with values 1 for `true` and 0 for
-`false`.
+`false`. In most contexts, the empty string is considered a zero integer.
 
 ### Floats
 
@@ -57,154 +58,94 @@ key occurs more than once, only the last occurrance is meaningful.
 Syntax I --- Tokenisation / Lexing
 ----------------------------------
 
-Avalanche uses a rather simple tokenisation scheme. Like Tcl, it requires a PDA
-(rather than an NFA) to parse, though it is a bit more complex than that of
-Tcl.
+Avalanche uses a rather simple tokenisation scheme. Like Tcl, it is
+non-regular.
 
-"Scopes" parsing described later are defined entirely by recursion levels in
-the lexer.
+The following characters are considered whitespace: Space (0x20), horizontal
+tab (0x09).
 
-"Closing characters" are any of `)`, `]`, or `}`.
+"Newline" always refers to Line Feed (0x0A). Carraige-Return (0x0D) characters
+are discarded by the lexer, but are required to be immediately followed by a
+Line Feed.
 
-### Ground State
-
-The ground state is the initial state of the lexer.
-
-All whitespace, including newlines, is discarded.
-
-If a semicolon `;` is encountered, it and all characters up to the next newline
-or end of file are discarded.
-
-If an ampersand `&` is encountered, the state switches to the Special Form
-state after consuming it.
-
-If a closing character is encoundered, the state is popped.
-
-Any other character switches to the Command state in Free mode.
-
-### Special Form State
-
-The Special Form state consumes all characters up to but not including the next
-semicolon `;` or newline, whichever comes first. The result must be a valid
-List of at least one element. The first element defines the type of special
-form; the rest are its arguments. The meaning of special forms is discussed
-later.
-
-### Command State
-
-Command form exists in two forms: Parenthetical and Free. The only difference
-is in how newlines are handled.
-
-All whitespace, except for newlines, is discarded.
-
-If a newline is encountered, it is discarded if in Parenthetical mode;
-otherwise, it is consumed and the state switches to the Ground state.
-
-If a semicolon `;` is encountered, it and all characters up to but not
-including the next newline are discarded.
-
-If a left parenthesis `(` is encountered, the state is pushed to Command state,
-Parenthetical mode. It must be popped by a matching `)`. The resulting token
-sequence is considered one token at this level; this is a Command Substitution.
-
-If a left bracket `[` is encountered, the state is pushed to Command state,
-Parenthetical mode. It must be popped by a matching `]`.
-
-If a left brace `{` is encountered, the state is pushed to the Ground state. It
-must be popped by a matching `}`. The resulting token sequence is considered
-one token at this level, and is considered a Code Block.
-
-If a closing character is encountered, the state is popped.
-
-If a double-quote `"` or back-quote `\`` is encountered, the state pushes to
-the String state.
-
-For any other character, the state pushes to Token state.
-
-### Token State
-
-Token State consumes all characters up to the next whitespace, semicolon `;`,
-back-quote `\``, or paren-like character `(`, `[`, `{`, `}`, `]`, `)`.
-
-If the consumed characters begin with a dollar sign `$`, the token is
-considered a variable substitution; if they begin with an ampersand `&`, it is
-considered a variable reference. Otherwise, it is a bareword. In the former
-two cases, the "value" of the token is all characters after the `$` or `&`; in
-the latter, it is the whole token.
-
-(Notice that, unlike Tcl, *no* escaping is permitted outside of quotes.)
-
-Token State switches to Post-Token State after consuming its characters.
-
-### String State
-
-String State consumes characters until it encounteres a `"` or `\`` not escaped.
-
-Backslash escaping works mostly as in C, except that octal escapes are not
-supported, but `\e` for ASCII ESC is s upported. `\xXX` escapes always have two
-hexits.
-
-The "value" of a string token is its contents with backslash escape sequences
-substituted.
-
-Strings come in four flavours, which provide string interpolation in the higher
-level of the language:
+The following characters are "special":
 ```
-  "This is a V-String"
-  "This is an L-String`
-  `This is an R-String"
-  `This is an LR-String`
+([{}])"`;\
 ```
 
-### Post-Token State
+The ASCII characters 0x00--0x0x08, 0x0B, 0x0C, 0x0E--0x1F, and 0x7F are
+illegal.
 
-Any whitespace character, closing character, or semicolon `;` is not consumed
-and the state is popped.
+All other characters are non-special.
 
-A left parenthesis `(` is consumed, and the state is pushed to the Command
-state in Parenthetical mode, which must be terminated by a matching `)`. The
-resulting token sequence is considered one token, a Name Subscript.
+Backslashes `\` are illegal in the base state, except in some combinations
+described below.
 
-A left bracket `[` is consumed, and the state is pushed to the Command state in
-Parenthetical mode, which must be terminated by a matching `]`. The resulting
-token sequence is considered one token, an Index Subscript.
+Whitespace is discarded by the lexer, but does separate tokens, and is relevant
+immediately preceding certain token types. Tokens are considered "preceded by
+whitespace" if they are proceded by one or more actual Whitespace characters,
+or occur at the very beginning of a line.
 
-A back-quote `\`` is not consumed, and the state is switched to String state.
+Any contiguous sequence of non-special characters is a Bareword Token. Certain
+contexts may place additional interpretation on the contents of Bareword
+Tokens.
 
-Any other character is an error.
+```
+  Bareword ::= {nonspecial}+
+```
 
-Syntax II --- Parsing
----------------------
+A semicolon `;` begins a comment. All characters from the semicolon to the next
+Newline (or end-of-file) are discarded, not including the Newline itself.
 
-"Parsing" as described here only applies to executable code; constructs lexed
-for other purpose are not subject to it.
+```
+  Comment ::= ;[^\n]*
+```
 
-Parsing is _strongly_ tied to the set of defined identifiers, and is also
-strongly connected to the recursive state of the lexer.
+A Newline produces a Newline Token. Additionally, a backslash followed by a
+whitespace character is converted to a Newline Token.
 
-Each logical token (which might be more than one physical token, eg, in the
-case of nested parentheses) is associated with a valence (one of V, L, R, or
-LR) and, if non-V valence, an integer precedence.
+```
+  Newline ::= \\ |\n
+```
 
-Valence determines whether the token takes positional arguments; tokens with no
-arguments have valence V; postfix tokens are L; prefix are R; and interfix are
-LR. Precedence effectively controls order of operations: Given two ordered
-tokens A and B, B activates-before A iff
-`ceil(B.precedence/2)<floor(A.precedence/2)`; otherwise, A activates-before B.
-This means that odd precedence produces right associativity of LR tokens, and
-even precedence produces left associativity.
+The characters between, but not including, a double-quote and a back-quote
+(either on either side) form a String Literal Token. Within a String Literal,
+C-style backslash escape sequences are supported.
 
-Parsing operates by locating the token which activates-before all other tokens.
-All tokens in the list on either side (corresponding to its valence) are passed
-to whatever handles that token; it is an error if there are no tokens on a
-valent side. Typically, the handler will substitute itself with some new token
-sequence containing its arguments, or will cause its arguments to be evaluated
-separately.
+- The following characters following a backslash simplify to themselves: \`"'
+- The following characters are interpreted as in C (with e being ESC): `abefnrtv`
+- An `x` is followed by two hexadecimal digits, not case-sensitive, and expands
+  to the byte value represented thereby.
+- Any other sequence following a backslash is illegal.
 
-A token sequence which exclusively contains V tokens is considered a standard
-command. A standard command of zero commands is a syntax error. If there is
-exactly one token, the sequence describes a commend evaluating to the result of
-evaluating that token alone. Otherwise, the the sequence describes a command
-invocation, where the first token evaluates to the specifier of the command,
-and all other tokens evaluate to its arguments.
+Note that strings _are_ permitted to span lines. A string which begins and ends
+with a double-quote is an A-String-Literal; beginning with a back-quote is an
+L-String-Literal; ending with a back-quote is an R-String-Literal; and
+beginning and ending with a back-quote is an LR-String-Literal.
 
+```
+  string-escape ::= ([\\`"'abefnrtv]|x[0-9A-Fa-f]{2})
+  string-body ::= ([^\\"`]|\\{string-escape})*
+  A-String-Literal ::= "{string-body}"
+  L-String-Literal ::= `{string-body}"
+  R-String-Literal ::= "{string-body}`
+  LR-String-Literal ::= `{string-body}`
+```
+
+A left-parenthesis `(` is interpreted as a Begin-Substitution Token if it is
+preceded by whitespace, and as a Begin-Name-Subscript Token otherwise. A
+close-parenthesis `)` is a Close-Paren Token.
+
+A left-bracket `[` is interpreted as a Begin-Semiliteral Token if it is
+preceded by whitespace, and as a Begin-Numeric-Subscript Token otherwise. A
+close-bracket `]` is a Close-Bracket Token.
+
+A left-brace `{` is interpreted as a Begin-Block Token if it is preceded by
+whitespace, and is an error otherwise. A close-brace '}' is a Close-Brace
+Token.
+
+A backslash followed by a left brace `{` begins a Verbatim Token. The token
+terminates upon encountering a _matching_ brace `}` also preceded by a
+backslash. Only brace characters which are also preceded by a backslash are
+counted for matching. Escape sequences work the same as in String Literals,
+except that the leader is a backslash followed by a semicolon.
