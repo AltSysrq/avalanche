@@ -250,7 +250,7 @@ deftest(rope_of_flats_to_cstring) {
   char expected[513];
 
   memcpy(expected, large_string, 512);
-  expected[513] = 0;
+  expected[512] = 0;
 
   ck_assert_str_eq(expected, ava_string_to_cstring(orig));
 }
