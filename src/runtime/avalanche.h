@@ -731,6 +731,18 @@ char ava_string_iterator_get(const ava_string_iterator*) AVA_PURE;
 size_t ava_string_iterator_read(char*restrict dst, size_t n,
                                 ava_string_iterator* iterator);
 /**
+ * Reads up to n bytes from the string backing iterator, starting at the
+ * iterator's current position, into dst, returning the number of bytes read.
+ * The iterator's position is not advanced.
+ *
+ * The number of bytes actually read may be less than n, if reading more would
+ * have been just as expensive as calling this function twice.
+ *
+ * Returns 0 if the iterator is invalid.
+ */
+size_t ava_string_iterator_read_hold(char*restrict dst, size_t n,
+                                     const ava_string_iterator* iterator);
+/**
  * Returns the current logical index of the given string iterator.
  *
  * If the iterator is currently invalid, returns 0 if the logical pointer is

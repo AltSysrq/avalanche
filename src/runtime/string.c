@@ -785,8 +785,8 @@ char ava_string_iterator_get(const ava_string_iterator* it) {
       it->stack[it->top].offset];
 }
 
-size_t ava_string_iterator_read(char*restrict dst, size_t n,
-                                ava_string_iterator* it) {
+size_t ava_string_iterator_read_hold(char*restrict dst, size_t n,
+                                     const ava_string_iterator* it) {
   size_t nread;
 
   if (!ava_string_iterator_valid(it))
@@ -815,6 +815,12 @@ size_t ava_string_iterator_read(char*restrict dst, size_t n,
     }
   }
 
+  return nread;
+}
+
+size_t ava_string_iterator_read(char*restrict dst, size_t n,
+                                ava_string_iterator* it) {
+  size_t nread = ava_string_iterator_read_hold(dst, n, it);
   ava_string_iterator_move(it, nread);
   return nread;
 }
