@@ -664,27 +664,24 @@ ava_string ava_string_optimise(ava_string) AVA_PURE;
  *
  * The iterator is a stack of ropes, the top of which is a leaf. Every other
  * stack element is the direct parent of the one below it. Each stack element
- * tracks its offset within the rope; for leaves, this is simply the
- * byte/character offset. For Concats, 0 indicates the left branch, and 1 the
- * right branch. (We can't derive the information by looking at the children,
- * because a Concat could have the same rope for both children.)
+ * tracks its offset within the rope. (This includes concats, since we can't
+ * derive the information by looking at the children, because a Concat could
+ * have the same rope for both children.)
  *
- * Out-of-bounds iterators are represented by setting the oob flag in addition
- * to placing the iterator at the nearest valid index to the out-of-bounds
- * location.
+ * Out-of-bounds iterators are represented by moving the real_index to the
+ * index nearest the requsted location, and logical_index to that location.
  *
- * ASCII9 strings are converted into a single rope node stored within the
- * iterator.
+ * ASCII9 strings are copied into the ascii9 field of the iterator.
  */
 typedef struct {
   struct {
-    const ava_rope* rope;
+    const ava_rope*restrict rope;
     size_t offset;
   } stack[AVA_MAX_ROPE_DEPTH];
   unsigned top;
-  size_t real_index, logical_index;
-  int oob;
-  ava_rope tmprope;
+  size_t real_index, length;
+  ssize_t logical_index;
+  ava_ascii9_string ascii9;
 } ava_string_iterator;
 
 /**
@@ -704,9 +701,11 @@ void ava_string_iterator_place(ava_string_iterator* it,
  *
  * Invalid iterators may be moved back into a valid range, at which point they
  * become valid again.
+ *
+ * @return Whether the iterator is still valid.
  */
-void ava_string_iterator_move(ava_string_iterator* it,
-                              ssize_t distance);
+int ava_string_iterator_move(ava_string_iterator* it,
+                             ssize_t distance);
 /**
  * Returns whether the given iterator is valid.
  */
@@ -720,9 +719,23 @@ int ava_string_iterator_valid(const ava_string_iterator*) AVA_PURE;
  */
 char ava_string_iterator_get(const ava_string_iterator*) AVA_PURE;
 /**
+ * Reads up to n bytes from the string backing iterator, starting at the
+ * iterator's current position, into dst, returning the number of bytes read
+ * and advancing the iterator's position.
+ *
+ * The number of bytes actually read may be less than n, if reading more would
+ * have been just as expensive as calling this function twice.
+ *
+ * Returns 0 if the iterator is invalid.
+ */
+size_t ava_string_iterator_read(char*restrict dst, size_t n,
+                                ava_string_iterator* iterator);
+/**
  * Returns the current logical index of the given string iterator.
  *
- * This will be beyond the string boundaries for invalid iterators.
+ * If the iterator is currently invalid, returns 0 if the logical pointer is
+ * before the start of the string, or the length of the string if the logical
+ * pointer is beyond the end of the string.
  */
 size_t ava_string_iterator_index(const ava_string_iterator*) AVA_PURE;
 

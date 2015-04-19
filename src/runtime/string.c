@@ -29,6 +29,7 @@
 #include <config.h>
 #endif
 
+#include <assert.h>
 #include <string.h>
 #include <stdlib.h>
 
@@ -663,4 +664,166 @@ ava_string ava_string_slice(ava_string str, size_t begin, size_t end) {
   ret.rope = ava_rope_rebalance(ava_rope_slice(str.rope, begin, end));
 
   return ret;
+}
+
+void ava_string_iterator_place(ava_string_iterator* it,
+                               ava_string str, size_t index) {
+  assert(index < ava_string_length(str));
+
+  memset(it, 0, sizeof(ava_string_iterator));
+
+  if (str.ascii9 & 1) {
+    it->ascii9 = str.ascii9;
+  } else {
+    size_t off = index;
+    const ava_rope*restrict rope;
+
+    assert(str.rope->depth <= AVA_MAX_ROPE_DEPTH);
+
+    rope = it->stack[0].rope = str.rope;
+    while (ava_rope_is_concat(rope)) {
+      if (off < rope->v.concat_left->length) {
+        it->stack[it->top].offset = 0;
+        ++it->top;
+        rope = it->stack[it->top].rope = rope->v.concat_left;
+      } else {
+        it->stack[it->top].offset =
+          it->stack[it->top].rope->v.concat_left->length;
+        ++it->top;
+        off -= rope->v.concat_left->length;
+        rope = it->stack[it->top].rope = rope->concat_right;
+      }
+    }
+
+    it->stack[it->top].offset = off;
+  }
+
+  it->real_index = it->logical_index = index;
+  it->length = ava_string_length(str);
+}
+
+int ava_string_iterator_move(ava_string_iterator* it,
+                             ssize_t logical_distance) {
+  size_t new_real_index;
+  ssize_t real_distance;
+
+  it->logical_index += logical_distance;
+
+  /* <= so that empty strings will place the real index at 0 rather than ~0u */
+  if (it->logical_index <= 0)
+    new_real_index = 0;
+  else if (it->logical_index >= (ssize_t)it->length)
+    new_real_index = it->length - 1;
+  else
+    new_real_index = it->logical_index;
+
+  real_distance = new_real_index - it->real_index;
+  it->real_index = new_real_index;
+
+  if (!it->ascii9) {
+    /* Walk up the tree until we find a rope that contains the index we are
+     * looking for.
+     */
+    if (real_distance > 0) {
+      while (real_distance >= ((ssize_t)it->stack[it->top].rope->length -
+                               (ssize_t)it->stack[it->top].offset)) {
+        real_distance += it->stack[it->top].offset;
+        --it->top;
+      }
+    } else {
+      while (real_distance + (ssize_t)it->stack[it->top].offset < 0) {
+        real_distance += it->stack[it->top].offset;
+        --it->top;
+      }
+
+      real_distance += it->stack[it->top].offset;
+      it->stack[it->top].offset = 0;
+    }
+
+    assert(real_distance >= 0);
+    size_t dist = real_distance;
+
+    /* Walk down the tree to find the leaf containing the desired index */
+    while (ava_rope_is_concat(it->stack[it->top].rope)) {
+      if (dist + it->stack[it->top].offset <
+          it->stack[it->top].rope->v.concat_left->length) {
+        dist += it->stack[it->top].offset;
+        it->stack[it->top].offset = 0;
+        it->stack[it->top+1].rope = it->stack[it->top].rope->v.concat_left;
+        it->stack[it->top+1].offset = 0;
+        ++it->top;
+      } else {
+        dist -= it->stack[it->top].rope->v.concat_left->length -
+          it->stack[it->top].offset;
+        it->stack[it->top].offset =
+          it->stack[it->top].rope->v.concat_left->length;
+        it->stack[it->top+1].rope = it->stack[it->top].rope->concat_right;
+        it->stack[it->top+1].offset = 0;
+        ++it->top;
+      }
+    }
+
+    /* Adjust offset in final leaf */
+    it->stack[it->top].offset += dist;
+  }
+
+  return ava_string_iterator_valid(it);
+}
+
+int ava_string_iterator_valid(const ava_string_iterator* it) {
+  return it->logical_index >= 0 && it->logical_index < (ssize_t)it->length;
+}
+
+char ava_string_iterator_get(const ava_string_iterator* it) {
+  if (it->ascii9)
+    return ava_ascii9_index(it->ascii9, it->real_index);
+  else if (ava_rope_is_leaf9(it->stack[it->top].rope))
+    return ava_ascii9_index(it->stack[it->top].rope->v.leaf9,
+                            it->stack[it->top].offset);
+  else
+    return it->stack[it->top].rope->v.leafv[
+      it->stack[it->top].offset];
+}
+
+size_t ava_string_iterator_read(char*restrict dst, size_t n,
+                                ava_string_iterator* it) {
+  size_t nread;
+
+  if (!ava_string_iterator_valid(it))
+    return 0;
+
+  if (it->ascii9) {
+    char c9[9];
+
+    nread = it->length - it->real_index;
+    if (n < nread) nread = n;
+
+    ava_ascii9_decode(c9, it->ascii9);
+    memcpy(dst, c9 + it->real_index, nread);
+  } else {
+    const ava_rope*restrict rope = it->stack[it->top].rope;
+    size_t offset = it->stack[it->top].offset;
+    nread = rope->length - it->stack[it->top].offset;
+    if (n < nread) nread = n;
+
+    if (ava_rope_is_leaf9(rope)) {
+      char c9[9];
+      ava_ascii9_decode(c9, rope->v.leaf9);
+      memcpy(dst, c9 + offset, nread);
+    } else {
+      memcpy(dst, rope->v.leafv + offset, nread);
+    }
+  }
+
+  ava_string_iterator_move(it, nread);
+  return nread;
+}
+
+size_t ava_string_iterator_index(const ava_string_iterator* it) {
+  if (it->logical_index >= 0 && it->logical_index < (ssize_t)it->length)
+    return it->logical_index;
+  else if (it->logical_index < 0)
+    return 0;
+  else
+    return it->length;
 }

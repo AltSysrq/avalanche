@@ -621,3 +621,134 @@ deftest(rope_rebalance) {
 
   assert_matches_large_string(str, 0, 7000);
 }
+
+deftest(ascii9_iterator_place_and_get) {
+  ava_string str = AVA_ASCII9_STRING("avalanche");
+  ava_string_iterator it;
+
+  ava_string_iterator_place(&it, str, 3);
+  ck_assert_int_eq('l', ava_string_iterator_get(&it));
+}
+
+deftest(ascii9_iterator_move_and_get) {
+  ava_string str = AVA_ASCII9_STRING("avalanche");
+  ava_string_iterator it;
+
+  ava_string_iterator_place(&it, str, 3);
+  ck_assert(ava_string_iterator_move(&it, +3));
+  ck_assert_int_eq('c', ava_string_iterator_get(&it));
+  ck_assert(ava_string_iterator_move(&it, -3));
+  ck_assert_int_eq('l', ava_string_iterator_get(&it));
+}
+
+deftest(ascii9_iterator_bounds_handling) {
+  ava_string str = AVA_ASCII9_STRING("avalanche");
+  ava_string_iterator it;
+
+  ava_string_iterator_place(&it, str, 3);
+  ck_assert_int_eq(3, ava_string_iterator_index(&it));
+  ck_assert(ava_string_iterator_valid(&it));
+  ck_assert(!ava_string_iterator_move(&it, -10));
+  ck_assert(!ava_string_iterator_valid(&it));
+  ck_assert_int_eq(0, ava_string_iterator_index(&it));
+  ck_assert(!ava_string_iterator_move(&it, +5));
+  ck_assert(ava_string_iterator_move(&it, +5));
+  ck_assert(ava_string_iterator_valid(&it));
+  ck_assert_int_eq('l', ava_string_iterator_get(&it));
+  ck_assert(!ava_string_iterator_move(&it, +10));
+  ck_assert(!ava_string_iterator_valid(&it));
+  ck_assert_int_eq(9, ava_string_iterator_index(&it));
+  ck_assert(!ava_string_iterator_move(&it, -1));
+  ck_assert(!ava_string_iterator_valid(&it));
+  ck_assert(ava_string_iterator_move(&it, -9));
+  ck_assert(ava_string_iterator_valid(&it));
+  ck_assert_int_eq('l', ava_string_iterator_get(&it));
+}
+
+deftest(ascii9_iterator_read_underflow) {
+  char buf[10];
+  ava_string str = AVA_ASCII9_STRING("avalanche");
+  ava_string_iterator it;
+
+  ava_string_iterator_place(&it, str, 3);
+  ck_assert_int_eq(6, ava_string_iterator_read(buf, sizeof(buf), &it));
+  ck_assert_int_eq(0, memcmp(buf, "lanche", 6));
+  ck_assert(!ava_string_iterator_valid(&it));
+  ck_assert_int_eq(9, ava_string_iterator_index(&it));
+
+  ck_assert_int_eq(0, ava_string_iterator_read(buf, sizeof(buf), &it));
+  ck_assert(!ava_string_iterator_valid(&it));
+  ck_assert_int_eq(9, ava_string_iterator_index(&it));
+}
+
+deftest(ascii9_iterator_read_overflow) {
+  char buf[3];
+  ava_string str = AVA_ASCII9_STRING("avalanche");
+  ava_string_iterator it;
+
+  ava_string_iterator_place(&it, str, 4);
+  ck_assert_int_eq(3, ava_string_iterator_read(buf, sizeof(buf), &it));
+  ck_assert_int_eq(0, memcmp(buf, "anc", 3));
+  ck_assert(ava_string_iterator_valid(&it));
+  ck_assert_int_eq(7, ava_string_iterator_index(&it));
+
+  ck_assert_int_eq(2, ava_string_iterator_read(buf, sizeof(buf), &it));
+  ck_assert_int_eq(0, memcmp(buf, "he", 2));
+  ck_assert(!ava_string_iterator_valid(&it));
+  ck_assert_int_eq(9, ava_string_iterator_index(&it));
+}
+
+deftest(rope_iterator_movement) {
+  ava_string str = AVA_EMPTY_STRING;
+  ava_string_iterator it;
+  ssize_t max = 0, ix, nix;
+  unsigned i, n;
+
+  for (i = 0; i < 100; ++i) {
+    n = 5 + rand() % 100;
+    str = ava_string_concat(str, ava_string_of_shared_bytes(
+                              large_string + max, n));
+    max += n;
+  }
+
+  ix = rand() % max;
+  ava_string_iterator_place(&it, str, ix);
+  ck_assert(ava_string_iterator_valid(&it));
+  ck_assert_int_eq(large_string[ix], ava_string_iterator_get(&it));
+
+  for (i = 0; i < 100; ++i) {
+    nix = rand() % max;
+    ck_assert(ava_string_iterator_move(&it, nix - ix));
+    ix = nix;
+
+    ck_assert(ava_string_iterator_valid(&it));
+    ck_assert_int_eq(ix, ava_string_iterator_index(&it));
+    ck_assert_int_eq(large_string[ix], ava_string_iterator_get(&it));
+  }
+}
+
+deftest(rope_iterator_get_read_ascii9) {
+  ava_string str = ava_string_concat(
+    ava_string_of_shared_bytes(large_string, 5),
+    ava_string_of_shared_bytes(large_string + 5, 128));
+  ava_string_iterator it;
+  char buf[3];
+
+  ava_string_iterator_place(&it, str, 1);
+  ck_assert_int_eq(large_string[1], ava_string_iterator_get(&it));
+  ck_assert_int_eq(sizeof(buf), ava_string_iterator_read(
+                     buf, sizeof(buf), &it));
+  ck_assert_int_eq(0, memcmp(large_string + 1, buf, sizeof(buf)));
+}
+
+deftest(rope_iterator_get_read_flat) {
+  AVA_STATIC_STRING(str, "foobar\303\237");
+  ava_string_iterator it;
+  char buf[3];
+
+  ava_string_iterator_place(&it, str, 1);
+  ck_assert_int_eq('o', ava_string_iterator_get(&it));
+  ck_assert_int_eq(sizeof(buf), ava_string_iterator_read(
+                     buf, sizeof(buf), &it));
+  ck_assert_int_eq(0, memcmp("oob", buf, sizeof(buf)));
+}
