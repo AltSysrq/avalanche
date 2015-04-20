@@ -688,8 +688,6 @@ typedef struct {
  * Initialises the given iterator to point at the given index within the given
  * string.
  *
- * Behaviour is undefined if index >= length(str).
- *
  * Complexity: O(log(n))
  */
 void ava_string_iterator_place(ava_string_iterator* it,

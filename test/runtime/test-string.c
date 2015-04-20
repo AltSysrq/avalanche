@@ -752,3 +752,12 @@ deftest(rope_iterator_get_read_flat) {
                      buf, sizeof(buf), &it));
   ck_assert_int_eq(0, memcmp("oob", buf, sizeof(buf)));
 }
+
+deftest(empty_string_iterator) {
+  AVA_STATIC_STRING(str, "");
+  ava_string_iterator it;
+
+  ava_string_iterator_place(&it, str, 0);
+  ck_assert_int_eq(0, ava_string_iterator_index(&it));
+  ck_assert(!ava_string_iterator_valid(&it));
+}

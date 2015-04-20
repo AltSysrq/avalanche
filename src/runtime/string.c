@@ -668,9 +668,13 @@ ava_string ava_string_slice(ava_string str, size_t begin, size_t end) {
 
 void ava_string_iterator_place(ava_string_iterator* it,
                                ava_string str, size_t index) {
-  assert(index < ava_string_length(str));
+  assert(index <= ava_string_length(str));
 
   memset(it, 0, sizeof(ava_string_iterator));
+
+  it->logical_index = index;
+  if (index >= ava_string_length(str))
+    index = ava_string_length(str) > 0? ava_string_length(str)-1 : 0;
 
   if (str.ascii9 & 1) {
     it->ascii9 = str.ascii9;
@@ -698,7 +702,7 @@ void ava_string_iterator_place(ava_string_iterator* it,
     it->stack[it->top].offset = off;
   }
 
-  it->real_index = it->logical_index = index;
+  it->real_index = index;
   it->length = ava_string_length(str);
 }
 
