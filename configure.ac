@@ -1,5 +1,5 @@
 AC_PREREQ([2.6])
-AC_INIT([mantigraphia], [0.0.0], [jason@lin.gl])
+AC_INIT([avalanche], [0.0.0], [jason@lin.gl])
 AC_CONFIG_SRCDIR([src/.c])
 AM_INIT_AUTOMAKE([1.11])
 AM_SILENT_RULES(yes)
