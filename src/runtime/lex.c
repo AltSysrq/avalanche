@@ -54,7 +54,8 @@ struct ava_lex_context_s {
   ava_string accum;
   char string_started_with;
 
-  char buffer[64];
+  const char*restrict buffer;
+  char tmpbuff[9];
   unsigned buffer_off, buffer_max;
   /* The most recent 4 characters, excluding the one under the cursor, to
    * guarantee that, eg, string escaping doesn't have to go deep-diving in the
@@ -194,8 +195,8 @@ static unsigned char ava_lex_get(ava_lex_context* lex) {
   if (lex->buffer_off >= lex->buffer_max) {
     ava_string_iterator_move(&lex->it, lex->buffer_max);
     lex->buffer_off = 0;
-    lex->buffer_max = ava_string_iterator_read_hold(
-      lex->buffer, sizeof(lex->buffer), &lex->it);
+    lex->buffer_max = ava_string_iterator_access(
+      &lex->buffer, &lex->it, lex->tmpbuff);
   }
 
   if (lex->buffer_off >= lex->buffer_max)
