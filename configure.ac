@@ -13,6 +13,7 @@ PKG_PROG_PKG_CONFIG()
 AC_PROG_CC
 AC_PROG_CC_C99
 AM_PROG_CC_C_O
+AC_CHECK_PROG([RE2C], [re2c], [re2c], [])
 
 # Checks for libraries.
 PKG_CHECK_MODULES([CHECK], [check], [], [:])

@@ -64,17 +64,16 @@ non-regular.
 The following characters are considered whitespace: Space (0x20), horizontal
 tab (0x09).
 
-"Newline" always refers to Line Feed (0x0A). Carraige-Return (0x0D) characters
-are discarded by the lexer, but are required to be immediately followed by a
-Line Feed.
+"Newline" refers to a Line-Feed character, a Carraige-Return immediately
+followed by a Line-Feed, or a lone Carraige-Return. All "Newlines" are
+implicitly normalised to a lone Line-Feed character.
 
 The following characters are "special":
 ```
 ([{}])"`;\
 ```
 
-The ASCII characters 0x00--0x0x08, 0x0B, 0x0C, 0x0E--0x1F, and 0x7F are
-illegal.
+The ASCII characters 0x00--0x08, 0x0B, 0x0C, 0x0E--0x1F, and 0x7F are illegal.
 
 All other characters are non-special.
 
@@ -101,12 +100,10 @@ Newline (or end-of-file) are discarded, not including the Newline itself.
   Comment ::= ;[^\n]*
 ```
 
-A Newline produces a Newline Token. Additionally, a backslash followed by a
-whitespace character is converted to a Newline Token.
-
-```
-  Newline ::= \\ |\n
-```
+A Newline produces a Newline Token. A backslash followed by a Newline or any
+whitespace character suppresses the next Newline Token that would occur, if no
+other tokens occur on that line. Otherwise, the blackslash itself acts as a
+Newline Token.
 
 The characters between, but not including, a double-quote and a back-quote
 (either on either side) form a String Literal Token. Within a String Literal,
@@ -148,4 +145,6 @@ A backslash followed by a left brace `{` begins a Verbatim Token. The token
 terminates upon encountering a _matching_ brace `}` also preceded by a
 backslash. Only brace characters which are also preceded by a backslash are
 counted for matching. Escape sequences work the same as in String Literals,
-except that the leader is a backslash followed by a semicolon.
+except that the leader is a backslash followed by a semicolon. All characters
+between the outermost braces not part of a backslash-semicolon escape sequence
+are preserved verbatim.

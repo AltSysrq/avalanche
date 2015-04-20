@@ -30,3 +30,4 @@ bootstrap-avac
 *.gcda
 *.gcno
 *.gcov
+gen-*
