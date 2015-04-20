@@ -218,7 +218,7 @@ static void ava_lex_consume(ava_lex_context* lex) {
   case '\n':
     ++lex->p.line;
     lex->p.column = 1;
-    lex->p.line_offset = ava_string_iterator_index(&lex->it);
+    lex->p.line_offset = ava_string_iterator_index(&lex->it) + lex->buffer_off + 1;
     break;
 
   default:
@@ -242,7 +242,7 @@ static ava_lex_status ava_lex_put_token_str(
   dst->line = begin->line;
   dst->column = begin->column;
   dst->index_start = begin->index;
-  dst->index_end = end->index+1;
+  dst->index_end = end->index;
   dst->line_offset = begin->line_offset;
   return ava_ls_ok;
 }
@@ -255,7 +255,7 @@ static ava_lex_status ava_lex_put_token(
   const ava_lex_context* lex
 ) {
   return ava_lex_put_token_str(
-    dst, type, ava_string_slice(lex->str, begin->index, end->index+1),
+    dst, type, ava_string_slice(lex->str, begin->index, end->index),
     begin, end);
 }
 
@@ -277,7 +277,7 @@ static ava_lex_status ava_lex_put_error(
   dst->line = begin->line;
   dst->column = begin->column;
   dst->index_start = begin->index;
-  dst->index_end = end->index + 1;
+  dst->index_end = end->index;
   dst->line_offset = begin->line_offset;
   return ava_ls_error;
 }
@@ -395,15 +395,16 @@ ava_lex_status ava_lex_lex(ava_lex_result* dst, ava_lex_context* lex) {
       BS = [\\] ;
       NS = LEGALNL \ [()\[\]{}\\;"`] \ WS ;
       SD = ["`] ;
-      ESCT = ([\\"`'abefnrtv]|"x"[0-9a-fA-F]) ;
+      ESCT = ([\\"`'abefnrtv]|"x"[0-9a-fA-F]{2}) ;
       STRINGB = LEGALNL \ BS \ SD ;
       VERBB = LEGALNL \ BS ;
+      ILLEGAL = [^] \ LEGAL ;
 
       <Ground> NS+              { SWS(0); ACCEPT(ava_lex_bareword); }
       <Ground> WS+              { SWS(1); IGNORE(); }
       <Ground> NL               { SWS(1); ACCEPT(ava_lex_newline); }
       <Ground> BS WS* COM? NL   { SWS(1); IGNORE(); }
-      <Ground> BS WS*           { SWS(1); ACCEPT(ava_lex_newline); }
+      <Ground> BS WS+           { SWS(1); ACCEPT(ava_lex_newline); }
       <Ground> COM              { SWS(1); IGNORE(); }
       <Ground> "("              {         ACCEPT(ava_lex_left_paren); }
       <Ground> ")"              { SWS(0); ACCEPT(ava_lex_right_paren); }
@@ -417,7 +418,7 @@ ava_lex_status ava_lex_lex(ava_lex_result* dst, ava_lex_context* lex) {
       <String> STRINGB+         {         ACCUM(ava_lex_accum_verb); }
       <String> NL               {         ACCUM(ava_lex_accum_nl); }
       <String> BS ESCT          {         ACCUM(ava_lex_accum_esc); }
-      <String> BS .             {         DERROR(ava_lex_error_backslash_sequence); }
+      <String> BS [^]           {         DERROR(ava_lex_error_backslash_sequence); }
       <String> BS               {         DERROR(ava_lex_error_backslash_at_eof); }
 
       <Ground> BS "{" => Verb   {         ACCUM(ava_lex_verb_init); }
@@ -432,15 +433,16 @@ ava_lex_status ava_lex_lex(ava_lex_result* dst, ava_lex_context* lex) {
                                 }
       <Verb> VERBB+             {         ACCUM(ava_lex_accum_verb); }
       <Verb> BS ";" ESCT        {         ACCUM(ava_lex_accum_esc2); }
-      <Verb> BS ";" .           {         DERROR(ava_lex_error_backslash_sequence); }
+      <Verb> BS ";" [^]         {         DERROR(ava_lex_error_backslash_sequence); }
       <Verb> BS ";"             {         DERROR(ava_lex_error_backslash_at_eof); }
       <Verb> BS                 {         ACCUM(ava_lex_accum_verb); }
       <Verb> NL                 {         ACCUM(ava_lex_accum_nl); }
 
-      <Ground> BS .             { SWS(1); ERROR(ava_lex_error_backslash_sequence); }
+      <Ground> BS [^]           { SWS(1); ERROR(ava_lex_error_backslash_sequence); }
       <Ground> BS               { SWS(1); ERROR(ava_lex_error_backslash_at_eof); }
 
-      <*> ([^] \ LEGAL)+        { SWS(1); ERROR(ava_lex_error_illegal_chars); }
+      <String,Verb> ILLEGAL+    { SWS(1); DERROR(ava_lex_error_illegal_chars); }
+      <Ground> ILLEGAL+         { SWS(1); ERROR(ava_lex_error_illegal_chars); }
      */
 
     continue_loop:;
@@ -721,7 +723,8 @@ static ava_lex_status ava_lex_error_illegal_chars(
   size_t n;
 
   n = lex->p.index - start->index;
-  ava_string_to_bytes(chars, lex->str, start->index, n > 4? 4 : n);
+  ava_string_to_bytes(chars, lex->str,
+                      start->index, start->index + (n > 4? 4 : n));
   for (i = 0; i < n && i < 4; ++i)
     snprintf(hex + 4*i, sizeof(hex) - 4*i, "\\x%02X", (unsigned)chars[i]);
 
