@@ -741,6 +741,28 @@ size_t ava_string_iterator_read(char*restrict dst, size_t n,
 size_t ava_string_iterator_read_hold(char*restrict dst, size_t n,
                                      const ava_string_iterator* iterator);
 /**
+ * Provides direct, non-copying access to the contents of a string.
+ *
+ * dst is set to a pointer containing the next character(s) in the string
+ * following the iterator. Should copying be necessary, the caller-supplied
+ * tmpbuff will be used to hold the temporary data; therefore, the lifetime of
+ * the output pointer is bounded by that of tmpbuff.
+ *
+ * If the iterator is invalid, dst is set to NULL and 0 is returned.
+ *
+ * @param dst Out-parameter to hold a pointer into the string. (*dst) becomes
+ * invalid when tmpbuff is destroyed, or the next time the same tmpbuff is
+ * passed into ava_string_iterator_access(). (*dst) may point into tmpbuff
+ * rather than to its beginning.
+ * @param iterator The iterator with which to access the string.
+ * @param tmpbuff A location in which to store characters if they must be
+ * copied; must be at least 9 characters wide.
+ * @return The number of characters behind (*dst) which are part of the string.
+ */
+size_t ava_string_iterator_access(const char*restrict* dst,
+                                  const ava_string_iterator* iterator,
+                                  char*restrict tmpbuff);
+/**
  * Returns the current logical index of the given string iterator.
  *
  * If the iterator is currently invalid, returns 0 if the logical pointer is

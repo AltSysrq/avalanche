@@ -829,6 +829,32 @@ size_t ava_string_iterator_read(char*restrict dst, size_t n,
   return nread;
 }
 
+size_t ava_string_iterator_access(const char*restrict* dst,
+                                  const ava_string_iterator* it,
+                                  char*restrict tmpbuff) {
+  if (!ava_string_iterator_valid(it)) {
+    *dst = NULL;
+    return 0;
+  }
+
+  if (it->ascii9) {
+    ava_ascii9_decode(tmpbuff, it->ascii9);
+    *dst = tmpbuff + it->real_index;
+    return it->length - it->real_index;
+  }
+
+  const ava_rope*restrict rope = it->stack[it->top].rope;
+  size_t offset = it->stack[it->top].offset;
+  if (ava_rope_is_leaf9(rope)) {
+    ava_ascii9_decode(tmpbuff, rope->v.leaf9);
+    *dst = tmpbuff + offset;
+  } else {
+    *dst = rope->v.leafv + offset;
+  }
+
+  return rope->length - offset;
+}
+
 size_t ava_string_iterator_index(const ava_string_iterator* it) {
   if (it->logical_index >= 0 && it->logical_index < (ssize_t)it->length)
     return it->logical_index;

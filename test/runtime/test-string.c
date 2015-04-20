@@ -761,3 +761,38 @@ deftest(empty_string_iterator) {
   ck_assert_int_eq(0, ava_string_iterator_index(&it));
   ck_assert(!ava_string_iterator_valid(&it));
 }
+
+deftest(ascii9_iterator_access) {
+  ava_string str = AVA_ASCII9_STRING("avalanche");
+  ava_string_iterator it;
+  char tmpbuff[9];
+  const char*restrict access;
+
+  ava_string_iterator_place(&it, str, 1);
+  ck_assert_int_eq(8, ava_string_iterator_access(&access, &it, tmpbuff));
+  ck_assert_int_eq(0, memcmp("valanche", access, 8));
+}
+
+deftest(rope_ascii9_iterator_access) {
+  ava_string str = ava_string_concat(
+    ava_string_of_shared_bytes(large_string, 5),
+    ava_string_of_shared_bytes(large_string + 5, 128));
+  ava_string_iterator it;
+  char tmpbuff[9];
+  const char*restrict access;
+
+  ava_string_iterator_place(&it, str, 1);
+  ck_assert_int_eq(4, ava_string_iterator_access(&access, &it, tmpbuff));
+  ck_assert_int_eq(0, memcmp(large_string + 1, access, 4));
+}
+
+deftest(rope_flat_iterator_access) {
+  ava_string str = ava_string_of_shared_bytes(large_string, 128);
+  ava_string_iterator it;
+  char tmpbuff[9];
+  const char*restrict access;
+
+  ava_string_iterator_place(&it, str, 1);
+  ck_assert_int_eq(127, ava_string_iterator_access(&access, &it, tmpbuff));
+  ck_assert_int_eq(0, memcmp(large_string + 1, access, 127));
+}
