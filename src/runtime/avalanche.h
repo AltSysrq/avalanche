@@ -256,6 +256,11 @@ struct ava_rope_s {
 #define AVA_EMPTY_STRING ((ava_string) { .ascii9 = 1 })
 
 /**
+ * The absent string.
+ */
+#define AVA_ABSENT_STRING ((ava_string) { .ascii9 = 0 })
+
+/**
  * Produces an ava_string containing the given rope.
  */
 static inline ava_string ava_string_of_rope(const ava_rope*restrict rope) {
@@ -297,6 +302,14 @@ static inline ava_string ava_string_of_rope(const ava_rope*restrict rope) {
 #define AVA_ASCII9_STRING(text) ((ava_string) { \
       .ascii9 = _AVA_ASCII9_ENCODE_STR(text)    \
     })
+
+/**
+ * Returns whether the given string is considered present.
+ */
+static inline int ava_string_is_present(ava_string str) AVA_CONSTFUN;
+static inline int ava_string_is_present(ava_string str) {
+  return !!str.ascii9;
+}
 
 /**
  * Returns an ava_string whose contents are that of the given NUL-terminated
@@ -761,7 +774,7 @@ ava_lex_status ava_lex_lex(ava_lex_result* result, ava_lex_context* analyser);
  *
  * - Representation. The physical way a value is stored. Without knowledge of
  *   the particular type, the representation of a value is totally opaque.
- *   Certain types, such as ava_type_string, MAY make their representation
+ *   Certain types, such as ava_string_type, MAY make their representation
  *   public.
  *
  * An important thing to note is that values *always* preserve their native
@@ -849,7 +862,7 @@ typedef struct {
  * Defines an accelerator; must be located in a source file.
  */
 #define AVA_DEFINE_ACCELERATOR(name) \
-  const ava_accelerator name = { .size = sizeof(ava_accelerator); }
+  const ava_accelerator name = { .size = sizeof(ava_accelerator) }
 
 struct ava_value_type_s {
   /**
@@ -938,6 +951,7 @@ struct ava_value_type_s {
    * The implementation may not inspect the contents of *accel, and may not do
    * anything whatsoever with dfault except return it.
    *
+   * @see ava_noop_query_accelerator()
    * @param accel The accelerator being queried.
    * @param dfault The value to return if the type does not know about accel.
    * @return An accelerator-dependent value.
@@ -1043,6 +1057,13 @@ ava_representation ava_singleton_string_chunk_iterator(ava_value value);
  */
 ava_string ava_iterate_singleton_string_chunk(ava_representation* rep,
                                               ava_value value);
+
+/**
+ * Implementation for ava_value_type.query_accelerator() that always returns
+ * the default.
+ */
+const void* ava_noop_query_accelerator(const ava_accelerator* accel,
+                                       const void* dfault) AVA_CONSTFUN;
 
 /**
  * The type for string values, the universal type.

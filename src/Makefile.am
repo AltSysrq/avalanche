@@ -12,7 +12,8 @@ bin_PROGRAMS = bootstrap-avac
 libavart_la_SOURCES = \
 runtime/alloc.c \
 runtime/string.c \
-runtime/gen-lex.c
+runtime/gen-lex.c \
+runtime/value.c
 bootstrap_avac_SOURCES = bootstrap/main.c
 bootstrap_avac_LDADD = libavart.la
 
