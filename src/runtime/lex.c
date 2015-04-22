@@ -49,7 +49,7 @@ struct ava_lex_context_s {
   ava_lex_pos p;
 
   /* Misc state that needs to be passed around */
-  int has_seen_whitespace;
+  int is_independent;
   unsigned verbatim_depth;
   ava_string accum;
   char string_started_with;
@@ -172,6 +172,11 @@ static ava_lex_status ava_lex_error_illegal_chars(
   const ava_lex_pos* start,
   const ava_lex_pos* frag_start,
   ava_lex_context* lex);
+static ava_lex_status ava_lex_error_need_separator(
+  ava_lex_result* dst,
+  const ava_lex_pos* start,
+  const ava_lex_pos* frag_start,
+  ava_lex_context* lex);
 
 int ava_lex_token_type_is_simple(ava_lex_token_type type) {
   switch (type) {
@@ -214,7 +219,6 @@ ava_lex_context* ava_lex_new(ava_string str) {
   lex->buffer_off = lex->buffer_max = 0;
 
   lex->verbatim_depth = 0;
-  lex->has_seen_whitespace = 1;
 
   ava_string_iterator_place(&lex->it, str, 0);
 
@@ -324,6 +328,13 @@ static ava_lex_status ava_lex_put_eof(ava_lex_result* dst,
   return ava_ls_end_of_input;
 }
 
+static const unsigned long long is_independent_prefix[256/64] = {
+  0x00000101FFFFFFFF,
+  0x8800000108000000,
+  0x0000000000000000,
+  0x0000000000000000,
+};
+
 ava_lex_status ava_lex_lex(ava_lex_result* dst, ava_lex_context* lex) {
   ava_lex_context marker/*, ctxmarker not currently used by lexer */;
   ava_lex_pos start, frag_start;
@@ -353,18 +364,25 @@ ava_lex_status ava_lex_lex(ava_lex_result* dst, ava_lex_context* lex) {
     fun(&frag_start, lex);                                      \
     goto continue_loop;                                         \
   } while (0)
-#define DERROR(fun) do {                                \
+#define SET_ERROR(fun) do {                             \
     if (!status)                                        \
       status = fun(dst, &start, &frag_start, lex);      \
+  } while (0)
+#define DERROR(fun) do {                                \
+    SET_ERROR(fun);                                     \
     goto continue_loop;                                 \
   } while (0)
 #define ERROR(fun) do {                                 \
-    if (!status)                                        \
-      status = fun(dst, &start, &frag_start, lex);      \
+    SET_ERROR(fun);                                     \
     goto end;                                           \
   } while (0)
-#define SWS(is_whitespace) do {                 \
-    lex->has_seen_whitespace = is_whitespace;   \
+#define IND() do {                              \
+    if (!lex->is_independent)                   \
+      ERROR(ava_lex_error_need_separator);      \
+  } while (0)
+#define DIND() do {                             \
+    if (!lex->is_independent)                   \
+      SET_ERROR(ava_lex_error_need_separator);  \
   } while (0)
 
   lex->verbatim_depth = 0;
@@ -374,11 +392,7 @@ ava_lex_status ava_lex_lex(ava_lex_result* dst, ava_lex_context* lex) {
     General design notes:
 
     A logical token, at the point where an ACCEPT call occurs, extends from
-    start to lex->p, inclusive. Every ACCEPT call updates the
-    preceding-whitespace flag, except for token types which are sensitive to
-    it; their implementations are responsible for doing this themselves. (This
-    term is a bit of a misnomer, since it also applies at logical "start of
-    input" points, such as immediately following a left-parenthesis.)
+    start to lex->p, inclusive.
 
     IGNORED strings like whitespace re-set the is_new_token flag so that the
     next iteration of the loop will reset start to the new position, then cause
@@ -411,8 +425,13 @@ ava_lex_status ava_lex_lex(ava_lex_result* dst, ava_lex_context* lex) {
    */
 
   while (lex->p.index < lex->strlen) {
-    if (is_new_token)
+    if (is_new_token) {
+      unsigned prev = lex->prev_char & 0xFF;
+      lex->is_independent = !!(
+        is_independent_prefix[prev / 64] &
+        (1LL << (prev % 64)));
       start = lex->p;
+    }
     frag_start = lex->p;
     is_new_token = 0;
 
@@ -431,28 +450,29 @@ ava_lex_status ava_lex_lex(ava_lex_result* dst, ava_lex_context* lex) {
       VERBB = LEGALNL \ BS ;
       ILLEGAL = [^] \ LEGAL ;
 
-      <Ground> NS+              { SWS(0); ACCEPT(ava_lex_bareword); }
-      <Ground> WS+              { SWS(1); IGNORE(); }
-      <Ground> NL               { SWS(1); ACCEPT(ava_lex_newline); }
-      <Ground> BS WS* COM? NL   { SWS(1); IGNORE(); }
-      <Ground> BS WS+           { SWS(1); ACCEPT(ava_lex_newline); }
-      <Ground> COM              { SWS(1); IGNORE(); }
+      <Ground> NS+              { IND();  ACCEPT(ava_lex_bareword); }
+      <Ground> WS+              {         IGNORE(); }
+      <Ground> NL               {         ACCEPT(ava_lex_newline); }
+      <Ground> BS WS* COM? NL   {         IGNORE(); }
+      <Ground> BS WS+           { IND();  ACCEPT(ava_lex_newline); }
+      <Ground> COM              {         IGNORE(); }
       <Ground> "("              {         ACCEPT(ava_lex_left_paren); }
-      <Ground> ")"              { SWS(0); ACCEPT(ava_lex_right_paren); }
+      <Ground> ")"              {         ACCEPT(ava_lex_right_paren); }
       <Ground> "["              {         ACCEPT(ava_lex_left_bracket); }
-      <Ground> "]"              { SWS(0); ACCEPT(ava_lex_right_bracket); }
-      <Ground> "{"              {         ACCEPT(ava_lex_left_brace); }
-      <Ground> "}"              { SWS(0); ACCEPT(ava_lex_right_brace); }
+      <Ground> "]"              {         ACCEPT(ava_lex_right_bracket); }
+      <Ground> "{"              { IND();  ACCEPT(ava_lex_left_brace); }
+      <Ground> "}"              {         ACCEPT(ava_lex_right_brace); }
 
-      <Ground> SD => String     {         ACCUM(ava_lex_string_init); }
-      <String> SD => Ground     { SWS(0); ACCEPT(ava_lex_string_finish); }
+      <Ground> '"' => String    { DIND(); ACCUM(ava_lex_string_init); }
+      <Ground> '`' => String    {         ACCUM(ava_lex_string_init); }
+      <String> SD => Ground     {         ACCEPT(ava_lex_string_finish); }
       <String> STRINGB+         {         ACCUM(ava_lex_accum_verb); }
       <String> NL               {         ACCUM(ava_lex_accum_nl); }
       <String> BS ESCT          {         ACCUM(ava_lex_accum_esc); }
       <String> BS [^]           {         DERROR(ava_lex_error_backslash_sequence); }
       <String> BS               {         DERROR(ava_lex_error_backslash_at_eof); }
 
-      <Ground> BS "{" => Verb   {         ACCUM(ava_lex_verb_init); }
+      <Ground> BS "{" => Verb   { DIND(); ACCUM(ava_lex_verb_init); }
       <Verb>   BS "{"           { ++lex->verbatim_depth;
                                           ACCUM(ava_lex_accum_verb); }
       <Verb>   BS "}"           { if (--lex->verbatim_depth) {
@@ -469,11 +489,11 @@ ava_lex_status ava_lex_lex(ava_lex_result* dst, ava_lex_context* lex) {
       <Verb> BS                 {         ACCUM(ava_lex_accum_verb); }
       <Verb> NL                 {         ACCUM(ava_lex_accum_nl); }
 
-      <Ground> BS [^]           { SWS(1); ERROR(ava_lex_error_backslash_sequence); }
-      <Ground> BS               { SWS(1); ERROR(ava_lex_error_backslash_at_eof); }
+      <Ground> BS [^]           {         ERROR(ava_lex_error_backslash_sequence); }
+      <Ground> BS               {         ERROR(ava_lex_error_backslash_at_eof); }
 
-      <String,Verb> ILLEGAL+    { SWS(1); DERROR(ava_lex_error_illegal_chars); }
-      <Ground> ILLEGAL+         { SWS(1); ERROR(ava_lex_error_illegal_chars); }
+      <String,Verb> ILLEGAL+    {         DERROR(ava_lex_error_illegal_chars); }
+      <Ground> ILLEGAL+         {         ERROR(ava_lex_error_illegal_chars); }
      */
 
     continue_loop:;
@@ -524,8 +544,7 @@ static ava_lex_status ava_lex_left_paren(
   const ava_lex_pos* frag_start,
   ava_lex_context* lex
 ) {
-  int ws = lex->has_seen_whitespace;
-  lex->has_seen_whitespace = 1;
+  int ws = lex->is_independent;
 
   return ava_lex_put_token(
     dst,
@@ -549,8 +568,7 @@ static ava_lex_status ava_lex_left_bracket(
   const ava_lex_pos* frag_start,
   ava_lex_context* lex
 ) {
-  int ws = lex->has_seen_whitespace;
-  lex->has_seen_whitespace = 1;
+  int ws = lex->is_independent;
 
   return ava_lex_put_token(
     dst,
@@ -574,15 +592,8 @@ static ava_lex_status ava_lex_left_brace(
   const ava_lex_pos* frag_start,
   ava_lex_context* lex
 ) {
-  int ws = lex->has_seen_whitespace;
-  lex->has_seen_whitespace = 1;
-
-  if (!ws)
-    return ava_lex_put_error(
-      dst, start, &lex->p, "brace not preceded by whitespace");
-  else
-    return ava_lex_put_token(
-      dst, ava_ltt_begin_block, start, &lex->p, lex);
+  return ava_lex_put_token(
+    dst, ava_ltt_begin_block, start, &lex->p, lex);
 }
 
 static ava_lex_status ava_lex_right_brace(
@@ -767,4 +778,15 @@ static ava_lex_status ava_lex_error_illegal_chars(
   return ava_lex_put_error(dst, start, &lex->p,
                            "encountered %d illegal character%s: %s",
                            (unsigned)n, n > 1? "s": "", hex);
+}
+
+static ava_lex_status ava_lex_error_need_separator(
+  ava_lex_result* dst,
+  const ava_lex_pos* start,
+  const ava_lex_pos* frag_start,
+  ava_lex_context* lex
+) {
+  return ava_lex_put_error(
+    dst, start, &lex->p,
+    "token must be separated from previous by whitespace");
 }

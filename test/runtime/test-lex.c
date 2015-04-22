@@ -271,7 +271,7 @@ deftest(whitespace_set_after_physical_nl) {
 }
 
 deftest(whitespace_set_after_synthetic_nl) {
-  start("foo\\ ()");
+  start("foo \\ ()");
   lex(ava_ltt_bareword, "foo");
   lex(ava_ltt_newline, "\n");
   lex(ava_ltt_begin_substitution, "(");
@@ -294,7 +294,7 @@ deftest(simple_string) {
 }
 
 deftest(string_types) {
-  start("\"\"\"``\"``");
+  start("\"\" \"``\"``");
   lex(ava_ltt_astring, "");
   lex(ava_ltt_rstring, "");
   lex(ava_ltt_lstring, "");
@@ -394,7 +394,7 @@ deftest(verbatim_containing_lone_backslash) {
 deftest(verbatim_clears_whitespace) {
   start("\\{\\}()");
   lex(ava_ltt_verbatim, "");
-  lex(ava_ltt_begin_substitution, "(");
+  lex(ava_ltt_begin_name_subscript, "(");
   lex(ava_ltt_close_paren, ")");
   end();
 }
@@ -434,7 +434,7 @@ deftest(error_on_unterminated_verbatim) {
 }
 
 deftest(error_on_illegal_backslash_in_ground) {
-  start("foo\\bar");
+  start("foo\\b ar");
   lex(ava_ltt_bareword, "foo");
   error();
   lex(ava_ltt_bareword, "ar");
@@ -493,5 +493,49 @@ deftest(error_on_brace_not_preceded_by_whitespace) {
   error();
   lex(ava_ltt_bareword, "bar");
   lex(ava_ltt_close_brace, "}");
+  end();
+}
+
+deftest(error_on_synthetic_newline_not_preceded_by_whitespace) {
+  start("foo\\ bar");
+  lex(ava_ltt_bareword, "foo");
+  error();
+  lex(ava_ltt_bareword, "bar");
+  end();
+}
+
+deftest(error_on_nonindependent_bareword) {
+  start("\"\"foo");
+  lex(ava_ltt_astring, "");
+  error();
+  end();
+}
+
+deftest(error_on_nonindependent_astring) {
+  start("a\"\" b");
+  lex(ava_ltt_bareword, "a");
+  error();
+  lex(ava_ltt_bareword, "b");
+  end();
+}
+
+deftest(astring_has_attached_end) {
+  start("\"\"a");
+  lex(ava_ltt_astring, "");
+  error();
+  end();
+}
+
+deftest(rstring_has_independent_end) {
+  start("\"`a");
+  lex(ava_ltt_rstring, "");
+  lex(ava_ltt_bareword, "a");
+  end();
+}
+
+deftest(lstring_can_be_attached) {
+  start("a`b\"");
+  lex(ava_ltt_bareword, "a");
+  lex(ava_ltt_lstring, "b");
   end();
 }

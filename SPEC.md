@@ -59,51 +59,79 @@ Syntax I --- Tokenisation / Lexing
 ----------------------------------
 
 Avalanche uses a rather simple tokenisation scheme. Like Tcl, it is
-non-regular.
+non-regular, though to a lesser extent.
+
+In all contexts, the ASCII characters 0x00--0x08, 0x0B, 0x0C, 0x0E--0x1F, and
+0x7F are illegal; it is an error if they occur at any point in a string to be
+tokenised. All other 8-bit encoding units are legal.
 
 The following characters are considered whitespace: Space (0x20), horizontal
 tab (0x09).
 
 "Newline" refers to a Line-Feed character, a Carraige-Return immediately
 followed by a Line-Feed, or a lone Carraige-Return. All "Newlines" are
-implicitly normalised to a lone Line-Feed character.
+implicitly normalised to a lone Line-Feed character before any other kind of
+processing, as if the input originally used Line-Feed-only line endings
+exclusively.
+
+Tokens are classified as "attached" or "independent" based on the preceding
+character. The first token in the input is always independent. Otherwise, the
+token is attached unless the immediately preceding character is one of:
+
+- Whitpespace (0x20, 0x09)
+- Line-Feed or Carraige-Return (0x0A, 0x0D)
+- One of the following special characters: Left-Parenthesis; Left-Bracket;
+  Left-Brace; Back-Quote.
 
 The following characters are "special":
-```
-([{}])"`;\
-```
 
-The ASCII characters 0x00--0x08, 0x0B, 0x0C, 0x0E--0x1F, and 0x7F are illegal.
+- Left-Parenthesis: `(`
+- Right-Parenthesis: `)`
+- Left-Bracket: `[`
+- Right-Bracket: `]`
+- Left-Brace: `{`
+- Right-Brace: `}`
+- Semicolon: `;`
+- Double-Quote: `"`
+- Back-Quote: \`
+- Semicolon: `;`
+- Backslash: `\`
 
-All other characters are non-special.
+All legal non-Special, non-Whitespace, non-Newline characters are Word
+characters.
+
+A semicolon `;` begins a Comment. All characters from the Semicolon to the next
+Newline (or end-of-file) are discarded, not including the Newline itself.
+
+```
+  ; this is a comment
+  not-a-comment
+```
 
 Backslashes `\` are illegal in the base state, except in some combinations
 described below.
 
-Whitespace is discarded by the lexer, but does separate tokens, and is relevant
-immediately preceding certain token types. Tokens are considered "preceded by
-whitespace" if they are proceded by one or more actual Whitespace characters,
-or occur at the very beginning of a line.
+A Newline produces a Newline Token. A Backslash followed by any amount of
+Whitespace, a possible Comment, then a Newline suppresses the Newline Token
+that would result. A Backslash followed by one or more Whitespace characters
+itself results in a Newline Token otherwise. Such "synthetic" Newline Tokens
+must occur Independent.
 
-Any contiguous sequence of non-special characters is a Bareword Token. Certain
+```
+  logical line 1
+  logical line 2
+  logical line 3 \ ; comment
+  still logical line 3
+  logical line 4 \ logical line 5
+```
+
+Any contiguous sequence of Word characters is a Bareword Token. Certain
 contexts may place additional interpretation on the contents of Bareword
-Tokens.
+Tokens. Barewords may only occur in Independent context.
 
 ```
-  Bareword ::= {nonspecial}+
+  word 01234 +/=? <<- every token on this line is a Bareword
 ```
-
-A semicolon `;` begins a comment. All characters from the semicolon to the next
-Newline (or end-of-file) are discarded, not including the Newline itself.
-
-```
-  Comment ::= ;[^\n]*
-```
-
-A Newline produces a Newline Token. A backslash followed by a Newline or any
-whitespace character suppresses the next Newline Token that would occur, if no
-other tokens occur on that line. Otherwise, the blackslash itself acts as a
-Newline Token.
 
 The characters between, but not including, a double-quote and a back-quote
 (either on either side) form a String Literal Token. Within a String Literal,
@@ -120,31 +148,62 @@ with a double-quote is an A-String-Literal; beginning with a back-quote is an
 L-String-Literal; ending with a back-quote is an R-String-Literal; and
 beginning and ending with a back-quote is an LR-String-Literal.
 
+A-String-Literals and R-String-Literals must occur Independent.
+
 ```
-  string-escape ::= ([\\`"'abefnrtv]|x[0-9A-Fa-f]{2})
-  string-body ::= ([^\\"`]|\\{string-escape})*
-  A-String-Literal ::= "{string-body}"
-  L-String-Literal ::= `{string-body}"
-  R-String-Literal ::= "{string-body}`
-  LR-String-Literal ::= `{string-body}`
+  "simple string"
+  "strings can
+span lines
+like this"
+  `lr string`
+
+  "backquotes emulate`$string`interpolation"
+
+  "\e[7minverted text\e[0m"
+  "explicit\nnewline"
+  "contains quotes and backslash: \"\`\\"
+  "hex escape \x5A\x5b\x00"
 ```
 
-A left-parenthesis `(` is interpreted as a Begin-Substitution Token if it is
-preceded by whitespace, and as a Begin-Name-Subscript Token otherwise. A
-close-parenthesis `)` is a Close-Paren Token.
+A Left-Parenthesis `(` is interpreted as a Begin-Substitution Token if it is
+Independent, and as a Begin-Name-Subscript Token otherwise. A Right-Parenthesis
+`)` is a Close-Paren Token.
 
-A left-bracket `[` is interpreted as a Begin-Semiliteral Token if it is
-preceded by whitespace, and as a Begin-Numeric-Subscript Token otherwise. A
-close-bracket `]` is a Close-Bracket Token.
+```
+  $dict($key)           ; Name-Subscript
+  foo (bar baz)         ; Substitution
+```
 
-A left-brace `{` is interpreted as a Begin-Block Token if it is preceded by
-whitespace, and is an error otherwise. A close-brace '}' is a Close-Brace
-Token.
+A Left-Bracket `[` is interpreted as a Begin-Semiliteral Token if it is
+Independent, and as a Begin-Numeric-Subscript Token otherwise. A Right-Bracket
+`]` is a Close-Bracket Token.
 
-A backslash followed by a left brace `{` begins a Verbatim Token. The token
-terminates upon encountering a _matching_ brace `}` also preceded by a
-backslash. Only brace characters which are also preceded by a backslash are
+```
+  $list[$offset]        ; Numeric-Subscript
+  [foo bar baz]         ; Semiliteral
+```
+
+A Left-Brace `{` is interpreted as a Begin-Block Token if it is Independent,
+and is an error otherwise. A Right-Brace '}' is a Close-Brace Token.
+
+```
+  map { foo bar }       ; Block
+```
+
+A Backslash followed by a Left-Brace `{` begins a Verbatim Token. The token
+terminates upon encountering a _matching_ Right-Brace `}` also preceded by a
+Backslash. Only brace characters which are also preceded by a Backslash are
 counted for matching. Escape sequences work the same as in String Literals,
-except that the leader is a backslash followed by a semicolon. All characters
-between the outermost braces not part of a backslash-semicolon escape sequence
-are preserved verbatim.
+except that the leader is a Backslash followed by a Semicolon. All characters
+between the outermost braces not part of a Backslash-Semicolon escape sequence
+are preserved verbatim. Verbatim tokens must occur Independent.
+
+```
+  \{verbatim\}
+  \{nested \{ver\{at\}im\}\}
+  \{normal {braces are not counted\}
+  \{not actual \e\s\c\a\p\e\ sequence}
+  \{newline: \;n\}
+  \{may
+  span lines\}
+```
