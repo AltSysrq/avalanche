@@ -173,6 +173,36 @@ static ava_lex_status ava_lex_error_illegal_chars(
   const ava_lex_pos* frag_start,
   ava_lex_context* lex);
 
+int ava_lex_token_type_is_simple(ava_lex_token_type type) {
+  switch (type) {
+  case ava_ltt_bareword:
+  case ava_ltt_astring:
+  case ava_ltt_verbatim:
+    return 1;
+
+  case ava_ltt_none:
+    abort();
+
+  default:
+    return 0;
+  }
+}
+
+int ava_lex_token_type_is_close_paren(ava_lex_token_type type) {
+  switch (type) {
+  case ava_ltt_close_paren:
+  case ava_ltt_close_bracket:
+  case ava_ltt_close_brace:
+    return 1;
+
+  case ava_ltt_none:
+    abort();
+
+  default:
+    return 0;
+  }
+}
+
 ava_lex_context* ava_lex_new(ava_string str) {
   ava_lex_context* lex = AVA_NEW(ava_lex_context);
   lex->str = str;
