@@ -802,7 +802,7 @@ typedef union {
   signed long long      slong;
   const void*restrict   ptr;
   ava_string            str;
-} ava_representation;
+} ava_datum;
 
 /**
  * Defines the type of a value and how its representation is interpreted.
@@ -829,7 +829,7 @@ struct ava_value_s {
   /**
    * The one or two representations of this value, as controlled by the type.
    */
-  ava_representation r1, r2;
+  ava_datum r1, r2;
   /**
    * The dynamic type of this value.
    */
@@ -917,7 +917,7 @@ struct ava_value_type_s {
    * @param value The value which is to be converted to a string in chunks.
    * @return The initial state of the iterator.
    */
-  ava_representation (*string_chunk_iterator)(ava_value value);
+  ava_datum (*string_chunk_iterator)(ava_value value);
   /**
    * Continues iteration over the chunks of a value.
    *
@@ -930,7 +930,7 @@ struct ava_value_type_s {
    * @return The next chunk in the string, or an absent string to indicate that
    * iteration has completed.
    */
-  ava_string (*iterate_string_chunk)(ava_representation*restrict it,
+  ava_string (*iterate_string_chunk)(ava_datum*restrict it,
                                      ava_value value);
 
   /**
@@ -975,7 +975,7 @@ static inline ava_string ava_to_string(ava_value value) {
  *
  * @see ava_value_type.string_chunk_iterator()
  */
-static inline ava_representation ava_string_chunk_iterator(ava_value value) {
+static inline ava_datum ava_string_chunk_iterator(ava_value value) {
   return (*value.type->string_chunk_iterator)(value);
 }
 
@@ -985,7 +985,7 @@ static inline ava_representation ava_string_chunk_iterator(ava_value value) {
  * @see ava_value_type.iterate_string_chunk()
  */
 static inline ava_string ava_iterate_string_chunk(
-  ava_representation*restrict it, ava_value value
+  ava_datum*restrict it, ava_value value
 ) {
   return (*value.type->iterate_string_chunk)(it, value);
 }
@@ -1046,7 +1046,7 @@ ava_string ava_string_of_chunk_iterator(ava_value value) AVA_PURE;
  * ava_value_type.string_chunk_iterator() for types that only implement
  * to_string() naturally.
  */
-ava_representation ava_singleton_string_chunk_iterator(ava_value value);
+ava_datum ava_singleton_string_chunk_iterator(ava_value value);
 
 /**
  * Iterates a value as a single string chunk.
@@ -1055,7 +1055,7 @@ ava_representation ava_singleton_string_chunk_iterator(ava_value value);
  * for types that only implement to_string() naturally. It must be used with
  * ava_singleton_string_chunk_iterator().
  */
-ava_string ava_iterate_singleton_string_chunk(ava_representation* rep,
+ava_string ava_iterate_singleton_string_chunk(ava_datum* rep,
                                               ava_value value);
 
 /**

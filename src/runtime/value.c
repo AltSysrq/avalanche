@@ -44,7 +44,7 @@ ava_string ava_string_of_chunk_iterator(ava_value value) {
   unsigned height[AVA_MAX_ROPE_DEPTH];
   unsigned count = 0;
   ava_string chunk;
-  ava_representation iterator;
+  ava_datum iterator;
 
   iterator = ava_string_chunk_iterator(value);
 
@@ -75,11 +75,11 @@ ava_string ava_string_of_chunk_iterator(ava_value value) {
   return accum[0];
 }
 
-ava_representation ava_singleton_string_chunk_iterator(ava_value value) {
-  return (ava_representation) { .str = ava_to_string(value) };
+ava_datum ava_singleton_string_chunk_iterator(ava_value value) {
+  return (ava_datum) { .str = ava_to_string(value) };
 }
 
-ava_string ava_iterate_singleton_string_chunk(ava_representation*restrict it,
+ava_string ava_iterate_singleton_string_chunk(ava_datum*restrict it,
                                               ava_value value) {
   ava_string ret = it->str;
   it->str = AVA_ABSENT_STRING;

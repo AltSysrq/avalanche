@@ -39,12 +39,12 @@ defsuite(value);
  * Chunk iterators store the number of characters left; each chunk contains one
  * character.
  */
-static ava_representation xn_string_chunk_iterator(ava_value value) {
+static ava_datum xn_string_chunk_iterator(ava_value value) {
   return value.r1;
 }
 
-static ava_string xn_iterate_string_chunk(ava_representation*restrict it,
-                                    ava_value value) {
+static ava_string xn_iterate_string_chunk(ava_datum*restrict it,
+                                          ava_value value) {
   if (it->ulong > 0) {
     --it->ulong;
     return ava_string_of_char(it->ulong);
@@ -116,7 +116,7 @@ deftest(singleton_chunk_iterator) {
   AVA_STATIC_STRING(str, "avalanches");
   ava_string accum = AVA_EMPTY_STRING, chunk;
   ava_value val = ava_value_of_string(str);
-  ava_representation iterator;
+  ava_datum iterator;
 
   iterator = ava_string_chunk_iterator(val);
   while (ava_string_is_present(
