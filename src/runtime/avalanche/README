@@ -1,0 +1,3 @@
+Headers in this directory are considered fragments of avalanche.h; they only
+exist separately for ease of management and organisation. Do not include them
+directly; just include avalanche.h.
