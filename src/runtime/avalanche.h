@@ -28,14 +28,19 @@
 #ifndef AVA_AVALANCHE_H_
 #define AVA_AVALANCHE_H_
 
+#include <stdlib.h>
+#include <setjmp.h>
+
 #if defined(__GNUC__) || defined(__clang__)
 #define AVA_MALLOC __attribute__((__malloc__))
 #define AVA_PURE __attribute__((__pure__))
 #define AVA_CONSTFUN __attribute__((__const__))
+#define AVA_NORETURN __attribute__((__noreturn__))
 #else
 #define AVA_MALLOC
 #define AVA_PURE
 #define AVA_CONSTFUN
+#define AVA_NORETURN
 #endif
 
 #ifdef __cplusplus
@@ -54,6 +59,7 @@ AVA_BEGIN_DECLS
 #include "avalanche/string.h"
 #include "avalanche/lex.h"
 #include "avalanche/value.h"
+#include "avalanche/function.h"
 
 #undef AVA_IN_AVALANCHE_H
 

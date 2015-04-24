@@ -35,6 +35,7 @@
 
 #include <check.h>
 #include <stdlib.h>
+#include <signal.h>
 
 extern const char* suite_names[1024];
 extern void (*suite_impls[1024])(Suite*);
@@ -42,6 +43,7 @@ extern unsigned suite_num;
 
 static const char* test_names[1024];
 static TFun test_impls[1024];
+static int test_signals[1024];
 static unsigned test_num;
 
 static void (*setups[256])(void);
@@ -59,7 +61,11 @@ static inline void run_suite(Suite* suite) {
     kase = tcase_create(test_names[test_num-i-1]);
     for (j = 0; j < setup_num && j < teardown_num; ++j)
       tcase_add_checked_fixture(kase, setups[j], teardowns[j]);
-    tcase_add_test(kase, test_impls[test_num-i-1]);
+    if (!test_signals[test_num-i-1])
+      tcase_add_test(kase, test_impls[test_num-i-1]);
+    else
+      tcase_add_test_raise_signal(
+        kase, test_impls[test_num-i-1], test_signals[test_num-i-1]);
     suite_add_tcase(suite, kase);
   }
 }
@@ -74,7 +80,7 @@ static inline void run_suite(Suite* suite) {
   }                                             \
   void dummy()
 
-#define deftest(name)                           \
+#define deftest_signal(name,sig)                \
   static void _register_##name(void)            \
     __attribute__((constructor));               \
   static void name##_impl(void);                \
@@ -85,9 +91,11 @@ static inline void run_suite(Suite* suite) {
   static void _register_##name(void) {          \
     test_names[test_num] = #name;               \
     test_impls[test_num] = name;                \
+    test_signals[test_num] = sig;               \
     ++test_num;                                 \
   }                                             \
   static void name##_impl(void)
+#define deftest(name) deftest_signal(name, 0)
 
 #define GLUE(a,b) _GLUE(a,b)
 #define _GLUE(a,b) a##b
