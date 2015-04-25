@@ -159,3 +159,9 @@ deftest(string_imbue_stringifies_other_types) {
   ck_assert_ptr_eq(NULL, new.r2.ptr);
   ck_assert_ptr_eq(&ava_string_type, new.type);
 }
+
+deftest(weight_of_string_is_its_length) {
+  ava_value value = ava_value_of_string(AVA_ASCII9_STRING("avalanche"));
+
+  ck_assert_int_eq(9, ava_value_weight(value));
+}

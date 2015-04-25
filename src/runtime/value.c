@@ -96,6 +96,10 @@ static ava_string ava_string_type_to_string(ava_value value) {
   return value.r1.str;
 }
 
+static size_t ava_string_type_value_weight(ava_value value) {
+  return ava_string_length(value.r1.str);
+}
+
 const ava_value_type ava_string_type = {
   .size = sizeof(ava_value_type),
   .name = "string",
@@ -103,6 +107,7 @@ const ava_value_type ava_string_type = {
   .string_chunk_iterator = ava_singleton_string_chunk_iterator,
   .iterate_string_chunk = ava_iterate_singleton_string_chunk,
   .query_accelerator  = ava_noop_query_accelerator,
+  .value_weight = ava_string_type_value_weight,
 };
 
 /* The string representation will become a bit more interesting once we have

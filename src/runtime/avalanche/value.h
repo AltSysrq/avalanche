@@ -244,6 +244,25 @@ struct ava_value_type_s {
    */
   const void* (*query_accelerator)(const ava_accelerator* accel,
                                    const void* dfault);
+
+  /**
+   * Queries the "cost" of maintaining a reference to the given value.
+   *
+   * Do not call this function directly; use ava_value_weight() instead.
+   *
+   * The weight of a value approximates the cost of incorrectly maintaining a
+   * reference to the value; this is considered to be in "bytes" for the
+   * purposes of callibration.
+   *
+   * Value weights are generally used to evaluate between the options of
+   * copying a larger data structure (so that any logically dead references can
+   * be garbage collected) or marking a value as deleted without removing it
+   * (which could cause a logically unreachable reference to remain).
+   *
+   * Weights are not necessarily constant for a value; internal operations may
+   * make the value become lighter or heavier dynamically.
+   */
+  size_t (*value_weight)(ava_value);
 };
 
 /**
@@ -315,6 +334,15 @@ static inline const void* ava_query_accelerator(
 ) {
   return ava___invoke_query_accelerator_const(
     value.type->query_accelerator, accel, dfault);
+}
+
+/**
+ * Returns the approximate "weight" of the given value.
+ *
+ * @see ava_value_type.value_weight()
+ */
+static inline size_t ava_value_weight(ava_value value) {
+  return (*value.type->value_weight)(value);
 }
 
 /**
