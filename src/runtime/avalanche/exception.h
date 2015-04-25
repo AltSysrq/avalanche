@@ -243,6 +243,19 @@ extern const ava_exception_type ava_user_exception_type;
  */
 extern const ava_exception_type ava_error_exception_type;
 /**
+ * Standard exception type for string format errors.
+ *
+ * String format errors are the result of attempting to assign an
+ * interpretation to a string which cannot be interpreted that way. (Eg,
+ * performing integer arithmetic on the string "foo".)
+ *
+ * Standard practise is to either immediately convert them to user exceptions
+ * or to let them bubble the whole way up the stack.
+ *
+ * The format is simply an explanatory message.
+ */
+extern const ava_exception_type ava_format_exception_type;
+/**
  * Exception type for errors internal to the runtime that are not fatal to the
  * process.
  *
