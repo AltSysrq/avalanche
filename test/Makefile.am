@@ -5,7 +5,7 @@ TESTS = runtime/test-string.t runtime/test-lex.t \
 runtime/test-value.t runtime/test-function.t
 
 EXTRA_CFLAGS =
-AM_CFLAGS = $(CHECK_CFLAGS) -I../src $(EXTRA_CFLAGS)
+AM_CFLAGS = $(CHECK_CFLAGS) -I../src $(EXTRA_CFLAGS) -funwind-tables
 AM_LDFLAGS = $(CHECK_LIBS) ../src/libavart.la
 
 check_PROGRAMS = $(TESTS)

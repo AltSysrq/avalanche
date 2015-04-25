@@ -48,7 +48,6 @@ typedef struct ava_strand_s ava_strand;
  * External code should treat this enumeration as open.
  */
 typedef enum {
-  ava_set_frame,
   ava_set_exception_handler,
 } ava_stack_element_type;
 
@@ -76,26 +75,6 @@ struct ava_stack_element_s {
 };
 
 /**
- * Tracks the current stack trace of the strand's call chain.
- *
- * Conventionally, a function which wishes to maintain this will start with an
- * AVA_PUSH_FRAME() call, and will update the line numbers with
- * AVA_UPDATE_FRAME().
- */
-typedef struct {
-  ava_stack_element header;
-
-  /**
-   * The source file containing the code in question.
-   */
-  const char* filename;
-  /**
-   * The line number of the code in question.
-   */
-  unsigned line_number;
-} ava_stack_frame;
-
-/**
  * Used by identity to describe an exception type. These usually are statically
  * allocated, but may be allocated otherwise for, eg, lexical exception
  * handling.
@@ -112,6 +91,37 @@ typedef struct {
    */
   const char* uncaught_description;
 } ava_exception_type;
+
+/**
+ * A list of stack frames at which an exception occurred, for debugging
+ * purposes.
+ */
+typedef struct ava_stack_trace_s ava_stack_trace;
+struct ava_stack_trace_s {
+  /**
+   * The "type" of function of this frame, based on the name mangling (or lack
+   * thereof) in the function name.
+   */
+  const char* function_type;
+  /**
+   * The demangled function name of this frame.
+   */
+  char in_function[256];
+
+  /**
+   * The position of the instruction pointer in this frame.
+   */
+  const void* ip;
+  /**
+   * The offset of ip from the start of the function.
+   */
+  size_t ip_offset;
+
+  /**
+   * The next frame *down* the stack, or NULL if this is the final callee.
+   */
+  ava_stack_trace* next;
+};
 
 /**
  * Stores information on a level of exception handling.
@@ -138,7 +148,7 @@ typedef struct {
    * direct callee of the catcher; ava_next_frame(stack_trace->header.next) is
    * the callee's callee, and so on.
    */
-  const ava_stack_frame*restrict stack_trace;
+  ava_stack_trace* stack_trace;
 
   /**
    * Implementation detail: Executions are implemented by setjmp()ing into this
@@ -164,46 +174,6 @@ typedef ava_value (*ava_function)(
   ava_strand* strand,
   ava_stack_element*restrict context);
 
-#if !AVA_SUPPRESS_STACK_TRACES
-/**
- * Pushes onto stack (which is overwritten) an automatically-allocated stack
- * frame indicating the current file and line number.
- *
- * If AVA_SUPPRESS_STACK_TRACES is defined to 1, this becomes a noop.
- */
-#define AVA_PUSH_FRAME(stack)                   \
-  ava_stack_frame _ava_stack_frame = {          \
-    .header = {                                 \
-      .type = ava_set_frame,                    \
-      .next = (stack),                          \
-    },                                          \
-    .filename = __FILE__,                       \
-    .line_number = __LINE__                     \
-  };                                            \
-  (stack) = &_ava_stack_frame.header
-
-#if !AVA_INACCURATE_STACK_TRACE_LINE_NUMBERS
-/**
- * Updates the stack frame produced by AVA_PUSH_FRAME() for the current line
- * number.
- *
- * If either AVA_SUPPRESS_STACK_TRACES or
- * AVA_INACCURATE_STACK_TRACE_LINE_NUMBERS is defined to 1, this becomes a
- * noop.
- */
-#define AVA_UPDATE_FRAME()                      \
-  (_ava_stack_frame.line_number = __LINE__)
-#else
-#define AVA_UPDATE_FRAME() (0)
-#endif
-
-#else /* AVA_SUPPRESS_STACK_TRACES */
-
-#define AVA_PUSH_FRAME(stack)
-#define AVA_UPDATE_FRAME() (0)
-
-#endif /* !AVA_SUPPRESS_STACK_TRACES */
-
 /**
  * This is an internal function.
  *
@@ -223,13 +193,14 @@ jmp_buf* ava_set_handler(ava_stack_exception_handler*restrict dst,
  * @param type The exception type being thrown.
  * @param value The value being thrown.
  * @param stack The stack to search for exception handlers.
- * @param downward_trace A heap-allocated series of stack frames as in
- * ava_stack_exception_handler::stack_trace. Usually NULL, indicating that this
- * is the original throw point.
+ * @param trace A heap-allocated series of stack frames as in
+ * ava_stack_exception_handler.stack_trace. Usually NULL, indicating that this
+ * is the original throw point. If non-NULL, this value will be used as the
+ * stack trace instead of the current trace.
  */
 void ava_throw(const ava_exception_type* type, ava_value value,
                ava_stack_element*restrict stack,
-               const ava_stack_frame*restrict downward_trace) AVA_NORETURN;
+               ava_stack_trace* trace) AVA_NORETURN;
 /**
  * Convenience for ava_throw(handler->exception_type, handler->value,
  *                           handler->header.next, handler->stack_trace);

@@ -30,24 +30,30 @@
 #define AVA__INTERNAL_INCLUDE 1
 #include "runtime/avalanche/function.h"
 
+#if defined(__GNUC__) || defined(__clang__)
+#define NOINLINE __attribute__((__noinline__))
+#else
+#define NOINLINE
+#endif
+
 defsuite(function);
+
+static void throw0(ava_stack_element* stack, ava_value value) NOINLINE;
+static void throw1(ava_stack_element* stack, ava_value value) NOINLINE;
+static void rethrow0(ava_stack_element* stack, ava_value value) NOINLINE;
 
 static void throw0(ava_stack_element* stack,
                    ava_value value) {
-  AVA_PUSH_FRAME(stack);
   ava_throw(&ava_user_exception_type, value, stack, NULL);
 }
 
 static void throw1(ava_stack_element* stack,
                    ava_value value) {
-  AVA_PUSH_FRAME(stack);
   throw0(stack, value);
 }
 
 static void rethrow0(ava_stack_element* stack,
                      ava_value value) {
-  AVA_PUSH_FRAME(stack);
-
   ava_stack_exception_handler handler;
   ava_try (handler, stack) {
     throw1(&handler.header, value);
@@ -63,8 +69,6 @@ deftest_signal(uncaught_exception, SIGABRT) {
   ava_stack_element* stack = NULL;
   ava_value value = ava_value_of_string(ava_string_of_cstring("hello world"));
 
-  AVA_PUSH_FRAME(stack);
-  AVA_UPDATE_FRAME();
   throw1(stack, value);
 }
 
@@ -72,11 +76,8 @@ deftest(caught_exception) {
   ava_stack_element* stack = NULL;
   ava_value value = ava_value_of_string(ava_string_of_cstring("hello world"));
 
-  AVA_PUSH_FRAME(stack);
-
   ava_stack_exception_handler handler;
   ava_try (handler, stack) {
-    AVA_UPDATE_FRAME();
     throw1(&handler.header, value);
     ck_abort_msg("Exception not thrown");
   } ava_catch (handler, ava_interrupt_exception_type) {
@@ -94,11 +95,8 @@ deftest(rethrow) {
   ava_stack_element* stack = NULL;
   ava_value value = ava_value_of_string(ava_string_of_cstring("hello world"));
 
-  AVA_PUSH_FRAME(stack);
-
   ava_stack_exception_handler handler;
   ava_try (handler, stack) {
-    AVA_UPDATE_FRAME();
     rethrow0(&handler.header, value);
     ck_abort_msg("Exception not thrown");
   } ava_catch (handler, ava_interrupt_exception_type) {

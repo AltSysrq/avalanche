@@ -29,13 +29,50 @@
 #include <config.h>
 #endif
 
+#define UNW_LOCAL_ONLY
+
 #include <stdio.h>
 #include <setjmp.h>
+#include <string.h>
+
+#include <libunwind.h>
 
 #define AVA__INTERNAL_INCLUDE 1
 #include "avalanche/alloc.h"
 #include "avalanche/function.h"
 #include "bsd.h"
+
+ava_stack_trace* ava_generate_stack_trace(void) {
+  unw_context_t uc;
+  unw_cursor_t cursor;
+  unw_word_t ip, ip_off;
+
+  ava_stack_trace* trace = NULL, * new;
+
+  unw_getcontext(&uc);
+  unw_init_local(&cursor, &uc);
+  while (unw_step(&cursor) > 0) {
+    new = AVA_NEW(ava_stack_trace);
+
+    if (0 == unw_get_reg(&cursor, UNW_REG_IP, &ip))
+      new->ip = (const void*)ip;
+
+    if (unw_get_proc_name(&cursor, new->in_function,
+                          sizeof(new->in_function),
+                          &ip_off) < 0) {
+      memcpy(new->in_function, "<unknown>", sizeof("<unknown>"));
+      new->function_type = "???";
+    } else {
+      new->function_type = "C";
+      new->ip_offset = ip_off;
+    }
+
+    new->next = trace;
+    trace = new;
+  }
+
+  return trace;
+}
 
 jmp_buf* ava_set_handler(ava_stack_exception_handler*restrict dst,
                          ava_stack_element* restrict tos) {
@@ -46,18 +83,12 @@ jmp_buf* ava_set_handler(ava_stack_exception_handler*restrict dst,
 
 void ava_throw(const ava_exception_type* type, ava_value value,
                ava_stack_element*restrict stack,
-               const ava_stack_frame*restrict trace) {
+               ava_stack_trace* trace) {
+  if (!trace)
+    trace = ava_generate_stack_trace();
+
   while (stack) {
     switch (stack->type) {
-    case ava_set_frame: {
-      ava_stack_frame* frame = ava_clone(
-        stack, sizeof(ava_stack_frame));
-      frame->header.next = (ava_stack_element*)trace;
-      trace = frame;
-
-      stack = stack->next;
-    } break;
-
     case ava_set_exception_handler: {
       ava_stack_exception_handler*restrict handler =
         (ava_stack_exception_handler*restrict)stack;
@@ -74,8 +105,9 @@ void ava_throw(const ava_exception_type* type, ava_value value,
         type->uncaught_description,
         ava_string_to_cstring(ava_to_string(value)));
   while (trace) {
-    warnx("\tat %s:%d", trace->filename, trace->line_number);
-    trace = (const ava_stack_frame*restrict)trace->header.next;
+    warnx("\tat %3s %s + 0x%x [%p]", trace->function_type, trace->in_function,
+          (int)trace->ip_offset, trace->ip);
+    trace = trace->next;
   }
 
   abort();
