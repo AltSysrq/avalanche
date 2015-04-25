@@ -36,45 +36,6 @@
 #include "value.h"
 
 /**
- * Stores contextual state private to the current strand of execution.
- *
- * A strand is simply a contiguous set of Avalanche-aware stack frames.
- */
-typedef struct ava_strand_s ava_strand;
-
-/**
- * Defines the possible types of stack elements.
- *
- * External code should treat this enumeration as open.
- */
-typedef enum {
-  ava_set_exception_handler,
-} ava_stack_element_type;
-
-/**
- * Every Avalanche-aware function is given a linked stack of stack elements,
- * which are typically allocated on the C stack.
- *
- * These elements are variously used for generating stack traces, exception
- * handling, etc.
- *
- * Actual data is stored in other structs which have an ava_stack_element as
- * their first member.
- */
-typedef struct ava_stack_element_s ava_stack_element;
-struct ava_stack_element_s {
-  /**
-   * The type of this element.
-   */
-  ava_stack_element_type type;
-  /**
-   * The next element above this element, or NULL if there are no more
-   * elements.
-   */
-  ava_stack_element*restrict next;
-};
-
-/**
  * Used by identity to describe an exception type. These usually are statically
  * allocated, but may be allocated otherwise for, eg, lexical exception
  * handling.
@@ -131,9 +92,8 @@ struct ava_stack_trace_s {
  * When a handler catches an exception, the public fields of this struct are
  * populated with the exception information.
  */
-typedef struct {
-  ava_stack_element header;
-
+typedef struct ava_exception_handler_s ava_exception_handler;
+struct ava_exception_handler_s {
   /**
    * After an exception has been caught, the type of exception that was caught.
    */
@@ -145,7 +105,7 @@ typedef struct {
   /**
    * After an exception has been caught, the (heap-allocated) stack trace
    * between the throw point and the catch point. *stack_trace indicates the
-   * direct callee of the catcher; ava_next_frame(stack_trace->header.next) is
+   * direct callee of the catcher; ava_next_frame(stack_trace->next) is
    * the callee's callee, and so on.
    */
   ava_stack_trace* stack_trace;
@@ -155,57 +115,51 @@ typedef struct {
    * buffer, then longjmp()ing back up the stack on a throw.
    */
   jmp_buf resume_point;
-} ava_stack_exception_handler;
 
-/**
- * Type for standard avalanche functions.
- *
- * @argc The number of arguments passed to the function. Always at least 1,
- * since it is impossible to call a function with zero arguments.
- * @param argv An array of values passed as arguments, of length argc. The
- * array is only guaranteed to be valid until the function returns.
- * @param strand The strand context of the function.
- * @param context The stack context of the function.
- * @return The function's return value.
- */
-typedef ava_value (*ava_function)(
-  unsigned argc,
-  const ava_value*restrict argv,
-  ava_strand* strand,
-  ava_stack_element*restrict context);
+  /**
+   * The next handler in the context's exception handler context.
+   */
+  ava_exception_handler* next;
+};
 
 /**
  * This is an internal function.
  *
  * *dst is initialised to be a valid exception handler element, except that the
- * jump buffer is not populated. Returns a pointer to the jump buffer, so that
+ * jump buffer is not populated, and the handler is pushed to the top of the
+ * stack for the current context. Returns a pointer to the jump buffer, so that
  * ava_try() can setjmp() it in the same expression.
  *
  * @param dst The handler to initialise.
- * @param tos The current top of stack.
  */
-jmp_buf* ava_set_handler(ava_stack_exception_handler*restrict dst,
-                         ava_stack_element*restrict tos);
+jmp_buf* ava_push_handler(ava_exception_handler*restrict dst);
+/**
+ * This is an internal function.
+ *
+ * If do_pop is non-zero, pops a handler from the top of the exception handler
+ * stack for the current context.
+ *
+ * @return do_pop
+ */
+int ava_pop_handler(int do_pop);
 /**
  * Throws an exception of the given type and with the given value up the stack,
  * to the first available handler.
  *
  * @param type The exception type being thrown.
  * @param value The value being thrown.
- * @param stack The stack to search for exception handlers.
  * @param trace A heap-allocated series of stack frames as in
- * ava_stack_exception_handler.stack_trace. Usually NULL, indicating that this
+ * ava_exception_handler.stack_trace. Usually NULL, indicating that this
  * is the original throw point. If non-NULL, this value will be used as the
  * stack trace instead of the current trace.
  */
 void ava_throw(const ava_exception_type* type, ava_value value,
-               ava_stack_element*restrict stack,
                ava_stack_trace* trace) AVA_NORETURN;
 /**
  * Convenience for ava_throw(handler->exception_type, handler->value,
- *                           handler->header.next, handler->stack_trace);
+ *                           handler->next, handler->stack_trace);
  */
-void ava_rethrow(ava_stack_exception_handler*restrict handler)
+void ava_rethrow(ava_exception_handler*restrict handler)
 AVA_NORETURN;
 
 /**
@@ -214,9 +168,9 @@ AVA_NORETURN;
  *
  * Typical usage:
  *
- *   ava_stack_exception_handler handler
- *   ava_try (handler, stack) {
- *     call_some_functions(&handler.header);
+ *   ava_exception_handler handler
+ *   ava_try (handler) {
+ *     call_some_functions();
  *   } ava_catch (handler, ava_user_exception_type) {
  *     handle_exception();
  *   } ava_catch_all {
@@ -226,13 +180,23 @@ AVA_NORETURN;
  * Note that failing to have an ava_catch_all block that rethrows any handled
  * exception will *cause exceptions to be silently swallowed*.
  *
+ * Semantics: ava_try initialises the given handler and pushes it onto the
+ * exception handler stack of the current context. When the try body completes
+ * or an exception is thrown within it, the handler is popped off the exception
+ * handler stack. In the case of an exception, control passes to the catch
+ * blocks in sequence, and control falls into the first whose type matches the
+ * exception type that was caught.
+ *
  * @param handler The exception handler struct to initialise and which will
  * receive any thrown data. Within the try block, this should be used as the
  * top-of-stack instead of stack.
  * @param stack The top-of-stack outside the try block.
  */
-#define ava_try(handler, stack)                         \
-  if (!setjmp(*ava_set_handler(&(handler), (stack))))
+#define ava_try(handler)                                        \
+  if (!ava_pop_handler(setjmp(*ava_push_handler(&(handler)))))  \
+    for (unsigned AVA_GLUE(i,__LINE__) = 0;                     \
+         AVA_GLUE(i,__LINE__) < 1;                              \
+         ava_pop_handler(++AVA_GLUE(i,__LINE__)))
 /**
  * Handles a single exception type.
  *

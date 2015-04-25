@@ -25,24 +25,35 @@
  * (INCLUDING NEGLIGENCE OR OTHERWISE) ARISING IN ANY WAY OUT OF THE USE OF
  * THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
  */
-#ifndef AVA_AVALANCHE_H_
-#define AVA_AVALANCHE_H_
+#ifndef AVA__INTERNAL_INCLUDE
+#error "Don't include avalanche/context.h directly; just include avalanche.h"
+#endif
 
-#define AVA__INTERNAL_INCLUDE 1
+#ifndef AVA_RUNTIME_CONTEXT_H_
+#define AVA_RUNTIME_CONTEXT_H_
 
-#include "avalanche/defs.h"
+#include "value.h"
 
-AVA_BEGIN_DECLS
+/**
+ * Executes (*f)(arg) in a fresh Avalanche context.
+ *
+ * A context tracks data such as the exception handling stack. Every thread is
+ * associated with a current context, and every context is bound to at most one
+ * thread.
+ *
+ * Exceptions cannot cross context boundaries; if (*f) throws, the process will
+ * abort.
+ *
+ * When this function is entered, the current context (if any) is saved, and
+ * the context is switched to a fresh one to execute f. When f returns, the new
+ * context is destroyed and the old one restored.
+ *
+ * There currently isn't much reason to layer one context on top of another.
+ *
+ * @param f The function to run within the new context.
+ * @param arg The argument to pass to f.
+ * @return The return value of (*f)(arg).
+ */
+ava_value ava_invoke_in_context(ava_value (*f)(void* arg), void* arg);
 
-#include "avalanche/alloc.h"
-#include "avalanche/string.h"
-#include "avalanche/lex.h"
-#include "avalanche/value.h"
-#include "avalanche/function.h"
-#include "avalanche/context.h"
-
-AVA_END_DECLS
-
-#undef AVA__INTERNAL_INCLUDE
-
-#endif /* AVA_AVALANCHE_H_ */
+#endif /* AVA_RUNTIME_CONTEXT_H_ */

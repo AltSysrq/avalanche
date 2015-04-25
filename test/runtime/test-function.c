@@ -38,25 +38,22 @@
 
 defsuite(function);
 
-static void throw0(ava_stack_element* stack, ava_value value) NOINLINE;
-static void throw1(ava_stack_element* stack, ava_value value) NOINLINE;
-static void rethrow0(ava_stack_element* stack, ava_value value) NOINLINE;
+static void throw0(ava_value value) NOINLINE;
+static void throw1(ava_value value) NOINLINE;
+static void rethrow0(ava_value value) NOINLINE;
 
-static void throw0(ava_stack_element* stack,
-                   ava_value value) {
-  ava_throw(&ava_user_exception_type, value, stack, NULL);
+static void throw0(ava_value value) {
+  ava_throw(&ava_user_exception_type, value, NULL);
 }
 
-static void throw1(ava_stack_element* stack,
-                   ava_value value) {
-  throw0(stack, value);
+static void throw1(ava_value value) {
+  throw0(value);
 }
 
-static void rethrow0(ava_stack_element* stack,
-                     ava_value value) {
-  ava_stack_exception_handler handler;
-  ava_try (handler, stack) {
-    throw1(&handler.header, value);
+static void rethrow0(ava_value value) {
+  ava_exception_handler handler;
+  ava_try (handler) {
+    throw1(value);
     ck_abort_msg("Exception not thrown");
   } ava_catch (handler, ava_internal_exception_type) {
     ck_abort_msg("Wrong catch block");
@@ -66,19 +63,17 @@ static void rethrow0(ava_stack_element* stack,
 }
 
 deftest_signal(uncaught_exception, SIGABRT) {
-  ava_stack_element* stack = NULL;
   ava_value value = ava_value_of_string(ava_string_of_cstring("hello world"));
 
-  throw1(stack, value);
+  throw1(value);
 }
 
 deftest(caught_exception) {
-  ava_stack_element* stack = NULL;
   ava_value value = ava_value_of_string(ava_string_of_cstring("hello world"));
 
-  ava_stack_exception_handler handler;
-  ava_try (handler, stack) {
-    throw1(&handler.header, value);
+  ava_exception_handler handler;
+  ava_try (handler) {
+    throw1(value);
     ck_abort_msg("Exception not thrown");
   } ava_catch (handler, ava_interrupt_exception_type) {
     ck_abort_msg("Wrong catch block");
@@ -92,12 +87,11 @@ deftest(caught_exception) {
 }
 
 deftest(rethrow) {
-  ava_stack_element* stack = NULL;
   ava_value value = ava_value_of_string(ava_string_of_cstring("hello world"));
 
-  ava_stack_exception_handler handler;
-  ava_try (handler, stack) {
-    rethrow0(&handler.header, value);
+  ava_exception_handler handler;
+  ava_try (handler) {
+    rethrow0(value);
     ck_abort_msg("Exception not thrown");
   } ava_catch (handler, ava_interrupt_exception_type) {
     ck_abort_msg("Wrong catch block");

@@ -13,10 +13,11 @@ lib_LTLIBRARIES = libavart.la
 bin_PROGRAMS = bootstrap-avac
 libavart_la_SOURCES = \
 runtime/alloc.c \
-runtime/string.c \
+runtime/context.c \
+runtime/function.c \
 runtime/gen-lex.c \
-runtime/value.c \
-runtime/function.c
+runtime/string.c \
+runtime/value.c
 libavart_la_LIBADD = $(LIBUNWIND_LIBS)
 bootstrap_avac_SOURCES = bootstrap/main.c
 bootstrap_avac_LDADD = libavart.la

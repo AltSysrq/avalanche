@@ -40,6 +40,7 @@
 #define AVA__INTERNAL_INCLUDE 1
 #include "avalanche/alloc.h"
 #include "avalanche/function.h"
+#include "-context.h"
 #include "bsd.h"
 
 ava_stack_trace* ava_generate_stack_trace(void) {
@@ -74,31 +75,33 @@ ava_stack_trace* ava_generate_stack_trace(void) {
   return trace;
 }
 
-jmp_buf* ava_set_handler(ava_stack_exception_handler*restrict dst,
-                         ava_stack_element* restrict tos) {
-  dst->header.type = ava_set_exception_handler;
-  dst->header.next = tos;
+jmp_buf* ava_push_handler(ava_exception_handler*restrict dst) {
+  dst->next = ava_current_context->exception_handlers;
+  ava_current_context->exception_handlers = dst;
   return &dst->resume_point;
 }
 
+int ava_pop_handler(int do_pop) {
+  if (do_pop)
+    ava_current_context->exception_handlers =
+      ava_current_context->exception_handlers->next;
+  return do_pop;
+}
+
 void ava_throw(const ava_exception_type* type, ava_value value,
-               ava_stack_element*restrict stack,
                ava_stack_trace* trace) {
   if (!trace)
     trace = ava_generate_stack_trace();
 
-  while (stack) {
-    switch (stack->type) {
-    case ava_set_exception_handler: {
-      ava_stack_exception_handler*restrict handler =
-        (ava_stack_exception_handler*restrict)stack;
+  if (ava_current_context->exception_handlers) {
+    ava_exception_handler*restrict handler =
+      ava_current_context->exception_handlers;
 
-      handler->exception_type = type;
-      handler->value = value;
-      handler->stack_trace = trace;
-      longjmp(handler->resume_point, 1);
-    } break;
-    }
+    handler->exception_type = type;
+    handler->value = value;
+    handler->stack_trace = trace;
+    longjmp(handler->resume_point, 1);
+    /* unreachable */
   }
 
   warnx("panic: uncaught %s: %s",
@@ -113,9 +116,8 @@ void ava_throw(const ava_exception_type* type, ava_value value,
   abort();
 }
 
-void ava_rethrow(ava_stack_exception_handler*restrict handler) {
-  ava_throw(handler->exception_type, handler->value,
-            handler->header.next, handler->stack_trace);
+void ava_rethrow(ava_exception_handler*restrict handler) {
+  ava_throw(handler->exception_type, handler->value, handler->stack_trace);
 }
 
 const ava_exception_type ava_user_exception_type = {

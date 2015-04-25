@@ -109,4 +109,7 @@ typedef ava_uint64_t  ava_ulong;
 typedef uint64_t      ava_ulong;
 #endif
 
+#define AVA_GLUE(x,y) AVA__GLUE(x,y)
+#define AVA__GLUE(x,y) x##y
+
 #endif /* AVA_RUNTIME_DEFS_H_ */

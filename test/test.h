@@ -37,6 +37,8 @@
 #include <stdlib.h>
 #include <signal.h>
 
+#include "runtime/avalanche.h"
+
 extern const char* suite_names[1024];
 extern void (*suite_impls[1024])(Suite*);
 extern unsigned suite_num;
@@ -70,6 +72,11 @@ static inline void run_suite(Suite* suite) {
   }
 }
 
+static ava_value run_function(void* f) {
+  (*(void(*)(void))f)();
+  return ava_value_of_string(AVA_EMPTY_STRING);
+}
+
 #define defsuite(name)                          \
   static void _register_suite_##name(void)      \
     __attribute__((constructor));               \
@@ -85,7 +92,8 @@ static inline void run_suite(Suite* suite) {
     __attribute__((constructor));               \
   static void name##_impl(void);                \
   START_TEST(name) {                            \
-    name##_impl();                              \
+    ava_invoke_in_context(run_function,         \
+                          (void*)name##_impl);  \
   }                                             \
   END_TEST                                      \
   static void _register_##name(void) {          \

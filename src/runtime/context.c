@@ -25,24 +25,35 @@
  * (INCLUDING NEGLIGENCE OR OTHERWISE) ARISING IN ANY WAY OUT OF THE USE OF
  * THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
  */
-#ifndef AVA_AVALANCHE_H_
-#define AVA_AVALANCHE_H_
+#ifdef HAVE_CONFIG_H
+#include <config.h>
+#endif
 
-#define AVA__INTERNAL_INCLUDE 1
+#include <string.h>
 
-#include "avalanche/defs.h"
-
-AVA_BEGIN_DECLS
-
-#include "avalanche/alloc.h"
-#include "avalanche/string.h"
-#include "avalanche/lex.h"
+#define AVA__INTERNAL_INCLUDE
 #include "avalanche/value.h"
-#include "avalanche/function.h"
 #include "avalanche/context.h"
+#include "-context.h"
 
-AVA_END_DECLS
+thread_local ava_context* ava_current_context;
 
-#undef AVA__INTERNAL_INCLUDE
+ava_value ava_invoke_in_context(ava_value (*f)(void*), void* arg) {
+  ava_context new_context, * old_context;
+  ava_value ret;
 
-#endif /* AVA_AVALANCHE_H_ */
+  memset(&new_context, 0, sizeof(new_context));
+  old_context = ava_current_context;
+  ava_current_context = &new_context;
+  ret = (*f)(arg);
+  ava_current_context = old_context;
+
+  return ret;
+}
+
+/* GDB has trouble finding threadlocals on some platforms; give it a function
+ * to do it on its behalf.
+ */
+ava_context* ava_get_current_context(void) {
+  return ava_current_context;
+}
