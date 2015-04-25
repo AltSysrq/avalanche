@@ -38,7 +38,7 @@ AVA_BEGIN_DECLS
 #include "avalanche/string.h"
 #include "avalanche/lex.h"
 #include "avalanche/value.h"
-#include "avalanche/function.h"
+#include "avalanche/exception.h"
 #include "avalanche/context.h"
 
 AVA_END_DECLS

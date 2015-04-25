@@ -28,7 +28,7 @@
 #include "test.c"
 
 #define AVA__INTERNAL_INCLUDE 1
-#include "runtime/avalanche/function.h"
+#include "runtime/avalanche/exception.h"
 
 #if defined(__GNUC__) || defined(__clang__)
 #define NOINLINE __attribute__((__noinline__))
@@ -36,7 +36,7 @@
 #define NOINLINE
 #endif
 
-defsuite(function);
+defsuite(exception);
 
 static void throw0(ava_value value) NOINLINE;
 static void throw1(ava_value value) NOINLINE;

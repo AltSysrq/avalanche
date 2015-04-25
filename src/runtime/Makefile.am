@@ -6,7 +6,7 @@ avalanche/ava-config.h \
 avalanche/alloc.h \
 avalanche/context.h \
 avalanche/defs.h \
-avalanche/function.h \
+avalanche/exception.h \
 avalanche/lex.h \
 avalanche/string.h \
 avalanche/value.h

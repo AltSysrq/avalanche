@@ -26,11 +26,11 @@
  * THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
  */
 #ifndef AVA__INTERNAL_INCLUDE
-#error "Don't include avalanche/function.h directly; just include avalanche.h"
+#error "Don't include avalanche/exception.h directly; just include avalanche.h"
 #endif
 
-#ifndef AVA_RUNTIME_FUNCTION_H_
-#define AVA_RUNTIME_FUNCTION_H_
+#ifndef AVA_RUNTIME_EXCEPTION_H_
+#define AVA_RUNTIME_EXCEPTION_H_
 
 #include "defs.h"
 #include "value.h"
@@ -258,4 +258,4 @@ extern const ava_exception_type ava_internal_exception_type;
  */
 extern const ava_exception_type ava_interrupt_exception_type;
 
-#endif /* AVA_RUNTIME_FUNCTION_H_ */
+#endif /* AVA_RUNTIME_EXCEPTION_H_ */

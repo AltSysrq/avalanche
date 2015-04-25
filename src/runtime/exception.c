@@ -39,7 +39,7 @@
 
 #define AVA__INTERNAL_INCLUDE 1
 #include "avalanche/alloc.h"
-#include "avalanche/function.h"
+#include "avalanche/exception.h"
 #include "-context.h"
 #include "bsd.h"
 
