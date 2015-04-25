@@ -31,3 +31,4 @@ bootstrap-avac
 *.gcno
 *.gcov
 gen-*
+ava-config.h

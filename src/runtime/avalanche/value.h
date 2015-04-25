@@ -83,15 +83,15 @@ typedef struct ava_value_s ava_value;
  * The usage of this union is entirely up to the type on the value.
  */
 typedef union {
-  unsigned char         ubytes[8];
-  signed char           sbytes[8];
+  ava_ubyte             ubytes[8];
+  ava_sbyte             sbytes[8];
   char                  chars[8];
-  unsigned short        ushorts[4];
-  signed short          sshorts[4];
-  unsigned int          uint[2];
-  signed int            sint[2];
-  unsigned long long    ulong;
-  signed long long      slong;
+  ava_ushort            ushorts[4];
+  ava_sshort            sshorts[4];
+  ava_uint              uint[2];
+  ava_sint              sint[2];
+  ava_ulong             ulong;
+  ava_slong             slong;
   const void*restrict   ptr;
   ava_string            str;
 } ava_datum;

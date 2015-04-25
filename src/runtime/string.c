@@ -475,7 +475,7 @@ static const ava_rope* ava_rope_concat(const ava_rope*restrict left,
 /* Inverse offset fibonacci function, where fib(0) == 0 and fib(1) == 1 */
 static unsigned ava_bif(size_t sz) {
   unsigned iterations = 0;
-  unsigned long long a = 0, b = 1, c;
+  ava_ulong a = 0, b = 1, c;
 
   while (sz >= a) {
     ++iterations;

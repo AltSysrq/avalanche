@@ -330,7 +330,7 @@ static ava_lex_status ava_lex_put_eof(ava_lex_result* dst,
   return ava_ls_end_of_input;
 }
 
-static const unsigned long long is_independent_prefix[256/64] = {
+static const ava_ulong is_independent_prefix[256/64] = {
   0x00000101FFFFFFFF,
   0x8800000108000000,
   0x0000000000000000,

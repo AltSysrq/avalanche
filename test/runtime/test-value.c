@@ -63,7 +63,7 @@ static const ava_value_type xn_type = {
   .query_accelerator = ava_noop_query_accelerator
 };
 
-static ava_value xn_of(unsigned long long val) {
+static ava_value xn_of(ava_ulong val) {
   return (ava_value) {
     .r1 = { .ulong = val },
     .r2 = { .ulong = 0 },

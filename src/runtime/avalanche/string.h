@@ -55,7 +55,7 @@
  * This format permits extremely efficient handling of short printable strings,
  * which are extremely common.
  */
-typedef unsigned long long ava_ascii9_string;
+typedef ava_ulong ava_ascii9_string;
 /**
  * An arbitrary byte string of any number of characters. The exact internal
  * format is undefined.
@@ -131,12 +131,12 @@ struct ava_rope_s {
    * The depth of this node. Leaves have depth zero; Concats have a depth one
    * greater than the maximum depth of either branch.
    */
-  unsigned depth;
+  ava_uint depth;
   /**
    * The number of children, direct and indirect, of this node. Leaves have 0
    * descendants.
    */
-  unsigned descendants;
+  ava_uint descendants;
   /**
    * The value of this node. If concat_right is greater than 1, it is a Concat;
    * otherwise, it is a Leaf. ASCII9 and array-based leaves can be

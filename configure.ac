@@ -14,6 +14,7 @@ AC_PROG_CC
 AC_PROG_CC_C99
 AM_PROG_CC_C_O
 AC_CHECK_PROG([RE2C], [re2c], [re2c], [])
+AC_PROG_SED
 
 # Checks for libraries.
 PKG_CHECK_MODULES([CHECK], [check], [], [:])
@@ -38,6 +39,10 @@ AC_TYPE_UINT8_T
 AC_TYPE_UINT16_T
 AC_TYPE_UINT32_T
 AC_TYPE_UINT64_T
+AC_TYPE_INT8_T
+AC_TYPE_INT16_T
+AC_TYPE_INT32_T
+AC_TYPE_INT64_T
 
-AC_CONFIG_FILES([Makefile src/Makefile test/Makefile])
+AC_CONFIG_FILES([Makefile src/Makefile src/runtime/Makefile test/Makefile])
 AC_OUTPUT

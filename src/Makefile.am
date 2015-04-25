@@ -1,5 +1,6 @@
 AUTOMAKE_OPTIONS = subdir-objects
 .MAKE.JOB.PREFIX=
+SUBDIRS = runtime .
 
 EXTRA_CFLAGS =
 AM_CFLAGS = $(EXTRA_CFLAGS)
