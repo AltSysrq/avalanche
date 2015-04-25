@@ -25,9 +25,15 @@
  * (INCLUDING NEGLIGENCE OR OTHERWISE) ARISING IN ANY WAY OUT OF THE USE OF
  * THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
  */
-#ifndef AVA_IN_AVALANCHE_H
+#ifndef AVA__INTERNAL_INCLUDE
 #error "Don't include avalanche/function.h directly; just include avalanche.h"
 #endif
+
+#ifndef AVA_RUNTIME_FUNCTION_H_
+#define AVA_RUNTIME_FUNCTION_H_
+
+#include "defs.h"
+#include "value.h"
 
 /**
  * Stores contextual state private to the current strand of execution.
@@ -316,3 +322,5 @@ extern const ava_exception_type ava_internal_exception_type;
  * catcher are in direct cooperation.
  */
 extern const ava_exception_type ava_interrupt_exception_type;
+
+#endif /* AVA_RUNTIME_FUNCTION_H_ */

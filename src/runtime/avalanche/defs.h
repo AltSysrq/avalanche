@@ -25,62 +25,34 @@
  * (INCLUDING NEGLIGENCE OR OTHERWISE) ARISING IN ANY WAY OUT OF THE USE OF
  * THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
  */
-#ifdef HAVE_CONFIG_H
-#include <config.h>
+#ifndef AVA__INTERNAL_INCLUDE
+#error "Don't include avalanche/defs.h directly; just include avalanche.h"
 #endif
 
-#if defined(HAVE_GC_GC_H)
-#include <gc/gc.h>
-#elif defined(HAVE_GC_H)
-#include <gc.h>
+#ifndef AVA_RUNTIME_DEFS_H_
+#define AVA_RUNTIME_DEFS_H_
+
+#include <stdlib.h>
+#include <setjmp.h>
+
+#if defined(__GNUC__) || defined(__clang__)
+#define AVA_MALLOC __attribute__((__malloc__))
+#define AVA_PURE __attribute__((__pure__))
+#define AVA_CONSTFUN __attribute__((__const__))
+#define AVA_NORETURN __attribute__((__noreturn__))
 #else
-#error "Neither <gc/gc.h> nor <gc.h> could be found."
+#define AVA_MALLOC
+#define AVA_PURE
+#define AVA_CONSTFUN
+#define AVA_NORETURN
 #endif
 
-#include <string.h>
-#include <stdio.h>
+#ifdef __cplusplus
+#define AVA_BEGIN_DECLS extern "C" {
+#define AVA_END_DECLS }
+#else
+#define AVA_BEGIN_DECLS
+#define AVA_END_DECLS
+#endif
 
-#include "bsd.h"
-
-#define AVA__INTERNAL_INCLUDE 1
-#include "avalanche/alloc.h"
-
-static inline void* ava_oom_if_null(void* ptr) {
-  if (!ptr)
-    errx(EX_UNAVAILABLE, "out of memory");
-
-  return ptr;
-}
-
-void ava_heap_init(void) {
-  GC_INIT();
-  GC_enable_incremental();
-}
-
-void* ava_alloc(size_t sz) {
-  return ava_oom_if_null(GC_MALLOC(sz));
-}
-
-void* ava_alloc_atomic(size_t sz) {
-  return ava_oom_if_null(GC_MALLOC_ATOMIC(sz));
-}
-
-void* ava_alloc_unmanaged(size_t sz) {
-  return ava_oom_if_null(GC_MALLOC_UNCOLLECTABLE(sz));
-}
-
-void ava_free_unmanaged(void* ptr) {
-  GC_FREE(ptr);
-}
-
-void* ava_clone(const void*restrict src, size_t sz) {
-  void* dst = ava_alloc(sz);
-  memcpy(dst, src, sz);
-  return dst;
-}
-
-void* ava_clone_atomic(const void*restrict src, size_t sz) {
-  void* dst = ava_alloc_atomic(sz);
-  memcpy(dst, src, sz);
-  return dst;
-}
+#endif /* AVA_RUNTIME_DEFS_H_ */

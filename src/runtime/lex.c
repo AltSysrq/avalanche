@@ -35,7 +35,9 @@
 #include <stdarg.h>
 #include <stdio.h>
 
-#include "avalanche.h"
+#define AVA__INTERNAL_INCLUDE 1
+#include "avalanche/alloc.h"
+#include "avalanche/lex.h"
 #include "gen-lex.h"
 
 typedef struct {

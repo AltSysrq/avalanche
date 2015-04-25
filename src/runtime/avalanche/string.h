@@ -25,9 +25,14 @@
  * (INCLUDING NEGLIGENCE OR OTHERWISE) ARISING IN ANY WAY OUT OF THE USE OF
  * THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
  */
-#ifndef AVA_IN_AVALANCHE_H
+#ifndef AVA__INTERNAL_INCLUDE
 #error "Don't include avalanche/string.h directly; just include avalanche.h"
 #endif
+
+#ifndef AVA_RUNTIME_STRING_H_
+#define AVA_RUNTIME_STRING_H_
+
+#include "defs.h"
 
 /******************** STRING HANDLING ********************/
 
@@ -491,3 +496,5 @@ size_t ava_string_iterator_access(const char*restrict* dst,
  * pointer is beyond the end of the string.
  */
 size_t ava_string_iterator_index(const ava_string_iterator*) AVA_PURE;
+
+#endif /* AVA_RUNTIME_STRING_H_ */

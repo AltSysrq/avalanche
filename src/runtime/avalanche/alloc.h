@@ -26,9 +26,14 @@
  * THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
  */
 
-#ifndef AVA_IN_AVALANCHE_H
+#ifndef AVA__INTERNAL_INCLUDE
 #error "Don't include avalanche/alloc.h directly; just include avalanche.h"
 #endif
+
+#ifndef AVA_RUNTIME_ALLOC_H_
+#define AVA_RUNTIME_ALLOC_H_
+
+#include "defs.h"
 
 /******************** MEMORY MANAGEMENT ********************/
 /**
@@ -91,3 +96,6 @@ void* ava_clone_atomic(const void*restrict, size_t) AVA_MALLOC;
  * casting it to a pointer to that type.
  */
 #define AVA_NEW(type) ((type*)ava_alloc(sizeof(type)))
+
+#endif /* AVA_RUNTIME_ALLOC_H_ */
+

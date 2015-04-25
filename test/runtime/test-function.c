@@ -27,7 +27,8 @@
  */
 #include "test.c"
 
-#include "runtime/avalanche.h"
+#define AVA__INTERNAL_INCLUDE 1
+#include "runtime/avalanche/function.h"
 
 defsuite(function);
 

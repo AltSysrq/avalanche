@@ -33,7 +33,9 @@
 #include <string.h>
 #include <stdlib.h>
 
-#include "avalanche.h"
+#define AVA__INTERNAL_INCLUDE 1
+#include "avalanche/alloc.h"
+#include "avalanche/string.h"
 
 /* Size under which non-flat ropes are not produced */
 #define ROPE_NONFLAT_THRESH (2 * sizeof(ava_rope))

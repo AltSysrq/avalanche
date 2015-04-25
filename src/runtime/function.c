@@ -32,7 +32,9 @@
 #include <stdio.h>
 #include <setjmp.h>
 
-#include "avalanche.h"
+#define AVA__INTERNAL_INCLUDE 1
+#include "avalanche/alloc.h"
+#include "avalanche/function.h"
 #include "bsd.h"
 
 jmp_buf* ava_set_handler(ava_stack_exception_handler*restrict dst,

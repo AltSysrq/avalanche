@@ -29,7 +29,8 @@
 
 #include <stdlib.h>
 
-#include "runtime/avalanche.h"
+#define AVA__INTERNAL_INCLUDE 1
+#include "runtime/avalanche/string.h"
 
 static char large_string[65536];
 

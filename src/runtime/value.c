@@ -32,7 +32,8 @@
 #include <stdlib.h>
 #include <string.h>
 
-#include "avalanche.h"
+#define AVA__INTERNAL_INCLUDE 1
+#include "avalanche/value.h"
 
 ava_string ava_string_of_chunk_iterator(ava_value value) {
   /* Produce a near-optimal string by concatting the chunks in a perfect binary

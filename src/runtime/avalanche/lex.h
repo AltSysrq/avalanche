@@ -25,9 +25,15 @@
  * (INCLUDING NEGLIGENCE OR OTHERWISE) ARISING IN ANY WAY OUT OF THE USE OF
  * THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
  */
-#ifndef AVA_IN_AVALANCHE_H
+#ifndef AVA__INTERNAL_INCLUDE
 #error "Don't include avalanche/lex.h directly; just include avalanche.h"
 #endif
+
+#ifndef AVA_RUNTIME_LEX_H_
+#define AVA_RUNTIME_LEX_H_
+
+#include "defs.h"
+#include "string.h"
 
 /******************** LEXICAL ANALYSIS ********************/
 
@@ -196,3 +202,5 @@ ava_lex_context* ava_lex_new(ava_string);
  * lexer even after it returns an error.
  */
 ava_lex_status ava_lex_lex(ava_lex_result* result, ava_lex_context* analyser);
+
+#endif /* AVA_RUNTIME_LEX_H_ */

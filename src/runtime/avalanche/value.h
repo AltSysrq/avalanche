@@ -25,9 +25,15 @@
  * (INCLUDING NEGLIGENCE OR OTHERWISE) ARISING IN ANY WAY OUT OF THE USE OF
  * THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
  */
-#ifndef AVA_IN_AVALANCHE_H
+#ifndef AVA__INTERNAL_INCLUDE
 #error "Don't include avalanche/value.h directly; just include avalanche.h"
 #endif
+
+#ifndef AVA_RUNTIME_VALUE_H_
+#define AVA_RUNTIME_VALUE_H_
+
+#include "defs.h"
+#include "string.h"
 
 /******************** VALUE AND TYPE SYSTEM ********************/
 
@@ -401,3 +407,5 @@ ava_value ava_value_of_string(ava_string str) AVA_PURE;
  * Returns a value which contains the string representation of the input value.
  */
 ava_value ava_string_imbue(ava_value value) AVA_PURE;
+
+#endif /* AVA_RUNTIME_VALUE_H_ */
