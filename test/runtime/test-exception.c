@@ -43,7 +43,7 @@ static void throw1(ava_value value) NOINLINE;
 static void rethrow0(ava_value value) NOINLINE;
 
 static void throw0(ava_value value) {
-  ava_throw(&ava_user_exception_type, value, NULL);
+  ava_throw(&ava_user_exception, value, NULL);
 }
 
 static void throw1(ava_value value) {
@@ -55,7 +55,7 @@ static void rethrow0(ava_value value) {
   ava_try (handler) {
     throw1(value);
     ck_abort_msg("Exception not thrown");
-  } ava_catch (handler, ava_internal_exception_type) {
+  } ava_catch (handler, ava_internal_exception) {
     ck_abort_msg("Wrong catch block");
   } ava_catch_all {
     ava_rethrow(&handler);
@@ -75,9 +75,9 @@ deftest(caught_exception) {
   ava_try (handler) {
     throw1(value);
     ck_abort_msg("Exception not thrown");
-  } ava_catch (handler, ava_interrupt_exception_type) {
+  } ava_catch (handler, ava_interrupt_exception) {
     ck_abort_msg("Wrong catch block");
-  } ava_catch (handler, ava_user_exception_type) {
+  } ava_catch (handler, ava_user_exception) {
     ck_assert_ptr_ne(NULL, handler.stack_trace);
     ck_assert_str_eq("hello world", ava_string_to_cstring(
                        ava_to_string(handler.value)));
@@ -93,9 +93,9 @@ deftest(rethrow) {
   ava_try (handler) {
     rethrow0(value);
     ck_abort_msg("Exception not thrown");
-  } ava_catch (handler, ava_interrupt_exception_type) {
+  } ava_catch (handler, ava_interrupt_exception) {
     ck_abort_msg("Wrong catch block");
-  } ava_catch (handler, ava_user_exception_type) {
+  } ava_catch (handler, ava_user_exception) {
     ck_assert_ptr_ne(NULL, handler.stack_trace);
     ck_assert_str_eq("hello world", ava_string_to_cstring(
                        ava_to_string(handler.value)));

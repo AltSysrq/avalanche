@@ -120,14 +120,14 @@ void ava_rethrow(ava_exception_handler*restrict handler) {
   ava_throw(handler->exception_type, handler->value, handler->stack_trace);
 }
 
-const ava_exception_type ava_user_exception_type = {
+const ava_exception_type ava_user_exception = {
   .uncaught_description = "user exception"
-}, ava_error_exception_type = {
+}, ava_error_exception = {
   .uncaught_description = "programming error"
-}, ava_format_exception_type = {
+}, ava_format_exception = {
   .uncaught_description = "string format error"
-}, ava_internal_exception_type = {
+}, ava_internal_exception = {
   .uncaught_description = "internal error"
-}, ava_interrupt_exception_type = {
+}, ava_interrupt_exception = {
   .uncaught_description = "interruption"
 };

@@ -41,7 +41,7 @@
  * handling.
  *
  * Note that this is distinct from user exception types, which are all covered
- * by the ava_user_exception_type tpe.
+ * by the ava_user_exception tpe.
  */
 typedef struct {
   /**
@@ -171,7 +171,7 @@ AVA_NORETURN;
  *   ava_exception_handler handler
  *   ava_try (handler) {
  *     call_some_functions();
- *   } ava_catch (handler, ava_user_exception_type) {
+ *   } ava_catch (handler, ava_user_exception) {
  *     handle_exception();
  *   } ava_catch_all {
  *     ava_rethrow(&handler);
@@ -232,7 +232,7 @@ AVA_NORETURN;
  * Eg,
  *   example-exception \{message "something broke" cause \{...\} \}
  */
-extern const ava_exception_type ava_user_exception_type;
+extern const ava_exception_type ava_user_exception;
 /**
  * Standard exception type for programming errors.
  *
@@ -241,7 +241,7 @@ extern const ava_exception_type ava_user_exception_type;
  *
  * They follow the same format as user exceptions.
  */
-extern const ava_exception_type ava_error_exception_type;
+extern const ava_exception_type ava_error_exception;
 /**
  * Standard exception type for string format errors.
  *
@@ -254,14 +254,14 @@ extern const ava_exception_type ava_error_exception_type;
  *
  * The format is simply an explanatory message.
  */
-extern const ava_exception_type ava_format_exception_type;
+extern const ava_exception_type ava_format_exception;
 /**
  * Exception type for errors internal to the runtime that are not fatal to the
  * process.
  *
  * These are not normally caught. They do not have any particular value format.
  */
-extern const ava_exception_type ava_internal_exception_type;
+extern const ava_exception_type ava_internal_exception;
 /**
  * Exception type for interrupts.
  *
@@ -269,6 +269,6 @@ extern const ava_exception_type ava_internal_exception_type;
  * call; the format of the value is up to the thrower, as usually it and the
  * catcher are in direct cooperation.
  */
-extern const ava_exception_type ava_interrupt_exception_type;
+extern const ava_exception_type ava_interrupt_exception;
 
 #endif /* AVA_RUNTIME_EXCEPTION_H_ */
