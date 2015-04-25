@@ -52,6 +52,7 @@ static inline void* ava_oom_if_null(void* ptr) {
 }
 
 void ava_heap_init(void) {
+  GC_INIT();
   GC_enable_incremental();
 }
 
@@ -82,5 +83,3 @@ void* ava_clone_atomic(const void*restrict src, size_t sz) {
   memcpy(dst, src, sz);
   return dst;
 }
-
-#include <stdlib.h>
