@@ -31,6 +31,7 @@
 
 #define AVA__INTERNAL_INCLUDE 1
 #include "runtime/avalanche/integer.h"
+#include "runtime/-integer-fast-dec.h"
 
 defsuite(integer);
 
@@ -44,6 +45,12 @@ static ava_integer str_to_int(const char* s, ava_integer d) {
   return ava_integer_of_value(
     ava_value_of_string(
       ava_string_of_cstring(s)), d);
+}
+
+static ava_integer str_to_dec_fast(const char* s) {
+  ava_string str = ava_string_of_shared_cstring(s);
+  ck_assert(str.ascii9 & 1);
+  return ava_integer_parse_dec_fast(str.ascii9, ava_string_length(str));
 }
 
 static int str_is_int(const char* s) {
@@ -449,4 +456,142 @@ deftest(oversized_string_is_not_integer) {
   ck_assert(
     !str_is_int(
       "000000000000000000000000000000000000000000000000000000000000000000"));
+}
+
+deftest(dec_fast_zero) {
+  ck_assert_int_eq(0, str_to_dec_fast("0"));
+}
+
+deftest(dec_fast_negative_zero) {
+  ck_assert_int_eq(0, str_to_dec_fast("-0"));
+}
+
+deftest(dec_fast_negative_one) {
+  ck_assert_int_eq(-1LL, str_to_dec_fast("-1"));
+}
+
+deftest(dec_fast_all_digits) {
+  char str[2];
+  unsigned i;
+
+  str[1] = 0;
+  for (i = 0; i < 10; ++i) {
+    str[0] = i + '0';
+    ck_assert_int_eq(i, str_to_dec_fast(str));
+  }
+}
+
+deftest(dec_fast_two_digit_positive) {
+  ck_assert_int_eq(42, str_to_dec_fast("42"));
+}
+
+deftest(dec_fast_two_digit_negative) {
+  ck_assert_int_eq(-42LL, str_to_dec_fast("-42"));
+}
+
+deftest(dec_fast_three_digit_positve) {
+  ck_assert_int_eq(123, str_to_dec_fast("123"));
+}
+
+deftest(dec_fast_three_digit_negative) {
+  ck_assert_int_eq(-123LL, str_to_dec_fast("-123"));
+}
+
+deftest(dec_fast_four_digit_positive) {
+  ck_assert_int_eq(1234, str_to_dec_fast("1234"));
+}
+
+deftest(dec_fast_four_digit_negative) {
+  ck_assert_int_eq(-1234LL, str_to_dec_fast("-1234"));
+}
+
+deftest(dec_fast_five_digit_positive) {
+  ck_assert_int_eq(12345, str_to_dec_fast("12345"));
+}
+
+deftest(dec_fast_five_digit_negative) {
+  ck_assert_int_eq(-12345LL, str_to_dec_fast("-12345"));
+}
+
+deftest(dec_fast_six_digit_positive) {
+  ck_assert_int_eq(123456, str_to_dec_fast("123456"));
+}
+
+deftest(dec_fast_six_digit_negative) {
+  ck_assert_int_eq(-123456LL, str_to_dec_fast("-123456"));
+}
+
+deftest(dec_fast_seven_digit_positive) {
+  ck_assert_int_eq(1234567, str_to_dec_fast("1234567"));
+}
+
+deftest(dec_fast_seven_digit_negative) {
+  ck_assert_int_eq(-1234567LL, str_to_dec_fast("-1234567"));
+}
+
+deftest(dec_fast_eight_digit_positive) {
+  ck_assert_int_eq(12345678, str_to_dec_fast("12345678"));
+}
+
+deftest(dec_fast_eight_digit_negative) {
+  ck_assert_int_eq(-12345678LL, str_to_dec_fast("-12345678"));
+}
+
+deftest(dec_fast_nine_digit_positive) {
+  ck_assert_int_eq(123456789LL, str_to_dec_fast("123456789"));
+}
+
+/* No nine-digit negative, since that would be 10 chars long */
+
+deftest(dec_fast_max_value) {
+  ck_assert_int_eq(999999999LL, str_to_dec_fast("999999999"));
+}
+
+deftest(dec_fast_min_value) {
+  ck_assert_int_eq(-99999999LL, str_to_dec_fast("-99999999"));
+}
+
+deftest(dec_fast_leading_zeroes) {
+  ck_assert_int_eq(1, str_to_dec_fast("000000001"));
+}
+
+deftest(dec_fast_rejects_isolated_hyphen) {
+  ck_assert_int_eq(PARSE_DEC_FAST_ERROR,
+                   str_to_dec_fast("-"));
+}
+
+deftest(dec_fast_rejects_nondigit_nonhyphen_at_start) {
+  char str[3];
+  unsigned i;
+
+  str[1] = '0';
+  str[2] = 0;
+
+  for (i = 1; i < 128; ++i) {
+    if (i != '-' && (i < '0' || i > '9')) {
+      str[0] = i;
+      ck_assert_int_eq(PARSE_DEC_FAST_ERROR,
+                       str_to_dec_fast(str));
+    }
+  }
+}
+
+deftest(dec_fast_rejects_all_nondigits_in_middle) {
+  char str[3];
+  unsigned i;
+
+  str[0] = '0';
+  str[2] = 0;
+
+  for (i = 1; i < 128; ++i) {
+    if (i < '0' || i > '9') {
+      str[1] = i;
+      ck_assert_int_eq(PARSE_DEC_FAST_ERROR,
+                       str_to_dec_fast(str));
+    }
+  }
+}
+
+deftest(dec_fast_rejects_repeated_hyphen) {
+  ck_assert_int_eq(PARSE_DEC_FAST_ERROR, str_to_dec_fast("--0"));
 }

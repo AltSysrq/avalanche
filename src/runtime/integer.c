@@ -39,6 +39,7 @@
 #include "avalanche/exception.h"
 #include "avalanche/integer.h"
 #include "-hexes.h"
+#include "-integer-fast-dec.h"
 
 static ava_string ava_integer_to_string(ava_value value) AVA_PURE;
 static const void* ava_integer_query_accelerator(
@@ -249,14 +250,21 @@ ava_integer ava_integer_of_noninteger_value(
 
   strlen = ava_string_length(str);
 
+  /* Inlined case only checks for ASCII9 empty string. */
+  if (0 == strlen)
+    return dfault;
+
+  if (str.ascii9 & 1) {
+    ava_integer fast_result =
+      ava_integer_parse_dec_fast(str.ascii9, strlen);
+    if (fast_result != PARSE_DEC_FAST_ERROR)
+      return fast_result;
+  }
+
   if (strlen > MAX_INTEGER_LENGTH) {
     error_message = "string too long to be interpreted as ingeger: ";
     goto error;
   }
-
-  /* Inlined case only checks for ASCII9 empty string. */
-  if (0 == strlen)
-    return dfault;
 
   /* Integers are always shorter than the maximum guaranteed atomic string
    * length, so just grab the whole array at once.
@@ -349,6 +357,10 @@ int ava_string_is_integer(ava_string str) {
 
   if (strlen > MAX_INTEGER_LENGTH)
     return 0;
+
+  if (str.ascii9 & 1 &&
+      PARSE_DEC_FAST_ERROR != ava_integer_parse_dec_fast(str.ascii9, strlen))
+    return 1;
 
   ava_string_iterator_place(&iterator, str, 0);
   strdata_len = ava_string_iterator_access(

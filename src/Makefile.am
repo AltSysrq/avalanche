@@ -18,6 +18,7 @@ runtime/exception.c \
 runtime/gen-integer.c \
 runtime/gen-lex.c \
 runtime/hexes.c \
+runtime/integer-fast-dec.c \
 runtime/string.c \
 runtime/value.c
 libavart_la_LIBADD = $(LIBUNWIND_LIBS)
