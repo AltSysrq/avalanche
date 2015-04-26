@@ -15,7 +15,9 @@ libavart_la_SOURCES = \
 runtime/alloc.c \
 runtime/context.c \
 runtime/exception.c \
+runtime/gen-integer.c \
 runtime/gen-lex.c \
+runtime/hexes.c \
 runtime/string.c \
 runtime/value.c
 libavart_la_LIBADD = $(LIBUNWIND_LIBS)
@@ -27,3 +29,8 @@ runtime/gen-lex.c: runtime/lex.c
 		-truntime/gen-lex.h \
 		-oruntime/gen-lex.c \
 		runtime/lex.c
+
+runtime/gen-integer.c: runtime/integer.c
+	$(AM_V_GEN)$(RE2C) --input custom -r $(RE2C_FLAGS) \
+		-oruntime/gen-integer.c \
+		runtime/integer.c

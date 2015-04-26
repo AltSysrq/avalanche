@@ -7,6 +7,7 @@ avalanche/alloc.h \
 avalanche/context.h \
 avalanche/defs.h \
 avalanche/exception.h \
+avalanche/integer.h \
 avalanche/lex.h \
 avalanche/string.h \
 avalanche/value.h

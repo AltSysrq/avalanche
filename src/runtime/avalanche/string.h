@@ -32,6 +32,8 @@
 #ifndef AVA_RUNTIME_STRING_H_
 #define AVA_RUNTIME_STRING_H_
 
+#include <string.h>
+
 #include "defs.h"
 
 /******************** STRING HANDLING ********************/
