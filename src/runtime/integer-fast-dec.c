@@ -46,7 +46,7 @@ ava_integer ava_integer_parse_dec_fast(
   ava_ascii9_string s, unsigned strlen
 ) {
   ava_ascii9_string mask = ~0ULL << ((9 - strlen) * 7 + 1);
-  int negative;
+  ava_bool negative;
   s &= mask;
 
   negative = (A9("-") & ~1ULL) == (s & A9("\x7f"));

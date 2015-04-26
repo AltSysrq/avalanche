@@ -138,6 +138,6 @@ static inline ava_value ava_value_of_integer(ava_integer i) {
  * Note that, even if this returns true, ava_integer_of_value() could still
  * throw if there is numeric overflow in the input.
  */
-int ava_string_is_integer(ava_string str);
+ava_bool ava_string_is_integer(ava_string str);
 
 #endif /* AVA_RUNTIME_INTEGER_H_ */

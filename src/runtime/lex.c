@@ -52,7 +52,7 @@ struct ava_lex_context_s {
   ava_lex_pos p;
 
   /* Misc state that needs to be passed around */
-  int is_independent;
+  ava_bool is_independent;
   unsigned verbatim_depth;
   ava_string accum;
   char string_started_with;
@@ -181,33 +181,33 @@ static ava_lex_status ava_lex_error_need_separator(
   const ava_lex_pos* frag_start,
   ava_lex_context* lex);
 
-int ava_lex_token_type_is_simple(ava_lex_token_type type) {
+ava_bool ava_lex_token_type_is_simple(ava_lex_token_type type) {
   switch (type) {
   case ava_ltt_bareword:
   case ava_ltt_astring:
   case ava_ltt_verbatim:
-    return 1;
+    return ava_true;
 
   case ava_ltt_none:
     abort();
 
   default:
-    return 0;
+    return ava_false;
   }
 }
 
-int ava_lex_token_type_is_close_paren(ava_lex_token_type type) {
+ava_bool ava_lex_token_type_is_close_paren(ava_lex_token_type type) {
   switch (type) {
   case ava_ltt_close_paren:
   case ava_ltt_close_bracket:
   case ava_ltt_close_brace:
-    return 1;
+    return ava_true;
 
   case ava_ltt_none:
     abort();
 
   default:
-    return 0;
+    return ava_false;
   }
 }
 
@@ -343,7 +343,7 @@ ava_lex_status ava_lex_lex(ava_lex_result* dst, ava_lex_context* lex) {
   ava_lex_pos start, frag_start;
   enum YYCONDTYPE cond = yycGround;
 
-  int is_new_token = 1;
+  ava_bool is_new_token = ava_true;
   ava_lex_status status = ava_ls_ok;
 
 #define YYCTYPE unsigned char
@@ -547,7 +547,7 @@ static ava_lex_status ava_lex_left_paren(
   const ava_lex_pos* frag_start,
   ava_lex_context* lex
 ) {
-  int ws = lex->is_independent;
+  ava_bool ws = lex->is_independent;
 
   return ava_lex_put_token(
     dst,
@@ -571,7 +571,7 @@ static ava_lex_status ava_lex_left_bracket(
   const ava_lex_pos* frag_start,
   ava_lex_context* lex
 ) {
-  int ws = lex->is_independent;
+  ava_bool ws = lex->is_independent;
 
   return ava_lex_put_token(
     dst,

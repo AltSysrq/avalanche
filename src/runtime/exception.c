@@ -81,7 +81,7 @@ jmp_buf* ava_push_handler(ava_exception_handler*restrict dst) {
   return &dst->resume_point;
 }
 
-int ava_pop_handler(int do_pop) {
+ava_bool ava_pop_handler(ava_bool do_pop) {
   if (do_pop)
     ava_current_context->exception_handlers =
       ava_current_context->exception_handlers->next;

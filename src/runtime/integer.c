@@ -48,7 +48,7 @@ static const void* ava_integer_query_accelerator(
 static size_t ava_integer_value_weight(ava_value value) AVA_CONSTFUN;
 static const char* consume_sign_and_radix(
   const char*restrict ch, const char*restrict end,
-  int* negative, char radixl, char radixu);
+  ava_bool* negative, char radixl, char radixu);
 static void throw_overflow(const char*restrict begin,
                            const char*restrict end);
 static ava_integer ava_integer_parse_bin(const char*restrict tok,
@@ -72,7 +72,7 @@ const ava_value_type ava_integer_type = {
 
 static ava_string ava_integer_to_string(ava_value value) {
   char str[20];
-  int negative = (value.r1.slong < 0);
+  ava_bool negative = (value.r1.slong < 0);
   ava_ulong i = negative? -value.r1.slong : value.r1.slong;
   unsigned ix = sizeof(str);
 
@@ -109,7 +109,7 @@ static size_t ava_integer_value_weight(ava_value value) {
 
 static const char* consume_sign_and_radix(
   const char*restrict ch, const char*restrict end,
-  int* negative, char radixl, char radixu
+  ava_bool* negative, char radixl, char radixu
 ) {
   /* Consume sign */
   if (*ch == '+' || *ch == '-') {
@@ -146,7 +146,7 @@ static ava_integer ava_integer_parse_bin(const char*restrict begin,
   const char*restrict ch = begin;
   ava_ulong accum = 0;
   unsigned bits = 0;
-  int negative = 0;
+  ava_bool negative = 0;
 
   ch = consume_sign_and_radix(ch, end, &negative, 'b', 'B');
 
@@ -167,7 +167,7 @@ static ava_integer ava_integer_parse_oct(const char*restrict begin,
   const char*restrict ch = begin;
   ava_ulong accum = 0;
   unsigned bits = 0;
-  int negative = 0;
+  ava_bool negative = 0;
 
   ch = consume_sign_and_radix(ch, end, &negative, 'o', 'O');
 
@@ -194,7 +194,7 @@ static ava_integer ava_integer_parse_hex(const char*restrict begin,
   const char*restrict ch = begin;
   ava_ulong accum = 0;
   unsigned bits = 0;
-  int negative = 0;
+  ava_bool negative = 0;
 
   ch = consume_sign_and_radix(ch, end, &negative, 'x', 'X');
 
@@ -217,7 +217,7 @@ static ava_integer ava_integer_parse_dec(const char*restrict begin,
   const char*restrict ch = begin;
   ava_ulong accum = 0;
   unsigned val;
-  int negative = 0;
+  ava_bool negative = 0;
 
   ch = consume_sign_and_radix(ch, end, &negative, 'z', 'Z');
 
@@ -347,7 +347,7 @@ ava_integer ava_integer_of_noninteger_value(
   /* unreachable */
 }
 
-int ava_string_is_integer(ava_string str) {
+ava_bool ava_string_is_integer(ava_string str) {
   ava_string_iterator iterator;
   const char*restrict strdata, *restrict cursor, * restrict marker = NULL;
   char tmpbuff[9];

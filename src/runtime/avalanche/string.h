@@ -231,8 +231,8 @@ static inline ava_string ava_string_of_rope(const ava_rope*restrict rope) {
 /**
  * Returns whether the given string is considered present.
  */
-static inline int ava_string_is_present(ava_string str) AVA_CONSTFUN;
-static inline int ava_string_is_present(ava_string str) {
+static inline ava_bool ava_string_is_present(ava_string str) AVA_CONSTFUN;
+static inline ava_bool ava_string_is_present(ava_string str) {
   return !!str.ascii9;
 }
 
@@ -430,12 +430,12 @@ void ava_string_iterator_place(ava_string_iterator* it,
  *
  * @return Whether the iterator is still valid.
  */
-int ava_string_iterator_move(ava_string_iterator* it,
-                             ssize_t distance);
+ava_bool ava_string_iterator_move(ava_string_iterator* it,
+                                  ssize_t distance);
 /**
  * Returns whether the given iterator is valid.
  */
-int ava_string_iterator_valid(const ava_string_iterator*) AVA_PURE;
+ava_bool ava_string_iterator_valid(const ava_string_iterator*) AVA_PURE;
 /**
  * Returns the character pointed to by the given string iterator.
  *

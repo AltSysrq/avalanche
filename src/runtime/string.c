@@ -43,15 +43,15 @@
 #define ROPE_FORMAT_LEAFV ((const ava_rope*restrict)0)
 #define ROPE_FORMAT_LEAF9 ((const ava_rope*restrict)1)
 
-static inline int ava_rope_is_leafv(const ava_rope*restrict rope) {
+static inline ava_bool ava_rope_is_leafv(const ava_rope*restrict rope) {
   return ROPE_FORMAT_LEAFV == rope->concat_right;
 }
 
-static inline int ava_rope_is_leaf9(const ava_rope*restrict rope) {
+static inline ava_bool ava_rope_is_leaf9(const ava_rope*restrict rope) {
   return ROPE_FORMAT_LEAF9 == rope->concat_right;
 }
 
-static inline int ava_rope_is_concat(const ava_rope*restrict rope) {
+static inline ava_bool ava_rope_is_concat(const ava_rope*restrict rope) {
   return rope->concat_right > ROPE_FORMAT_LEAF9;
 }
 
@@ -61,7 +61,7 @@ static ava_rope* ava_rope_new_leafv(const char*restrict,
                                     size_t length, size_t external_size);
 static ava_rope* ava_rope_new_leaf9(ava_ascii9_string);
 
-static int ava_string_can_encode_ascii9(const char*, size_t);
+static ava_bool ava_string_can_encode_ascii9(const char*, size_t);
 static ava_ascii9_string ava_ascii9_encode(const char*, size_t);
 static void ava_rope_flatten_into(char*restrict dst, const ava_rope*restrict);
 static void ava_ascii9_decode(char*restrict dst, ava_ascii9_string);
@@ -86,24 +86,24 @@ static void ava_rope_rebalance_iterate(
   const ava_rope*restrict);
 static const ava_rope* ava_rope_rebalance_flush(
   const ava_rope*restrict[AVA_MAX_ROPE_DEPTH], unsigned, unsigned);
-static int ava_rope_is_balanced(const ava_rope*restrict);
-static int ava_rope_concat_would_be_node_balanced(
+static ava_bool ava_rope_is_balanced(const ava_rope*restrict);
+static ava_bool ava_rope_concat_would_be_node_balanced(
   const ava_rope*restrict, const ava_rope*restrict);
 static unsigned ava_bif(size_t);
 static ava_ascii9_string ava_ascii9_slice(ava_ascii9_string, size_t, size_t);
 static const ava_rope* ava_rope_slice(const ava_rope*restrict, size_t, size_t);
 
-static int ava_string_can_encode_ascii9(const char* str,
-                                        size_t sz) {
+static ava_bool ava_string_can_encode_ascii9(const char* str,
+                                             size_t sz) {
   unsigned i;
 
-  if (sz > 9) return 0;
+  if (sz > 9) return ava_false;
 
   for (i = 0; i < sz; ++i)
     if (0 == str[i] || (str[i] & 0x80))
-      return 0;
+      return ava_false;
 
-  return 1;
+  return ava_true;
 }
 
 static ava_ascii9_string ava_ascii9_encode(
@@ -487,12 +487,12 @@ static unsigned ava_bif(size_t sz) {
   return iterations;
 }
 
-static int ava_rope_is_balanced(const ava_rope*restrict rope) {
+static ava_bool ava_rope_is_balanced(const ava_rope*restrict rope) {
   /* The rope is considered balanced if fib(depth+2) <= length. */
   return rope->depth+2 <= ava_bif(rope->length) + 1;
 }
 
-static int ava_rope_concat_would_be_node_balanced(
+static ava_bool ava_rope_concat_would_be_node_balanced(
   const ava_rope*restrict left, const ava_rope*restrict right
 ) {
   unsigned depth = left->depth > right->depth? left->depth : right->depth;
@@ -526,7 +526,7 @@ static void ava_rope_rebalance_iterate(
   const ava_rope*restrict rope
 ) {
   unsigned clear, bif;
-  int is_slot_free;
+  ava_bool is_slot_free;
 
   if (ava_rope_is_concat(rope)) {
     ava_rope_rebalance_iterate(accum, rope->v.concat_left);
@@ -540,10 +540,10 @@ static void ava_rope_rebalance_iterate(
     bif = ava_bif(rope->length) - 1; /* -1 since size 0 never occurs */
 
     /* Ensure all slots below the target are free */
-    is_slot_free = 1;
+    is_slot_free = ava_true;
     for (; clear <= bif; ++clear) {
       if (accum[clear]) {
-        is_slot_free = 0;
+        is_slot_free = ava_false;
         break;
       }
     }
@@ -708,8 +708,8 @@ void ava_string_iterator_place(ava_string_iterator* it,
   it->length = ava_string_length(str);
 }
 
-int ava_string_iterator_move(ava_string_iterator* it,
-                             ssize_t logical_distance) {
+ava_bool ava_string_iterator_move(ava_string_iterator* it,
+                                  ssize_t logical_distance) {
   size_t new_real_index;
   ssize_t real_distance;
 
@@ -776,7 +776,7 @@ int ava_string_iterator_move(ava_string_iterator* it,
   return ava_string_iterator_valid(it);
 }
 
-int ava_string_iterator_valid(const ava_string_iterator* it) {
+ava_bool ava_string_iterator_valid(const ava_string_iterator* it) {
   return it->logical_index >= 0 && it->logical_index < (ssize_t)it->length;
 }
 

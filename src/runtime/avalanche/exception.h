@@ -136,12 +136,12 @@ jmp_buf* ava_push_handler(ava_exception_handler*restrict dst);
 /**
  * This is an internal function.
  *
- * If do_pop is non-zero, pops a handler from the top of the exception handler
+ * If do_pop is true, pops a handler from the top of the exception handler
  * stack for the current context.
  *
  * @return do_pop
  */
-int ava_pop_handler(int do_pop);
+ava_bool ava_pop_handler(ava_bool do_pop);
 /**
  * Throws an exception of the given type and with the given value up the stack,
  * to the first available handler.

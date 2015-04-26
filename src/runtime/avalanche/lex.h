@@ -178,12 +178,12 @@ typedef enum {
  *
  * This assumes the caller assigns no special semantics to barewords.
  */
-int ava_lex_token_type_is_simple(ava_lex_token_type);
+ava_bool ava_lex_token_type_is_simple(ava_lex_token_type);
 /**
  * Returns whether the given token type is any of the three
  * close-parenthesis-like token types.
  */
-int ava_lex_token_type_is_close_paren(ava_lex_token_type);
+ava_bool ava_lex_token_type_is_close_paren(ava_lex_token_type);
 
 /**
  * Creates a new lexical analyser that will tokenise the given string.
