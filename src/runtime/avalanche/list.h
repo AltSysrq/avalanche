@@ -57,16 +57,16 @@
 /**
  * Accelerator for list manipulation.
  *
- * The return value for query_accelerator() is a ava_list_iface*. Implementing
- * this accelerator implies that (a) every value of the backing type is
- * guaranteed to conform to the list format; (b) the underlying type can
- * provide efficient amortised access to the elements of the list as defined by
- * that format.
+ * The return value for query_accelerator() is a const ava_list_iface*.
+ * Implementing this accelerator implies that (a) every value of the backing
+ * type is guaranteed to conform to the list format; (b) the underlying type
+ * can provide efficient amortised access to the elements of the list as
+ * defined by that format.
  *
  * Clients should generally use ava_list_value_of() rather than directly
  * interacting with the accelerator.
  */
-extern const ava_accelerator ava_list_accelerator;
+AVA_DECLARE_ACCELERATOR(ava_list_accelerator);
 
 typedef struct ava_list_iface_s ava_list_iface;
 
@@ -103,23 +103,6 @@ struct ava_list_iface_s {
   ava_value (*to_value)(ava_list_value list);
 
   /**
-   * Returns the sum reachable weight of values in the given list, plus any
-   * weight incurred by the list itself.
-   *
-   * This is used along with actual_weight() to determine whether certain
-   * operations should rebuild internal structures to avoid wasting memory.
-   */
-  size_t (*reachable_weight)(ava_list_value list);
-  /**
-   * Returns the sum weight of the values held by the given list, including any
-   * not logically reachable from the list itself.
-   *
-   * This is used along with reachable_weight() to determine whether certain
-   * operations should rebuild internal structures to avoid wasting memory.
-   */
-  size_t (*actual_weight)(ava_list_value list);
-
-  /**
    * Returns the number of elements in the list.
    *
    * Complexity: O(1)
@@ -137,11 +120,11 @@ struct ava_list_iface_s {
    * Returns a new list containing the elements of list between begin,
    * inclusive, and end, exclusive.
    *
-   * Effect is undefined if begin > end or end >= length().
+   * Effect is undefined if begin > end or end > length().
    *
    * Complexity: Amortised O(log(length) + (end - begin))
    */
-  ava_list_value (*slice)(ava_value list, size_t begin, size_t end);
+  ava_list_value (*slice)(ava_list_value list, size_t begin, size_t end);
 
   /**
    * Returns a new list which contains all the elements of list followed by the
@@ -179,7 +162,7 @@ struct ava_list_iface_s {
    * Clients typically allocate iterators on the stack, so this should be
    * reasonably small.
    */
-  size_t iterator_size;
+  size_t (*iterator_size)(ava_list_value list);
   /**
    * Positions the given iterator at the given index within the given list.
    *
@@ -225,24 +208,28 @@ struct ava_list_iface_s {
 };
 
 /**
- * Ensures that a value has a list-like type.
- *
- * Equivalent to
- *   ava_list_value l = ava_list_value_of(value);
- *   return l.v->to_value(l);
- */
-ava_value ava_list_imbue(ava_value value);
-/**
- * Produces an ava_list_value from the given list_value.
+ * Produces a *possibly normalised* ava_list_value from the given ava_value.
  *
  * If the value does not currently have a type that permits efficient list
  * access, it will be converted to one that does. In such a case, the string
  * value of the new list will be the same as the string value of value. (I.e.,
  * no normalisation occurs).
  *
+ * Note that ava_to_string(ava_list_value_of(x)) is not necessarily equivalent
+ * to ava_to_string(x); the returned value is conceptually different.
+ *
  * @throws ava_format_exception if value is not conform to list format.
  */
 ava_list_value ava_list_value_of(ava_value value);
+
+/**
+ * Copies the given list into a new list using a reasonable type for the
+ * contents. The result will be a normalised list.
+ *
+ * The only real use for this is for pseudo-list implementations that cannot
+ * actually implement list mutation operations themselves.
+ */
+ava_list_value ava_list_copy_of(ava_list_value list, size_t begin, size_t end);
 
 /**
  * Declares a local variable named name which is usable as an iterator for the
@@ -252,12 +239,17 @@ ava_list_value ava_list_value_of(ava_value value);
  * without an explicit reference.
  */
 #define AVA_LIST_ITERATOR(list, name)                                   \
-  void* name[((list).v->iterator_size + sizeof(void*) - 1)/sizeof(void*)]
+  void* name[((list).v->iterator_size(list) + sizeof(void*) - 1)/sizeof(void*)]
 
 /**
  * Escapes the given string so that it can be used in a string representation
  * of a list.
  */
 ava_string ava_list_escape(ava_string);
+
+/**
+ * The empty list.
+ */
+extern const ava_list_value ava_empty_list;
 
 #endif /* AVA_RUNTIME_LIST_H_ */
