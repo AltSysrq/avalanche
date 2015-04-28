@@ -13,15 +13,12 @@ lib_LTLIBRARIES = libavart.la
 bin_PROGRAMS = bootstrap-avac
 libavart_la_SOURCES = \
 runtime/alloc.c \
-runtime/array-list.c \
 runtime/context.c \
-runtime/empty-list.c \
 runtime/exception.c \
 runtime/gen-integer.c \
 runtime/gen-lex.c \
 runtime/hexes.c \
 runtime/integer-fast-dec.c \
-runtime/list.c \
 runtime/string.c \
 runtime/value.c
 libavart_la_LIBADD = $(LIBUNWIND_LIBS)

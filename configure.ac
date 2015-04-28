@@ -29,7 +29,7 @@ AC_SEARCH_LIBS([GC_init], [gc], [],
 [The gc library could not be found. Make sure libgc[-dev] is installed.])])
 
 # Checks for header files
-AC_CHECK_HEADERS([gc.h gc/gc.h atomic_ops.h])
+AC_CHECK_HEADERS([gc.h gc/gc.h])
 AC_CHECK_HEADERS([err.h bsd/err.h sysexits.h bsd/sysexits.h bsd/string.h])
 AC_CHECK_HEADERS([sys/types.h sys/resource.h])
 

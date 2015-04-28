@@ -40,7 +40,6 @@ AVA_BEGIN_DECLS
 #include "avalanche/value.h"
 #include "avalanche/exception.h"
 #include "avalanche/context.h"
-#include "avalanche/list.h"
 
 AVA_END_DECLS
 

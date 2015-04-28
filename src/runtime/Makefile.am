@@ -9,7 +9,6 @@ avalanche/defs.h \
 avalanche/exception.h \
 avalanche/integer.h \
 avalanche/lex.h \
-avalanche/list.h \
 avalanche/string.h \
 avalanche/value.h
 
