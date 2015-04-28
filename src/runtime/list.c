@@ -48,16 +48,6 @@ static ava_list_value ava_list_value_of_string(ava_string);
 
 AVA_DEFINE_ACCELERATOR(ava_list_accelerator);
 
-ava_value ava_list_imbue(ava_value value) {
-  ava_list_value as_list;
-
-  if (ava_query_accelerator(value, &ava_list_accelerator, NULL))
-    return value;
-
-  as_list = ava_list_value_of(value);
-  return as_list.v->to_value(as_list);
-}
-
 ava_list_value ava_list_value_of(ava_value value) {
   const ava_list_iface* iface = ava_query_accelerator(
     value, &ava_list_accelerator, NULL);
@@ -108,7 +98,7 @@ static ava_list_value ava_list_value_of_string(ava_string str) {
       break;
 
     case ava_ls_end_of_input:
-      return accum;
+      goto done;
 
     case ava_ls_error: {
       char message[256];
@@ -124,6 +114,12 @@ static ava_list_value ava_list_value_of_string(ava_string str) {
     } break;
     }
   }
+
+  done:
+  if (buffer_ix)
+    accum = accum.v->concat(
+      accum, ava_array_list_of_raw(buffer, buffer_ix));
+  return accum;
 }
 
 ava_list_value ava_list_copy_of(ava_list_value list, size_t begin, size_t end) {
@@ -220,7 +216,7 @@ ava_string ava_list_escape(ava_string str) {
         }
       }
 
-      if ((strdat[i] != '\n' &&
+      if ((strdat[i] != '\n' && strdat[i] != '\t' &&
            (unsigned)strdat[i]  < (unsigned)' ') ||
           strdat[i] == '\x7f') {
         /* Illegal character; needs hex escape */
