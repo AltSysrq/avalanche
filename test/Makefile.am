@@ -3,7 +3,8 @@ AUTOMAKE_OPTIONS = subdir-objects
 
 TESTS = runtime/test-string.t runtime/test-lex.t \
 runtime/test-value.t runtime/test-exception.t \
-runtime/test-integer.t runtime/test-empty-list.t
+runtime/test-integer.t runtime/test-empty-list.t \
+runtime/test-array-list.t
 
 EXTRA_CFLAGS =
 AM_CFLAGS = $(CHECK_CFLAGS) -I../src $(EXTRA_CFLAGS) -funwind-tables
@@ -17,4 +18,5 @@ runtime_test_value_t_SOURCES = runtime/test-value.c
 runtime_test_exception_t_SOURCES = runtime/test-exception.c
 runtime_test_integer_t_SOURCES = runtime/test-integer.c
 runtime_test_empty_list_t_SOURCES = runtime/test-empty-list.c
+runtime_test_array_list_t_SOURCES = runtime/test-array-list.c
 runtime_rope_vis_t_SOURCES = runtime/rope-vis.c

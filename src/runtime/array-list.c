@@ -142,6 +142,11 @@ static const ava_list_iface ava_array_list_iface = {
   .iterator_index = ava_array_list_list_iterator_index,
 };
 
+unsigned ava_array_list_used(ava_list_value list) {
+  const ava_array_list*restrict al = list.LIST;
+  return al->used;
+}
+
 ava_list_value ava_array_list_copy_of(
   ava_list_value list, size_t begin, size_t end
 ) {
@@ -266,6 +271,9 @@ static ava_list_value ava_array_list_list_slice(ava_list_value list,
   assert(begin <= end);
   assert(end <= list.LENGTH);
 
+  if (begin == end)
+    return ava_empty_list;
+
   if (0 == begin && end * 2 >= al->capacity) {
     list.LENGTH = end;
     return list;
@@ -332,6 +340,7 @@ static ava_list_value ava_array_list_list_concat(ava_list_value list,
                                ava_array_list_growing_capacity(
                                  list.LENGTH + other_length));
   al->used += other_length;
+  list.LIST = al;
 
   mutate_al:;
   size_t added_weight = 0;
@@ -341,7 +350,7 @@ static ava_list_value ava_array_list_list_concat(ava_list_value list,
        i < other_length;
        other.v->iterator_move(other, it, 1)) {
     al->values[list.LENGTH + i] = other.v->iterator_get(other, it);
-    added_weight += ava_value_weight(al->values[list.LENGTH + 1]);
+    added_weight += ava_value_weight(al->values[list.LENGTH + i]);
     ++i;
   }
 

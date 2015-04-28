@@ -64,4 +64,12 @@ ava_list_value ava_array_list_of_raw(
   const ava_value*restrict array,
   size_t length);
 
+/**
+ * This is for testing.
+ *
+ * It returns the number of used elements in the backing of the list. This is
+ * not thread-safe and violates the generally-expected behaviour of values.
+ */
+unsigned ava_array_list_used(ava_list_value list);
+
 #endif /* AVA_RUNTIME__ARRAY_LIST_H_ */
