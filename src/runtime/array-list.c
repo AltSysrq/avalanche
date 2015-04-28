@@ -368,7 +368,7 @@ static ava_list_value ava_array_list_list_delete(
   assert(end <= list.LENGTH);
 
   if (begin == end)
-    return ava_empty_list;
+    return list;
 
   if (0 == begin)
     return ava_array_list_list_slice(list, end, list.LENGTH);

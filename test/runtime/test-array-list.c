@@ -258,3 +258,64 @@ deftest(copying_slice_due_to_size_reduction) {
   for (i = 0; i < 2; ++i)
     ck_assert(values_equal(values[i], slice.v->index(slice, i)));
 }
+
+deftest(noop_delete) {
+  ava_list_value orig = ava_array_list_of_raw(values, 8);
+  ava_list_value new = orig.v->delete(orig, 5, 5);
+
+  ck_assert(values_equal(orig.v->to_value(orig), new.v->to_value(new)));
+}
+
+deftest(prefix_delete) {
+  ava_list_value orig = ava_array_list_of_raw(values, 8);
+  ava_list_value new = orig.v->delete(orig, 0, 2);
+  unsigned i;
+
+  ck_assert_int_eq(8, orig.v->length(orig));
+  ck_assert_int_eq(6, new.v->length(new));
+  ck_assert_int_eq(8, ava_array_list_used(orig));
+  ck_assert_int_eq(6, ava_array_list_used(new));
+
+  for (i = 0; i < 6; ++i)
+    ck_assert(values_equal(values[i + 2], new.v->index(new, i)));
+}
+
+deftest(suffix_delete) {
+  ava_list_value orig = ava_array_list_of_raw(values, 8);
+  ava_list_value new = orig.v->delete(orig, 6, 8);
+  unsigned i;
+
+  ck_assert_int_eq(8, orig.v->length(orig));
+  ck_assert_int_eq(6, new.v->length(new));
+  ck_assert_int_eq(8, ava_array_list_used(orig));
+  ck_assert_int_eq(8, ava_array_list_used(new));
+
+  for (i = 0; i < 6; ++i)
+    ck_assert(values_equal(values[i], new.v->index(new, i)));
+}
+
+deftest(internal_delete) {
+  ava_list_value orig = ava_array_list_of_raw(values, 8);
+  ava_list_value new = orig.v->delete(orig, 4, 6);
+  unsigned i;
+
+  ck_assert_int_eq(8, orig.v->length(orig));
+  ck_assert_int_eq(6, new.v->length(new));
+  ck_assert_int_eq(8, ava_array_list_used(orig));
+  ck_assert_int_eq(6, ava_array_list_used(new));
+
+  for (i = 0; i < 4; ++i)
+    ck_assert(values_equal(values[i], new.v->index(new, i)));
+  for (; i < 6; ++i)
+    ck_assert(values_equal(values[i+2], new.v->index(new, i)));
+}
+
+deftest(iterator_preserves_index) {
+  ava_list_value orig = ava_array_list_of_raw(values, 2);
+  AVA_LIST_ITERATOR(orig, it);
+
+  orig.v->iterator_place(orig, it, 42);
+  ck_assert_int_eq(42, orig.v->iterator_index(orig, it));
+  orig.v->iterator_move(orig, it, -40);
+  ck_assert_int_eq(2, orig.v->iterator_index(orig, it));
+}
