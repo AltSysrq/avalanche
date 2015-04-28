@@ -36,6 +36,12 @@
 #include <check.h>
 #include <stdlib.h>
 #include <signal.h>
+#ifdef HAVE_SYS_TYPES_H
+#include <sys/types.h>
+#endif
+#ifdef HAVE_SYS_RESOURCE_H
+#include <sys/resource.h>
+#endif
 
 #include "runtime/avalanche.h"
 
@@ -87,11 +93,24 @@ static ava_value run_function(void* f) {
   }                                             \
   void dummy()
 
+#if defined(HAVE_SETRLIMIT) && defined(RLIMIT_CORE)
+#define SUPPRESS_DUMP_CORE() do {               \
+    struct rlimit rlimit_zero = { 0, 0 };       \
+    setrlimit(RLIMIT_CORE, &rlimit_zero);       \
+  } while (0)
+#else
+#define SUPPRESS_DUMP_CORE() do { } while (0)
+#endif
+
 #define deftest_signal(name,sig)                \
   static void _register_##name(void)            \
     __attribute__((constructor));               \
   static void name##_impl(void);                \
   START_TEST(name) {                            \
+    /* If we expect a signal, suppress */       \
+    /* dumping core, it just wastes time. */    \
+    if (sig)                                    \
+      SUPPRESS_DUMP_CORE();                     \
     ava_invoke_in_context(run_function,         \
                           (void*)name##_impl);  \
   }                                             \

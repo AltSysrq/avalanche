@@ -31,6 +31,7 @@ AC_SEARCH_LIBS([GC_init], [gc], [],
 # Checks for header files
 AC_CHECK_HEADERS([gc.h gc/gc.h atomic_ops.h])
 AC_CHECK_HEADERS([err.h bsd/err.h sysexits.h bsd/sysexits.h bsd/string.h])
+AC_CHECK_HEADERS([sys/types.h sys/resource.h])
 
 # Checks for typedefs, structures, and compiler characteristics.
 AC_HEADER_STDBOOL
@@ -48,6 +49,9 @@ AC_TYPE_INT8_T
 AC_TYPE_INT16_T
 AC_TYPE_INT32_T
 AC_TYPE_INT64_T
+
+# Checks for library functions.
+AC_CHECK_FUNCS([setrlimit])
 
 AC_CONFIG_FILES([Makefile src/Makefile src/runtime/Makefile test/Makefile])
 AC_OUTPUT
