@@ -422,6 +422,18 @@ deftest(error_on_illegal_char_in_verb) {
   end();
 }
 
+deftest(error_on_illegal_char_at_eof) {
+  start("\1");
+  error();
+  end();
+}
+
+deftest(error_on_nul_at_eof) {
+  lexer = ava_lex_new(ava_string_of_char(0));
+  error();
+  end();
+}
+
 deftest(error_on_unterminated_string_literal) {
   start("\"foo\n\nbar");
   error();

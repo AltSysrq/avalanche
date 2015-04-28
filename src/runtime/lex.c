@@ -452,6 +452,7 @@ ava_lex_status ava_lex_lex(ava_lex_result* dst, ava_lex_context* lex) {
       STRINGB = LEGALNL \ BS \ SD ;
       VERBB = LEGALNL \ BS ;
       ILLEGAL = [^] \ LEGAL ;
+      ILLEGAL_STR = ((ILLEGAL \ [\x00])+ | "\x00") ;
 
       <Ground> NS+              { IND();  ACCEPT(ava_lex_bareword); }
       <Ground> WS+              {         IGNORE(); }
@@ -495,8 +496,8 @@ ava_lex_status ava_lex_lex(ava_lex_result* dst, ava_lex_context* lex) {
       <Ground> BS [^]           {         ERROR(ava_lex_error_backslash_sequence); }
       <Ground> BS               {         ERROR(ava_lex_error_backslash_at_eof); }
 
-      <String,Verb> ILLEGAL+    {         DERROR(ava_lex_error_illegal_chars); }
-      <Ground> ILLEGAL+         {         ERROR(ava_lex_error_illegal_chars); }
+      <String,Verb> ILLEGAL_STR {         DERROR(ava_lex_error_illegal_chars); }
+      <Ground> ILLEGAL_STR      {         ERROR(ava_lex_error_illegal_chars); }
      */
 
     continue_loop:;
