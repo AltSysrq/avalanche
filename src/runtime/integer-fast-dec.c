@@ -99,8 +99,7 @@ ava_integer ava_integer_parse_dec_fast(
   if ((~s & mask) & A9("\x30\x30\x30\x30\x30\x30\x30\x30\x30"))
     return PARSE_DEC_FAST_ERROR;
 
-  /* It's a base-10 string, possibly with a leading question mark indicating it
-   * is negative.
+  /* It's a base-10 string; any leading hyphen has been removed.
    *
    * Subtract the '0' bias.
    */
