@@ -46,6 +46,7 @@ ava_integer ava_integer_parse_dec_fast(
   ava_ascii9_string s, unsigned strlen
 ) {
   ava_ascii9_string mask = ~0ULL << ((9 - strlen) * 7 + 1);
+  ava_ascii9_string error;
   ava_bool negative;
   s &= mask;
 
@@ -56,8 +57,7 @@ ava_integer ava_integer_parse_dec_fast(
    *
    * First check for anything that has bits set that definitely shouldn't be.
    */
-  if (s != (s & A9("\x3F\x3F\x3F\x3F\x3F\x3F\x3F\x3F\x3F")))
-    return PARSE_DEC_FAST_ERROR;
+  error = s ^ (s & A9("\x3F\x3F\x3F\x3F\x3F\x3F\x3F\x3F\x3F"));
 
   /* If negative, remove the negative sign */
   if (negative) {
@@ -88,15 +88,16 @@ ava_integer ava_integer_parse_dec_fast(
   ava_ascii9_string bit3 = s & A9("\x08\x08\x08\x08\x08\x08\x08\x08\x08");
   bit3 >>= 1;
   bit3 |= bit3 >> 1;
-  if (s & bit3)
-    return PARSE_DEC_FAST_ERROR;
+  error |= s & bit3;
 
   /* We now know that every character is between 01 and 3F, and furthermore is
    * not between XA and XF for any row X.
    *
    * Now discard anything that isn't in the 0x3X range.
    */
-  if ((~s & mask) & A9("\x30\x30\x30\x30\x30\x30\x30\x30\x30"))
+  error |= (~s & mask) & A9("\x30\x30\x30\x30\x30\x30\x30\x30\x30");
+
+  if (error)
     return PARSE_DEC_FAST_ERROR;
 
   /* It's a base-10 string; any leading hyphen has been removed.
