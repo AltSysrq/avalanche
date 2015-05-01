@@ -125,18 +125,21 @@ ava_integer ava_integer_parse_dec_fast(
    */
   s = (s & A9_1("\x7f\x00\x7f\x00\x7f\x00\x7f\x00\x7f")) +
     10 * ((s >> 7) & A9_1("\x7f\x00\x7f\x00\x7f\x00\x7f\x00\x7f"));
+  if (strlen <= 2) goto done;
   /* Bits: 7 14 14 14 14     7   28   28
    * Max:  9 99 99 99 99 =>  9 9999 9999
    * Need: 4  7  7  7  7     4   14   14
    */
   s = (s & A9_1("\x7f\x00\x00\x7f\x7f\x00\x00\x7f\x7f")) +
     100 * ((s >> 14) & A9_1("\x7f\x00\x00\x7f\x7f\x00\x00\x7f\x7f"));
+  if (strlen <= 4) goto done;
   /* Bits: 7   28   28    7       56
    * Max:  9 9999 9999 => 9 99999999
    * Need: 4   14   14    4       27
    */
   s = (s & A9_1("\x7f\x00\x00\x00\x00\x7f\x7f\x7f\x7f")) +
     10000 * ((s >> 28) & A9_1("\x7f\x00\x00\x00\x00\x7f\x7f\x7f\x7f"));
+  if (strlen <= 8) goto done;
   /* Bits: 7       56           64
    * Max:  9 99999999 => 999999999
    * Need: 4       27           30
@@ -144,5 +147,6 @@ ava_integer ava_integer_parse_dec_fast(
   s = (s & A9_1("\x00\x7f\x7f\x7f\x7f\x7f\x7f\x7f\x7f")) +
     100000000 * ((s >> 56) & A9_1("\x00\x7f\x7f\x7f\x7f\x7f\x7f\x7f\x7f"));
 
+  done:
   return negative? -s : s;
 }
