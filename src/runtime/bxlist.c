@@ -235,7 +235,7 @@
 
  */
 
-#define BXLIST_ORDER 64
+#define BXLIST_ORDER AVA_BXLIST_ORDER
 
 static inline void static_assert_ulong_holds_aot(void) {
   switch (0) {
@@ -516,6 +516,28 @@ static void ava_bxlist_node_append_one_direct(
   const void*restrict data,
   ava_bxlist_timestamp t_n);
 
+/**
+ * Adjusts the indices of elements within a spilled branch.
+ *
+ * If the given node is non-NULL, it is assumed to be a fresh node created to
+ * house spill-over from an insert or append operation. The num_prior_indices
+ * of the first element will be subtracted in-place from all elements in the
+ * node.
+ */
+static void ava_bxlist_branch_adjust_indices(ava_bxlist_node*restrict node) {
+  ava_bxlist_branch_element*restrict elts;
+  unsigned i;
+  size_t off;
+
+  if (!node) return;
+
+  elts = (ava_bxlist_branch_element*restrict)node->primary.data;
+  off = elts[0].num_prior_indices;
+
+  for (i = 0; i < BXLIST_ORDER && T_INFINITY != node->primary.available[i]; ++i)
+    elts[i].num_prior_indices -= off;
+}
+
 ava_bxlist ava_bxlist_new(size_t element_size,
                           ava_bxlist_weight_function weight_function) {
   ava_bxlist_node*restrict root;
@@ -623,6 +645,7 @@ static ava_bxlist_node* ava_bxlist_node_new(
   node->family = family;
 
   memset(node->primary.available, -1, sizeof(node->primary.available));
+  node->primary.data = (char*)(node + 1);
   node->patch_available = T_INFINITY;
 
   return node;
@@ -669,6 +692,7 @@ static ava_bxlist_node* ava_bxlist_node_fork(
   ava_bxlist_timestamp t_r
 ) {
   unsigned i, nelt;
+  ava_bxlist_timestamp t_n = *family;
   ava_bxlist_node*restrict dst = ava_bxlist_node_new(
     src->element_size, src->leaf_element_size, src->height,
     src->weight_function, family);
@@ -676,7 +700,7 @@ static ava_bxlist_node* ava_bxlist_node_fork(
 
   for (i = 0; i < BXLIST_ORDER &&
          (elt = ava_bxlist_node_get_element(src, i, t_r)); ++i) {
-    ava_bxlist_node_write_element(dst, elt, i, t_r);
+    ava_bxlist_node_write_element(dst, elt, i, t_n);
   }
 
   /* For branches, we may need to set foreign_timestamp if some children are
@@ -749,13 +773,12 @@ static unsigned ava_bxlist_node_used(
     upper_bound *= 2;
   }
 
-  --upper_bound;
   while (lower_bound < upper_bound) {
-    mid = (lower_bound + upper_bound + 1) / 2;
+    mid = (lower_bound + upper_bound) / 2;
     if (node->primary.available[mid] <= t_r)
-      lower_bound = mid;
+      lower_bound = mid + 1;
     else
-      upper_bound = mid - 1;
+      upper_bound = mid;
   }
 
   /* lower_bound == upper_bound */
@@ -802,6 +825,7 @@ static ava_bxlist_node* ava_bxlist_node_reserve_elements(
   if (needs_patch && T_INFINITY == node->patch_available) {
     node->patch = ava_alloc(sizeof(ava_bxlist_table) +
                             node->element_size * BXLIST_ORDER);
+    node->patch->data = (char*)(node->patch + 1);
     memset(node->patch->available, -1, sizeof(node->patch->available));
     node->patch_available = t_n;
   }
@@ -812,6 +836,7 @@ static ava_bxlist_node* ava_bxlist_node_reserve_elements(
   /* Fork the node, but then erase the primary elements we're about to
    * overwrite
    */
+  node = ava_bxlist_node_fork(node, node->family, t_n);
   elements = elements_to_reserve >> first_element_to_reserve;
   for (ix = first_element_to_reserve; ix < last_element_to_reserve;
        ++ix, elements >>= 1)
@@ -917,7 +942,7 @@ static ava_bxlist_node* ava_bxlist_node_make_root(
     };
 
     new_root->primary.available[0] =
-      new_root->primary.available[1] = T_INFINITY;
+      new_root->primary.available[1] = t_r;
     memcpy(new_root->primary.data, elts, sizeof(elts));
     new_root->weight = in[0]->weight + in[1]->weight;
 
@@ -966,6 +991,7 @@ static void ava_bxlist_node_insert_one(
       ava_bxlist_node_get_element(node, ix, t_n);
     ava_bxlist_branch_element new_elt;
     ava_bxlist_node*restrict new_children[2];
+    ava_bxlist_node*restrict orig_node = node;
 
     ava_bxlist_node_insert_one(
       new_children, ava_bxlist_node_acquire(old_elt, node->family),
@@ -987,11 +1013,11 @@ static void ava_bxlist_node_insert_one(
     }
 
     /* Adjust the num_prior_indices of all following elements */
-    ava_bxlist_node_reserve_elements(
+    node = ava_bxlist_node_reserve_elements(
       node, ~0ULL << (ix + 1), ix + 1, used, t_n);
     for (i = ix + 1; i < used; ++i) {
       const ava_bxlist_branch_element*restrict cur =
-        ava_bxlist_node_get_element(node, i, t_n);
+        ava_bxlist_node_get_element(orig_node, i, t_n);
       new_elt = *cur;
       ++new_elt.num_prior_indices;
       ava_bxlist_node_write_element(node, &new_elt, i, t_n);
@@ -1008,7 +1034,8 @@ static void ava_bxlist_node_insert_one(
       new_elt.num_prior_indices = old_elt->num_prior_indices +
         ava_bxlist_node_length(new_children[0], t_n);
       ava_bxlist_node_insert_one_direct(
-        out, node, index + 1, &new_elt, t_n);
+        out, node, ix + 1, &new_elt, t_n);
+      ava_bxlist_branch_adjust_indices(out[1]);
     }
   }
 }
@@ -1026,11 +1053,12 @@ static void ava_bxlist_node_insert_one_direct(
    /* There is room for the new element */
    ava_ulong mask = (~0ULL) << index;
    unsigned i;
+   ava_bxlist_node*restrict old_node = node;
    node = ava_bxlist_node_reserve_elements(node, mask, index, used+1, t_n);
 
-   for (i = used+1; i > index; --i)
+   for (i = used; i > index; --i)
      ava_bxlist_node_write_element(
-       node, ava_bxlist_node_get_element(node, i-1, t_n), i, t_n);
+       node, ava_bxlist_node_get_element(old_node, i-1, t_n), i, t_n);
 
    ava_bxlist_node_write_element(node, data, index, t_n);
 
@@ -1046,13 +1074,13 @@ static void ava_bxlist_node_insert_one_direct(
                                 node->height, node->weight_function,
                                 node->family);
 
-   for (i = 0; i < used; ++i) {
+   for (i = 0; i <= used; ++i) {
      ava_bxlist_node_write_element(
        out[i >= split],
        (i < index? ava_bxlist_node_get_element(node, i, t_n) :
         i == index? data :
         ava_bxlist_node_get_element(node, i-1, t_n)),
-       i, t_n);
+       i < split? i : i - split, t_n);
    }
  }
 }
@@ -1087,7 +1115,7 @@ static void ava_bxlist_node_append_one(
     ava_bxlist_node_append_one_direct(out, node, data, t_n);
   } else {
     /* Branch */
-    unsigned ix = ava_bxlist_node_used(node, t_n);
+    unsigned ix = ava_bxlist_node_used(node, t_n) - 1;
     const ava_bxlist_branch_element*restrict old_elt =
       ava_bxlist_node_get_element(node, ix, t_n);
     ava_bxlist_node*restrict new_children[2];
@@ -1107,22 +1135,23 @@ static void ava_bxlist_node_append_one(
       node = ava_bxlist_node_reserve_elements(
         node, 1ULL << ix, ix, ix + 1, t_n);
       ava_bxlist_node_write_element(node, &new_elt, ix, t_n);
+    }
 
-      if (new_children[1]) {
-        /* Need to append the new child to self */
-        ava_bxlist_branch_element new_elt = {
-          .child = new_children[1],
-          .foreign_timestamp = T_INFINITY,
-          .num_prior_indices = old_elt->num_prior_indices +
-            ava_bxlist_node_length(new_children[0], t_n)
-        };
+    if (new_children[1]) {
+      /* Need to append the new child to self */
+      ava_bxlist_branch_element new_elt = {
+        .child = new_children[1],
+        .foreign_timestamp = T_INFINITY,
+        .num_prior_indices = old_elt->num_prior_indices +
+          ava_bxlist_node_length(new_children[0], t_n)
+      };
 
-        ava_bxlist_node_append_one_direct(out, node, &new_elt, t_n);
-      } else {
-        /* This node doesn't need to grow, we're done */
-        out[0] = node;
-        out[1] = NULL;
-      }
+      ava_bxlist_node_append_one_direct(out, node, &new_elt, t_n);
+      ava_bxlist_branch_adjust_indices(out[1]);
+    } else {
+      /* This node doesn't need to grow, we're done */
+      out[0] = node;
+      out[1] = NULL;
     }
   }
 }

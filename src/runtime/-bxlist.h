@@ -30,6 +30,8 @@
 
 #include "avalanche/defs.h"
 
+#define AVA_BXLIST_ORDER 64
+
 /**
  * Internal type used in the B+ List.
  */
