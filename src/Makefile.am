@@ -16,6 +16,7 @@ runtime/alloc.c \
 runtime/array-list.c \
 runtime/bxlist.c \
 runtime/context.c \
+runtime/degrad-array.c \
 runtime/empty-list.c \
 runtime/exception.c \
 runtime/gen-integer.c \

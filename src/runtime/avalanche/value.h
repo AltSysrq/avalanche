@@ -88,8 +88,8 @@ typedef union {
   char                  chars[8];
   ava_ushort            ushorts[4];
   ava_sshort            sshorts[4];
-  ava_uint              uint[2];
-  ava_sint              sint[2];
+  ava_uint              uints[2];
+  ava_sint              sints[2];
   ava_ulong             ulong;
   ava_slong             slong;
   const void*restrict   ptr;
