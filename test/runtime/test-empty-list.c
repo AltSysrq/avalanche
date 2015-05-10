@@ -103,6 +103,10 @@ deftest_signal(empty_list_refuses_nonzero_delete, SIGABRT) {
   ava_empty_list.v->delete(ava_empty_list, 1, 1);
 }
 
+deftest_signal(empty_list_refuses_set, SIGABRT) {
+  ava_empty_list.v->set(ava_empty_list, 0, empty_list_value);
+}
+
 deftest(empty_list_iterator_retains_position) {
   AVA_LIST_ITERATOR(ava_empty_list, it);
 

@@ -101,7 +101,7 @@ struct ava_list_iface_s {
    *
    * Effect is undefined if index >= length().
    *
-   * Complexity: Amortised O(log(length))
+   * Complexity: Amortised O(1)
    */
   ava_value (*index)(ava_list_value list, size_t index);
   /**
@@ -118,14 +118,14 @@ struct ava_list_iface_s {
    * Returns a new list which contains all the elements of list followed by the
    * given element.
    *
-   * Complexity: Amortised O(log(length))
+   * Complexity: Amortised O(1)
    */
   ava_list_value (*append)(ava_list_value list, ava_value element);
   /**
    * Returns a new list which contains all the elements of left followed by all
    * the elements of right.
    *
-   * Complexity: Amortised O(log(length))
+   * Complexity: Amortised O(length)
    */
   ava_list_value (*concat)(ava_list_value left, ava_list_value right);
   /**
@@ -134,9 +134,19 @@ struct ava_list_iface_s {
    *
    * Effect is undefined if begin > end or end >= length().
    *
-   * Complexity: Amortised O(log(length))
+   * Complexity: Amortised O(length)
    */
   ava_list_value (*delete)(ava_list_value list, size_t begin, size_t end);
+
+  /**
+   * Returns a new list which contains the elements in list, except with the
+   * element at the selected index replaced with the given value.
+   *
+   * Behaviour is undefined if index > length().
+   *
+   * Complexity: Amortised O(1)
+   */
+  ava_list_value (*set)(ava_list_value list, size_t index, ava_value element);
 
   /**
    * The size of an iterator used for this list type.

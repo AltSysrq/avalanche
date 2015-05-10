@@ -298,6 +298,21 @@ deftest(internal_delete) {
     ck_assert(values_equal(values[i+2], new.v->index(new, i)));
 }
 
+deftest(set) {
+  ava_value new_value = values[20];
+  ava_list_value orig = ava_array_list_of_raw(values, 8);
+  ava_list_value new = orig.v->set(orig, 2, new_value);
+  unsigned i;
+
+  ck_assert_int_eq(8, orig.v->length(orig));
+  ck_assert_int_eq(8, new.v->length(new));
+
+  for (i = 0; i < 8; ++i) {
+    ck_assert(values_equal(values[i], orig.v->index(orig, i)));
+    ck_assert(values_equal(values[2 == i? 20 : i], new.v->index(new, i)));
+  }
+}
+
 deftest(iterator_preserves_index) {
   ava_list_value orig = ava_array_list_of_raw(values, 2);
   AVA_LIST_ITERATOR(orig, it);

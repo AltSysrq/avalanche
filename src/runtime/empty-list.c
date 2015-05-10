@@ -43,6 +43,8 @@ static ava_list_value ava_empty_list_list_concat(
   ava_list_value, ava_list_value);
 static ava_list_value ava_empty_list_list_delete(
   ava_list_value, size_t, size_t);
+static ava_list_value ava_empty_list_list_set(
+  ava_list_value, size_t, ava_value);
 static size_t ava_empty_list_list_iterator_size(ava_list_value);
 static void ava_empty_list_list_iterator_place(
   ava_list_value, void*restrict, size_t);
@@ -69,6 +71,7 @@ static const ava_list_iface ava_empty_list_iface = {
   .append = ava_empty_list_list_append,
   .concat = ava_empty_list_list_concat,
   .delete = ava_empty_list_list_delete,
+  .set = ava_empty_list_list_set,
   .iterator_size = ava_empty_list_list_iterator_size,
   .iterator_place = ava_empty_list_list_iterator_place,
   .iterator_get = ava_empty_list_list_iterator_get,
@@ -149,6 +152,12 @@ static ava_list_value ava_empty_list_list_delete(
   if (begin || end) abort();
 
   return el;
+}
+
+static ava_list_value ava_empty_list_list_set(
+  ava_list_value el, size_t index, ava_value value
+) {
+  abort();
 }
 
 static size_t ava_empty_list_list_iterator_size(ava_list_value el) {

@@ -97,6 +97,8 @@ static ava_list_value ava_array_list_list_concat(
   ava_list_value, ava_list_value);
 static ava_list_value ava_array_list_list_delete(
   ava_list_value, size_t, size_t);
+static ava_list_value ava_array_list_list_set(
+  ava_list_value, size_t, ava_value);
 static size_t ava_array_list_list_iterator_size(ava_list_value);
 static void ava_array_list_list_iterator_place(
   ava_list_value, void*restrict, size_t);
@@ -123,6 +125,7 @@ static const ava_list_iface ava_array_list_iface = {
   .append = ava_array_list_list_append,
   .concat = ava_array_list_list_concat,
   .delete = ava_array_list_list_delete,
+  .set = ava_array_list_list_set,
   .iterator_size = ava_array_list_list_iterator_size,
   .iterator_place = ava_array_list_list_iterator_place,
   .iterator_get = ava_array_list_list_iterator_get,
@@ -375,6 +378,23 @@ static ava_list_value ava_array_list_list_delete(
 
   list.LIST = nal;
   list.LENGTH -= end - begin;
+  return list;
+}
+
+static ava_list_value ava_array_list_list_set(
+  ava_list_value list, size_t index, ava_value value
+) {
+  const ava_array_list*restrict al = list.LIST;
+
+  assert(index < list.LENGTH);
+
+  ava_array_list*restrict mal = ava_array_list_of_array(
+    al->values, list.LENGTH, list.LENGTH);
+  mal->weight -= ava_value_weight(mal->values[index]);
+  mal->weight += ava_value_weight(value);
+  mal->values[index] = value;
+
+  list.LIST = mal;
   return list;
 }
 
