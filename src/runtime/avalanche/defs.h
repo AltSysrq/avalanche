@@ -36,11 +36,17 @@
 #define AVA_PURE __attribute__((__pure__))
 #define AVA_CONSTFUN __attribute__((__const__))
 #define AVA_NORETURN __attribute__((__noreturn__))
+#define AVA_UNUSED __attribute__((__unused__))
+#define AVA_LIKELY(x) __builtin_expect(!!(x), 1)
+#define AVA_UNLIKELY(x) __builtin_expect((x), 0)
 #else
 #define AVA_MALLOC
 #define AVA_PURE
 #define AVA_CONSTFUN
 #define AVA_NORETURN
+#define AVA_UNUSED
+#define AVA_LIKELY(x) (x)
+#define AVA_UNLIKELY(x) (x)
 #endif
 
 #ifdef __cplusplus
