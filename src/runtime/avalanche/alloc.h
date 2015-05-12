@@ -41,7 +41,7 @@ void ava_heap_init(void);
 void* ava_alloc(size_t) AVA_MALLOC;
 /**
  * Allocates and returns a block of memory of at least the given size. The
- * memory is initialised to zeroes.
+ * memory is *not* initialised to zeroes; its contents are undefined.
  *
  * The caller may not store any pointers in this memory.
  *

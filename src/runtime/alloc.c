@@ -17,6 +17,16 @@
 #include <config.h>
 #endif
 
+/* The macro AVA_NOGC can be used to suppress all use of the Boehm GC, and
+ * instead use malloc() for everything.
+ *
+ * This makes library leak memory like a sieve, but makes it possible to use
+ * diagnostic tools like valgrind to check for other memory errors. It also
+ * makes working with gdb a bit less irritating, since one need not constantly
+ * tell it "handle SIGSEGV noprint nostop".
+ */
+
+#ifndef AVA_NOGC
 #if defined(HAVE_GC_GC_H)
 #include <gc/gc.h>
 #elif defined(HAVE_GC_H)
@@ -24,8 +34,15 @@
 #else
 #error "Neither <gc/gc.h> nor <gc.h> could be found."
 #endif
+#else /* AVA_NOGC */
+#define GC_MALLOC(sz) (calloc(1, (sz)))
+#define GC_MALLOC_ATOMIC(sz) (malloc(sz))
+#define GC_MALLOC_UNCOLLECTABLE(sz) (calloc(1, (sz)))
+#define GC_FREE(ptr) (free(ptr))
+#endif /* !AVA_NOGC */
 
 #include <string.h>
+#include <stdlib.h>
 #include <stdio.h>
 
 #include "bsd.h"
@@ -41,8 +58,10 @@ static inline void* ava_oom_if_null(void* ptr) {
 }
 
 void ava_heap_init(void) {
+#ifndef AVA_NOGC
   GC_INIT();
   GC_enable_incremental();
+#endif
 }
 
 void* ava_alloc(size_t sz) {
