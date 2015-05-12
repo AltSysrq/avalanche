@@ -700,7 +700,7 @@ ava_esba ava_esba_append(ava_esba esba, const void*restrict data,
   size_t new_length = esba.length + num_elements;
   size_t element_size = ava_esba_handle_read(esba.handle).head->element_size;
 
-  ava_esba_make_mutable(&esba, &val, element_size, num_elements);
+  ava_esba_make_mutable(&esba, &val, element_size * num_elements, num_elements);
 
   /* Write directly into the newly live area; nothing will be looking at it for
    * now.
