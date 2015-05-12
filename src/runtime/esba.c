@@ -637,6 +637,7 @@ static ava_esba_array* ava_esba_handle_copy_out(
   ava_esba_array* dst = ava_esba_array_new(
     old.head->element_size, capacity,
     old.head->weight_function, old.head->allocator);
+  dst->dead_segment_size = capacity - length;
 
   /* Do a trivial copy of the main data.
    *
@@ -729,7 +730,7 @@ ava_esba ava_esba_set(ava_esba esba, size_t index, const void*restrict data) {
 
   ava_esba_make_mutable(&esba, &val,
                         element_size + sizeof_ptr(ava_esba_undead_element),
-                        0);
+                        element_size + sizeof_ptr(ava_esba_undead_element));
 
   /* Obtain the undo element. This is basically val.version-1, but is a but
    * obtuse due to the variable-sized structure.
@@ -810,6 +811,9 @@ static void ava_esba_make_mutable(
     val->version = (const ava_esba_undead_element*)val->head->end;
     esba->handle = ava_esba_handle_new(val->head, (AO_t)val->version,
                                        esba->length);
+
+    /* Set the correct dead size */
+    val->head->dead_segment_size -= required_space;
   }
 }
 
