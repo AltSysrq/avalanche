@@ -288,3 +288,27 @@ deftest(weight_calculated_correctly) {
 
   ck_assert_int_eq(5 * sizeof(ava_ulong), ava_esba_weight(e));
 }
+
+deftest(two_part_append) {
+  ava_esba base = ava_esba_append(new(), (ava_ulong[]) { 42 }, 1);
+  ava_esba left = base, right;
+
+  ava_ulong* left_dst = ava_esba_start_append(&left, 3);
+  left_dst[0] = 1;
+  left_dst[1] = 2;
+  left_dst[2] = 3;
+  /* Conflicting append before append finishes */
+  right = ava_esba_append(base, (ava_ulong[]) { 56 }, 1);
+  ava_esba_finish_append(left, 3);
+
+  ck_assert_int_eq(1, ava_esba_length(base));
+  ck_assert_int_eq(42, get_at(base, 0));
+  ck_assert_int_eq(4, ava_esba_length(left));
+  ck_assert_int_eq(42, get_at(left, 0));
+  ck_assert_int_eq(1, get_at(left, 1));
+  ck_assert_int_eq(2, get_at(left, 2));
+  ck_assert_int_eq(3, get_at(left, 3));
+  ck_assert_int_eq(2, ava_esba_length(right));
+  ck_assert_int_eq(42, get_at(right, 0));
+  ck_assert_int_eq(56, get_at(right, 1));
+}

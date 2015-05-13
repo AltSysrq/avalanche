@@ -42,6 +42,9 @@ typedef struct {
   /**
    * The handle on the ESBA.
    *
+   * This is guaranteed to be an exact pointer returned by the ESBA's
+   * allocator.
+   *
    * In an ava_value, conventionally in r1.ptr.
    */
   ava_esba_handle* handle;
@@ -164,6 +167,46 @@ ava_bool ava_esba_check_access(ava_esba esba, const void* accessed, ava_esba_tx 
  */
 ava_esba ava_esba_append(ava_esba esba, const void*restrict data,
                          size_t num_elements);
+
+/**
+ * Begins an externally-controlled append operation.
+ *
+ * The given ESBA will be modified as necessary to permit the insertion of
+ * exactly num_elements to the end of the array, and a pointer to that memory
+ * is returned.
+ *
+ * The caller MUST either call ava_esba_finish_append() with the resulting ESBA
+ * and the same number of elements, or discard the resulting reference.
+ *
+ * The effect of passing the new ESBA to any function other than
+ * ava_esba_finish_append() is undefined.
+ *
+ * @param esba The ESBA to use for appending. Modified as necessary so that the
+ * append operation will be possible.
+ * @param num_elements The number of elements the caller plans to append.
+ * @return A pointer to the location where the first element may be appended.
+ * The caller may copy arbitrary data to this location, but the amount of data
+ * copied must be exactly num_elements*element_size. This memory is stable
+ * until ava_esba_finish_append() is called.
+ */
+void* ava_esba_start_append(ava_esba* esba, size_t num_elements);
+/**
+ * Finalises an externally-controlled append to an ESBA, making it safe for
+ * reading or passing to any other function.
+ *
+ * After this is called, the pointer that had been returned from
+ * ava_esba_start_append() is no longer safe; its contents may change at any
+ * time.
+ *
+ * The effect of passing an ESBA not freshly produced by
+ * ava_esba_start_append() into this function is undefined.
+ *
+ * @param esba The ESBA produced by a call to ava_esba_start_append().
+ * @param num_elements The value of num_elements passed into
+ * ava_esba_start_append().
+ */
+void ava_esba_finish_append(ava_esba esba, size_t num_elements);
+
 /**
  * Changes the value of an element within an ESBA.
  *

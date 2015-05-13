@@ -695,19 +695,27 @@ static ava_esba_array* ava_esba_handle_copy_out(
   return dst;
 }
 
-ava_esba ava_esba_append(ava_esba esba, const void*restrict data,
-                         size_t num_elements) {
+static void* ava_esba_start_append_impl(ava_esba* esba, size_t num_elements,
+                                        ava_esba_handle_value* val) {
+  size_t element_size = ava_esba_handle_read(esba->handle).head->element_size;
+  size_t old_length = esba->length;
+
+  ava_esba_make_mutable(esba, val, element_size * num_elements, num_elements);
+  esba->length += num_elements;
+  return val->head->data + old_length * element_size;
+}
+
+void* ava_esba_start_append(ava_esba* esba, size_t num_elements) {
   ava_esba_handle_value val;
-  size_t new_length = esba.length + num_elements;
-  size_t element_size = ava_esba_handle_read(esba.handle).head->element_size;
+  return ava_esba_start_append_impl(esba, num_elements, &val);
+}
 
-  ava_esba_make_mutable(&esba, &val, element_size * num_elements, num_elements);
+static void ava_esba_finish_append_impl(ava_esba esba, size_t num_elements,
+                                        ava_esba_handle_value val) {
+  size_t old_length = esba.length - num_elements;
+  size_t new_length = esba.length;
+  size_t element_size = val.head->element_size;
 
-  /* Write directly into the newly live area; nothing will be looking at it for
-   * now.
-   */
-  memcpy(val.head->data + esba.length * val.head->element_size,
-         data, num_elements * val.head->element_size * sizeof(pointer));
   /* Update the handle with the new maximum length.
    *
    * Write-release since a reader on another thread could act on the larger
@@ -717,9 +725,29 @@ ava_esba ava_esba_append(ava_esba esba, const void*restrict data,
   /* Update the weight; this can be incremental and non-atomic since we're the
    * only writer.
    */
-  val.head->weight += (*val.head->weight_function)(data, num_elements);
+  val.head->weight += (*val.head->weight_function)(
+    val.head->data + old_length * element_size, num_elements);
+}
 
-  esba.length = new_length;
+
+void ava_esba_finish_append(ava_esba esba, size_t num_elements) {
+  ava_esba_handle_value val = ava_esba_handle_read(esba.handle);
+  ava_esba_finish_append_impl(esba, num_elements, val);
+}
+
+ava_esba ava_esba_append(ava_esba esba, const void*restrict data,
+                         size_t num_elements) {
+  ava_esba_handle_value val;
+  size_t element_size = ava_esba_handle_read(esba.handle).head->element_size;
+
+  void* dst = ava_esba_start_append_impl(&esba, num_elements, &val);
+
+  /* Write directly into the newly live area; nothing will be looking at it for
+   * now.
+   */
+  memcpy(dst, data, num_elements * element_size * sizeof(pointer));
+
+  ava_esba_finish_append_impl(esba, num_elements, val);
 
   return esba;
 }
