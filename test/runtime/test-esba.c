@@ -30,7 +30,8 @@ static size_t weight_function(const void* data, size_t count) {
 }
 
 static ava_esba new(void) {
-  return ava_esba_new(sizeof(ava_ulong), 8, weight_function, ava_alloc_atomic);
+  return ava_esba_new(sizeof(ava_ulong), 8, weight_function, ava_alloc_atomic,
+                      NULL);
 }
 
 static ava_ulong get_at(ava_esba e, size_t ix) {

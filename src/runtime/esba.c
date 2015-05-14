@@ -275,6 +275,11 @@ typedef struct {
 
 struct ava_esba_handle_s {
   /**
+   * The userdata on the ESBA. This needs to be the first element in the
+   * structure.
+   */
+  void* userdata;
+  /**
    * A pointer to the array backing this handle.
    *
    * This may only be altered when the handle is stale.
@@ -340,6 +345,7 @@ static ava_esba_array* ava_esba_array_new(
   void* (*allocator)(size_t));
 
 static ava_esba_handle* ava_esba_handle_new(
+  void* userdata,
   ava_esba_array* array, AO_t version, size_t max_length);
 
 /**
@@ -421,7 +427,8 @@ ava_esba ava_esba_new(size_t element_size,
                       size_t initial_capacity,
                       size_t (*weight_function)(
                         const void*restrict, size_t),
-                      void* (*allocator)(size_t)) {
+                      void* (*allocator)(size_t),
+                      void* userdata) {
   assert(0 == element_size % sizeof(pointer));
 
   element_size /= sizeof(pointer);
@@ -429,7 +436,8 @@ ava_esba ava_esba_new(size_t element_size,
     element_size, initial_capacity * element_size,
     weight_function, allocator);
 
-  ava_esba_handle* handle = ava_esba_handle_new(array, array->true_version, 0);
+  ava_esba_handle* handle = ava_esba_handle_new(
+    userdata, array, array->true_version, 0);
 
   return (ava_esba) { .handle = handle, .length = 0 };
 }
@@ -441,23 +449,29 @@ static ava_esba_array* ava_esba_array_new(
 ) {
   ava_esba_array* array = (*allocator)(
     sizeof(ava_esba_array) +
-    initial_capacity * element_size * sizeof(pointer));
+    initial_capacity * element_size * sizeof(pointer) +
+    /* Always ensure there's space for at least one undead element */
+    sizeof_ptr(ava_esba_undead_element));
 
   array->element_size = element_size;
   array->weight_function = weight_function;
   array->allocator = allocator;
-  array->dead_segment_size = initial_capacity * element_size;
-  array->true_version = (AO_t)(array->data + initial_capacity * element_size);
-  array->end = array->data + initial_capacity * element_size;
+  array->dead_segment_size = initial_capacity * element_size +
+    sizeof_ptr(ava_esba_undead_element);
+  array->end = array->data + initial_capacity * element_size +
+    sizeof_ptr(ava_esba_undead_element);
+  array->true_version = (AO_t)array->end;
   array->weight = 0;
 
   return array;
 }
 
 static ava_esba_handle* ava_esba_handle_new(
+  void* userdata,
   ava_esba_array* array, AO_t version, size_t max_length
 ) {
   ava_esba_handle* handle = AVA_NEW(ava_esba_handle);
+  handle->userdata = userdata;
   handle->head = (AO_t)array;
   handle->version = version;
   handle->max_length = max_length;
@@ -791,7 +805,8 @@ ava_esba ava_esba_set(ava_esba esba, size_t index, const void*restrict data) {
   val.head->weight += (*val.head->weight_function)(data, 1);
 
   /* Create a new handle for the new version. */
-  esba.handle = ava_esba_handle_new(val.head, (AO_t)undo, esba.length);
+  esba.handle = ava_esba_handle_new(
+    esba.handle->userdata, val.head, (AO_t)undo, esba.length);
 
   return esba;
 }
@@ -837,8 +852,9 @@ static void ava_esba_make_mutable(
       esba->handle, believed_live_size,
       new_capacity * 2 * val->head->element_size);
     val->version = (const ava_esba_undead_element*)val->head->end;
-    esba->handle = ava_esba_handle_new(val->head, (AO_t)val->version,
-                                       esba->length);
+    esba->handle = ava_esba_handle_new(
+      esba->handle->userdata,
+      val->head, (AO_t)val->version, esba->length);
 
     /* Set the correct dead size */
     val->head->dead_segment_size -= required_space;

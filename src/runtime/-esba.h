@@ -42,9 +42,6 @@ typedef struct {
   /**
    * The handle on the ESBA.
    *
-   * This is guaranteed to be an exact pointer returned by the ESBA's
-   * allocator.
-   *
    * In an ava_value, conventionally in r1.ptr.
    */
   ava_esba_handle* handle;
@@ -81,13 +78,16 @@ typedef struct {
  * @param allocator Function compatible with ava_alloc_atomic() to use to
  * allocate the array and any arrays derived from it. Callers must provide
  * ava_alloc() if their elements may have pointers within.
+ * @param userdata Arbitrary pointer to associate with the array. This is not
+ * stored in memory allocated by allocator.
  * @return The new, empty array.
  */
 ava_esba ava_esba_new(size_t element_size,
                       size_t initial_capacity,
                       size_t (*weight_function)(
                         const void*restrict, size_t),
-                      void* (*allocator)(size_t));
+                      void* (*allocator)(size_t),
+                      void* userdata);
 
 /**
  * Starts a read transaction against the given ESBA.
@@ -233,5 +233,16 @@ static inline size_t ava_esba_length(ava_esba esba) {
  * over time.
  */
 size_t ava_esba_weight(ava_esba esba);
+
+/**
+ * Returns the userdata that was associated with the given esba when it was
+ * created.
+ */
+static inline void* ava_esba_userdata(ava_esba esba) {
+  /* XXX Evil cast so that we don't need a relocated function call just to
+   * dereference a pointer.
+   */
+  return *(void*const restrict*)esba.handle;
+}
 
 #endif /* AVA_RUNTIME__ESBA_H_ */
