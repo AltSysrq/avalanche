@@ -105,7 +105,7 @@ const ava_value_type ava_string_type = {
 ava_value ava_value_of_string(ava_string str) {
   return (ava_value) {
     .r1 = { .str = str },
-    .r2 = { .ptr = NULL },
+    .r2 = { .ulong = 0 },
     .type = &ava_string_type,
   };
 }

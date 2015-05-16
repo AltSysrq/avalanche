@@ -110,7 +110,7 @@ static inline ava_value ava_value_of_integer(ava_integer i) AVA_CONSTFUN;
 static inline ava_value ava_value_of_integer(ava_integer i) {
   ava_value ret = {
     .r1 = { .slong = i },
-    .r2 = { .ptr = NULL },
+    .r2 = { .ulong = 0 },
     .type = &ava_integer_type
   };
   return ret;
