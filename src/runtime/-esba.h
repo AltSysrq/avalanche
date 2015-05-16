@@ -56,7 +56,7 @@ typedef struct {
   size_t length;
 } ava_esba;
 
-/**
+/**c
  * An opaque value used for tracking ASBA transactions.
  *
  * No special action is required to destroy a transaction.
@@ -66,6 +66,19 @@ typedef struct {
 } ava_esba_tx;
 
 /**
+ * Function to "weigh" elements in an ESBA.
+ *
+ * @param userdata Any userdata associated with the array in use.
+ * @param elements The elements to weigh.
+ * @param num_elements The number of elements pointed to by elements.
+ * @return The total weight of the elements.
+ */
+typedef size_t (*ava_esba_weight_function)(
+  const void*restrict userdata,
+  const void*restrict elements,
+  size_t num_elements);
+
+/**
  * Allocates a new, empty ESBA.
  *
  * @param element_size The size of elements, in bytes, that will be stored in
@@ -73,8 +86,6 @@ typedef struct {
  * @param initial_capacity The minimum number of elements the ESBA is
  * guaranteed to be able to hold. Actual capacity may be greater.
  * @param weight_function A function to "weigh" elements added to the array.
- * The first parameter is a pointer to an array of elements, the second is the
- * element count.
  * @param allocator Function compatible with ava_alloc_atomic() to use to
  * allocate the array and any arrays derived from it. Callers must provide
  * ava_alloc() if their elements may have pointers within.
@@ -84,8 +95,7 @@ typedef struct {
  */
 ava_esba ava_esba_new(size_t element_size,
                       size_t initial_capacity,
-                      size_t (*weight_function)(
-                        const void*restrict, size_t),
+                      ava_esba_weight_function weight_function,
                       void* (*allocator)(size_t),
                       void* userdata);
 

@@ -75,7 +75,7 @@ static ava_esba ava_esba_list_concat_esbas(
 static ava_esba ava_esba_list_make_compatible(
   ava_esba esba, unsigned new_format);
 static size_t ava_esba_list_weight_function(
-  const void*restrict data, size_t nvalues);
+  const void*restrict userdata, const void*restrict data, size_t nvalues);
 
 static ava_datum ava_esba_list_value_string_chunk_iterator(ava_value);
 static ava_string ava_esba_list_value_iterate_string_chunk(
@@ -161,12 +161,24 @@ static const ava_esba_list_header* ava_esba_list_header_of(ava_esba esba) {
   return ava_esba_userdata(esba);
 }
 
-static size_t ava_esba_list_weight_function(const void*restrict vvalues,
+static size_t ava_esba_list_weight_function(const void*restrict userdata,
+                                            const void*restrict vvalues,
                                             size_t nvalues) {
-  /* TODO: The ESBA needs to pass itself in so we can actually decode the
-   * values...
-   */
-  return 0;
+  const ava_esba_list_header*restrict header = userdata;
+  const pointer*restrict values = vvalues;
+  ava_value value;
+  size_t sum = 0;
+  unsigned eltsz = ava_esba_list_element_size_pointers[header->format];
+  ava_esba_list_swizzle_up_f swizzle =
+    ava_esba_list_swizzle_up[header->format];
+
+  while (nvalues--) {
+    swizzle(&value, &header->template, values);
+    sum += ava_value_weight(value);
+    values += eltsz;
+  }
+
+  return sum;
 }
 
 static ava_esba ava_esba_list_create_esba(

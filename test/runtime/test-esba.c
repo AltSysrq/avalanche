@@ -25,7 +25,8 @@
 
 defsuite(esba);
 
-static size_t weight_function(const void* data, size_t count) {
+static size_t weight_function(const void*restrict userdata,
+                              const void*restrict data, size_t count) {
   return sizeof(ava_ulong) * count;
 }
 

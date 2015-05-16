@@ -216,7 +216,7 @@ typedef struct {
   /**
    * The weight function for the elements in this array.
    */
-  size_t (*weight_function)(const void*restrict, size_t);
+  ava_esba_weight_function weight_function;
   /**
    * The allocator used to allocate this array, and copies derived therefrom.
    *
@@ -340,8 +340,7 @@ typedef struct {
 static ava_esba_array* ava_esba_array_new(
   size_t element_size,
   size_t initial_capacity,
-  size_t (*weight_function)(
-    const void*restrict, size_t),
+  ava_esba_weight_function weight_function,
   void* (*allocator)(size_t));
 
 static ava_esba_handle* ava_esba_handle_new(
@@ -425,8 +424,7 @@ static void ava_esba_make_mutable(
 
 ava_esba ava_esba_new(size_t element_size,
                       size_t initial_capacity,
-                      size_t (*weight_function)(
-                        const void*restrict, size_t),
+                      ava_esba_weight_function weight_function,
                       void* (*allocator)(size_t),
                       void* userdata) {
   assert(0 == element_size % sizeof(pointer));
@@ -444,7 +442,7 @@ ava_esba ava_esba_new(size_t element_size,
 
 static ava_esba_array* ava_esba_array_new(
   size_t element_size, size_t initial_capacity,
-  size_t (*weight_function)(const void*restrict, size_t),
+  ava_esba_weight_function weight_function,
   void* (*allocator)(size_t)
 ) {
   ava_esba_array* array = (*allocator)(
@@ -705,7 +703,7 @@ static ava_esba_array* ava_esba_handle_copy_out(
   /* The destination array is now fully consistent; calculate it's weight and
    * we're done.
    */
-  dst->weight = (*dst->weight_function)(dst->data, length);
+  dst->weight = (*dst->weight_function)(handle->userdata, dst->data, length);
   return dst;
 }
 
@@ -740,6 +738,7 @@ static void ava_esba_finish_append_impl(ava_esba esba, size_t num_elements,
    * only writer.
    */
   val.head->weight += (*val.head->weight_function)(
+    esba.handle->userdata,
     val.head->data + old_length * element_size, num_elements);
 }
 
@@ -802,7 +801,8 @@ ava_esba ava_esba_set(ava_esba esba, size_t index, const void*restrict data) {
    *
    * No atomicity or barrier needed since we're the only writer.
    */
-  val.head->weight += (*val.head->weight_function)(data, 1);
+  val.head->weight += (*val.head->weight_function)(
+    esba.handle->userdata, data, 1);
 
   /* Create a new handle for the new version. */
   esba.handle = ava_esba_handle_new(
