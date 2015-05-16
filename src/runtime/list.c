@@ -31,6 +31,7 @@
 #include "avalanche/exception.h"
 #include "avalanche/list.h"
 #include "-array-list.h"
+#include "-esba-list.h"
 
 static ava_list_value ava_list_value_of_string(ava_string);
 
@@ -116,9 +117,17 @@ ava_list_value ava_list_copy_of(ava_list_value list, size_t begin, size_t end) {
 
   if (end - begin <= AVA_ARRAY_LIST_THRESH)
     return ava_array_list_copy_of(list, begin, end);
+  else
+    return ava_esba_list_copy_of(list, begin, end);
+}
 
-  /* TODO: Use a btree list */
-  return ava_array_list_copy_of(list, begin, end);
+ava_list_value ava_list_of_values(const ava_value*restrict values, size_t n) {
+  if (0 == n)
+    return ava_empty_list;
+  else if (n <= AVA_ARRAY_LIST_THRESH)
+    return ava_array_list_of_raw(values, n);
+  else
+    return ava_esba_list_of_raw(values, n);
 }
 
 ava_string ava_list_escape(ava_string str) {
@@ -242,4 +251,87 @@ ava_string ava_list_escape(ava_string str) {
     escaped, AVA_ASCII9_STRING("\\}"));
 
   return escaped;
+}
+
+ava_list_value ava_list_copy_slice(
+  ava_list_value list, size_t begin, size_t end
+) {
+  return ava_list_copy_of(list, begin, end);
+}
+
+ava_list_value ava_list_copy_append(ava_list_value list, ava_value elt) {
+  list = ava_list_copy_of(list, 0, list.v->length(list));
+  return list.v->append(list, elt);
+}
+
+ava_list_value ava_list_copy_concat(ava_list_value left, ava_list_value right) {
+  left = ava_list_copy_of(left, 0, left.v->length(left));
+  return left.v->concat(left, right);
+}
+
+ava_list_value ava_list_copy_delete(ava_list_value list,
+                                    size_t begin, size_t end) {
+  if (begin == end)
+    return list;
+  if (0 == begin && list.v->length(list) == end)
+    return ava_empty_list;
+
+  list = ava_list_copy_of(list, 0, list.v->length(list));
+  return list.v->delete(list, begin, end);
+}
+
+ava_list_value ava_list_copy_set(ava_list_value list,
+                                 size_t ix, ava_value val) {
+  list = ava_list_copy_of(list, 0, list.v->length(list));
+  return list.v->set(list, ix, val);
+}
+
+size_t ava_list_ix_iterator_size(ava_list_value list) {
+  return sizeof(size_t);
+}
+
+void ava_list_ix_iterator_place(
+  ava_list_value list, void*restrict iterator, size_t ix
+) {
+  *(size_t*restrict)iterator = ix;
+}
+
+ava_value ava_list_ix_iterator_get(
+  ava_list_value list, const void*restrict iterator
+) {
+  return list.v->index(list, *(const size_t*restrict)iterator);
+}
+
+void ava_list_ix_iterator_move(
+  ava_list_value list, void*restrict iterator, ssize_t off
+) {
+  *(size_t*restrict)iterator += off;
+}
+
+size_t ava_list_ix_iterator_index(
+  ava_list_value el, const void*restrict iterator
+) {
+  return *(const size_t*restrict)iterator;
+}
+
+ava_datum ava_list_string_chunk_iterator(ava_value list) {
+  return (ava_datum) { .ulong = 0 };
+}
+
+ava_string ava_list_iterate_string_chunk(
+  ava_datum*restrict it, ava_value list_val
+) {
+  ava_list_value list = ava_list_value_of(list_val);
+  ava_string elt;
+
+  if (it->ulong >= list.v->length(list))
+    return AVA_ABSENT_STRING;
+
+  elt = ava_to_string(list.v->index(list, it->ulong++));
+  elt = ava_list_escape(elt);
+
+  if (it->ulong > 1)
+    return ava_string_concat(AVA_ASCII9_STRING(" "), elt);
+  else
+    return elt;
 }

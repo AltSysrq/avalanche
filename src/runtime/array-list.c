@@ -81,9 +81,6 @@ typedef struct {
 static ava_array_list* ava_array_list_of_array(
   const ava_value*restrict, size_t, size_t);
 static size_t ava_array_list_growing_capacity(size_t);
-static ava_datum ava_array_list_value_string_chunk_iterator(ava_value);
-static ava_string ava_array_list_value_iterate_string_chunk(
-  ava_datum*restrict, ava_value);
 static const void* ava_array_list_value_query_accelerator(
   const ava_accelerator* accel, const void* dfault);
 static size_t ava_array_list_value_value_weight(ava_value);
@@ -99,20 +96,11 @@ static ava_list_value ava_array_list_list_delete(
   ava_list_value, size_t, size_t);
 static ava_list_value ava_array_list_list_set(
   ava_list_value, size_t, ava_value);
-static size_t ava_array_list_list_iterator_size(ava_list_value);
-static void ava_array_list_list_iterator_place(
-  ava_list_value, void*restrict, size_t);
-static ava_value ava_array_list_list_iterator_get(
-  ava_list_value, const void*restrict);
-static void ava_array_list_list_iterator_move(
-  ava_list_value, void*restrict, ssize_t);
-static size_t ava_array_list_list_iterator_index(
-  ava_list_value, const void*restrict);
 
 static const ava_value_type ava_array_list_type = {
   .to_string = ava_string_of_chunk_iterator,
-  .string_chunk_iterator = ava_array_list_value_string_chunk_iterator,
-  .iterate_string_chunk = ava_array_list_value_iterate_string_chunk,
+  .string_chunk_iterator = ava_list_string_chunk_iterator,
+  .iterate_string_chunk = ava_list_iterate_string_chunk,
   .query_accelerator = ava_array_list_value_query_accelerator,
   .value_weight = ava_array_list_value_value_weight,
 };
@@ -126,11 +114,11 @@ static const ava_list_iface ava_array_list_iface = {
   .concat = ava_array_list_list_concat,
   .delete = ava_array_list_list_delete,
   .set = ava_array_list_list_set,
-  .iterator_size = ava_array_list_list_iterator_size,
-  .iterator_place = ava_array_list_list_iterator_place,
-  .iterator_get = ava_array_list_list_iterator_get,
-  .iterator_move = ava_array_list_list_iterator_move,
-  .iterator_index = ava_array_list_list_iterator_index,
+  .iterator_size = ava_list_ix_iterator_size,
+  .iterator_place = ava_list_ix_iterator_place,
+  .iterator_get = ava_list_ix_iterator_get,
+  .iterator_move = ava_list_ix_iterator_move,
+  .iterator_index = ava_list_ix_iterator_index,
 };
 
 unsigned ava_array_list_used(ava_list_value list) {
@@ -198,28 +186,6 @@ ava_list_value ava_array_list_of_raw(
     .r2 = { .ulong = length },
     .v = &ava_array_list_iface
   };
-}
-
-static ava_datum ava_array_list_value_string_chunk_iterator(ava_value list) {
-  return (ava_datum) { .ulong = 0 };
-}
-
-static ava_string ava_array_list_value_iterate_string_chunk(
-  ava_datum*restrict it, ava_value list
-) {
-  const ava_array_list*restrict al = list.LIST;
-  ava_string elt;
-
-  if (it->ulong >= list.LENGTH)
-    return AVA_ABSENT_STRING;
-
-  elt = ava_to_string(al->values[it->ulong++]);
-
-  if (it->ulong > 1)
-    return ava_string_concat(AVA_ASCII9_STRING(" "),
-                             elt);
-  else
-    return elt;
 }
 
 static const void* ava_array_list_value_query_accelerator(
@@ -396,36 +362,4 @@ static ava_list_value ava_array_list_list_set(
 
   list.LIST = mal;
   return list;
-}
-
-static size_t ava_array_list_list_iterator_size(ava_list_value list) {
-  return sizeof(size_t);
-}
-
-static void ava_array_list_list_iterator_place(
-  ava_list_value list, void*restrict iterator, size_t ix
-) {
-  *(size_t*restrict)iterator = ix;
-}
-
-static ava_value ava_array_list_list_iterator_get(
-  ava_list_value list, const void*restrict iterator
-) {
-  const ava_array_list*restrict al = list.LIST;
-  size_t ix = *(const size_t*restrict)iterator;
-
-  assert(ix <= list.LENGTH);
-  return al->values[ix];
-}
-
-static void ava_array_list_list_iterator_move(
-  ava_list_value list, void*restrict iterator, ssize_t off
-) {
-  *(size_t*restrict)iterator += off;
-}
-
-static size_t ava_array_list_list_iterator_index(
-  ava_list_value el, const void*restrict iterator
-) {
-  return *(const size_t*restrict)iterator;
 }

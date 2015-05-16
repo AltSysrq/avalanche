@@ -77,6 +77,13 @@ typedef struct {
  *
  * Documnented complexities of methods are the worst acceptable complexities
  * for implementations; implementations are often better in practise.
+ *
+ * All "mutating" methods can be implemented with the ava_list_copy_*()
+ * functions, if the underlying implementation has no better way to implement
+ * them.
+ *
+ * Most lists will use the ava_list_ix_iterator_*() functions to implement the
+ * iterator section of the interface.
  */
 struct ava_list_iface_s {
   /**
@@ -230,6 +237,16 @@ ava_list_value ava_list_value_of(ava_value value);
 ava_list_value ava_list_copy_of(ava_list_value list, size_t begin, size_t end);
 
 /**
+ * Returns a list containing the given sequence of values.
+ *
+ * @param values The values that comprise the list. This array is copied, and
+ * need not be prerved after this function returns.
+ * @param count The number of values to copy.
+ */
+ava_list_value ava_list_of_values(const ava_value*restrict values,
+                                  size_t count);
+
+/**
  * Declares a local variable named name which is usable as an iterator for the
  * given list.
  *
@@ -244,6 +261,84 @@ ava_list_value ava_list_copy_of(ava_list_value list, size_t begin, size_t end);
  * of a list.
  */
 ava_string ava_list_escape(ava_string);
+
+/**
+ * The standard implementation of ava_value.string_chunk_iterator() for
+ * normalised lists.
+ */
+ava_datum ava_list_string_chunk_iterator(ava_value);
+
+/**
+ * The standard implementation of ava_value.iterate_string_chunk() for
+ * normalised lists.
+ */
+ava_string ava_list_iterate_string_chunk(ava_datum*restrict i,
+                                         ava_value val);
+
+/**
+ * Implementation of ava_list_iface.slice which copies the input list into a
+ * new list of an unspecified type.
+ */
+ava_list_value ava_list_copy_slice(
+  ava_list_value list, size_t begin, size_t end);
+/**
+ * Implementation of ava_list_iface.append which copies the input list and new
+ * element into a new list of an unspecified type.
+ */
+ava_list_value ava_list_copy_append(ava_list_value list, ava_value elt);
+/**
+ * Implementation of ava_list_iface.concat which copies the lists into a new
+ * list of an unspecified type.
+ */
+ava_list_value ava_list_copy_concat(ava_list_value left, ava_list_value right);
+/**
+ * Implementation of ava_list_iface.delete which copies the list into a new
+ * list of unspecified type.
+ */
+ava_list_value ava_list_copy_delete(
+  ava_list_value list, size_t begin, size_t end);
+/**
+ * Implementation of ava_list_iface.copy which copies the list into a new list
+ * of unspecified type.
+ */
+ava_list_value ava_list_copy_set(ava_list_value list, size_t ix, ava_value val);
+
+/**
+ * Implementation of ava_list_iface.iterator_size.
+ *
+ * The ava_list_ix_iterator_*() function family implements list iterators by
+ * delegating to the list's ava_list_iface.index method. If any
+ * ava_list_ix_iterator_*() implementation is used on a list, they must all be,
+ * as the format of the iterator is unspecified.
+ */
+size_t ava_list_ix_iterator_size(ava_list_value list);
+/**
+ * Implementation af ava_list_iface.iterator_place.
+ *
+ * @see ava_list_ix_iterator_size()
+ */
+void ava_list_ix_iterator_place(ava_list_value list,
+                                void*restrict it, size_t ix);
+/**
+ * Implementation of ava_list_iface.iterator_get.
+ *
+ * @see ava_list_ix_iterator_size()
+ */
+ava_value ava_list_ix_iterator_get(ava_list_value list,
+                                   const void*restrict it);
+/**
+ * Implementation of ava_list_iface.iterator_move.
+ *
+ * @see ava_list_ix_iterator_size()
+ */
+void ava_list_ix_iterator_move(ava_list_value list,
+                               void*restrict it, ssize_t off);
+/**
+ * Implementation of ava_list_iface.iterator_index.
+ *
+ * @see ava_list_ix_iterator_size()
+ */
+size_t ava_list_ix_iterator_index(ava_list_value list, const void*restrict it);
 
 /**
  * The empty list.

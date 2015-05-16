@@ -45,15 +45,6 @@ static ava_list_value ava_empty_list_list_delete(
   ava_list_value, size_t, size_t);
 static ava_list_value ava_empty_list_list_set(
   ava_list_value, size_t, ava_value);
-static size_t ava_empty_list_list_iterator_size(ava_list_value);
-static void ava_empty_list_list_iterator_place(
-  ava_list_value, void*restrict, size_t);
-static ava_value ava_empty_list_list_iterator_get(
-  ava_list_value, const void*restrict);
-static void ava_empty_list_list_iterator_move(
-  ava_list_value, void*restrict, ssize_t);
-static size_t ava_empty_list_list_iterator_index(
-  ava_list_value, const void*restrict);
 
 static const ava_value_type ava_empty_list_type = {
   .to_string = ava_empty_list_value_to_string,
@@ -72,11 +63,11 @@ static const ava_list_iface ava_empty_list_iface = {
   .concat = ava_empty_list_list_concat,
   .delete = ava_empty_list_list_delete,
   .set = ava_empty_list_list_set,
-  .iterator_size = ava_empty_list_list_iterator_size,
-  .iterator_place = ava_empty_list_list_iterator_place,
-  .iterator_get = ava_empty_list_list_iterator_get,
-  .iterator_move = ava_empty_list_list_iterator_move,
-  .iterator_index = ava_empty_list_list_iterator_index,
+  .iterator_size = ava_list_ix_iterator_size,
+  .iterator_place = ava_list_ix_iterator_place,
+  .iterator_get = ava_list_ix_iterator_get,
+  .iterator_move = ava_list_ix_iterator_move,
+  .iterator_index = ava_list_ix_iterator_index,
 };
 
 const ava_list_value ava_empty_list = {
@@ -158,32 +149,4 @@ static ava_list_value ava_empty_list_list_set(
   ava_list_value el, size_t index, ava_value value
 ) {
   abort();
-}
-
-static size_t ava_empty_list_list_iterator_size(ava_list_value el) {
-  return sizeof(size_t);
-}
-
-static void ava_empty_list_list_iterator_place(
-  ava_list_value list, void*restrict iterator, size_t ix
-) {
-  *(size_t*restrict)iterator = ix;
-}
-
-static ava_value ava_empty_list_list_iterator_get(
-  ava_list_value el, const void*restrict iterator
-) {
-  abort();
-}
-
-static void ava_empty_list_list_iterator_move(
-  ava_list_value el, void*restrict iterator, ssize_t off
-) {
-  *(size_t*restrict)iterator += off;
-}
-
-static size_t ava_empty_list_list_iterator_index(
-  ava_list_value el, const void*restrict iterator
-) {
-  return *(const size_t*restrict)iterator;
 }

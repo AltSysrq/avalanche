@@ -145,7 +145,6 @@ deftest(all_two_char_strings_escaped_reversibly) {
     for (j = 0; j < 256; ++j) {
       in[0] = i;
       in[1] = j;
-      printf("%02X%02X...\n", in[0] & 0xFF, in[1] & 0xFF);
 
       in_str = ava_string_of_bytes(in, 2);
       parsed_list = ava_list_value_of(
@@ -160,4 +159,17 @@ deftest(all_two_char_strings_escaped_reversibly) {
       ck_assert_int_eq(in[1], out[1]);
     }
   }
+}
+
+deftest(list_stringified_correctly) {
+  ava_value values[2] = {
+    ava_value_of_string(ava_string_of_cstring("foo bar")),
+    ava_value_of_string(ava_string_of_cstring("xy\"zzy")),
+  };
+  ava_list_value list = ava_list_of_values(values, 2);
+
+  ava_string str = ava_to_string(list.v->to_value(list));
+
+  ck_assert_str_eq("\"foo bar\" \\{xy\"zzy\\}",
+                   ava_string_to_cstring(str));
 }
