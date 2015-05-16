@@ -51,7 +51,7 @@ AC_TYPE_INT32_T
 AC_TYPE_INT64_T
 
 # Checks for library functions.
-AC_CHECK_FUNCS([setrlimit])
+AC_CHECK_FUNCS([setrlimit arc4random_buf])
 
 AC_CONFIG_FILES([Makefile src/Makefile src/runtime/Makefile test/Makefile])
 AC_OUTPUT

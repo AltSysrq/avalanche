@@ -17,6 +17,7 @@
 
 #define AVA__INTERNAL_INCLUDE 1
 #include "runtime/avalanche/value.h"
+#include "runtime/avalanche/integer.h"
 
 defsuite(value);
 
@@ -153,4 +154,64 @@ deftest(weight_of_string_is_its_length) {
   ava_value value = ava_value_of_string(AVA_ASCII9_STRING("avalanche"));
 
   ck_assert_int_eq(9, ava_value_weight(value));
+}
+
+deftest(identical_string_values_equal) {
+  AVA_STATIC_STRING(sfoo, "foo");
+  ck_assert(ava_value_equal(ava_value_of_string(AVA_ASCII9_STRING("foo")),
+                            ava_value_of_string(sfoo)));
+}
+
+deftest(values_of_different_type_but_same_string_rep_equal) {
+  ck_assert(ava_value_equal(ava_value_of_integer(42),
+                            ava_value_of_string(AVA_ASCII9_STRING("42"))));
+}
+
+deftest(nonequal_values_ordered_lexicographically) {
+  ck_assert_int_lt(0, ava_value_strcmp(ava_value_of_cstring("foo"),
+                                       ava_value_of_cstring("bar")));
+  ck_assert_int_gt(0, ava_value_strcmp(ava_value_of_cstring("bar"),
+                                       ava_value_of_cstring("foo")));
+  ck_assert_int_gt(0, ava_value_strcmp(ava_value_of_cstring("fo"),
+                                       ava_value_of_cstring("foo")));
+  ck_assert_int_lt(0, ava_value_strcmp(ava_value_of_cstring("foo"),
+                                       ava_value_of_cstring("fo")));
+}
+
+deftest(string_chars_considered_unsigned) {
+  ck_assert_int_gt(0, ava_value_strcmp(ava_value_of_cstring("x"),
+                                       ava_value_of_cstring("\xC0")));
+}
+
+deftest(strcmp_on_strings_of_different_chunks) {
+  char cstr[4] = "\2\1\0";
+
+  ck_assert(ava_value_equal(xn_of(3),
+                            ava_value_of_string(ava_string_of_bytes(cstr, 3))));
+  ck_assert_int_gt(0, ava_value_strcmp(xn_of(3),
+                                       ava_value_of_string(
+                                         ava_string_of_bytes(cstr, 4))));
+  ck_assert_int_lt(0, ava_value_strcmp(xn_of(3),
+                                       ava_value_of_string(
+                                         ava_string_of_bytes(cstr, 2))));
+}
+
+deftest(hash_basically_works) {
+  ava_value a = ava_value_of_cstring("hello world");
+  ava_value b = ava_value_of_cstring("hello worle");
+
+  ck_assert_int_eq(ava_value_hash(a), ava_value_hash(a));
+  /* This has a 1 in 2**64 chance of failing randomly */
+  ck_assert_int_ne(ava_value_hash(a), ava_value_hash(b));
+}
+
+deftest(hash_crosses_rope_boundaries_correctly) {
+  char buf[246];
+  ava_string base = ava_to_string(xn_of(123));
+  ava_string rope = ava_string_concat(base, base);
+  ava_string_to_bytes(buf, rope, 0, 246);
+  ava_string flat = ava_string_of_bytes(buf, 246);
+
+  ck_assert_int_eq(ava_value_hash(ava_value_of_string(rope)),
+                   ava_value_hash(ava_value_of_string(flat)));
 }

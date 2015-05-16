@@ -396,4 +396,60 @@ ava_value ava_value_of_string(ava_string str) AVA_PURE;
  */
 ava_value ava_string_imbue(ava_value value) AVA_PURE;
 
+/**
+ * Convenience for ava_value_of_string(ava_value_of_cstring(str)).
+ */
+ava_value ava_value_of_cstring(const char*) AVA_PURE;
+
+/**
+ * Compares the string representations of two ava_values.
+ *
+ * This is used to implement strict equality as defined by Avalanche; two
+ * values are strictly equal if any only if this function returns zero. This is
+ * distinct from logical equality; for example, the values "42" and "0x2A"
+ * represent the same integer, but are distinct strings, and therefore are not
+ * strictly equal.
+ *
+ * This function operates on unsigned bytes in the string regardless of the
+ * signedness of the platform's char type, such that 'a\x80' is always ordered
+ * after 'ab'.
+ *
+ * If one value is a prefix of the other, the shorter one is considered
+ * lexicographically first.
+ *
+ * @return Zero if the two values are strictly equal; a negative integer if a
+ * is lexicographically before b; a positive integer if a is lexicographically
+ * before a.
+ * @see ava_value_equal()
+ */
+signed ava_value_strcmp(ava_value a, ava_value b) AVA_PURE;
+/**
+ * Returns whether the two values are strictly equal, as defined by
+ * ava_value_strcmp().
+ *
+ * This is essentially a convenience for (0==ava_value_strcmp(a,b)).
+ *
+ * @see ava_value_strcmp()
+ */
+ava_bool ava_value_equal(ava_value a, ava_value b) AVA_PURE;
+
+/**
+ * Returns the hash of the string value of the given value.
+ *
+ * Any two values which are strictly equal (as per ava_value_strcmp()) produce
+ * the same hash code *within the same process*. Values not strictly equal
+ * produce different hash codes with extremely high probability and effectively
+ * randomly distributed through the 64-bit integer space.
+ */
+ava_ulong ava_value_hash(ava_value value) AVA_PURE;
+
+/**
+ * Initialises the process-wide hashing key.
+ *
+ * There is generally no reason to call this directly; call ava_init() instead.
+ *
+ * This should be called exactly once at process start-up.
+ */
+void ava_value_hash_init(void);
+
 #endif /* AVA_RUNTIME_VALUE_H_ */

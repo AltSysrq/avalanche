@@ -445,6 +445,12 @@ char ava_string_iterator_get(const ava_string_iterator*) AVA_PURE;
 size_t ava_string_iterator_read(char*restrict dst, size_t n,
                                 ava_string_iterator* iterator);
 /**
+ * Like ava_string_iterator_read(), but guarantees to read exactly n characters
+ * unless the end of the string is reached first.
+ */
+size_t ava_string_iterator_read_fully(char*restrict dst, size_t n,
+                                      ava_string_iterator* iterator);
+/**
  * Reads up to n bytes from the string backing iterator, starting at the
  * iterator's current position, into dst, returning the number of bytes read.
  * The iterator's position is not advanced.

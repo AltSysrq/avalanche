@@ -27,6 +27,9 @@
 /**
  * Initialises the Avalanche heap. This should be called once, at the start of
  * the process.
+ *
+ * There is generally no reason to call this function directly; use ava_init()
+ * instead.
  */
 void ava_heap_init(void);
 /**

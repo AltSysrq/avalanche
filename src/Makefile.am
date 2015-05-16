@@ -22,6 +22,7 @@ runtime/exception.c \
 runtime/gen-integer.c \
 runtime/gen-lex.c \
 runtime/hexes.c \
+runtime/init.c \
 runtime/integer-fast-dec.c \
 runtime/list.c \
 runtime/string.c \

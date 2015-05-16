@@ -1,5 +1,5 @@
 /*-
- * Copyright (c) 2015, Jason Lingle
+ * Copyright (c) 2015 Jason Lingle
  *
  * Permission to  use, copy,  modify, and/or distribute  this software  for any
  * purpose  with or  without fee  is hereby  granted, provided  that the  above
@@ -13,32 +13,16 @@
  * OF  CONTRACT, NEGLIGENCE  OR OTHER  TORTIOUS ACTION,  ARISING OUT  OF OR  IN
  * CONNECTION WITH THE USE OR PERFORMANCE OF THIS SOFTWARE.
  */
+#ifdef HAVE_CONFIG_H
+#include <config.h>
+#endif
 
+#define AVA__INTERNAL_INCLUDE 1
+#include "avalanche/defs.h"
+#include "avalanche/alloc.h"
+#include "avalanche/value.h"
 
-#include "test.h"
-
-#include "runtime/avalanche.h"
-
-const char* suite_names[1024];
-void (*suite_impls[1024])(Suite*);
-unsigned suite_num;
-
-int main(void) {
-  unsigned failures = 0;
-  Suite* suite;
-  SRunner* sr;
-  unsigned i;
-
-  ava_init();
-
-  for (i = 0; i < suite_num; ++i) {
-    suite = suite_create(suite_names[i]);
-    (*suite_impls[i])(suite);
-    sr = srunner_create(suite);
-    srunner_run_all(sr, CK_VERBOSE);
-    failures += srunner_ntests_failed(sr);
-    srunner_free(sr);
-  }
-
-  return (failures < 255? failures : 255);
+void ava_init(void) {
+  ava_heap_init();
+  ava_value_hash_init();
 }

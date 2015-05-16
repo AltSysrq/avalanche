@@ -819,6 +819,18 @@ size_t ava_string_iterator_read(char*restrict dst, size_t n,
   return nread;
 }
 
+size_t ava_string_iterator_read_fully(
+  char*restrict dst, size_t n, ava_string_iterator* it
+) {
+  size_t nread= 0;
+
+  while (nread < n && ava_string_iterator_valid(it)) {
+    nread += ava_string_iterator_read(dst + nread, n - nread, it);
+  }
+
+  return nread;
+}
+
 size_t ava_string_iterator_access(const char*restrict* dst,
                                   const ava_string_iterator* it,
                                   char*restrict tmpbuff) {
