@@ -30,6 +30,7 @@
 #include "avalanche/value.h"
 #include "avalanche/list.h"
 #include "-array-list.h"
+#include "-esba-list.h"
 
 #define AVA_ARRAY_LIST_MIN_CAPACITY 8
 
@@ -261,18 +262,22 @@ static ava_list_value ava_array_list_list_append(ava_list_value list,
   }
 
   /* Failed, create a new allocation */
-  /* TODO: Switch to B+Tree if too large */
-  al = ava_array_list_of_array(al->values, list.LENGTH,
-                               ava_array_list_growing_capacity(
-                                 list.LENGTH + 1));
-  al->values[list.LENGTH] = elt;
-  ++al->used;
-  al->weight += ava_value_weight(elt);
+  if (list.LENGTH + 1 <= AVA_ARRAY_LIST_THRESH) {
+    al = ava_array_list_of_array(al->values, list.LENGTH,
+                                 ava_array_list_growing_capacity(
+                                   list.LENGTH + 1));
+    al->values[list.LENGTH] = elt;
+    ++al->used;
+    al->weight += ava_value_weight(elt);
 
-  list.LIST = al;
-  ++list.LENGTH;
+    list.LIST = al;
+    ++list.LENGTH;
 
-  return list;
+    return list;
+  } else {
+    list = ava_esba_list_of_raw(al->values, list.LENGTH);
+    return list.v->append(list, elt);
+  }
 }
 
 static ava_list_value ava_array_list_list_concat(ava_list_value list,
@@ -292,28 +297,32 @@ static ava_list_value ava_array_list_list_concat(ava_list_value list,
   }
 
   /* Can't concat in-place, create a new allocation */
-  /* TODO: Switch to B+Tree if too large */
-  al = ava_array_list_of_array(al->values, list.LENGTH,
-                               ava_array_list_growing_capacity(
-                                 list.LENGTH + other_length));
-  al->used += other_length;
-  list.LIST = al;
+  if (list.LENGTH + other_length <= AVA_ARRAY_LIST_THRESH) {
+    al = ava_array_list_of_array(al->values, list.LENGTH,
+                                 ava_array_list_growing_capacity(
+                                   list.LENGTH + other_length));
+    al->used += other_length;
+    list.LIST = al;
 
-  mutate_al:;
-  size_t added_weight = 0;
-  size_t i = 0;
-  AVA_LIST_ITERATOR(other, it);
-  for (other.v->iterator_place(other, it, 0);
-       i < other_length;
-       other.v->iterator_move(other, it, 1)) {
-    al->values[list.LENGTH + i] = other.v->iterator_get(other, it);
-    added_weight += ava_value_weight(al->values[list.LENGTH + i]);
-    ++i;
+    mutate_al:;
+    size_t added_weight = 0;
+    size_t i = 0;
+    AVA_LIST_ITERATOR(other, it);
+    for (other.v->iterator_place(other, it, 0);
+         i < other_length;
+         other.v->iterator_move(other, it, 1)) {
+      al->values[list.LENGTH + i] = other.v->iterator_get(other, it);
+      added_weight += ava_value_weight(al->values[list.LENGTH + i]);
+      ++i;
+    }
+
+    AO_fetch_and_add(&al->weight, added_weight);
+    list.LENGTH += other_length;
+    return list;
+  } else {
+    list = ava_esba_list_of_raw(al->values, list.LENGTH);
+    return list.v->concat(list, other);
   }
-
-  AO_fetch_and_add(&al->weight, added_weight);
-  list.LENGTH += other_length;
-  return list;
 }
 
 static ava_list_value ava_array_list_list_delete(

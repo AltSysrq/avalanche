@@ -30,7 +30,7 @@
  */
 
 /**
- * The threshold above which btree lists should be preferred over array lists.
+ * The threshold above which esba lists should be preferred over array lists.
  * Mutating operations on an array list automatically switch if the result size
  * is greater than this threshold and a reallocation is required anyway.
  */
