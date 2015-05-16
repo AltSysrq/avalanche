@@ -173,3 +173,16 @@ deftest(list_stringified_correctly) {
   ck_assert_str_eq("\"foo bar\" \\{xy\"zzy\\}",
                    ava_string_to_cstring(str));
 }
+
+deftest(empty_string_is_quoted) {
+  ava_value values[2] = {
+    ava_value_of_string(AVA_EMPTY_STRING),
+    ava_value_of_string(AVA_EMPTY_STRING),
+  };
+  ava_list_value list = ava_list_of_values(values, 2);
+
+  ava_string str = ava_to_string(list.v->to_value(list));
+
+  ck_assert_str_eq("\"\" \"\"",
+                   ava_string_to_cstring(str));
+}

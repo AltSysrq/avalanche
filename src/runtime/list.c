@@ -139,6 +139,12 @@ ava_string ava_list_escape(ava_string str) {
   char tmpbuff[9];
   size_t strdat_len, i;
 
+  /* Special case: The empty string needs to be quoted, otherwise it will
+   * disappear.
+   */
+  if (0 == ava_string_length(str))
+    return AVA_ASCII9_STRING("\"\"");
+
   /* Check for what needs to be escaped */
   ava_string_iterator_place(&it, str, 0);
   while (ava_string_iterator_valid(&it)) {
