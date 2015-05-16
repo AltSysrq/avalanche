@@ -5,7 +5,7 @@ TESTS = runtime/test-string.t runtime/test-lex.t \
 runtime/test-value.t runtime/test-exception.t \
 runtime/test-integer.t runtime/test-empty-list.t \
 runtime/test-array-list.t runtime/test-list.t \
-runtime/test-esba.t
+runtime/test-esba.t runtime/test-esba-list.t
 
 EXTRA_CFLAGS =
 AM_CFLAGS = $(CHECK_CFLAGS) -I../src $(EXTRA_CFLAGS) -funwind-tables
@@ -22,4 +22,5 @@ runtime_test_empty_list_t_SOURCES = runtime/test-empty-list.c
 runtime_test_array_list_t_SOURCES = runtime/test-array-list.c
 runtime_test_list_t_SOURCES = runtime/test-list.c
 runtime_test_esba_t_SOURCES = runtime/test-esba.c
+runtime_test_esba_list_t_SOURCES = runtime/test-esba-list.c
 runtime_rope_vis_t_SOURCES = runtime/rope-vis.c

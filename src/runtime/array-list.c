@@ -152,7 +152,7 @@ ava_list_value ava_array_list_copy_of(
   i = 0;
   for (list.v->iterator_place(list, it, begin);
        i < end - begin;
-       list.v->iterator_move(list, it, +1)) {
+       list.v->iterator_move(list, it, +1), ++i) {
     al->values[i] = list.v->iterator_get(list, it);
     weight += ava_value_weight(al->values[i]);
   }

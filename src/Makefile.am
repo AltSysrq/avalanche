@@ -17,6 +17,7 @@ runtime/array-list.c \
 runtime/context.c \
 runtime/empty-list.c \
 runtime/esba.c \
+runtime/esba-list.c \
 runtime/exception.c \
 runtime/gen-integer.c \
 runtime/gen-lex.c \
