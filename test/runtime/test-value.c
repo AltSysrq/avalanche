@@ -126,30 +126,6 @@ deftest(noop_query_accelerator) {
   ck_assert_ptr_eq(NULL, ava_query_accelerator(val, &foo_accelerator, NULL));
 }
 
-deftest(string_imbue_of_string_is_noop) {
-  ava_value orig, new;
-
-  orig = ava_value_of_string(AVA_EMPTY_STRING);
-  /* Put something in r2 to make sure it gets preserved. */
-  orig.r2.ptr = &orig;
-
-  new = ava_string_imbue(orig);
-  ck_assert_int_eq(orig.r1.str.ascii9, new.r1.str.ascii9);
-  ck_assert_ptr_eq(&orig, new.r2.ptr);
-  ck_assert_ptr_eq(&ava_string_type, new.type);
-}
-
-deftest(string_imbue_stringifies_other_types) {
-  ava_value orig, new;
-
-  orig = xn_of(5);
-
-  new = ava_string_imbue(orig);
-  ck_assert_str_eq("\4\3\2\1", ava_string_to_cstring(new.r1.str));
-  ck_assert_ptr_eq(NULL, new.r2.ptr);
-  ck_assert_ptr_eq(&ava_string_type, new.type);
-}
-
 deftest(weight_of_string_is_its_length) {
   ava_value value = ava_value_of_string(AVA_ASCII9_STRING("avalanche"));
 

@@ -67,9 +67,7 @@ typedef ava_slong ava_integer;
  * In all contexts, a string that is empty except for possible whitespace is
  * also considered a valid integer for parsing purposes. Its value depends on
  * the context; it is not directly representable as an ava_value, but must
- * first be subjected to normalisation. For this reason, it is impossible to
- * simply imbue a value to an integer; the caller must extract the integer and
- * create a new value from it.
+ * first be subjected to normalisation.
  *
  * A value with integer type stores its integer value in r1.slong. r2 is unused
  * and contains NULL.

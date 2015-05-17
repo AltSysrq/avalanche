@@ -129,13 +129,6 @@ ava_value ava_value_of_cstring(const char* str) {
   return ava_value_of_string(ava_string_of_cstring(str));
 }
 
-ava_value ava_string_imbue(ava_value value) {
-  if (&ava_string_type == value.type)
-    return value;
-  else
-    return ava_value_of_string(ava_to_string(value));
-}
-
 ava_bool ava_value_equal(ava_value a, ava_value b) {
   return 0 == ava_value_strcmp(a, b);
 }

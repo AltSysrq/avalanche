@@ -48,9 +48,7 @@
  *   subset the set of all strings; (b) a higher-level internal representation
  *   that may be more performant than raw strings; (c) a set of method
  *   implementations. The finite set of types in the process is determined at
- *   compile time; types can only be introduced by C code. Constructing a value
- *   of a particular type from another value is to "imbue" the value with that
- *   type.
+ *   compile time; types can only be introduced by C code.
  *
  * - Representation. The physical way a value is stored. Without knowledge of
  *   the particular type, the representation of a value is totally opaque.
@@ -379,22 +377,12 @@ const void* ava_noop_query_accelerator(const ava_accelerator* accel,
  * Representational semantics:
  *
  * - r1 has the str field set to the string value.
- *
- * - r2 may be used internally.
- *
- * ava_value_of_string() is the appropriate means to create a value holding a
- * string. ava_string_imbue() creates a string value from any value, and is
- * strongly preferred over ava_value_of_string(ava_to_string(value)).
  */
 extern const ava_value_type ava_string_type;
 /**
  * Returns a value which contains the given string, with a string type.
  */
 ava_value ava_value_of_string(ava_string str) AVA_PURE;
-/**
- * Returns a value which contains the string representation of the input value.
- */
-ava_value ava_string_imbue(ava_value value) AVA_PURE;
 
 /**
  * Convenience for ava_value_of_string(ava_value_of_cstring(str)).
