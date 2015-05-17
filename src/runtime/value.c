@@ -150,6 +150,12 @@ signed ava_value_strcmp(ava_value a, ava_value b) {
   ava_bool a_finished = ava_false, b_finished = ava_false;
   signed cmp;
 
+  /* If both values are byte-for-byte the same, we need not actually inspect
+   * them deeply; they're definitely equal.
+   */
+  if (0 == memcmp(&a, &b, sizeof(a)))
+    return 0;
+
   ait = ava_string_chunk_iterator(a);
   bit = ava_string_chunk_iterator(b);
   ava_string_iterator_place(&asit, AVA_EMPTY_STRING, 0);
