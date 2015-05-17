@@ -63,13 +63,13 @@ typedef struct ava_list_iface_s ava_list_iface;
  */
 typedef struct {
   /**
-   * r1 and r2 from ava_value.
-   */
-  ava_datum r1, r2;
-  /**
    * The implementation of the list primitives for this list.
    */
   const ava_list_iface*restrict v;
+  /**
+   * r1 and r2 from ava_value.
+   */
+  ava_datum r1, r2;
 } ava_list_value;
 
 /**
