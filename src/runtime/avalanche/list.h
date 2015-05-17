@@ -43,20 +43,16 @@
  */
 
 /**
- * Accelerator for list manipulation.
+ * Trait tag for list manipulation.
  *
- * The return value for query_accelerator() is a const ava_list_iface*.
- * Implementing this accelerator implies that (a) every value of the backing
- * type is guaranteed to conform to the list format; (b) the underlying type
- * can provide efficient amortised access to the elements of the list as
- * defined by that format.
- *
- * Clients should generally use ava_list_value_of() rather than directly
- * interacting with the accelerator.
+ * Implementing this trait implies that (a) every value of the backing type is
+ * guaranteed to conform to the list format; (b) the underlying type can
+ * provide efficient amortised access to the elements of the list as defined by
+ * that format.
  */
-AVA_DECLARE_ACCELERATOR(ava_list_accelerator);
+extern const ava_attribute_tag ava_list_trait_tag;
 
-typedef struct ava_list_iface_s ava_list_iface;
+typedef struct ava_list_trait_s ava_list_trait;
 
 /**
  * Like an ava_value, but with a list vtable instead of a type.
@@ -65,7 +61,7 @@ typedef struct {
   /**
    * The implementation of the list primitives for this list.
    */
-  const ava_list_iface*restrict v;
+  const ava_list_trait*restrict v;
   /**
    * r1 and r2 from ava_value.
    */
@@ -85,14 +81,16 @@ typedef struct {
  * Most lists will use the ava_list_ix_iterator_*() functions to implement the
  * iterator section of the interface.
  */
-struct ava_list_iface_s {
+struct ava_list_trait_s {
+  ava_attribute header;
+
   /**
    * Converts the list back into a normal value.
    *
    * Requirement:
    *   to_value(ava_list_value_of(value)) == value
    *   Ie, the value produced must be exatcly equal to the value used to obtain
-   *   the iface, if there was one. Typically this function just copies r1 and
+   *   the trait, if there was one. Typically this function just copies r1 and
    *   r2 into an ava_value and sets the type.
    */
   ava_value (*to_value)(ava_list_value list);
@@ -276,65 +274,65 @@ ava_string ava_list_iterate_string_chunk(ava_datum*restrict i,
                                          ava_value val);
 
 /**
- * Implementation of ava_list_iface.slice which copies the input list into a
+ * Implementation of ava_list_trait.slice which copies the input list into a
  * new list of an unspecified type.
  */
 ava_list_value ava_list_copy_slice(
   ava_list_value list, size_t begin, size_t end);
 /**
- * Implementation of ava_list_iface.append which copies the input list and new
+ * Implementation of ava_list_trait.append which copies the input list and new
  * element into a new list of an unspecified type.
  */
 ava_list_value ava_list_copy_append(ava_list_value list, ava_value elt);
 /**
- * Implementation of ava_list_iface.concat which copies the lists into a new
+ * Implementation of ava_list_trait.concat which copies the lists into a new
  * list of an unspecified type.
  */
 ava_list_value ava_list_copy_concat(ava_list_value left, ava_list_value right);
 /**
- * Implementation of ava_list_iface.delete which copies the list into a new
+ * Implementation of ava_list_trait.delete which copies the list into a new
  * list of unspecified type.
  */
 ava_list_value ava_list_copy_delete(
   ava_list_value list, size_t begin, size_t end);
 /**
- * Implementation of ava_list_iface.copy which copies the list into a new list
+ * Implementation of ava_list_trait.copy which copies the list into a new list
  * of unspecified type.
  */
 ava_list_value ava_list_copy_set(ava_list_value list, size_t ix, ava_value val);
 
 /**
- * Implementation of ava_list_iface.iterator_size.
+ * Implementation of ava_list_trait.iterator_size.
  *
  * The ava_list_ix_iterator_*() function family implements list iterators by
- * delegating to the list's ava_list_iface.index method. If any
+ * delegating to the list's ava_list_trait.index method. If any
  * ava_list_ix_iterator_*() implementation is used on a list, they must all be,
  * as the format of the iterator is unspecified.
  */
 size_t ava_list_ix_iterator_size(ava_list_value list);
 /**
- * Implementation af ava_list_iface.iterator_place.
+ * Implementation af ava_list_trait.iterator_place.
  *
  * @see ava_list_ix_iterator_size()
  */
 void ava_list_ix_iterator_place(ava_list_value list,
                                 void*restrict it, size_t ix);
 /**
- * Implementation of ava_list_iface.iterator_get.
+ * Implementation of ava_list_trait.iterator_get.
  *
  * @see ava_list_ix_iterator_size()
  */
 ava_value ava_list_ix_iterator_get(ava_list_value list,
                                    const void*restrict it);
 /**
- * Implementation of ava_list_iface.iterator_move.
+ * Implementation of ava_list_trait.iterator_move.
  *
  * @see ava_list_ix_iterator_size()
  */
 void ava_list_ix_iterator_move(ava_list_value list,
                                void*restrict it, ssize_t off);
 /**
- * Implementation of ava_list_iface.iterator_index.
+ * Implementation of ava_list_trait.iterator_index.
  *
  * @see ava_list_ix_iterator_size()
  */

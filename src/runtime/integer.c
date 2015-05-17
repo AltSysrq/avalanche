@@ -20,6 +20,7 @@
 #include <assert.h>
 
 #define AVA__INTERNAL_INCLUDE 1
+#define AVA__IN_INTEGER_C
 
 #include "avalanche/defs.h"
 #include "avalanche/string.h"
@@ -30,9 +31,6 @@
 #include "-integer-fast-dec.h"
 
 static ava_string ava_integer_to_string(ava_value value) AVA_PURE;
-static const void* ava_integer_query_accelerator(
-  const ava_accelerator* accel,
-  const void* dfault) AVA_CONSTFUN;
 static size_t ava_integer_value_weight(ava_value value) AVA_CONSTFUN;
 static const char* consume_sign_and_radix(
   const char*restrict ch, const char*restrict end,
@@ -48,13 +46,12 @@ static ava_integer ava_integer_parse_dec(const char*restrict tok,
 static ava_integer ava_integer_parse_hex(const char*restrict tok,
                                          const char*restrict end);
 
-const ava_value_type ava_integer_type = {
-  .size = sizeof(ava_value_type),
+const ava_generic_trait ava_integer_type = {
+  .header = { .tag = &ava_generic_trait_tag, .next = NULL },
   .name = "integer",
   .to_string = ava_integer_to_string,
   .string_chunk_iterator = ava_singleton_string_chunk_iterator,
   .iterate_string_chunk = ava_iterate_singleton_string_chunk,
-  .query_accelerator = ava_integer_query_accelerator,
   .value_weight = ava_integer_value_weight,
 };
 
@@ -82,13 +79,6 @@ static ava_string ava_integer_to_string(ava_value value) {
     str[--ix] = '-';
 
   return ava_string_of_bytes(str + ix, sizeof(str) - ix);
-}
-
-static const void* ava_integer_query_accelerator(
-  const ava_accelerator* accel,
-  const void* dfault
-) {
-  return dfault;
 }
 
 static size_t ava_integer_value_weight(ava_value value) {

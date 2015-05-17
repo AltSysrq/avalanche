@@ -77,8 +77,6 @@ static ava_esba ava_esba_list_make_compatible(
 static size_t ava_esba_list_weight_function(
   const void*restrict userdata, const void*restrict data, size_t nvalues);
 
-static const void* ava_esba_list_value_query_accelerator(
-  const ava_accelerator* accel, const void* dfault);
 static size_t ava_esba_list_value_value_weight(ava_value);
 
 static ava_value ava_esba_list_list_to_value(ava_list_value);
@@ -93,15 +91,18 @@ static ava_list_value ava_esba_list_list_delete(
 static ava_list_value ava_esba_list_list_set(
   ava_list_value, size_t, ava_value);
 
-static const ava_value_type ava_esba_list_type = {
+static const ava_generic_trait ava_esba_list_generic_impl = {
+  .header = { .tag = &ava_generic_trait_tag, .next = NULL },
+  .name = "esba-list",
   .to_string = ava_string_of_chunk_iterator,
   .string_chunk_iterator = ava_list_string_chunk_iterator,
   .iterate_string_chunk = ava_list_iterate_string_chunk,
-  .query_accelerator = ava_esba_list_value_query_accelerator,
   .value_weight = ava_esba_list_value_value_weight,
 };
 
-static const ava_list_iface ava_esba_list_iface = {
+static const ava_list_trait ava_esba_list_list_impl = {
+  .header = { .tag = &ava_list_trait_tag,
+              .next = (const ava_attribute*)&ava_esba_list_generic_impl },
   .to_value = ava_esba_list_list_to_value,
   .length = ava_esba_list_list_length,
   .index = ava_esba_list_list_index,
@@ -127,7 +128,7 @@ static inline ava_esba to_esba_from_value(ava_value val) {
 
 static inline ava_list_value to_list(ava_esba esba) {
   return (ava_list_value) {
-    .v = &ava_esba_list_iface,
+    .v = &ava_esba_list_list_impl,
     .r1 = { .ptr = esba.handle },
     .r2 = { .ulong = esba.length },
   };
@@ -135,8 +136,8 @@ static inline ava_list_value to_list(ava_esba esba) {
 
 static unsigned ava_esba_list_polymorphism(ava_value template, ava_value new) {
   unsigned ret = 0;
-  if (template.type != new.type)
-    ret |= POLYMORPH_TYPE;
+  if (template.attr != new.attr)
+    ret |= POLYMORPH_ATTR;
   if (template.r1.ulong != new.r1.ulong)
     ret |= POLYMORPH_R1;
   if (template.r2.ulong |= new.r2.ulong)
@@ -215,7 +216,7 @@ static unsigned ava_esba_list_accum_format(
   unsigned format;
   size_t i;
 
-  if (list.v == &ava_esba_list_iface) {
+  if (list.v == &ava_esba_list_list_impl) {
     const ava_esba_list_header*restrict header =
       ava_esba_list_header_of(to_esba(list));
     return header->format |
@@ -242,7 +243,7 @@ static ava_esba ava_esba_list_append_sublist(
   size_t i;
   pointer*restrict dst;
 
-  if (list.v == &ava_esba_list_iface)
+  if (list.v == &ava_esba_list_list_impl)
     return ava_esba_list_concat_esbas(esba, to_esba(list), begin, end);
 
   AVA_LIST_ITERATOR(list, it);
@@ -332,13 +333,6 @@ ava_list_value ava_esba_list_of_raw(
   return to_list(esba);
 }
 
-static const void* ava_esba_list_value_query_accelerator(
-  const ava_accelerator* accel,
-  const void* dfault
-) {
-  return &ava_list_accelerator == accel? &ava_esba_list_iface : dfault;
-}
-
 static size_t ava_esba_list_value_value_weight(ava_value list) {
   return ava_esba_weight(to_esba_from_value(list));
 }
@@ -347,7 +341,7 @@ static ava_value ava_esba_list_list_to_value(ava_list_value list) {
   ava_value v = {
     .r1 = list.r1,
     .r2 = list.r2,
-    .type = &ava_esba_list_type
+    .attr = (const ava_attribute*)&ava_esba_list_list_impl
   };
   return v;
 }

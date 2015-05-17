@@ -33,17 +33,19 @@
 #include "-array-list.h"
 #include "-esba-list.h"
 
+const ava_attribute_tag ava_list_trait_tag = {
+  .name = "list"
+};
+
 static ava_list_value ava_list_value_of_string(ava_string);
 
-AVA_DEFINE_ACCELERATOR(ava_list_accelerator);
-
 ava_list_value ava_list_value_of(ava_value value) {
-  const ava_list_iface* iface = ava_query_accelerator(
-    value, &ava_list_accelerator, NULL);
+  const ava_list_trait* trait = ava_get_attribute(
+    value, &ava_list_trait_tag);
 
-  if (iface) {
+  if (trait) {
     return (ava_list_value) {
-      .v = iface,
+      .v = trait,
       .r1 = value.r1,
       .r2 = value.r2
     };

@@ -82,8 +82,6 @@ typedef struct {
 static ava_array_list* ava_array_list_of_array(
   const ava_value*restrict, size_t, size_t);
 static size_t ava_array_list_growing_capacity(size_t);
-static const void* ava_array_list_value_query_accelerator(
-  const ava_accelerator* accel, const void* dfault);
 static size_t ava_array_list_value_value_weight(ava_value);
 
 static ava_value ava_array_list_list_to_value(ava_list_value);
@@ -98,15 +96,17 @@ static ava_list_value ava_array_list_list_delete(
 static ava_list_value ava_array_list_list_set(
   ava_list_value, size_t, ava_value);
 
-static const ava_value_type ava_array_list_type = {
+static const ava_generic_trait ava_array_list_generic_impl = {
+  .header = { .tag = &ava_generic_trait_tag, .next = NULL },
   .to_string = ava_string_of_chunk_iterator,
   .string_chunk_iterator = ava_list_string_chunk_iterator,
   .iterate_string_chunk = ava_list_iterate_string_chunk,
-  .query_accelerator = ava_array_list_value_query_accelerator,
   .value_weight = ava_array_list_value_value_weight,
 };
 
-static const ava_list_iface ava_array_list_iface = {
+static const ava_list_trait ava_array_list_list_impl = {
+  .header = { .tag = &ava_list_trait_tag,
+              .next = (const ava_attribute*)&ava_array_list_generic_impl },
   .to_value = ava_array_list_list_to_value,
   .length = ava_array_list_list_length,
   .index = ava_array_list_list_index,
@@ -151,7 +151,7 @@ ava_list_value ava_array_list_copy_of(
   return (ava_list_value) {
     .r1 = { .ptr = al },
     .r2 = { .ulong = end - begin },
-    .v = &ava_array_list_iface,
+    .v = &ava_array_list_list_impl,
   };
 }
 
@@ -185,15 +185,8 @@ ava_list_value ava_array_list_of_raw(
   return (ava_list_value) {
     .r1 = { .ptr = al },
     .r2 = { .ulong = length },
-    .v = &ava_array_list_iface
+    .v = &ava_array_list_list_impl
   };
-}
-
-static const void* ava_array_list_value_query_accelerator(
-  const ava_accelerator* accel,
-  const void* dfault
-) {
-  return &ava_list_accelerator == accel? &ava_array_list_iface : dfault;
 }
 
 static size_t ava_array_list_value_value_weight(ava_value list) {
@@ -205,7 +198,7 @@ static ava_value ava_array_list_list_to_value(ava_list_value list) {
   ava_value v = {
     .r1 = list.r1,
     .r2 = list.r2,
-    .type = &ava_array_list_type
+    .attr = (const ava_attribute*)&ava_array_list_list_impl
   };
   return v;
 }

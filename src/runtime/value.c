@@ -31,12 +31,28 @@
  */
 #define AVA_SIPHASH_C 2
 #endif
+
+#ifndef AVA_SIPHASH_D
 /**
  * The number of finishing hash rounds.
  */
-#ifndef AVA_SIPHASH_D
 #define AVA_SIPHASH_D 4
 #endif
+
+const ava_attribute_tag ava_generic_trait_tag = {
+  .name = "generic"
+};
+
+const void* ava_get_attribute(ava_value value,
+                              const ava_attribute_tag*restrict tag) {
+  const ava_attribute*restrict attr;
+
+  for (attr = value.attr; attr; attr = attr->next)
+    if (tag == attr->tag)
+      return attr;
+
+  return NULL;
+}
 
 ava_string ava_string_of_chunk_iterator(ava_value value) {
   /* Produce a near-optimal string by concatting the chunks in a perfect binary
@@ -90,28 +106,22 @@ ava_string ava_iterate_singleton_string_chunk(ava_datum*restrict it,
   return ret;
 }
 
-const void* ava_noop_query_accelerator(const ava_accelerator* accel,
-                                       const void* dfault) {
-  return dfault;
-}
-
-static ava_string ava_string_type_to_string(ava_value value) AVA_CONSTFUN;
-static ava_string ava_string_type_to_string(ava_value value) {
+static ava_string ava_string_value_to_string(ava_value value) AVA_CONSTFUN;
+static ava_string ava_string_value_to_string(ava_value value) {
   return value.r1.str;
 }
 
-static size_t ava_string_type_value_weight(ava_value value) {
+static size_t ava_string_value_value_weight(ava_value value) {
   return ava_string_length(value.r1.str);
 }
 
-const ava_value_type ava_string_type = {
-  .size = sizeof(ava_value_type),
+static const ava_generic_trait ava_string_generic_impl = {
+  .header = { .tag = &ava_generic_trait_tag, .next = NULL },
   .name = "string",
-  .to_string = ava_string_type_to_string,
+  .to_string = ava_string_value_to_string,
   .string_chunk_iterator = ava_singleton_string_chunk_iterator,
   .iterate_string_chunk = ava_iterate_singleton_string_chunk,
-  .query_accelerator  = ava_noop_query_accelerator,
-  .value_weight = ava_string_type_value_weight,
+  .value_weight = ava_string_value_value_weight,
 };
 
 /* The string representation will become a bit more interesting once we have
@@ -121,7 +131,7 @@ ava_value ava_value_of_string(ava_string str) {
   return (ava_value) {
     .r1 = { .str = str },
     .r2 = { .ulong = 0 },
-    .type = &ava_string_type,
+    .attr = (const ava_attribute*)&ava_string_generic_impl,
   };
 }
 

@@ -45,21 +45,12 @@ static size_t list_weight(ava_list_value list) {
   return ava_value_weight(list.v->to_value(list));
 }
 
-static const void* list_qa_or_null(ava_list_value list,
-                                   const ava_accelerator* accel) {
-  return ava_query_accelerator(list.v->to_value(list), accel, NULL);
-}
-
-AVA_DEFINE_ACCELERATOR(unrelated_accelerator);
-
 deftest(basic_interleave) {
   ava_list_value input[3] = { range(0, 3), range(3, 6), range(6, 9) };
   ava_list_value result = ava_list_proj_interleave(input, 3);
 
   ck_assert_int_eq(9, result.v->length(result));
   ck_assert_int_eq(3 * list_weight(input[0]), list_weight(result));
-  ck_assert_ptr_ne(NULL, list_qa_or_null(result, &ava_list_accelerator));
-  ck_assert_ptr_eq(NULL, list_qa_or_null(result, &unrelated_accelerator));
   assert_looks_like("0 3 6 1 4 7 2 5 8", result);
 }
 
@@ -84,8 +75,6 @@ deftest(basic_demux) {
   ck_assert_int_eq(list_weight(input), list_weight(result[0]));
   ck_assert_int_eq(list_weight(input), list_weight(result[1]));
   ck_assert_int_eq(list_weight(input), list_weight(result[2]));
-  ck_assert_ptr_ne(NULL, list_qa_or_null(result[0], &ava_list_accelerator));
-  ck_assert_ptr_eq(NULL, list_qa_or_null(result[0], &unrelated_accelerator));
   assert_looks_like("0 3", result[0]);
   assert_looks_like("1 4", result[1]);
   assert_looks_like("2", result[2]);
@@ -182,8 +171,6 @@ deftest(basic_group) {
 
   ck_assert_int_eq(3, result.v->length(result));
   ck_assert_int_eq(list_weight(input), list_weight(result));
-  ck_assert_ptr_ne(NULL, list_qa_or_null(result, &ava_list_accelerator));
-  ck_assert_ptr_eq(NULL, list_qa_or_null(result, &unrelated_accelerator));
   assert_looks_like("\"0 1 2\" \"3 4 5\" \"6 7\"", result);
 }
 

@@ -25,6 +25,9 @@
 
 /**
  * The maximum length, in characters, of an integer value.
+ *
+ * No attempt is made to parse strings longer than this value; they are
+ * rejected outright.
  */
 #define MAX_INTEGER_LENGTH 65
 
@@ -32,8 +35,21 @@
  * Integer type used in user integer arithmetic calculations.
  */
 typedef ava_slong ava_integer;
+/* integer.c actually needs to define this symbol as an ava_generic_trait, but
+ * we'd prefer not to make that being the first trait on integers contractural.
+ * Instead, just hide the declaration from the compiler when compiling that
+ * file.
+ *
+ * (The alternative is to have an actual attribute that chains to
+ * ava_generic_trait, but that incurs a runtime performance penalty.)
+ */
+#ifndef AVA__IN_INTEGER_C
 /**
  * The basic integer type.
+ *
+ * Integer values can generally be expected to have this attribute at the head
+ * of their attribute chain. As normal, the absence of this attribute does not
+ * imply the value is not an integer.
  *
  * The string representation of an integer matches the following regular
  * expression. Surrounding whitespace is implicitly discarded. It is not
@@ -72,7 +88,10 @@ typedef ava_slong ava_integer;
  * A value with integer type stores its integer value in r1.slong. r2 is unused
  * and contains NULL.
  */
-extern const ava_value_type ava_integer_type;
+extern const ava_attribute ava_integer_type;
+#else /* AVA__IN_INTEGER_C */
+extern const ava_generic_trait ava_integer_type;
+#endif /* !AVA__IN_INTEGER_C */
 
 /**
  * Returns the integer parsable from the given value.
@@ -95,7 +114,7 @@ static inline ava_integer ava_integer_of_value(
   ava_value value, ava_integer dfault
 ) {
   /* Optimise for constant propagation */
-  if (&ava_integer_type == value.type)
+  if ((const ava_attribute*)&ava_integer_type == value.attr)
     return value.r1.slong;
 
   return ava_integer_of_noninteger_value(value, dfault);
@@ -109,7 +128,7 @@ static inline ava_value ava_value_of_integer(ava_integer i) {
   ava_value ret = {
     .r1 = { .slong = i },
     .r2 = { .ulong = 0 },
-    .type = &ava_integer_type
+    .attr = (const ava_attribute*)&ava_integer_type
   };
   return ret;
 }

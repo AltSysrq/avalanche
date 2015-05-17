@@ -48,11 +48,6 @@ deftest(empty_list_string_chunk_iterator_is_empty) {
                                      &it, empty_list_value)));
 }
 
-deftest(empty_list_responds_to_query_list_accelerator) {
-  ck_assert_ptr_eq(ava_empty_list.v, ava_query_accelerator(
-                     empty_list_value, &ava_list_accelerator, NULL));
-}
-
 deftest(empty_list_is_weightless) {
   ck_assert_int_eq(0, ava_value_weight(empty_list_value));
 }

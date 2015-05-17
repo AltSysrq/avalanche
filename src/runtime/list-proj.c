@@ -50,39 +50,36 @@ typedef struct {
   AO_t /* const ava_list_value*restrict */ groups[];
 } ava_list_proj_group_list;
 
-static const void* ava_list_proj_interleave_value_query_accelerator(
-  const ava_accelerator* accel, const void* dfault);
 static size_t ava_list_proj_interleave_value_value_weight(ava_value val);
 static ava_value ava_list_proj_interleave_list_to_value(ava_list_value list);
 static size_t ava_list_proj_interleave_list_length(ava_list_value list);
 static ava_value ava_list_proj_interleave_list_index(
   ava_list_value list, size_t ix);
 
-static const void* ava_list_proj_demux_value_query_accelerator(
-  const ava_accelerator* accel, const void* dfault);
 static size_t ava_list_proj_demux_value_value_weight(ava_value val);
 static ava_value ava_list_proj_demux_list_to_value(ava_list_value list);
 static size_t ava_list_proj_demux_list_length(ava_list_value list);
 static ava_value ava_list_proj_demux_list_index(ava_list_value list, size_t ix);
 
-static const void* ava_list_proj_group_value_query_accelerator(
-  const ava_accelerator* accel, const void* dfault);
 static size_t ava_list_proj_group_value_value_weight(ava_value val);
 static ava_value ava_list_proj_group_list_to_value(ava_list_value list);
 static size_t ava_list_proj_group_list_length(ava_list_value list);
 static ava_value ava_list_proj_group_list_index(ava_list_value list, size_t ix);
 
-static const ava_value_type ava_list_proj_interleave_type = {
-  .size = sizeof(ava_value_type),
+static const ava_generic_trait ava_list_proj_interleave_generic_impl = {
+  .header = { .tag = &ava_generic_trait_tag, .next = NULL },
   .name = "interleave-list-proj",
   .to_string = ava_string_of_chunk_iterator,
   .string_chunk_iterator = ava_list_string_chunk_iterator,
   .iterate_string_chunk = ava_list_iterate_string_chunk,
-  .query_accelerator = ava_list_proj_interleave_value_query_accelerator,
   .value_weight = ava_list_proj_interleave_value_value_weight,
 };
 
-static const ava_list_iface ava_list_proj_interleave_iface = {
+static const ava_list_trait ava_list_proj_interleave_list_impl = {
+  .header = {
+    .tag = &ava_list_trait_tag,
+    .next = (const ava_attribute*)&ava_list_proj_interleave_generic_impl
+  },
   .to_value = ava_list_proj_interleave_list_to_value,
   .length = ava_list_proj_interleave_list_length,
   .index = ava_list_proj_interleave_list_index,
@@ -98,17 +95,20 @@ static const ava_list_iface ava_list_proj_interleave_iface = {
   .iterator_index = ava_list_ix_iterator_index,
 };
 
-static const ava_value_type ava_list_proj_demux_type = {
-  .size = sizeof(ava_value_type),
+static const ava_generic_trait ava_list_proj_demux_generic_impl = {
+  .header = { .tag = &ava_generic_trait_tag, .next = NULL },
   .name = "demux-list-proj",
   .to_string = ava_string_of_chunk_iterator,
   .string_chunk_iterator = ava_list_string_chunk_iterator,
   .iterate_string_chunk = ava_list_iterate_string_chunk,
-  .query_accelerator = ava_list_proj_demux_value_query_accelerator,
   .value_weight = ava_list_proj_demux_value_value_weight,
 };
 
-static const ava_list_iface ava_list_proj_demux_iface = {
+static const ava_list_trait ava_list_proj_demux_list_impl = {
+  .header = {
+    .tag = &ava_list_trait_tag,
+    .next = (const ava_attribute*)&ava_list_proj_demux_generic_impl
+  },
   .to_value = ava_list_proj_demux_list_to_value,
   .length = ava_list_proj_demux_list_length,
   .index = ava_list_proj_demux_list_index,
@@ -124,17 +124,20 @@ static const ava_list_iface ava_list_proj_demux_iface = {
   .iterator_index = ava_list_ix_iterator_index,
 };
 
-static const ava_value_type ava_list_proj_group_type = {
-  .size = sizeof(ava_value_type),
+static const ava_generic_trait ava_list_proj_group_generic_impl = {
+  .header = { .tag = &ava_generic_trait_tag, .next = NULL },
   .name = "group-list-proj",
   .to_string = ava_string_of_chunk_iterator,
   .string_chunk_iterator = ava_list_string_chunk_iterator,
   .iterate_string_chunk = ava_list_iterate_string_chunk,
-  .query_accelerator = ava_list_proj_group_value_query_accelerator,
   .value_weight = ava_list_proj_group_value_value_weight,
 };
 
-static const ava_list_iface ava_list_proj_group_iface = {
+static const ava_list_trait ava_list_proj_group_list_impl = {
+  .header = {
+    .tag = &ava_list_trait_tag,
+    .next = (const ava_attribute*)&ava_list_proj_group_generic_impl
+  },
   .to_value = ava_list_proj_group_list_to_value,
   .length = ava_list_proj_group_list_length,
   .index = ava_list_proj_group_list_index,
@@ -149,15 +152,6 @@ static const ava_list_iface ava_list_proj_group_iface = {
   .iterator_move = ava_list_ix_iterator_move,
   .iterator_index = ava_list_ix_iterator_index,
 };
-
-static const void* ava_list_proj_interleave_value_query_accelerator(
-  const ava_accelerator* accel, const void* dfault
-) {
-  if (&ava_list_accelerator == accel)
-    return &ava_list_proj_interleave_iface;
-  else
-    return dfault;
-}
 
 ava_list_value ava_list_proj_interleave(const ava_list_value*restrict lists,
                                         size_t num_lists) {
@@ -179,7 +173,7 @@ ava_list_value ava_list_proj_interleave(const ava_list_value*restrict lists,
 
   /* See if we can invert a demux */
   for (i = 0; i < num_lists; ++i) {
-    if (&ava_list_proj_demux_iface != lists[i].v)
+    if (&ava_list_proj_demux_list_impl != lists[i].v)
       goto project;
 
     if (i != DEMUX_LIST_C(lists[i])->offset ||
@@ -198,7 +192,7 @@ ava_list_value ava_list_proj_interleave(const ava_list_value*restrict lists,
   return DEMUX_LIST_C(lists[0])->delegate;
 
   project:
-  ret.v = &ava_list_proj_interleave_iface;
+  ret.v = &ava_list_proj_interleave_list_impl;
   ret.INTERLEAVE_LISTS = ava_clone(lists, sizeof(ava_list_value) * num_lists);
   ret.INTERLEAVE_NLISTS = num_lists;
   return ret;
@@ -218,7 +212,7 @@ static size_t ava_list_proj_interleave_value_value_weight(ava_value val) {
 
 static ava_value ava_list_proj_interleave_list_to_value(ava_list_value list) {
   return (ava_value) {
-    .type = &ava_list_proj_interleave_type,
+    .attr = (const ava_attribute*)&ava_list_proj_interleave_list_impl,
     .r1 = list.r1,
     .r2 = list.r2
   };
@@ -252,7 +246,7 @@ ava_list_value ava_list_proj_demux(ava_list_value delegate,
 
   if (1 == stride) return delegate;
 
-  if (&ava_list_proj_interleave_iface == delegate.v) {
+  if (&ava_list_proj_interleave_list_impl == delegate.v) {
     if (stride == delegate.INTERLEAVE_NLISTS) {
       return INTERLEAVE_LISTS_C(delegate)[offset];
     }
@@ -263,19 +257,10 @@ ava_list_value ava_list_proj_demux(ava_list_value delegate,
   this->offset = offset;
   this->stride = stride;
 
-  ret.v = &ava_list_proj_demux_iface;
+  ret.v = &ava_list_proj_demux_list_impl;
   ret.DEMUX_LIST = this;
   ret.r2.ulong = 0;
   return ret;
-}
-
-static const void* ava_list_proj_demux_value_query_accelerator(
-  const ava_accelerator* accel, const void* dfault
-) {
-  if (&ava_list_accelerator == accel)
-    return &ava_list_proj_demux_iface;
-  else
-    return dfault;
 }
 
 static size_t ava_list_proj_demux_value_value_weight(ava_value val) {
@@ -285,7 +270,7 @@ static size_t ava_list_proj_demux_value_value_weight(ava_value val) {
 
 static ava_value ava_list_proj_demux_list_to_value(ava_list_value list) {
   return (ava_value) {
-    .type = &ava_list_proj_demux_type,
+    .attr = (const ava_attribute*)&ava_list_proj_demux_list_impl,
     .r1 = list.r1,
     .r2 = list.r2
   };
@@ -316,19 +301,10 @@ ava_list_value ava_list_proj_group(ava_list_value delegate, size_t group_size) {
   this->num_groups = num_groups;
 
   return (ava_list_value) {
-    .v = &ava_list_proj_group_iface,
+    .v = &ava_list_proj_group_list_impl,
     .r1 = { .ptr = this },
     .r2 = { .ulong = NULL }
   };
-}
-
-static const void* ava_list_proj_group_value_query_accelerator(
-  const ava_accelerator* accel, const void* dfault
-) {
-  if (&ava_list_accelerator == accel)
-    return &ava_list_proj_group_iface;
-  else
-    return dfault;
 }
 
 static size_t ava_list_proj_group_value_value_weight(ava_value val) {
@@ -339,7 +315,7 @@ static size_t ava_list_proj_group_value_value_weight(ava_value val) {
 
 static ava_value ava_list_proj_group_list_to_value(ava_list_value list) {
   return (ava_value) {
-    .type = &ava_list_proj_group_type,
+    .attr = (const ava_attribute*)&ava_list_proj_group_list_impl,
     .r1 = list.r1,
     .r2 = list.r2
   };
@@ -382,7 +358,7 @@ ava_list_value ava_list_proj_flatten(ava_list_value list) {
   ava_list_value accum;
   size_t i, n;
 
-  if (&ava_list_proj_group_iface == list.v)
+  if (&ava_list_proj_group_list_impl == list.v)
     return GROUP_LIST_C(list)->delegate;
 
   n = list.v->length(list);

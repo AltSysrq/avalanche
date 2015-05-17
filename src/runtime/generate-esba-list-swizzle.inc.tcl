@@ -1,6 +1,6 @@
 #! /usr/bin/env tclsh8.6
 #-
-# Copyright (c)
+# Copyright (c) 2015 Jason Lingle
 #
 # Permission to  use, copy,  modify, and/or distribute  this software  for any
 # purpose  with or  without fee  is hereby  granted, provided  that the  above
@@ -14,7 +14,7 @@
 # OF  CONTRACT, NEGLIGENCE  OR OTHER  TORTIOUS ACTION,  ARISING OUT  OF OR  IN
 # CONNECTION WITH THE USE OR PERFORMANCE OF THIS SOFTWARE.
 
-set TYPE 1
+set ATTR 1
 set R1 2
 set R2 4
 
@@ -31,20 +31,20 @@ typedef void (*ava_esba_list_swizzle_up_f)(
 }
 
 puts ""
-puts "#define POLYMORPH_TYPE $TYPE"
+puts "#define POLYMORPH_ATTR $ATTR"
 puts "#define POLYMORPH_R1 $R1"
 puts "#define POLYMORPH_R2 $R2"
-puts "#define POLYMORPH_ALL ($TYPE|$R1|$R2)"
+puts "#define POLYMORPH_ALL ($ATTR|$R1|$R2)"
 puts ""
 
 for {set i 0} {$i < 8} {incr i} {
-  set type [expr {$i & $TYPE}]
+  set attr [expr {$i & $ATTR}]
   set r1 [expr {$i & $R1}]
   set r2 [expr {$i & $R2}]
 
   puts "typedef struct {"
-  if {$type} {
-    puts "  const ava_value_type*restrict type;"
+  if {$attr} {
+    puts "  const ava_attribute*restrict attr;"
   }
   if {$r1} {
     puts "  ava_datum r1;"
@@ -59,7 +59,7 @@ for {set i 0} {$i < 8} {incr i} {
   puts "  ava_esba_list_swizzled_$i*restrict dst,"
   puts "  const ava_value*restrict src"
   puts ") {"
-  foreach field {type r1 r2} {
+  foreach field {attr r1 r2} {
     if {[set $field]} {
       puts "  dst->$field = src->$field;"
     }
@@ -72,7 +72,7 @@ for {set i 0} {$i < 8} {incr i} {
   puts "  const ava_value*restrict template,"
   puts "  const ava_esba_list_swizzled_$i*restrict src"
   puts ") {"
-  foreach field {type r1 r2} {
+  foreach field {attr r1 r2} {
     if {[set $field]} {
       puts "  dst->$field = src->$field;"
     } else {

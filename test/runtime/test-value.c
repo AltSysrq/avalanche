@@ -43,20 +43,19 @@ static ava_string xn_iterate_string_chunk(ava_datum*restrict it,
   }
 }
 
-static const ava_value_type xn_type = {
-  .size = sizeof(ava_value_type),
+static const ava_generic_trait xn_type = {
+  .header = { .tag = &ava_generic_trait_tag, .next = NULL },
   .name = "xn",
   .to_string = ava_string_of_chunk_iterator,
   .string_chunk_iterator = xn_string_chunk_iterator,
   .iterate_string_chunk = xn_iterate_string_chunk,
-  .query_accelerator = ava_noop_query_accelerator
 };
 
 static ava_value xn_of(ava_ulong val) {
   return (ava_value) {
     .r1 = { .ulong = val },
     .r2 = { .ulong = 0 },
-    .type = &xn_type
+    .attr = (const ava_attribute*)&xn_type
   };
 }
 
@@ -114,16 +113,6 @@ deftest(singleton_chunk_iterator) {
     accum = ava_string_concat(accum, chunk);
 
   ck_assert_str_eq("avalanches", ava_string_to_cstring(accum));
-}
-
-AVA_DECLARE_ACCELERATOR(foo_accelerator);
-AVA_DEFINE_ACCELERATOR(foo_accelerator);
-
-deftest(noop_query_accelerator) {
-  ava_value val = ava_value_of_string(AVA_EMPTY_STRING);
-
-  ck_assert_ptr_eq(&val, ava_query_accelerator(val, &foo_accelerator, &val));
-  ck_assert_ptr_eq(NULL, ava_query_accelerator(val, &foo_accelerator, NULL));
 }
 
 deftest(weight_of_string_is_its_length) {

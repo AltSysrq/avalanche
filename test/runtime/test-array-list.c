@@ -53,13 +53,6 @@ deftest(stringification_produces_normal_form) {
                      ava_to_string(list.v->to_value(list))));
 }
 
-deftest(responds_to_query_accelerator) {
-  ava_list_value orig = ava_array_list_of_raw(values, 4);
-  ava_list_value cycled = ava_list_value_of(orig.v->to_value(orig));
-
-  ck_assert_int_eq(0, memcmp(&orig, &cycled, sizeof(orig)));
-}
-
 deftest(value_weight_nonzero) {
   ava_list_value list = ava_array_list_of_raw(values, 4);
 
