@@ -31,7 +31,10 @@
 #include <sys/resource.h>
 #endif
 
-#include "runtime/avalanche.h"
+#define AVA__INTERNAL_INCLUDE 1
+#include "runtime/avalanche/defs.h"
+#include "runtime/avalanche/value.h"
+#include "runtime/avalanche/context.h"
 
 extern const char* suite_names[1024];
 extern void (*suite_impls[1024])(Suite*);

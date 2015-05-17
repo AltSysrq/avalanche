@@ -17,7 +17,7 @@
 
 #include "test.h"
 
-#include "runtime/avalanche.h"
+void ava_init(void);
 
 const char* suite_names[1024];
 void (*suite_impls[1024])(Suite*);

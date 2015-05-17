@@ -17,7 +17,7 @@
 
 #include <stdlib.h>
 
-#define AVA__INTERNAL_INCLUDE 1
+#include "runtime/avalanche/exception.h"
 #include "runtime/avalanche/integer.h"
 #include "runtime/-integer-fast-dec.h"
 
