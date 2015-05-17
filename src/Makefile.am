@@ -25,6 +25,7 @@ runtime/hexes.c \
 runtime/init.c \
 runtime/integer-fast-dec.c \
 runtime/list.c \
+runtime/list-proj.c \
 runtime/string.c \
 runtime/value.c
 libavart_la_LIBADD = $(LIBUNWIND_LIBS)

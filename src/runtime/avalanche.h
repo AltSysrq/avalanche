@@ -29,6 +29,7 @@ AVA_BEGIN_DECLS
 #include "avalanche/exception.h"
 #include "avalanche/context.h"
 #include "avalanche/list.h"
+#include "avalanche/list-proj.h"
 
 /**
  * Initialises the avalanche runtime.
