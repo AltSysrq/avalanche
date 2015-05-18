@@ -46,8 +46,8 @@ static ava_integer ava_integer_parse_dec(const char*restrict tok,
 static ava_integer ava_integer_parse_hex(const char*restrict tok,
                                          const char*restrict end);
 
-const ava_generic_trait ava_integer_type = {
-  .header = { .tag = &ava_generic_trait_tag, .next = NULL },
+const ava_value_trait ava_integer_type = {
+  .header = { .tag = &ava_value_trait_tag, .next = NULL },
   .name = "integer",
   .to_string = ava_integer_to_string,
   .string_chunk_iterator = ava_singleton_string_chunk_iterator,

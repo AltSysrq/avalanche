@@ -91,8 +91,8 @@ static ava_list_value ava_esba_list_list_delete(
 static ava_list_value ava_esba_list_list_set(
   ava_list_value, size_t, ava_value);
 
-static const ava_generic_trait ava_esba_list_generic_impl = {
-  .header = { .tag = &ava_generic_trait_tag, .next = NULL },
+static const ava_value_trait ava_esba_list_generic_impl = {
+  .header = { .tag = &ava_value_trait_tag, .next = NULL },
   .name = "esba-list",
   .to_string = ava_string_of_chunk_iterator,
   .string_chunk_iterator = ava_list_string_chunk_iterator,

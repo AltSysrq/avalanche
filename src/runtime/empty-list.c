@@ -44,8 +44,8 @@ static ava_list_value ava_empty_list_list_delete(
 static ava_list_value ava_empty_list_list_set(
   ava_list_value, size_t, ava_value);
 
-static const ava_generic_trait ava_empty_list_generic_impl = {
-  .header = { .tag = &ava_generic_trait_tag, .next = NULL },
+static const ava_value_trait ava_empty_list_generic_impl = {
+  .header = { .tag = &ava_value_trait_tag, .next = NULL },
   .name = "empty-list",
   .to_string = ava_empty_list_value_to_string,
   .string_chunk_iterator = ava_empty_list_value_string_chunk_iterator,

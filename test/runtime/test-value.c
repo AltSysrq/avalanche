@@ -43,8 +43,8 @@ static ava_string xn_iterate_string_chunk(ava_datum*restrict it,
   }
 }
 
-static const ava_generic_trait xn_type = {
-  .header = { .tag = &ava_generic_trait_tag, .next = NULL },
+static const ava_value_trait xn_type = {
+  .header = { .tag = &ava_value_trait_tag, .next = NULL },
   .name = "xn",
   .to_string = ava_string_of_chunk_iterator,
   .string_chunk_iterator = xn_string_chunk_iterator,

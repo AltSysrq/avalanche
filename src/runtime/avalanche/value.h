@@ -143,9 +143,9 @@ struct ava_value_s {
 };
 
 /**
- * The tag for ava_generic_trait.
+ * The tag for ava_value_trait.
  */
-extern const ava_attribute_tag ava_generic_trait_tag;
+extern const ava_attribute_tag ava_value_trait_tag;
 
 /**
  * The generic trait, which is present on all values.
@@ -235,7 +235,7 @@ typedef struct {
    * make the value become lighter or heavier dynamically.
    */
   size_t (*value_weight)(ava_value);
-} ava_generic_trait;
+} ava_value_trait;
 
 /**
  * Returns the first attribute on value matching the given tag, or NULL if none
@@ -256,49 +256,49 @@ const void* ava_get_attribute(
 /**
  * Converts the given value into a monolithic string.
  *
- * @see ava_generic_trait.to_string()
+ * @see ava_value_trait.to_string()
  */
 static inline ava_string ava_to_string(ava_value value) AVA_PURE;
 static inline ava_string ava_to_string(ava_value value) {
-  return AVA_GET_ATTRIBUTE(value, ava_generic_trait)->to_string(value);
+  return AVA_GET_ATTRIBUTE(value, ava_value_trait)->to_string(value);
 }
 
 /**
  * Begins iterating string chunks in the given value.
  *
- * @see ava_generic_trait.string_chunk_iterator()
+ * @see ava_value_trait.string_chunk_iterator()
  */
 static inline ava_datum ava_string_chunk_iterator(ava_value value) {
-  return AVA_GET_ATTRIBUTE(value, ava_generic_trait)
+  return AVA_GET_ATTRIBUTE(value, ava_value_trait)
     ->string_chunk_iterator(value);
 }
 
 /**
  * Continues iterating string chunks in the given value.
  *
- * @see ava_generic_trait.iterate_string_chunk()
+ * @see ava_value_trait.iterate_string_chunk()
  */
 static inline ava_string ava_iterate_string_chunk(
   ava_datum*restrict it, ava_value value
 ) {
-  return AVA_GET_ATTRIBUTE(value, ava_generic_trait)
+  return AVA_GET_ATTRIBUTE(value, ava_value_trait)
     ->iterate_string_chunk(it, value);
 }
 
 /**
  * Returns the approximate "weight" of the given value.
  *
- * @see ava_generic_trait.value_weight()
+ * @see ava_value_trait.value_weight()
  */
 static inline size_t ava_value_weight(ava_value value) {
-  return AVA_GET_ATTRIBUTE(value, ava_generic_trait)
+  return AVA_GET_ATTRIBUTE(value, ava_value_trait)
     ->value_weight(value);
 }
 
 /**
  * Constructs a string by using the chunk-iterator API on the given value.
  *
- * This is a good implementation of ava_generic_trait.to_string() for types that
+ * This is a good implementation of ava_value_trait.to_string() for types that
  * implement string_chunk_iterator() and iterate_string_chunk() naturally.
  */
 ava_string ava_string_of_chunk_iterator(ava_value value) AVA_PURE;
@@ -307,7 +307,7 @@ ava_string ava_string_of_chunk_iterator(ava_value value) AVA_PURE;
  * Prepares an iterator for use with ava_iterate_singleton_string_chunk().
  *
  * This is a reasonable implementation of
- * ava_generic_trait.string_chunk_iterator() for types that only implement
+ * ava_value_trait.string_chunk_iterator() for types that only implement
  * to_string() naturally.
  */
 ava_datum ava_singleton_string_chunk_iterator(ava_value value);
@@ -315,7 +315,7 @@ ava_datum ava_singleton_string_chunk_iterator(ava_value value);
 /**
  * Iterates a value as a single string chunk.
  *
- * This is a reasonable implementation of ava_generic_trait.iterate_string_chunk()
+ * This is a reasonable implementation of ava_value_trait.iterate_string_chunk()
  * for types that only implement to_string() naturally. It must be used with
  * ava_singleton_string_chunk_iterator().
  */

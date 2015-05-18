@@ -39,7 +39,7 @@
 #define AVA_SIPHASH_D 4
 #endif
 
-const ava_attribute_tag ava_generic_trait_tag = {
+const ava_attribute_tag ava_value_trait_tag = {
   .name = "generic"
 };
 
@@ -115,8 +115,8 @@ static size_t ava_string_value_value_weight(ava_value value) {
   return ava_string_length(value.r1.str);
 }
 
-static const ava_generic_trait ava_string_generic_impl = {
-  .header = { .tag = &ava_generic_trait_tag, .next = NULL },
+static const ava_value_trait ava_string_generic_impl = {
+  .header = { .tag = &ava_value_trait_tag, .next = NULL },
   .name = "string",
   .to_string = ava_string_value_to_string,
   .string_chunk_iterator = ava_singleton_string_chunk_iterator,

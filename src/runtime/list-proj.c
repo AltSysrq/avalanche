@@ -66,8 +66,8 @@ static ava_value ava_list_proj_group_list_to_value(ava_list_value list);
 static size_t ava_list_proj_group_list_length(ava_list_value list);
 static ava_value ava_list_proj_group_list_index(ava_list_value list, size_t ix);
 
-static const ava_generic_trait ava_list_proj_interleave_generic_impl = {
-  .header = { .tag = &ava_generic_trait_tag, .next = NULL },
+static const ava_value_trait ava_list_proj_interleave_generic_impl = {
+  .header = { .tag = &ava_value_trait_tag, .next = NULL },
   .name = "interleave-list-proj",
   .to_string = ava_string_of_chunk_iterator,
   .string_chunk_iterator = ava_list_string_chunk_iterator,
@@ -95,8 +95,8 @@ static const ava_list_trait ava_list_proj_interleave_list_impl = {
   .iterator_index = ava_list_ix_iterator_index,
 };
 
-static const ava_generic_trait ava_list_proj_demux_generic_impl = {
-  .header = { .tag = &ava_generic_trait_tag, .next = NULL },
+static const ava_value_trait ava_list_proj_demux_generic_impl = {
+  .header = { .tag = &ava_value_trait_tag, .next = NULL },
   .name = "demux-list-proj",
   .to_string = ava_string_of_chunk_iterator,
   .string_chunk_iterator = ava_list_string_chunk_iterator,
@@ -124,8 +124,8 @@ static const ava_list_trait ava_list_proj_demux_list_impl = {
   .iterator_index = ava_list_ix_iterator_index,
 };
 
-static const ava_generic_trait ava_list_proj_group_generic_impl = {
-  .header = { .tag = &ava_generic_trait_tag, .next = NULL },
+static const ava_value_trait ava_list_proj_group_generic_impl = {
+  .header = { .tag = &ava_value_trait_tag, .next = NULL },
   .name = "group-list-proj",
   .to_string = ava_string_of_chunk_iterator,
   .string_chunk_iterator = ava_list_string_chunk_iterator,

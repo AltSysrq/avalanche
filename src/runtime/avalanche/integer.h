@@ -35,13 +35,13 @@
  * Integer type used in user integer arithmetic calculations.
  */
 typedef ava_slong ava_integer;
-/* integer.c actually needs to define this symbol as an ava_generic_trait, but
+/* integer.c actually needs to define this symbol as an ava_value_trait, but
  * we'd prefer not to make that being the first trait on integers contractural.
  * Instead, just hide the declaration from the compiler when compiling that
  * file.
  *
  * (The alternative is to have an actual attribute that chains to
- * ava_generic_trait, but that incurs a runtime performance penalty.)
+ * ava_value_trait, but that incurs a runtime performance penalty.)
  */
 #ifndef AVA__IN_INTEGER_C
 /**
@@ -90,7 +90,7 @@ typedef ava_slong ava_integer;
  */
 extern const ava_attribute ava_integer_type;
 #else /* AVA__IN_INTEGER_C */
-extern const ava_generic_trait ava_integer_type;
+extern const ava_value_trait ava_integer_type;
 #endif /* !AVA__IN_INTEGER_C */
 
 /**
