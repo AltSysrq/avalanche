@@ -71,7 +71,7 @@ static ava_value ava_list_value_of_string(ava_string str) {
         buffer[buffer_ix++] = ava_value_of_string(result.str);
         if (buffer_ix == sizeof(buffer) / sizeof(buffer[0])) {
           accum = ava_list_concat(
-            accum, ava_list_value_to_value(ava_array_list_of_raw(buffer, buffer_ix)));
+            accum, ava_array_list_of_raw(buffer, buffer_ix));
           buffer_ix = 0;
         }
       } else {
@@ -111,7 +111,7 @@ static ava_value ava_list_value_of_string(ava_string str) {
   done:
   if (buffer_ix)
     accum = ava_list_concat(
-      accum, ava_list_value_to_value(ava_array_list_of_raw(buffer, buffer_ix)));
+      accum, ava_array_list_of_raw(buffer, buffer_ix));
   return accum;
 }
 
@@ -120,7 +120,8 @@ ava_list_value ava_list_copy_of(ava_list_value list, size_t begin, size_t end) {
     return ava_list_value_of(ava_empty_list);
 
   if (end - begin <= AVA_ARRAY_LIST_THRESH)
-    return ava_array_list_copy_of(list, begin, end);
+    return ava_list_value_of(ava_array_list_copy_of(
+                               ava_list_value_to_value(list), begin, end));
   else
     return ava_esba_list_copy_of(list, begin, end);
 }
@@ -129,7 +130,7 @@ ava_value ava_list_of_values(const ava_value*restrict values, size_t n) {
   if (0 == n)
     return ava_empty_list;
   else if (n <= AVA_ARRAY_LIST_THRESH)
-    return ava_list_value_to_value(ava_array_list_of_raw(values, n));
+    return ava_array_list_of_raw(values, n);
   else
     return ava_list_value_to_value(ava_esba_list_of_raw(values, n));
 }

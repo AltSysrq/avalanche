@@ -50,8 +50,8 @@
  * without special reader support since concurrent readers each have their own
  * length which will be less than the new value of used, and thus no other
  * thread will ever attempt to read into the modified portion of values unless
- * it gets its hands on a new ava_list_value with the larger length, which
- * by nature already involves the necessary memory barrier.
+ * it gets its hands on a new ava_value with the larger length, which by nature
+ * already involves the necessary memory barrier.
  */
 typedef struct {
   /**
@@ -112,13 +112,13 @@ static const ava_list_trait ava_array_list_list_impl = {
   .set = ava_array_list_list_set,
 };
 
-unsigned ava_array_list_used(ava_list_value list) {
+unsigned ava_array_list_used(ava_value list) {
   const ava_array_list*restrict al = list.LIST;
   return al->used;
 }
 
-ava_list_value ava_array_list_copy_of(
-  ava_list_value list, size_t begin, size_t end
+ava_value ava_array_list_copy_of(
+  ava_value list, size_t begin, size_t end
 ) {
   ava_array_list* al = ava_alloc(sizeof(ava_array_list) +
                                  sizeof(ava_value) * (end - begin));
@@ -128,16 +128,16 @@ ava_list_value ava_array_list_copy_of(
   al->used = end - begin;
 
   for (i = begin; i < end; ++i) {
-    al->values[i-begin] = ava_list_index(ava_list_value_to_value(list), i);
+    al->values[i-begin] = ava_list_index(list, i);
     weight += ava_value_weight(al->values[i-begin]);
   }
 
   al->weight = weight + sizeof(ava_value) * (end - begin);
 
-  return (ava_list_value) {
+  return (ava_value) {
+    .attr = (const ava_attribute*)&ava_array_list_list_impl,
     .r1 = { .ptr = al },
     .r2 = { .ulong = end - begin },
-    .v = &ava_array_list_list_impl,
   };
 }
 
@@ -162,16 +162,16 @@ static ava_array_list* ava_array_list_of_array(
   return al;
 }
 
-ava_list_value ava_array_list_of_raw(
+ava_value ava_array_list_of_raw(
   const ava_value*restrict array,
   size_t length
 ) {
   ava_array_list* al = ava_array_list_of_array(array, length, length);
 
-  return (ava_list_value) {
+  return (ava_value) {
+    .attr = (const ava_attribute*)&ava_array_list_list_impl,
     .r1 = { .ptr = al },
     .r2 = { .ulong = length },
-    .v = &ava_array_list_list_impl
   };
 }
 
@@ -206,9 +206,7 @@ static ava_value ava_array_list_list_slice(ava_value list,
     return list;
   }
 
-  return ava_list_value_to_value(
-    ava_array_list_of_raw(
-      al->values + begin, end - begin));
+  return ava_array_list_of_raw(al->values + begin, end - begin);
 }
 
 static size_t ava_array_list_growing_capacity(size_t length) {

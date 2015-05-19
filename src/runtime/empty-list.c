@@ -101,7 +101,7 @@ static ava_value ava_empty_list_list_slice(ava_value el,
 }
 
 static ava_value ava_empty_list_list_append(ava_value el, ava_value elt) {
-  return ava_list_value_to_value(ava_array_list_of_raw(&elt, 1));
+  return ava_array_list_of_raw(&elt, 1);
 }
 
 static ava_value ava_empty_list_list_concat(ava_value el, ava_value other) {

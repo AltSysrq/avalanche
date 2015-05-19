@@ -362,8 +362,7 @@ static ava_value ava_esba_list_list_slice(ava_value list,
     return list;
 
   if (end - begin < AVA_ARRAY_LIST_THRESH / 2)
-    return ava_list_value_to_value(
-      ava_array_list_copy_of(ava_list_value_of(list), begin, end));
+    return ava_array_list_copy_of(list, begin, end);
 
   return ava_list_value_to_value(
     ava_esba_list_copy_of(ava_list_value_of(list), begin, end));

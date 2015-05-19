@@ -130,8 +130,8 @@ deftest(polymorphic_create_from_list) {
     ava_value_of_integer(42),
     ava_value_of_string(ava_string_of_cstring("hello world")),
   };
-  ava_list_value array_list = ava_array_list_of_raw(values, 2);
-  ava_value list = ava_list_value_to_value(ava_esba_list_copy_of(array_list, 0, 2));
+  ava_value array_list = ava_array_list_of_raw(values, 2);
+  ava_value list = ava_list_value_to_value(ava_esba_list_copy_of(ava_list_value_of(array_list), 0, 2));
 
   ck_assert_int_eq(2, ava_list_length(list));
   assert_values_equal(values[0], ava_list_index(list, 0));
@@ -160,7 +160,7 @@ deftest(slice_to_array_list) {
 
   result = ava_list_slice(list, 5, 8);
 
-  ck_assert_int_eq(3, ava_array_list_used(ava_list_value_of(result)));
+  ck_assert_int_eq(3, ava_array_list_used(result));
   ck_assert_int_eq(3, ava_list_length(result));
   ck_assert_int_eq(5, ava_integer_of_value(
                      ava_list_index(result, 0), -1));
@@ -244,7 +244,7 @@ deftest(concat_with_compatible_other_list) {
   unsigned i;
 
   left = ava_list_value_to_value(ava_esba_list_of_raw(values, 2));
-  right = ava_list_value_to_value(ava_array_list_of_raw(values + 2, 2));
+  right = ava_array_list_of_raw(values + 2, 2);
   result = ava_list_concat(left, right);
 
   ck_assert_int_eq(4, ava_list_length(result));
@@ -263,7 +263,7 @@ deftest(concat_with_incompatible_other_list) {
   unsigned i;
 
   left = ava_list_value_to_value(ava_esba_list_of_raw(values, 2));
-  right = ava_list_value_to_value(ava_array_list_of_raw(values + 2, 2));
+  right = ava_array_list_of_raw(values + 2, 2);
   result = ava_list_concat(left, right);
 
   ck_assert_int_eq(4, ava_list_length(result));
