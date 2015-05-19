@@ -103,7 +103,7 @@ deftest(fully_polymorphic_append) {
   ava_list_value list = ava_esba_list_of_raw(&fourty_two, 1);
   list = list.v->append(list, string);
 
-  ava_value list_value = list.v->to_value(list);
+  ava_value list_value = ava_list_value_to_value(list);
   list = list.v->append(list, list_value);
 
   ck_assert_int_eq(3, list.v->length(list));
@@ -146,8 +146,8 @@ deftest(slice_to_empty_list) {
   ava_list_value list = ava_esba_list_of_raw(values, 2);
   ava_list_value empty = list.v->slice(list, 1, 1);
 
-  assert_values_equal(ava_empty_list.v->to_value(ava_empty_list),
-                      empty.v->to_value(empty));
+  assert_values_equal(ava_list_value_to_value(ava_empty_list),
+                      ava_list_value_to_value(empty));
 }
 
 deftest(slice_to_array_list) {

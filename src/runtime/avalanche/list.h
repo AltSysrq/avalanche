@@ -38,8 +38,8 @@
  * Normal form for a list is comprised of each element string escaped with
  * ava_list_escape(), separated by exactly one space character.
  *
- * There is no single "list" type; the list accelerator is used to access
- * efficient list manuplation functionality independent of the type.
+ * There is no single "list" type; the list trait is used to access efficient
+ * list manuplation functionality independent of the type.
  */
 
 /**
@@ -69,6 +69,16 @@ typedef struct {
 } ava_list_value;
 
 /**
+ * TODO: Remove once ava_list_value is no longer so profusely spread about and
+ * contains a proper ava_value.
+ */
+static inline ava_value ava_list_value_to_value(ava_list_value list) {
+  return (ava_value) {
+    .attr = (const ava_attribute*)list.v, .r1 = list.r1, .r2 = list.r2
+  };
+}
+
+/**
  * Defines the operations that can be performed on a list structure.
  *
  * Documnented complexities of methods are the worst acceptable complexities
@@ -83,17 +93,6 @@ typedef struct {
  */
 struct ava_list_trait_s {
   ava_attribute header;
-
-  /**
-   * Converts the list back into a normal value.
-   *
-   * Requirement:
-   *   to_value(ava_list_value_of(value)) == value
-   *   Ie, the value produced must be exatcly equal to the value used to obtain
-   *   the trait, if there was one. Typically this function just copies r1 and
-   *   r2 into an ava_value and sets the type.
-   */
-  ava_value (*to_value)(ava_list_value list);
 
   /**
    * Returns the number of elements in the list.

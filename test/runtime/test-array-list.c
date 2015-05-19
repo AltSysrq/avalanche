@@ -50,13 +50,13 @@ deftest(stringification_produces_normal_form) {
   ava_list_value list = ava_array_list_of_raw(values, 4);
   ck_assert_str_eq("a b c d",
                    ava_string_to_cstring(
-                     ava_to_string(list.v->to_value(list))));
+                     ava_to_string(ava_list_value_to_value(list))));
 }
 
 deftest(value_weight_nonzero) {
   ava_list_value list = ava_array_list_of_raw(values, 4);
 
-  ck_assert_int_lt(0, ava_value_weight(list.v->to_value(list)));
+  ck_assert_int_lt(0, ava_value_weight(ava_list_value_to_value(list)));
 }
 
 deftest(simple_indexing) {
@@ -193,8 +193,8 @@ deftest(slice_to_empty) {
   ava_list_value orig = ava_array_list_of_raw(values, 4);
   ava_list_value empty = orig.v->slice(orig, 1, 1);
 
-  ck_assert(values_equal(ava_empty_list.v->to_value(ava_empty_list),
-                         empty.v->to_value(empty)));
+  ck_assert(values_equal(ava_list_value_to_value(ava_empty_list),
+                         ava_list_value_to_value(empty)));
 }
 
 deftest(inplace_slice) {
@@ -244,7 +244,8 @@ deftest(noop_delete) {
   ava_list_value orig = ava_array_list_of_raw(values, 8);
   ava_list_value new = orig.v->delete(orig, 5, 5);
 
-  ck_assert(values_equal(orig.v->to_value(orig), new.v->to_value(new)));
+  ck_assert(values_equal(ava_list_value_to_value(orig),
+                         ava_list_value_to_value(new)));
 }
 
 deftest(prefix_delete) {

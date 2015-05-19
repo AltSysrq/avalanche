@@ -32,7 +32,6 @@ static ava_string ava_empty_list_value_iterate_string_chunk(
   ava_datum*restrict, ava_value);
 static size_t ava_empty_list_value_value_weight(ava_value);
 
-static ava_value ava_empty_list_list_to_value(ava_list_value);
 static size_t ava_empty_list_list_length(ava_list_value);
 static ava_value ava_empty_list_list_index(ava_list_value, size_t);
 static ava_list_value ava_empty_list_list_slice(ava_list_value, size_t, size_t);
@@ -56,7 +55,6 @@ static const ava_value_trait ava_empty_list_generic_impl = {
 static const ava_list_trait ava_empty_list_list_impl = {
   .header = { .tag = &ava_list_trait_tag,
               .next = (const ava_attribute*)&ava_empty_list_generic_impl },
-  .to_value = ava_empty_list_list_to_value,
   .length = ava_empty_list_list_length,
   .index = ava_empty_list_list_index,
   .slice = ava_empty_list_list_slice,
@@ -77,12 +75,6 @@ const ava_list_value ava_empty_list = {
   .v = &ava_empty_list_list_impl
 };
 
-static const ava_value ava_empty_list_value = {
-  .r1 = { .ptr = NULL },
-  .r2 = { .ptr = NULL },
-  .attr = (const ava_attribute*)&ava_empty_list_list_impl
-};
-
 static ava_string ava_empty_list_value_to_string(ava_value el) {
   return AVA_EMPTY_STRING;
 }
@@ -99,10 +91,6 @@ static ava_string ava_empty_list_value_iterate_string_chunk(
 
 static size_t ava_empty_list_value_value_weight(ava_value el) {
   return 0;
-}
-
-static ava_value ava_empty_list_list_to_value(ava_list_value el) {
-  return ava_empty_list_value;
 }
 
 static size_t ava_empty_list_list_length(ava_list_value el) {

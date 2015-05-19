@@ -51,18 +51,15 @@ typedef struct {
 } ava_list_proj_group_list;
 
 static size_t ava_list_proj_interleave_value_value_weight(ava_value val);
-static ava_value ava_list_proj_interleave_list_to_value(ava_list_value list);
 static size_t ava_list_proj_interleave_list_length(ava_list_value list);
 static ava_value ava_list_proj_interleave_list_index(
   ava_list_value list, size_t ix);
 
 static size_t ava_list_proj_demux_value_value_weight(ava_value val);
-static ava_value ava_list_proj_demux_list_to_value(ava_list_value list);
 static size_t ava_list_proj_demux_list_length(ava_list_value list);
 static ava_value ava_list_proj_demux_list_index(ava_list_value list, size_t ix);
 
 static size_t ava_list_proj_group_value_value_weight(ava_value val);
-static ava_value ava_list_proj_group_list_to_value(ava_list_value list);
 static size_t ava_list_proj_group_list_length(ava_list_value list);
 static ava_value ava_list_proj_group_list_index(ava_list_value list, size_t ix);
 
@@ -80,7 +77,6 @@ static const ava_list_trait ava_list_proj_interleave_list_impl = {
     .tag = &ava_list_trait_tag,
     .next = (const ava_attribute*)&ava_list_proj_interleave_generic_impl
   },
-  .to_value = ava_list_proj_interleave_list_to_value,
   .length = ava_list_proj_interleave_list_length,
   .index = ava_list_proj_interleave_list_index,
   .slice = ava_list_copy_slice,
@@ -109,7 +105,6 @@ static const ava_list_trait ava_list_proj_demux_list_impl = {
     .tag = &ava_list_trait_tag,
     .next = (const ava_attribute*)&ava_list_proj_demux_generic_impl
   },
-  .to_value = ava_list_proj_demux_list_to_value,
   .length = ava_list_proj_demux_list_length,
   .index = ava_list_proj_demux_list_index,
   .slice = ava_list_copy_slice,
@@ -138,7 +133,6 @@ static const ava_list_trait ava_list_proj_group_list_impl = {
     .tag = &ava_list_trait_tag,
     .next = (const ava_attribute*)&ava_list_proj_group_generic_impl
   },
-  .to_value = ava_list_proj_group_list_to_value,
   .length = ava_list_proj_group_list_length,
   .index = ava_list_proj_group_list_index,
   .slice = ava_list_copy_slice,
@@ -204,19 +198,12 @@ static size_t ava_list_proj_interleave_value_value_weight(ava_value val) {
 
   for (i = 0; i < val.INTERLEAVE_NLISTS; ++i) {
     sublist = INTERLEAVE_LISTS_C(val) + i;
-    sum += ava_value_weight(sublist->v->to_value(*sublist));
+    sum += ava_value_weight(ava_list_value_to_value(*sublist));
   }
 
   return sum;
 }
 
-static ava_value ava_list_proj_interleave_list_to_value(ava_list_value list) {
-  return (ava_value) {
-    .attr = (const ava_attribute*)&ava_list_proj_interleave_list_impl,
-    .r1 = list.r1,
-    .r2 = list.r2
-  };
-}
 static size_t ava_list_proj_interleave_list_length(ava_list_value list) {
   const ava_list_value*restrict delegate;
 
@@ -265,16 +252,9 @@ ava_list_value ava_list_proj_demux(ava_list_value delegate,
 
 static size_t ava_list_proj_demux_value_value_weight(ava_value val) {
   const ava_list_value*restrict delegate = &DEMUX_LIST_C(val)->delegate;
-  return ava_value_weight(delegate->v->to_value(*delegate));
+  return ava_value_weight(ava_list_value_to_value(*delegate));
 }
 
-static ava_value ava_list_proj_demux_list_to_value(ava_list_value list) {
-  return (ava_value) {
-    .attr = (const ava_attribute*)&ava_list_proj_demux_list_impl,
-    .r1 = list.r1,
-    .r2 = list.r2
-  };
-}
 static size_t ava_list_proj_demux_list_length(ava_list_value list) {
   const ava_list_value*restrict delegate = &DEMUX_LIST_C(list)->delegate;
   return (delegate->v->length(*delegate) - DEMUX_LIST_C(list)->offset +
@@ -310,16 +290,9 @@ ava_list_value ava_list_proj_group(ava_list_value delegate, size_t group_size) {
 static size_t ava_list_proj_group_value_value_weight(ava_value val) {
   const ava_list_value*restrict delegate = &GROUP_LIST_C(val)->delegate;
 
-  return ava_value_weight(delegate->v->to_value(*delegate));
+  return ava_value_weight(ava_list_value_to_value(*delegate));
 }
 
-static ava_value ava_list_proj_group_list_to_value(ava_list_value list) {
-  return (ava_value) {
-    .attr = (const ava_attribute*)&ava_list_proj_group_list_impl,
-    .r1 = list.r1,
-    .r2 = list.r2
-  };
-}
 static size_t ava_list_proj_group_list_length(ava_list_value list) {
   return GROUP_LIST_C(list)->num_groups;
 }
@@ -335,7 +308,7 @@ static ava_value ava_list_proj_group_list_index(
   assert(ix < this->num_groups);
 
   ret = (const ava_list_value*restrict)AO_load_acquire_read(this->groups + ix);
-  if (ret) return ret->v->to_value(*ret);
+  if (ret) return ava_list_value_to_value(*ret);
 
   /* Group not yet cached, create it */
   begin = ix * this->group_size;
@@ -351,7 +324,7 @@ static ava_value ava_list_proj_group_list_index(
    */
   AO_store_release_write(this->groups + ix, (AO_t)ret);
 
-  return ret->v->to_value(*ret);
+  return ava_list_value_to_value(*ret);
 }
 
 ava_list_value ava_list_proj_flatten(ava_list_value list) {

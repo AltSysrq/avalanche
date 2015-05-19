@@ -38,11 +38,11 @@ static ava_list_value range(unsigned low, unsigned high) {
 
 static void assert_looks_like(const char* expected, ava_list_value actual) {
   ck_assert_str_eq(expected, ava_string_to_cstring(
-                     ava_to_string(actual.v->to_value(actual))));
+                     ava_to_string(ava_list_value_to_value(actual))));
 }
 
 static size_t list_weight(ava_list_value list) {
-  return ava_value_weight(list.v->to_value(list));
+  return ava_value_weight(ava_list_value_to_value(list));
 }
 
 deftest(basic_interleave) {

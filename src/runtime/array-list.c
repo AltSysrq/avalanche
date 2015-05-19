@@ -84,7 +84,6 @@ static ava_array_list* ava_array_list_of_array(
 static size_t ava_array_list_growing_capacity(size_t);
 static size_t ava_array_list_value_value_weight(ava_value);
 
-static ava_value ava_array_list_list_to_value(ava_list_value);
 static size_t ava_array_list_list_length(ava_list_value);
 static ava_value ava_array_list_list_index(ava_list_value, size_t);
 static ava_list_value ava_array_list_list_slice(ava_list_value, size_t, size_t);
@@ -107,7 +106,6 @@ static const ava_value_trait ava_array_list_generic_impl = {
 static const ava_list_trait ava_array_list_list_impl = {
   .header = { .tag = &ava_list_trait_tag,
               .next = (const ava_attribute*)&ava_array_list_generic_impl },
-  .to_value = ava_array_list_list_to_value,
   .length = ava_array_list_list_length,
   .index = ava_array_list_list_index,
   .slice = ava_array_list_list_slice,
@@ -192,15 +190,6 @@ ava_list_value ava_array_list_of_raw(
 static size_t ava_array_list_value_value_weight(ava_value list) {
   const ava_array_list*restrict al = list.LIST;
   return al->weight;
-}
-
-static ava_value ava_array_list_list_to_value(ava_list_value list) {
-  ava_value v = {
-    .r1 = list.r1,
-    .r2 = list.r2,
-    .attr = (const ava_attribute*)&ava_array_list_list_impl
-  };
-  return v;
 }
 
 static size_t ava_array_list_list_length(ava_list_value list) {

@@ -29,8 +29,7 @@ static ava_value empty_list_value;
 defsuite(empty_list);
 
 defsetup {
-  empty_list_value = ava_empty_list.v->to_value(
-    ava_empty_list);
+  empty_list_value = ava_list_value_to_value(ava_empty_list);
 }
 
 defteardown { }
