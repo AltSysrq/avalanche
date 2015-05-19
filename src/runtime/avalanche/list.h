@@ -137,7 +137,7 @@ struct ava_list_trait_s {
    *
    * Complexity: Amortised O(length)
    */
-  ava_list_value (*delete)(ava_list_value list, size_t begin, size_t end);
+  ava_value (*delete)(ava_value list, size_t begin, size_t end);
 
   /**
    * Returns a new list which contains the elements in list, except with the
@@ -223,13 +223,30 @@ ava_list_value ava_list_copy_concat(ava_list_value left, ava_list_value right);
  * Implementation of ava_list_trait.delete which copies the list into a new
  * list of unspecified type.
  */
-ava_list_value ava_list_copy_delete(
-  ava_list_value list, size_t begin, size_t end);
+ava_value ava_list_copy_delete(
+  ava_value list, size_t begin, size_t end);
 /**
  * Implementation of ava_list_trait.copy which copies the list into a new list
  * of unspecified type.
  */
 ava_value ava_list_copy_set(ava_value list, size_t ix, ava_value val);
+
+static inline size_t ava_list_length(ava_value list_val) {
+  ava_list_value list = ava_list_value_of(list_val);
+  return list.v->length(list);
+}
+
+static inline ava_value ava_list_index(ava_value list_val, size_t ix) {
+  ava_list_value list = ava_list_value_of(list_val);
+  return list.v->index(list, ix);
+}
+
+static inline ava_value ava_list_delete(
+  ava_value list, size_t begin, size_t end
+) {
+  ava_list_value l = ava_list_value_of(list);
+  return l.v->delete(ava_list_value_to_value(l), begin, end);
+}
 
 static inline ava_value ava_list_set(ava_value list, size_t index,
                                      ava_value element) {

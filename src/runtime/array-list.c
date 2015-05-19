@@ -90,8 +90,8 @@ static ava_list_value ava_array_list_list_slice(ava_list_value, size_t, size_t);
 static ava_list_value ava_array_list_list_append(ava_list_value, ava_value);
 static ava_list_value ava_array_list_list_concat(
   ava_list_value, ava_list_value);
-static ava_list_value ava_array_list_list_delete(
-  ava_list_value, size_t, size_t);
+static ava_value ava_array_list_list_delete(
+  ava_value, size_t, size_t);
 static ava_value ava_array_list_list_set(
   ava_value, size_t, ava_value);
 
@@ -294,8 +294,8 @@ static ava_list_value ava_array_list_list_concat(ava_list_value list,
   }
 }
 
-static ava_list_value ava_array_list_list_delete(
-  ava_list_value list, size_t begin, size_t end
+static ava_value ava_array_list_list_delete(
+  ava_value list, size_t begin, size_t end
 ) {
   const ava_array_list*restrict al = list.LIST;
 
@@ -306,10 +306,12 @@ static ava_list_value ava_array_list_list_delete(
     return list;
 
   if (0 == begin)
-    return ava_array_list_list_slice(list, end, list.LENGTH);
+    return ava_list_value_to_value(
+      ava_array_list_list_slice(ava_list_value_of(list), end, list.LENGTH));
 
   if (list.LENGTH == end)
-    return ava_array_list_list_slice(list, 0, begin);
+    return ava_list_value_to_value(
+      ava_array_list_list_slice(ava_list_value_of(list), 0, begin));
 
   ava_array_list*restrict nal = ava_array_list_of_array(
     al->values, begin, list.LENGTH - (end - begin));

@@ -85,8 +85,8 @@ static ava_list_value ava_esba_list_list_slice(ava_list_value, size_t, size_t);
 static ava_list_value ava_esba_list_list_append(ava_list_value, ava_value);
 static ava_list_value ava_esba_list_list_concat(
   ava_list_value, ava_list_value);
-static ava_list_value ava_esba_list_list_delete(
-  ava_list_value, size_t, size_t);
+static ava_value ava_esba_list_list_delete(
+  ava_value, size_t, size_t);
 static ava_value ava_esba_list_list_set(
   ava_value, size_t, ava_value);
 
@@ -421,10 +421,10 @@ static ava_list_value ava_esba_list_list_concat(ava_list_value list,
   return to_list(esba);
 }
 
-static ava_list_value ava_esba_list_list_delete(
-  ava_list_value list, size_t begin, size_t end
+static ava_value ava_esba_list_list_delete(
+  ava_value list, size_t begin, size_t end
 ) {
-  ava_esba src_esba = to_esba(list);
+  ava_esba src_esba = to_esba_from_value(list);
   const ava_esba_list_header*restrict header =
     ava_esba_list_header_of(src_esba);
   size_t length = ava_esba_length(src_esba);
@@ -433,7 +433,7 @@ static ava_list_value ava_esba_list_list_delete(
   assert(end <= length);
 
   if (0 == begin && length == end)
-    return ava_empty_list;
+    return ava_list_value_to_value(ava_empty_list);
 
   if (begin == end)
     return list;
@@ -443,7 +443,7 @@ static ava_list_value ava_esba_list_list_delete(
   dst_esba = ava_esba_list_concat_esbas(dst_esba, src_esba, 0, begin);
   dst_esba = ava_esba_list_concat_esbas(dst_esba, src_esba, end, length);
 
-  return to_list(dst_esba);
+  return to_value(dst_esba);
 }
 
 static ava_value ava_esba_list_list_set(

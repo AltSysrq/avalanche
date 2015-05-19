@@ -277,15 +277,17 @@ ava_list_value ava_list_copy_concat(ava_list_value left, ava_list_value right) {
   return left.v->concat(left, right);
 }
 
-ava_list_value ava_list_copy_delete(ava_list_value list,
-                                    size_t begin, size_t end) {
+ava_value ava_list_copy_delete(ava_value list_val,
+                               size_t begin, size_t end) {
+  ava_list_value list = ava_list_value_of(list_val);
+
   if (begin == end)
-    return list;
+    return list_val;
   if (0 == begin && list.v->length(list) == end)
-    return ava_empty_list;
+    return ava_list_value_to_value(ava_empty_list);
 
   list = ava_list_copy_of(list, 0, list.v->length(list));
-  return list.v->delete(list, begin, end);
+  return list.v->delete(ava_list_value_to_value(list), begin, end);
 }
 
 ava_value ava_list_copy_set(ava_value list_val,

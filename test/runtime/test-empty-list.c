@@ -87,14 +87,13 @@ deftest(empty_list_concats_to_other_list) {
 }
 
 deftest(empty_list_permits_zero_to_zero_delete) {
-  ava_list_value result = ava_empty_list.v->delete(
-    ava_empty_list, 0, 0);
+  ava_value result = ava_list_delete(empty_list_value, 0, 0);
 
-  ck_assert_int_eq(0, memcmp(&result, &ava_empty_list, sizeof(result)));
+  ck_assert_int_eq(0, memcmp(&result, &empty_list_value, sizeof(result)));
 }
 
 deftest_signal(empty_list_refuses_nonzero_delete, SIGABRT) {
-  ava_empty_list.v->delete(ava_empty_list, 1, 1);
+  ava_list_delete(empty_list_value, 1, 1);
 }
 
 deftest_signal(empty_list_refuses_set, SIGABRT) {

@@ -38,8 +38,8 @@ static ava_list_value ava_empty_list_list_slice(ava_list_value, size_t, size_t);
 static ava_list_value ava_empty_list_list_append(ava_list_value, ava_value);
 static ava_list_value ava_empty_list_list_concat(
   ava_list_value, ava_list_value);
-static ava_list_value ava_empty_list_list_delete(
-  ava_list_value, size_t, size_t);
+static ava_value ava_empty_list_list_delete(
+  ava_value, size_t, size_t);
 static ava_value ava_empty_list_list_set(
   ava_value, size_t, ava_value);
 
@@ -114,8 +114,8 @@ static ava_list_value ava_empty_list_list_concat(ava_list_value el,
   return other;
 }
 
-static ava_list_value ava_empty_list_list_delete(
-  ava_list_value el, size_t begin, size_t end
+static ava_value ava_empty_list_list_delete(
+  ava_value el, size_t begin, size_t end
 ) {
   if (begin || end) abort();
 
