@@ -128,7 +128,7 @@ struct ava_list_trait_s {
    *
    * Complexity: Amortised O(length)
    */
-  ava_list_value (*concat)(ava_list_value left, ava_list_value right);
+  ava_value (*concat)(ava_value left, ava_value right);
   /**
    * Returns a new list which contains the elements in list from 0 to begin
    * exclusive, and from end inclusive to the end of list.
@@ -218,7 +218,7 @@ ava_list_value ava_list_copy_append(ava_list_value list, ava_value elt);
  * Implementation of ava_list_trait.concat which copies the lists into a new
  * list of an unspecified type.
  */
-ava_list_value ava_list_copy_concat(ava_list_value left, ava_list_value right);
+ava_value ava_list_copy_concat(ava_value left, ava_value right);
 /**
  * Implementation of ava_list_trait.delete which copies the list into a new
  * list of unspecified type.
@@ -239,6 +239,11 @@ static inline size_t ava_list_length(ava_value list_val) {
 static inline ava_value ava_list_index(ava_value list_val, size_t ix) {
   ava_list_value list = ava_list_value_of(list_val);
   return list.v->index(list, ix);
+}
+
+static inline ava_value ava_list_concat(ava_value left, ava_value right) {
+  ava_list_value list = ava_list_value_of(left);
+  return list.v->concat(ava_list_value_to_value(list), right);
 }
 
 static inline ava_value ava_list_delete(

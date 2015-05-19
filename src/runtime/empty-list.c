@@ -36,12 +36,9 @@ static size_t ava_empty_list_list_length(ava_list_value);
 static ava_value ava_empty_list_list_index(ava_list_value, size_t);
 static ava_list_value ava_empty_list_list_slice(ava_list_value, size_t, size_t);
 static ava_list_value ava_empty_list_list_append(ava_list_value, ava_value);
-static ava_list_value ava_empty_list_list_concat(
-  ava_list_value, ava_list_value);
-static ava_value ava_empty_list_list_delete(
-  ava_value, size_t, size_t);
-static ava_value ava_empty_list_list_set(
-  ava_value, size_t, ava_value);
+static ava_value ava_empty_list_list_concat(ava_value, ava_value);
+static ava_value ava_empty_list_list_delete(ava_value, size_t, size_t);
+static ava_value ava_empty_list_list_set(ava_value, size_t, ava_value);
 
 static const ava_value_trait ava_empty_list_generic_impl = {
   .header = { .tag = &ava_value_trait_tag, .next = NULL },
@@ -109,8 +106,7 @@ static ava_list_value ava_empty_list_list_append(ava_list_value el,
   return ava_array_list_of_raw(&elt, 1);
 }
 
-static ava_list_value ava_empty_list_list_concat(ava_list_value el,
-                                                 ava_list_value other) {
+static ava_value ava_empty_list_list_concat(ava_value el, ava_value other) {
   return other;
 }
 

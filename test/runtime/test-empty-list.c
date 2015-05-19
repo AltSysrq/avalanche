@@ -75,13 +75,12 @@ deftest(empty_list_appends_to_singleton_array_list) {
 }
 
 deftest(empty_list_concats_to_other_list) {
-  ava_list_value garbage = {
-    .v = (void*)0x100,
+  ava_value garbage = {
+    .attr = (void*)0x100,
     .r1 = { .ulong = 42 },
     .r2 = { .ulong = 56 },
   };
-  ava_list_value result = ava_empty_list.v->concat(
-    ava_empty_list, garbage);
+  ava_value result = ava_list_concat(empty_list_value, garbage);
 
   ck_assert_int_eq(0, memcmp(&garbage, &result, sizeof(result)));
 }

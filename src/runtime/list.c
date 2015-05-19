@@ -37,27 +37,29 @@ const ava_attribute_tag ava_list_trait_tag = {
   .name = "list"
 };
 
-static ava_list_value ava_list_value_of_string(ava_string);
+static ava_value ava_list_value_of_string(ava_string);
 
 ava_list_value ava_list_value_of(ava_value value) {
   const ava_list_trait* trait = ava_get_attribute(
     value, &ava_list_trait_tag);
 
-  if (trait) {
-    return (ava_list_value) {
-      .v = trait,
-      .r1 = value.r1,
-      .r2 = value.r2
-    };
+  if (!trait) {
+    value = ava_list_value_of_string(ava_to_string(value));
+    trait = ava_get_attribute(value, &ava_list_trait_tag);
+    assert(trait);
   }
 
-  return ava_list_value_of_string(ava_to_string(value));
+  return (ava_list_value) {
+    .v = trait,
+    .r1 = value.r1,
+    .r2 = value.r2
+  };
 }
 
-static ava_list_value ava_list_value_of_string(ava_string str) {
+static ava_value ava_list_value_of_string(ava_string str) {
   ava_lex_context* lex = ava_lex_new(str);
   ava_lex_result result;
-  ava_list_value accum = ava_empty_list;
+  ava_value accum = ava_list_value_to_value(ava_empty_list);
 
   ava_value buffer[64];
   unsigned buffer_ix = 0;
@@ -68,8 +70,8 @@ static ava_list_value ava_list_value_of_string(ava_string str) {
       if (ava_lex_token_type_is_simple(result.type)) {
         buffer[buffer_ix++] = ava_value_of_string(result.str);
         if (buffer_ix == sizeof(buffer) / sizeof(buffer[0])) {
-          accum = accum.v->concat(
-            accum, ava_array_list_of_raw(buffer, buffer_ix));
+          accum = ava_list_concat(
+            accum, ava_list_value_to_value(ava_array_list_of_raw(buffer, buffer_ix)));
           buffer_ix = 0;
         }
       } else {
@@ -108,8 +110,8 @@ static ava_list_value ava_list_value_of_string(ava_string str) {
 
   done:
   if (buffer_ix)
-    accum = accum.v->concat(
-      accum, ava_array_list_of_raw(buffer, buffer_ix));
+    accum = ava_list_concat(
+      accum, ava_list_value_to_value(ava_array_list_of_raw(buffer, buffer_ix)));
   return accum;
 }
 
@@ -272,9 +274,10 @@ ava_list_value ava_list_copy_append(ava_list_value list, ava_value elt) {
   return list.v->append(list, elt);
 }
 
-ava_list_value ava_list_copy_concat(ava_list_value left, ava_list_value right) {
-  left = ava_list_copy_of(left, 0, left.v->length(left));
-  return left.v->concat(left, right);
+ava_value ava_list_copy_concat(ava_value left_val, ava_value right) {
+  ava_list_value left = ava_list_value_of(left_val);
+  left = ava_list_copy_of(left, 0, ava_list_length(ava_list_value_to_value(left)));
+  return left.v->concat(ava_list_value_to_value(left), right);
 }
 
 ava_value ava_list_copy_delete(ava_value list_val,

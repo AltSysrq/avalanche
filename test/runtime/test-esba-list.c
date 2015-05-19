@@ -205,16 +205,16 @@ deftest(concat_with_compatible_esba_list) {
     ava_value_of_integer(2),
     ava_value_of_integer(3),
   };
-  ava_list_value left, right, result;
+  ava_value left, right, result;
   unsigned i;
 
-  left = ava_esba_list_of_raw(values, 2);
-  right = ava_esba_list_of_raw(values + 2, 2);
-  result = left.v->concat(left, right);
+  left = ava_list_value_to_value(ava_esba_list_of_raw(values, 2));
+  right = ava_list_value_to_value(ava_esba_list_of_raw(values + 2, 2));
+  result = ava_list_concat(left, right);
 
-  ck_assert_int_eq(4, result.v->length(result));
+  ck_assert_int_eq(4, ava_list_length(result));
   for (i = 0; i < 4; ++i)
-    assert_values_equal(values[i], result.v->index(result, i));
+    assert_values_equal(values[i], ava_list_index(result, i));
 }
 
 deftest(concat_with_incompatible_esba_list) {
@@ -224,16 +224,16 @@ deftest(concat_with_incompatible_esba_list) {
     ava_value_of_string(ava_string_of_cstring("foo")),
     ava_value_of_string(ava_string_of_cstring("bar")),
   };
-  ava_list_value left, right, result;
+  ava_value left, right, result;
   unsigned i;
 
-  left = ava_esba_list_of_raw(values, 2);
-  right = ava_esba_list_of_raw(values + 2, 2);
-  result = left.v->concat(left, right);
+  left = ava_list_value_to_value(ava_esba_list_of_raw(values, 2));
+  right = ava_list_value_to_value(ava_esba_list_of_raw(values + 2, 2));
+  result = ava_list_concat(left, right);
 
-  ck_assert_int_eq(4, result.v->length(result));
+  ck_assert_int_eq(4, ava_list_length(result));
   for (i = 0; i < 4; ++i)
-    assert_values_equal(values[i], result.v->index(result, i));
+    assert_values_equal(values[i], ava_list_index(result, i));
 }
 
 deftest(concat_with_compatible_other_list) {
@@ -243,16 +243,16 @@ deftest(concat_with_compatible_other_list) {
     ava_value_of_integer(2),
     ava_value_of_integer(3),
   };
-  ava_list_value left, right, result;
+  ava_value left, right, result;
   unsigned i;
 
-  left = ava_esba_list_of_raw(values, 2);
-  right = ava_array_list_of_raw(values + 2, 2);
-  result = left.v->concat(left, right);
+  left = ava_list_value_to_value(ava_esba_list_of_raw(values, 2));
+  right = ava_list_value_to_value(ava_array_list_of_raw(values + 2, 2));
+  result = ava_list_concat(left, right);
 
-  ck_assert_int_eq(4, result.v->length(result));
+  ck_assert_int_eq(4, ava_list_length(result));
   for (i = 0; i < 4; ++i)
-    assert_values_equal(values[i], result.v->index(result, i));
+    assert_values_equal(values[i], ava_list_index(result, i));
 }
 
 deftest(concat_with_incompatible_other_list) {
@@ -262,16 +262,16 @@ deftest(concat_with_incompatible_other_list) {
     ava_value_of_string(ava_string_of_cstring("foo")),
     ava_value_of_string(ava_string_of_cstring("bar")),
   };
-  ava_list_value left, right, result;
+  ava_value left, right, result;
   unsigned i;
 
-  left = ava_esba_list_of_raw(values, 2);
-  right = ava_array_list_of_raw(values + 2, 2);
-  result = left.v->concat(left, right);
+  left = ava_list_value_to_value(ava_esba_list_of_raw(values, 2));
+  right = ava_list_value_to_value(ava_array_list_of_raw(values + 2, 2));
+  result = ava_list_concat(left, right);
 
-  ck_assert_int_eq(4, result.v->length(result));
+  ck_assert_int_eq(4, ava_list_length(result));
   for (i = 0; i < 4; ++i)
-    assert_values_equal(values[i], result.v->index(result, i));
+    assert_values_equal(values[i], ava_list_index(result, i));
 }
 
 deftest(noop_delete) {

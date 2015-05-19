@@ -313,7 +313,7 @@ static ava_value ava_list_proj_group_list_index(
 }
 
 ava_list_value ava_list_proj_flatten(ava_list_value list) {
-  ava_list_value accum;
+  ava_value accum;
   size_t i, n;
 
   if (&ava_list_proj_group_list_impl == list.v)
@@ -323,11 +323,10 @@ ava_list_value ava_list_proj_flatten(ava_list_value list) {
   if (0 == n)
     return ava_empty_list;
 
-  accum = ava_list_value_of(list.v->index(list, 0));
+  accum = list.v->index(list, 0);
 
   for (i = 1; i < n; ++i)
-    accum = accum.v->concat(
-      accum, ava_list_value_of(list.v->index(list, i)));
+    accum = ava_list_concat(accum, list.v->index(list, i));
 
-  return accum;
+  return ava_list_value_of(accum);
 }

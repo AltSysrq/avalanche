@@ -115,76 +115,76 @@ deftest(conflicting_append) {
 }
 
 deftest(copying_concat) {
-  ava_list_value orig = ava_array_list_of_raw(values, 2);
-  ava_list_value other = ava_array_list_of_raw(values + 2, 2);
-  ava_list_value cat = orig.v->concat(orig, other);
+  ava_value orig = ava_list_value_to_value(ava_array_list_of_raw(values, 2));
+  ava_value other = ava_list_value_to_value(ava_array_list_of_raw(values + 2, 2));
+  ava_value cat = ava_list_concat(orig, other);
   unsigned i;
 
-  ck_assert_int_eq(4, cat.v->length(cat));
+  ck_assert_int_eq(4, ava_list_length(cat));
   for (i = 0; i < 4; ++i)
-    ck_assert(values_equal(values[i], cat.v->index(cat, i)));
+    ck_assert(values_equal(values[i], ava_list_index(cat, i)));
 }
 
 deftest(inplace_concat) {
-  ava_list_value orig = ava_array_list_of_raw(values, 2);
-  ava_list_value o23 = ava_array_list_of_raw(values + 2, 2);
-  ava_list_value o45 = ava_array_list_of_raw(values + 4, 2);
-  ava_list_value old = orig.v->concat(orig, o23);
-  ava_list_value new = old.v->concat(old, o45);
+  ava_value orig = ava_list_value_to_value(ava_array_list_of_raw(values, 2));
+  ava_value o23 = ava_list_value_to_value(ava_array_list_of_raw(values + 2, 2));
+  ava_value o45 = ava_list_value_to_value(ava_array_list_of_raw(values + 4, 2));
+  ava_value old = ava_list_concat(orig, o23);
+  ava_value new = ava_list_concat(old, o45);
   unsigned i;
 
   ck_assert_ptr_eq(old.r1.ptr, new.r1.ptr);
-  ck_assert_int_eq(4, old.v->length(old));
-  ck_assert_int_eq(6, new.v->length(new));
-  ck_assert_int_eq(6, ava_array_list_used(old));
-  ck_assert_int_eq(6, ava_array_list_used(new));
+  ck_assert_int_eq(4, ava_list_length(old));
+  ck_assert_int_eq(6, ava_list_length(new));
+  ck_assert_int_eq(6, ava_array_list_used(ava_list_value_of(old)));
+  ck_assert_int_eq(6, ava_array_list_used(ava_list_value_of(new)));
   for (i = 0; i < 6; ++i)
-    ck_assert(values_equal(values[i], new.v->index(new, i)));
+    ck_assert(values_equal(values[i], ava_list_index(new, i)));
 }
 
 deftest(conflicting_concat) {
-  ava_list_value orig = ava_array_list_of_raw(values, 2);
-  ava_list_value o23 = ava_array_list_of_raw(values + 2, 2);
-  ava_list_value o45 = ava_array_list_of_raw(values + 4, 2);
-  ava_list_value o67 = ava_array_list_of_raw(values + 6, 2);
-  ava_list_value base = orig.v->concat(orig, o23);
-  ava_list_value left = base.v->concat(base, o45);
-  ava_list_value right = base.v->concat(base, o67);
+  ava_value orig = ava_list_value_to_value(ava_array_list_of_raw(values, 2));
+  ava_value o23 = ava_list_value_to_value(ava_array_list_of_raw(values + 2, 2));
+  ava_value o45 = ava_list_value_to_value(ava_array_list_of_raw(values + 4, 2));
+  ava_value o67 = ava_list_value_to_value(ava_array_list_of_raw(values + 6, 2));
+  ava_value base = ava_list_concat(orig, o23);
+  ava_value left = ava_list_concat(base, o45);
+  ava_value right = ava_list_concat(base, o67);
 
   ck_assert_ptr_eq(base.r1.ptr, left.r1.ptr);
-  ck_assert_int_eq(4, base.v->length(base));
-  ck_assert_int_eq(6, left.v->length(left));
-  ck_assert_int_eq(6, right.v->length(right));
-  ck_assert_int_eq(6, ava_array_list_used(base));
-  ck_assert_int_eq(6, ava_array_list_used(left));
-  ck_assert_int_eq(6, ava_array_list_used(right));
-  ck_assert(values_equal(values[4], left.v->index(left, 4)));
-  ck_assert(values_equal(values[5], left.v->index(left, 5)));
-  ck_assert(values_equal(values[6], right.v->index(right, 4)));
-  ck_assert(values_equal(values[7], right.v->index(right, 5)));
+  ck_assert_int_eq(4, ava_list_length(base));
+  ck_assert_int_eq(6, ava_list_length(left));
+  ck_assert_int_eq(6, ava_list_length(right));
+  ck_assert_int_eq(6, ava_array_list_used(ava_list_value_of(base)));
+  ck_assert_int_eq(6, ava_array_list_used(ava_list_value_of(left)));
+  ck_assert_int_eq(6, ava_array_list_used(ava_list_value_of(right)));
+  ck_assert(values_equal(values[4], ava_list_index(left, 4)));
+  ck_assert(values_equal(values[5], ava_list_index(left, 5)));
+  ck_assert(values_equal(values[6], ava_list_index(right, 4)));
+  ck_assert(values_equal(values[7], ava_list_index(right, 5)));
 }
 
 deftest(inplace_self_concat) {
-  ava_list_value orig = ava_array_list_of_raw(values, 2);
-  ava_list_value o23 = ava_array_list_of_raw(values + 2, 2);
-  ava_list_value base = orig.v->concat(orig, o23);
-  ava_list_value result = base.v->concat(base, base);
+  ava_value orig = ava_list_value_to_value(ava_array_list_of_raw(values, 2));
+  ava_value o23 = ava_list_value_to_value(ava_array_list_of_raw(values + 2, 2));
+  ava_value base = ava_list_concat(orig, o23);
+  ava_value result = ava_list_concat(base, base);
   unsigned i;
 
   ck_assert_ptr_eq(base.r1.ptr, result.r1.ptr);
-  ck_assert_int_eq(4, base.v->length(base));
-  ck_assert_int_eq(8, result.v->length(result));
-  ck_assert_int_eq(8, ava_array_list_used(result));
+  ck_assert_int_eq(4, ava_list_length(base));
+  ck_assert_int_eq(8, ava_list_length(result));
+  ck_assert_int_eq(8, ava_array_list_used(ava_list_value_of(result)));
   for (i = 0; i < 4; ++i) {
-    ck_assert(values_equal(values[i], base.v->index(base, i)));
-    ck_assert(values_equal(values[i], result.v->index(result, i)));
-    ck_assert(values_equal(values[i], result.v->index(result, i+4)));
+    ck_assert(values_equal(values[i], ava_list_index(base, i)));
+    ck_assert(values_equal(values[i], ava_list_index(result, i)));
+    ck_assert(values_equal(values[i], ava_list_index(result, i+4)));
   }
 }
 
 deftest(empty_list_concat) {
-  ava_list_value orig = ava_array_list_of_raw(values, 2);
-  ava_list_value result = orig.v->concat(orig, ava_empty_list);
+  ava_value orig = ava_list_value_to_value(ava_array_list_of_raw(values, 2));
+  ava_value result = ava_list_concat(orig, ava_list_value_to_value(ava_empty_list));
 
   ck_assert_ptr_eq(orig.r1.ptr, result.r1.ptr);
 }

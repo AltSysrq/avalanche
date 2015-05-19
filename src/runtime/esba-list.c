@@ -83,12 +83,9 @@ static size_t ava_esba_list_list_length(ava_list_value);
 static ava_value ava_esba_list_list_index(ava_list_value, size_t);
 static ava_list_value ava_esba_list_list_slice(ava_list_value, size_t, size_t);
 static ava_list_value ava_esba_list_list_append(ava_list_value, ava_value);
-static ava_list_value ava_esba_list_list_concat(
-  ava_list_value, ava_list_value);
-static ava_value ava_esba_list_list_delete(
-  ava_value, size_t, size_t);
-static ava_value ava_esba_list_list_set(
-  ava_value, size_t, ava_value);
+static ava_value ava_esba_list_list_concat(ava_value, ava_value);
+static ava_value ava_esba_list_list_delete(ava_value, size_t, size_t);
+static ava_value ava_esba_list_list_set(ava_value, size_t, ava_value);
 
 static const ava_value_trait ava_esba_list_generic_impl = {
   .header = { .tag = &ava_value_trait_tag, .next = NULL },
@@ -402,23 +399,22 @@ static ava_esba ava_esba_list_make_compatible(ava_esba src_esba,
                                     0, ava_esba_length(src_esba));
 }
 
-static ava_list_value ava_esba_list_list_concat(ava_list_value list,
-                                                ava_list_value other) {
-  ava_esba esba = to_esba(list);
+static ava_value ava_esba_list_list_concat(ava_value list, ava_value other) {
+  ava_esba esba = to_esba_from_value(list);
   const ava_esba_list_header*restrict header;
 
-  size_t other_length = other.v->length(other);
+  size_t other_length = ava_list_length(other);
 
   header = ava_esba_list_header_of(esba);
   esba = ava_esba_list_make_compatible(
-    esba, ava_esba_list_accum_format(other, 0, other_length,
+    esba, ava_esba_list_accum_format(ava_list_value_of(other), 0, other_length,
                                      header->template));
 
   header = ava_esba_list_header_of(esba);
   esba = ava_esba_list_append_sublist(esba, header->format,
-                                      other, 0, other_length);
+                                      ava_list_value_of(other), 0, other_length);
 
-  return to_list(esba);
+  return to_value(esba);
 }
 
 static ava_value ava_esba_list_list_delete(

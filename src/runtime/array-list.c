@@ -88,12 +88,9 @@ static size_t ava_array_list_list_length(ava_list_value);
 static ava_value ava_array_list_list_index(ava_list_value, size_t);
 static ava_list_value ava_array_list_list_slice(ava_list_value, size_t, size_t);
 static ava_list_value ava_array_list_list_append(ava_list_value, ava_value);
-static ava_list_value ava_array_list_list_concat(
-  ava_list_value, ava_list_value);
-static ava_value ava_array_list_list_delete(
-  ava_value, size_t, size_t);
-static ava_value ava_array_list_list_set(
-  ava_value, size_t, ava_value);
+static ava_value ava_array_list_list_concat(ava_value, ava_value);
+static ava_value ava_array_list_list_delete(ava_value, size_t, size_t);
+static ava_value ava_array_list_list_set(ava_value, size_t, ava_value);
 
 static const ava_value_trait ava_array_list_generic_impl = {
   .header = { .tag = &ava_value_trait_tag, .next = NULL },
@@ -253,10 +250,9 @@ static ava_list_value ava_array_list_list_append(ava_list_value list,
   }
 }
 
-static ava_list_value ava_array_list_list_concat(ava_list_value list,
-                                                 ava_list_value other) {
+static ava_value ava_array_list_list_concat(ava_value list, ava_value other) {
   ava_array_list*restrict al = (ava_array_list*restrict)list.LIST;
-  size_t other_length = other.v->length(other);
+  size_t other_length = ava_list_length(other);
 
   if (0 == other_length) return list;
 
@@ -281,7 +277,7 @@ static ava_list_value ava_array_list_list_concat(ava_list_value list,
     size_t added_weight = 0;
     size_t i;
     for (i = 0; i < other_length; ++i) {
-      al->values[list.LENGTH + i] = other.v->index(other, i);
+      al->values[list.LENGTH + i] = ava_list_index(other, i);
       added_weight += ava_value_weight(al->values[list.LENGTH + i]);
     }
 
@@ -289,8 +285,8 @@ static ava_list_value ava_array_list_list_concat(ava_list_value list,
     list.LENGTH += other_length;
     return list;
   } else {
-    list = ava_esba_list_of_raw(al->values, list.LENGTH);
-    return list.v->concat(list, other);
+    list = ava_list_value_to_value(ava_esba_list_of_raw(al->values, list.LENGTH));
+    return ava_list_concat(list, other);
   }
 }
 
