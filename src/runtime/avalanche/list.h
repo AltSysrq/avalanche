@@ -181,8 +181,8 @@ ava_list_value ava_list_copy_of(ava_list_value list, size_t begin, size_t end);
  * need not be prerved after this function returns.
  * @param count The number of values to copy.
  */
-ava_list_value ava_list_of_values(const ava_value*restrict values,
-                                  size_t count);
+ava_value ava_list_of_values(const ava_value*restrict values,
+                             size_t count);
 
 /**
  * Escapes the given string so that it can be used in a string representation

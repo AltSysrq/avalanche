@@ -166,8 +166,7 @@ deftest(list_stringified_correctly) {
     ava_value_of_string(ava_string_of_cstring("foo bar")),
     ava_value_of_string(ava_string_of_cstring("xy\"zzy")),
   };
-  ava_value list = ava_list_value_to_value(
-    ava_list_of_values(values, 2));
+  ava_value list = ava_list_of_values(values, 2);
 
   ava_string str = ava_to_string(list);
 
@@ -180,8 +179,7 @@ deftest(empty_string_is_quoted) {
     ava_value_of_string(AVA_EMPTY_STRING),
     ava_value_of_string(AVA_EMPTY_STRING),
   };
-  ava_value list = ava_list_value_to_value(
-    ava_list_of_values(values, 2));
+  ava_value list = ava_list_of_values(values, 2);
 
   ava_string str = ava_to_string(list);
 
