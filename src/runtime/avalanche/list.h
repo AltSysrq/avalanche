@@ -147,7 +147,7 @@ struct ava_list_trait_s {
    *
    * Complexity: Amortised O(1)
    */
-  ava_list_value (*set)(ava_list_value list, size_t index, ava_value element);
+  ava_value (*set)(ava_value list, size_t index, ava_value element);
 };
 
 /**
@@ -163,7 +163,7 @@ struct ava_list_trait_s {
  *
  * @throws ava_format_exception if value is not conform to list format.
  */
-ava_list_value ava_list_value_of(ava_value value);
+ava_list_value ava_list_value_of(ava_value value) AVA_PURE;
 
 /**
  * Copies the given list into a new list using a reasonable type for the
@@ -229,7 +229,13 @@ ava_list_value ava_list_copy_delete(
  * Implementation of ava_list_trait.copy which copies the list into a new list
  * of unspecified type.
  */
-ava_list_value ava_list_copy_set(ava_list_value list, size_t ix, ava_value val);
+ava_value ava_list_copy_set(ava_value list, size_t ix, ava_value val);
+
+static inline ava_value ava_list_set(ava_value list, size_t index,
+                                     ava_value element) {
+  ava_list_value l = ava_list_value_of(list);
+  return l.v->set(ava_list_value_to_value(l), index, element);
+}
 
 /**
  * The empty list.

@@ -98,5 +98,5 @@ deftest_signal(empty_list_refuses_nonzero_delete, SIGABRT) {
 }
 
 deftest_signal(empty_list_refuses_set, SIGABRT) {
-  ava_empty_list.v->set(ava_empty_list, 0, empty_list_value);
+  ava_list_set(empty_list_value, 0, empty_list_value);
 }

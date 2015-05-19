@@ -40,8 +40,8 @@ static ava_list_value ava_empty_list_list_concat(
   ava_list_value, ava_list_value);
 static ava_list_value ava_empty_list_list_delete(
   ava_list_value, size_t, size_t);
-static ava_list_value ava_empty_list_list_set(
-  ava_list_value, size_t, ava_value);
+static ava_value ava_empty_list_list_set(
+  ava_value, size_t, ava_value);
 
 static const ava_value_trait ava_empty_list_generic_impl = {
   .header = { .tag = &ava_value_trait_tag, .next = NULL },
@@ -122,8 +122,8 @@ static ava_list_value ava_empty_list_list_delete(
   return el;
 }
 
-static ava_list_value ava_empty_list_list_set(
-  ava_list_value el, size_t index, ava_value value
+static ava_value ava_empty_list_list_set(
+  ava_value el, size_t index, ava_value value
 ) {
   abort();
 }

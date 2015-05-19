@@ -288,10 +288,11 @@ ava_list_value ava_list_copy_delete(ava_list_value list,
   return list.v->delete(list, begin, end);
 }
 
-ava_list_value ava_list_copy_set(ava_list_value list,
-                                 size_t ix, ava_value val) {
+ava_value ava_list_copy_set(ava_value list_val,
+                            size_t ix, ava_value val) {
+  ava_list_value list = ava_list_value_of(list_val);
   list = ava_list_copy_of(list, 0, list.v->length(list));
-  return list.v->set(list, ix, val);
+  return list.v->set(ava_list_value_to_value(list), ix, val);
 }
 
 ava_datum ava_list_string_chunk_iterator(ava_value list) {

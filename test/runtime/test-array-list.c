@@ -295,7 +295,8 @@ deftest(internal_delete) {
 deftest(set) {
   ava_value new_value = values[20];
   ava_list_value orig = ava_array_list_of_raw(values, 8);
-  ava_list_value new = orig.v->set(orig, 2, new_value);
+  ava_list_value new = ava_list_value_of(
+    ava_list_set(ava_list_value_to_value(orig), 2, new_value));
   unsigned i;
 
   ck_assert_int_eq(8, orig.v->length(orig));

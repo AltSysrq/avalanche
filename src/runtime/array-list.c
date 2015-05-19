@@ -92,8 +92,8 @@ static ava_list_value ava_array_list_list_concat(
   ava_list_value, ava_list_value);
 static ava_list_value ava_array_list_list_delete(
   ava_list_value, size_t, size_t);
-static ava_list_value ava_array_list_list_set(
-  ava_list_value, size_t, ava_value);
+static ava_value ava_array_list_list_set(
+  ava_value, size_t, ava_value);
 
 static const ava_value_trait ava_array_list_generic_impl = {
   .header = { .tag = &ava_value_trait_tag, .next = NULL },
@@ -325,8 +325,8 @@ static ava_list_value ava_array_list_list_delete(
   return list;
 }
 
-static ava_list_value ava_array_list_list_set(
-  ava_list_value list, size_t index, ava_value value
+static ava_value ava_array_list_list_set(
+  ava_value list, size_t index, ava_value value
 ) {
   const ava_array_list*restrict al = list.LIST;
 

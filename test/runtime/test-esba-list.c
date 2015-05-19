@@ -64,7 +64,8 @@ deftest(identical_set) {
   unsigned i;
 
   for (i = 1; i < 256; ++i)
-    list = list.v->set(list, 0, fourty_two);
+    list = ava_list_value_of(
+      ava_list_set(ava_list_value_to_value(list), 0, fourty_two));
 
   ck_assert_int_eq(1, list.v->length(list));
   ck_assert_int_eq(0, ava_esba_list_element_size(list));
@@ -350,7 +351,8 @@ deftest(compatible_set) {
     ava_value_of_integer(2),
   };
   ava_list_value list = ava_esba_list_of_raw(values, 3);
-  ava_list_value result = list.v->set(list, 1, ava_value_of_integer(42));
+  ava_list_value result = ava_list_value_of(
+    ava_list_set(ava_list_value_to_value(list), 1, ava_value_of_integer(42)));
 
   ck_assert_int_eq(3, result.v->length(result));
   assert_values_equal(values[0], result.v->index(result, 0));
@@ -367,7 +369,8 @@ deftest(incompatible_set) {
   };
   ava_value str = ava_value_of_string(ava_string_of_cstring("foo"));
   ava_list_value list = ava_esba_list_of_raw(values, 3);
-  ava_list_value result = list.v->set(list, 1, str);
+  ava_list_value result = ava_list_value_of(
+    ava_list_set(ava_list_value_to_value(list), 1, str));
 
   ck_assert_int_eq(3, result.v->length(result));
   assert_values_equal(values[0], result.v->index(result, 0));

@@ -87,8 +87,8 @@ static ava_list_value ava_esba_list_list_concat(
   ava_list_value, ava_list_value);
 static ava_list_value ava_esba_list_list_delete(
   ava_list_value, size_t, size_t);
-static ava_list_value ava_esba_list_list_set(
-  ava_list_value, size_t, ava_value);
+static ava_value ava_esba_list_list_set(
+  ava_value, size_t, ava_value);
 
 static const ava_value_trait ava_esba_list_generic_impl = {
   .header = { .tag = &ava_value_trait_tag, .next = NULL },
@@ -122,6 +122,14 @@ static inline ava_esba to_esba_from_value(ava_value val) {
 static inline ava_list_value to_list(ava_esba esba) {
   return (ava_list_value) {
     .v = &ava_esba_list_list_impl,
+    .r1 = { .ptr = esba.handle },
+    .r2 = { .ulong = esba.length },
+  };
+}
+
+static inline ava_value to_value(ava_esba esba) {
+  return (ava_value) {
+    .attr = (const ava_attribute*)&ava_esba_list_list_impl,
     .r1 = { .ptr = esba.handle },
     .r2 = { .ulong = esba.length },
   };
@@ -438,10 +446,10 @@ static ava_list_value ava_esba_list_list_delete(
   return to_list(dst_esba);
 }
 
-static ava_list_value ava_esba_list_list_set(
-  ava_list_value list, size_t index, ava_value value
+static ava_value ava_esba_list_list_set(
+  ava_value list, size_t index, ava_value value
 ) {
-  ava_esba esba = to_esba(list);
+  ava_esba esba = to_esba_from_value(list);
   const ava_esba_list_header*restrict header;
 
   header = ava_esba_list_header_of(esba);
@@ -454,7 +462,7 @@ static ava_list_value ava_esba_list_list_set(
   ava_esba_list_swizzle_down[header->format](swizzled, &value);
   esba = ava_esba_set(esba, index, swizzled);
 
-  return to_list(esba);
+  return to_value(esba);
 }
 
 size_t ava_esba_list_element_size(ava_list_value list) {
