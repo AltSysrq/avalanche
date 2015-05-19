@@ -242,7 +242,7 @@ static ava_value ava_array_list_list_append(ava_value list, ava_value elt) {
 
     return list;
   } else {
-    list = ava_list_value_to_value(ava_esba_list_of_raw(al->values, list.LENGTH));
+    list = ava_esba_list_of_raw(al->values, list.LENGTH);
     return ava_list_append(list, elt);
   }
 }
@@ -282,7 +282,7 @@ static ava_value ava_array_list_list_concat(ava_value list, ava_value other) {
     list.LENGTH += other_length;
     return list;
   } else {
-    list = ava_list_value_to_value(ava_esba_list_of_raw(al->values, list.LENGTH));
+    list = ava_esba_list_of_raw(al->values, list.LENGTH);
     return ava_list_concat(list, other);
   }
 }

@@ -123,7 +123,8 @@ ava_list_value ava_list_copy_of(ava_list_value list, size_t begin, size_t end) {
     return ava_list_value_of(ava_array_list_copy_of(
                                ava_list_value_to_value(list), begin, end));
   else
-    return ava_esba_list_copy_of(list, begin, end);
+    return ava_list_value_of(ava_esba_list_copy_of(
+                               ava_list_value_to_value(list), begin, end));
 }
 
 ava_value ava_list_of_values(const ava_value*restrict values, size_t n) {
@@ -132,7 +133,7 @@ ava_value ava_list_of_values(const ava_value*restrict values, size_t n) {
   else if (n <= AVA_ARRAY_LIST_THRESH)
     return ava_array_list_of_raw(values, n);
   else
-    return ava_list_value_to_value(ava_esba_list_of_raw(values, n));
+    return ava_esba_list_of_raw(values, n);
 }
 
 ava_string ava_list_escape(ava_string str) {
