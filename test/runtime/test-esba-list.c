@@ -46,72 +46,71 @@ deftest(single_element_list) {
  */
 deftest(identical_append) {
   ava_value fourty_two = ava_value_of_integer(42);
-  ava_list_value list = ava_esba_list_of_raw(&fourty_two, 1);
+  ava_value list = ava_list_value_to_value(ava_esba_list_of_raw(&fourty_two, 1));
   unsigned i;
 
   for (i = 1; i < 256; ++i)
-    list = list.v->append(list, fourty_two);
+    list = ava_list_append(list, fourty_two);
 
-  ck_assert_int_eq(256, list.v->length(list));
-  ck_assert_int_eq(0, ava_esba_list_element_size(list));
+  ck_assert_int_eq(256, ava_list_length(list));
+  ck_assert_int_eq(0, ava_esba_list_element_size(ava_list_value_of(list)));
   for (i = 0; i < 256; ++i)
-    assert_values_equal(fourty_two, list.v->index(list, i));
+    assert_values_equal(fourty_two, ava_list_index(list, i));
 }
 
 deftest(identical_set) {
   ava_value fourty_two = ava_value_of_integer(42);
-  ava_list_value list = ava_esba_list_of_raw(&fourty_two, 1);
+  ava_value list = ava_list_value_to_value(ava_esba_list_of_raw(&fourty_two, 1));
   unsigned i;
 
   for (i = 1; i < 256; ++i)
-    list = ava_list_value_of(
-      ava_list_set(ava_list_value_to_value(list), 0, fourty_two));
+    list = ava_list_set(list, 0, fourty_two);
 
-  ck_assert_int_eq(1, list.v->length(list));
-  ck_assert_int_eq(0, ava_esba_list_element_size(list));
-  assert_values_equal(fourty_two, list.v->index(list, 0));
+  ck_assert_int_eq(1, ava_list_length(list));
+  ck_assert_int_eq(0, ava_esba_list_element_size(ava_list_value_of(list)));
+  assert_values_equal(fourty_two, ava_list_index(list, 0));
 }
 
 deftest(polymorphic_value_append) {
   ava_value zero = ava_value_of_integer(0);
-  ava_list_value list = ava_esba_list_of_raw(&zero, 1);
+  ava_value list = ava_list_value_to_value(ava_esba_list_of_raw(&zero, 1));
   unsigned i;
 
   for (i = 1; i < 256; ++i)
-    list = list.v->append(list, ava_value_of_integer(i));
+    list = ava_list_append(list, ava_value_of_integer(i));
 
-  ck_assert_int_eq(256, list.v->length(list));
-  ck_assert_int_eq(sizeof(ava_ulong), ava_esba_list_element_size(list));
+  ck_assert_int_eq(256, ava_list_length(list));
+  ck_assert_int_eq(sizeof(ava_ulong), ava_esba_list_element_size(ava_list_value_of(list)));
   for (i = 0; i < 256; ++i)
-    ck_assert_int_eq(i, ava_integer_of_value(list.v->index(list, i), -1));
+    ck_assert_int_eq(i, ava_integer_of_value(ava_list_index(list, i), -1));
 }
 
 deftest(polymorphic_value_and_type_append) {
   ava_value fourty_two = ava_value_of_integer(42);
   ava_value string = ava_value_of_string(ava_string_of_cstring("hello world"));
-  ava_list_value list = ava_esba_list_of_raw(&fourty_two, 1);
-  list = list.v->append(list, string);
+  ava_value list = ava_list_value_to_value(ava_esba_list_of_raw(&fourty_two, 1));
+  list = ava_list_append(list, string);
 
-  ck_assert_int_eq(2, list.v->length(list));
-  ck_assert_int_gt(sizeof(ava_value), ava_esba_list_element_size(list));
-  assert_values_equal(fourty_two, list.v->index(list, 0));
-  assert_values_equal(string, list.v->index(list, 1));
+  ck_assert_int_eq(2, ava_list_length(list));
+  ck_assert_int_gt(sizeof(ava_value), ava_esba_list_element_size(ava_list_value_of(list)));
+  assert_values_equal(fourty_two, ava_list_index(list, 0));
+  assert_values_equal(string, ava_list_index(list, 1));
 }
 
 deftest(fully_polymorphic_append) {
   ava_value fourty_two = ava_value_of_integer(42);
   ava_value string = ava_value_of_string(ava_string_of_cstring("hello world"));
-  ava_list_value list = ava_esba_list_of_raw(&fourty_two, 1);
-  list = list.v->append(list, string);
+  ava_value list = ava_list_value_to_value(ava_esba_list_of_raw(&fourty_two, 1));
+  list = ava_list_append(list, string);
 
-  ava_value list_value = ava_list_value_to_value(list);
-  list = list.v->append(list, list_value);
+  ava_value list_value = list;
+  list = ava_list_append(list, list_value);
 
-  ck_assert_int_eq(3, list.v->length(list));
-  ck_assert_int_eq(sizeof(ava_value), ava_esba_list_element_size(list));
-  assert_values_equal(fourty_two, list.v->index(list, 0));
-  assert_values_equal(string, list.v->index(list, 1));
-  assert_values_equal(list_value, list.v->index(list, 2));
+  ck_assert_int_eq(3, ava_list_length(list));
+  ck_assert_int_eq(sizeof(ava_value), ava_esba_list_element_size(ava_list_value_of(list)));
+  assert_values_equal(fourty_two, ava_list_index(list, 0));
+  assert_values_equal(string, ava_list_index(list, 1));
+  assert_values_equal(list_value, ava_list_index(list, 2));
 }
 
 deftest(polymorphic_create_from_array) {
@@ -153,48 +152,47 @@ deftest(slice_to_empty_list) {
 
 deftest(slice_to_array_list) {
   ava_value zero = ava_value_of_integer(0);
-  ava_list_value list = ava_esba_list_of_raw(&zero, 1);
-  ava_list_value result;
+  ava_value list = ava_list_value_to_value(ava_esba_list_of_raw(&zero, 1));
+  ava_value result;
   unsigned i;
 
   for (i = 1; i < 64; ++i)
-    list = list.v->append(list, ava_value_of_integer(i));
+    list = ava_list_append(list, ava_value_of_integer(i));
 
-  result = list.v->slice(list, 5, 8);
+  result = ava_list_slice(list, 5, 8);
 
-  ck_assert_int_eq(3, ava_array_list_used(result));
-  ck_assert_int_eq(3, result.v->length(result));
+  ck_assert_int_eq(3, ava_array_list_used(ava_list_value_of(result)));
+  ck_assert_int_eq(3, ava_list_length(result));
   ck_assert_int_eq(5, ava_integer_of_value(
-                     result.v->index(result, 0), -1));
+                     ava_list_index(result, 0), -1));
   ck_assert_int_eq(6, ava_integer_of_value(
-                     result.v->index(result, 1), -1));
+                     ava_list_index(result, 1), -1));
   ck_assert_int_eq(7, ava_integer_of_value(
-                     result.v->index(result, 2), -1));
+                     ava_list_index(result, 2), -1));
 }
 
 deftest(slice_to_esba_list) {
   ava_value zero = ava_value_of_integer(0);
-  ava_list_value list = ava_esba_list_of_raw(&zero, 1);
-  ava_list_value result;
+  ava_value list = ava_list_value_to_value(ava_esba_list_of_raw(&zero, 1));
+  ava_value result;
   unsigned i;
 
   for (i = 1; i < 64; ++i)
-    list = list.v->append(list, ava_value_of_integer(i));
+    list = ava_list_append(list, ava_value_of_integer(i));
 
-  result = list.v->slice(list, 5, 58);
-  ck_assert_ptr_eq(list.v, result.v);
-  ck_assert_int_eq(53, result.v->length(result));
+  result = ava_list_slice(list, 5, 58);
+  ck_assert_int_eq(53, ava_list_length(result));
   for (i = 0; i < 53; ++i)
     ck_assert_int_eq(5+i, ava_integer_of_value(
-                       result.v->index(result, i), -1));
+                       ava_list_index(result, i), -1));
 }
 
 deftest(noop_slice) {
   ava_value zero = ava_value_of_integer(0);
-  ava_list_value list = ava_esba_list_of_raw(&zero, 1);
-  ava_list_value result;
+  ava_value list = ava_list_value_to_value(ava_esba_list_of_raw(&zero, 1));
+  ava_value result;
 
-  result = list.v->slice(list, 0, 1);
+  result = ava_list_slice(list, 0, 1);
   ck_assert_int_eq(0, memcmp(&list, &result, sizeof(list)));
 }
 

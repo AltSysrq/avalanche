@@ -69,49 +69,49 @@ deftest(simple_indexing) {
 }
 
 deftest(copying_append) {
-  ava_list_value orig = ava_array_list_of_raw(values, 1);
-  ava_list_value new = orig.v->append(orig, values[1]);
+  ava_value orig = ava_list_value_to_value(ava_array_list_of_raw(values, 1));
+  ava_value new = ava_list_append(orig, values[1]);
 
-  ck_assert_int_eq(1, orig.v->length(orig));
-  ck_assert(values_equal(values[0], orig.v->index(orig, 0)));
-  ck_assert_int_eq(2, new.v->length(new));
-  ck_assert(values_equal(values[0], new.v->index(new, 0)));
-  ck_assert(values_equal(values[1], new.v->index(new, 1)));
+  ck_assert_int_eq(1, ava_list_length(orig));
+  ck_assert(values_equal(values[0], ava_list_index(orig, 0)));
+  ck_assert_int_eq(2, ava_list_length(new));
+  ck_assert(values_equal(values[0], ava_list_index(new, 0)));
+  ck_assert(values_equal(values[1], ava_list_index(new, 1)));
 }
 
 deftest(inplace_append) {
-  ava_list_value orig = ava_array_list_of_raw(values, 1);
+  ava_value orig = ava_list_value_to_value(ava_array_list_of_raw(values, 1));
   /* Append so the array is grown large enough for the next append to fit
    * in-place.
    */
-  ava_list_value old = orig.v->append(orig, values[1]);
+  ava_value old = ava_list_append(orig, values[1]);
   /* Next one will use the same array */
-  ava_list_value new = old.v->append(old, values[2]);
+  ava_value new = ava_list_append(old, values[2]);
   ck_assert_ptr_eq(old.r1.ptr, new.r1.ptr);
 
-  ck_assert_int_eq(2, old.v->length(old));
-  ck_assert_int_eq(3, new.v->length(new));
-  ck_assert_int_eq(3, ava_array_list_used(old));
-  ck_assert_int_eq(3, ava_array_list_used(new));
+  ck_assert_int_eq(2, ava_list_length(old));
+  ck_assert_int_eq(3, ava_list_length(new));
+  ck_assert_int_eq(3, ava_array_list_used(ava_list_value_of(old)));
+  ck_assert_int_eq(3, ava_array_list_used(ava_list_value_of(new)));
 }
 
 deftest(conflicting_append) {
-  ava_list_value orig = ava_array_list_of_raw(values, 1);
+  ava_value orig = ava_list_value_to_value(ava_array_list_of_raw(values, 1));
   /* Append so the array is grown large enough for the next append to fit
    * in-place.
    */
-  ava_list_value base = orig.v->append(orig, values[1]);
+  ava_value base = ava_list_append(orig, values[1]);
   /* Two lists independently build off base */
-  ava_list_value left = base.v->append(base, values[2]);
-  ava_list_value right = base.v->append(base, values[3]);
+  ava_value left = ava_list_append(base, values[2]);
+  ava_value right = ava_list_append(base, values[3]);
 
-  ck_assert_int_eq(3, left.v->length(left));
-  ck_assert_int_eq(3, right.v->length(right));
-  ck_assert(values_equal(values[2], left.v->index(left, 2)));
-  ck_assert(values_equal(values[3], right.v->index(right, 2)));
-  ck_assert_int_eq(3, ava_array_list_used(base));
-  ck_assert_int_eq(3, ava_array_list_used(left));
-  ck_assert_int_eq(3, ava_array_list_used(right));
+  ck_assert_int_eq(3, ava_list_length(left));
+  ck_assert_int_eq(3, ava_list_length(right));
+  ck_assert(values_equal(values[2], ava_list_index(left, 2)));
+  ck_assert(values_equal(values[3], ava_list_index(right, 2)));
+  ck_assert_int_eq(3, ava_array_list_used(ava_list_value_of(base)));
+  ck_assert_int_eq(3, ava_array_list_used(ava_list_value_of(left)));
+  ck_assert_int_eq(3, ava_array_list_used(ava_list_value_of(right)));
 }
 
 deftest(copying_concat) {

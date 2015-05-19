@@ -87,7 +87,7 @@ static size_t ava_array_list_value_value_weight(ava_value);
 static size_t ava_array_list_list_length(ava_list_value);
 static ava_value ava_array_list_list_index(ava_list_value, size_t);
 static ava_list_value ava_array_list_list_slice(ava_list_value, size_t, size_t);
-static ava_list_value ava_array_list_list_append(ava_list_value, ava_value);
+static ava_value ava_array_list_list_append(ava_value, ava_value);
 static ava_value ava_array_list_list_concat(ava_value, ava_value);
 static ava_value ava_array_list_list_delete(ava_value, size_t, size_t);
 static ava_value ava_array_list_list_set(ava_value, size_t, ava_value);
@@ -216,8 +216,7 @@ static size_t ava_array_list_growing_capacity(size_t length) {
     AVA_ARRAY_LIST_MIN_CAPACITY : length * 2;
 }
 
-static ava_list_value ava_array_list_list_append(ava_list_value list,
-                                                 ava_value elt) {
+static ava_value ava_array_list_list_append(ava_value list, ava_value elt) {
   ava_array_list*restrict al = (ava_array_list*restrict)list.LIST;
 
   if (list.LENGTH < al->capacity) {
@@ -245,8 +244,8 @@ static ava_list_value ava_array_list_list_append(ava_list_value list,
 
     return list;
   } else {
-    list = ava_esba_list_of_raw(al->values, list.LENGTH);
-    return list.v->append(list, elt);
+    list = ava_list_value_to_value(ava_esba_list_of_raw(al->values, list.LENGTH));
+    return ava_list_append(list, elt);
   }
 }
 

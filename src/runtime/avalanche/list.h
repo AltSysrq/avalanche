@@ -121,7 +121,7 @@ struct ava_list_trait_s {
    *
    * Complexity: Amortised O(1)
    */
-  ava_list_value (*append)(ava_list_value list, ava_value element);
+  ava_value (*append)(ava_value list, ava_value element);
   /**
    * Returns a new list which contains all the elements of left followed by all
    * the elements of right.
@@ -213,7 +213,7 @@ ava_list_value ava_list_copy_slice(
  * Implementation of ava_list_trait.append which copies the input list and new
  * element into a new list of an unspecified type.
  */
-ava_list_value ava_list_copy_append(ava_list_value list, ava_value elt);
+ava_value ava_list_copy_append(ava_value list, ava_value elt);
 /**
  * Implementation of ava_list_trait.concat which copies the lists into a new
  * list of an unspecified type.
@@ -239,6 +239,17 @@ static inline size_t ava_list_length(ava_value list_val) {
 static inline ava_value ava_list_index(ava_value list_val, size_t ix) {
   ava_list_value list = ava_list_value_of(list_val);
   return list.v->index(list, ix);
+}
+
+static inline ava_value ava_list_slice(ava_value list_val,
+                                       size_t begin, size_t end) {
+  ava_list_value list = ava_list_value_of(list_val);
+  return ava_list_value_to_value(list.v->slice(list, begin, end));
+}
+
+static inline ava_value ava_list_append(ava_value list_val, ava_value elt) {
+  ava_list_value list = ava_list_value_of(list_val);
+  return list.v->append(ava_list_value_to_value(list), elt);
 }
 
 static inline ava_value ava_list_concat(ava_value left, ava_value right) {

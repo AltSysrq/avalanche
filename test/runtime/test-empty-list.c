@@ -69,9 +69,8 @@ deftest_signal(empty_list_refuses_index, SIGABRT) {
 }
 
 deftest(empty_list_appends_to_singleton_array_list) {
-  ava_list_value result = ava_empty_list.v->append(
-    ava_empty_list, empty_list_value);
-  ck_assert_int_eq(1, result.v->length(result));
+  ava_value result = ava_list_append(empty_list_value, empty_list_value);
+  ck_assert_int_eq(1, ava_list_length(result));
 }
 
 deftest(empty_list_concats_to_other_list) {

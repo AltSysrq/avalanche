@@ -28,12 +28,12 @@ defsuite(list_proj);
 
 static ava_list_value range(unsigned low, unsigned high) {
   unsigned i;
-  ava_list_value accum = ava_empty_list;
+  ava_value accum = ava_list_value_to_value(ava_empty_list);
 
   for (i = low; i < high; ++i)
-    accum = accum.v->append(accum, ava_value_of_integer(i));
+    accum = ava_list_append(accum, ava_value_of_integer(i));
 
-  return accum;
+  return ava_list_value_of(accum);
 }
 
 static void assert_looks_like(const char* expected, ava_list_value actual) {
