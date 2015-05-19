@@ -84,8 +84,8 @@ static ava_array_list* ava_array_list_of_array(
 static size_t ava_array_list_growing_capacity(size_t);
 static size_t ava_array_list_value_value_weight(ava_value);
 
-static size_t ava_array_list_list_length(ava_list_value);
-static ava_value ava_array_list_list_index(ava_list_value, size_t);
+static size_t ava_array_list_list_length(ava_value);
+static ava_value ava_array_list_list_index(ava_value, size_t);
 static ava_value ava_array_list_list_slice(ava_value, size_t, size_t);
 static ava_value ava_array_list_list_append(ava_value, ava_value);
 static ava_value ava_array_list_list_concat(ava_value, ava_value);
@@ -128,7 +128,7 @@ ava_list_value ava_array_list_copy_of(
   al->used = end - begin;
 
   for (i = begin; i < end; ++i) {
-    al->values[i-begin] = list.v->index(list, i);
+    al->values[i-begin] = ava_list_index(ava_list_value_to_value(list), i);
     weight += ava_value_weight(al->values[i-begin]);
   }
 
@@ -180,11 +180,11 @@ static size_t ava_array_list_value_value_weight(ava_value list) {
   return al->weight;
 }
 
-static size_t ava_array_list_list_length(ava_list_value list) {
+static size_t ava_array_list_list_length(ava_value list) {
   return list.LENGTH;
 }
 
-static ava_value ava_array_list_list_index(ava_list_value list, size_t ix) {
+static ava_value ava_array_list_list_index(ava_value list, size_t ix) {
   const ava_array_list*restrict al = list.LIST;
 
   assert(ix < list.LENGTH);

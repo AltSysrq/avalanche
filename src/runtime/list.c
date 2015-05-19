@@ -270,13 +270,13 @@ ava_value ava_list_copy_slice(ava_value list, size_t begin, size_t end) {
 
 ava_value ava_list_copy_append(ava_value list_val, ava_value elt) {
   ava_list_value list = ava_list_value_of(list_val);
-  list = ava_list_copy_of(list, 0, list.v->length(list));
+  list = ava_list_copy_of(list, 0, list.v->length(ava_list_value_to_value(list)));
   return ava_list_append(ava_list_value_to_value(list), elt);
 }
 
 ava_value ava_list_copy_concat(ava_value left_val, ava_value right) {
   ava_list_value left = ava_list_value_of(left_val);
-  left = ava_list_copy_of(left, 0, ava_list_length(ava_list_value_to_value(left)));
+  left = ava_list_copy_of(left, 0, left.v->length(ava_list_value_to_value(left)));
   return left.v->concat(ava_list_value_to_value(left), right);
 }
 
@@ -286,17 +286,17 @@ ava_value ava_list_copy_delete(ava_value list_val,
 
   if (begin == end)
     return list_val;
-  if (0 == begin && list.v->length(list) == end)
+  if (0 == begin && list.v->length(ava_list_value_to_value(list)) == end)
     return ava_list_value_to_value(ava_empty_list);
 
-  list = ava_list_copy_of(list, 0, list.v->length(list));
+  list = ava_list_copy_of(list, 0, list.v->length(ava_list_value_to_value(list)));
   return list.v->delete(ava_list_value_to_value(list), begin, end);
 }
 
 ava_value ava_list_copy_set(ava_value list_val,
                             size_t ix, ava_value val) {
   ava_list_value list = ava_list_value_of(list_val);
-  list = ava_list_copy_of(list, 0, list.v->length(list));
+  list = ava_list_copy_of(list, 0, list.v->length(ava_list_value_to_value(list)));
   return list.v->set(ava_list_value_to_value(list), ix, val);
 }
 
@@ -310,10 +310,10 @@ ava_string ava_list_iterate_string_chunk(
   ava_list_value list = ava_list_value_of(list_val);
   ava_string elt;
 
-  if (it->ulong >= list.v->length(list))
+  if (it->ulong >= list.v->length(ava_list_value_to_value(list)))
     return AVA_ABSENT_STRING;
 
-  elt = ava_to_string(list.v->index(list, it->ulong++));
+  elt = ava_to_string(list.v->index(ava_list_value_to_value(list), it->ulong++));
   elt = ava_list_escape(elt);
 
   if (it->ulong > 1)

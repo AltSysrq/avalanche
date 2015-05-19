@@ -79,8 +79,8 @@ static size_t ava_esba_list_weight_function(
 
 static size_t ava_esba_list_value_value_weight(ava_value);
 
-static size_t ava_esba_list_list_length(ava_list_value);
-static ava_value ava_esba_list_list_index(ava_list_value, size_t);
+static size_t ava_esba_list_list_length(ava_value);
+static ava_value ava_esba_list_list_index(ava_value, size_t);
 static ava_value ava_esba_list_list_slice(ava_value, size_t, size_t);
 static ava_value ava_esba_list_list_append(ava_value, ava_value);
 static ava_value ava_esba_list_list_concat(ava_value, ava_value);
@@ -197,7 +197,7 @@ ava_list_value ava_esba_list_copy_of(
   assert(end != begin);
 
   /* First pass through the range to determine the format */
-  template = list.v->index(list, begin);
+  template = ava_list_index(ava_list_value_to_value(list), begin);
   format = ava_esba_list_accum_format(list, begin, end, template);
 
   /* Second pass to populate the array */
@@ -224,7 +224,7 @@ static unsigned ava_esba_list_accum_format(
   format = 0;
   for (i = begin + 1; i < end && format != POLYMORPH_ALL; ++i) {
     format |= ava_esba_list_polymorphism(
-      template, list.v->index(list, i));
+      template, ava_list_index(ava_list_value_to_value(list), i));
   }
 
   return format;
@@ -243,7 +243,7 @@ static ava_esba ava_esba_list_append_sublist(
   dst = ava_esba_start_append(&esba, end - begin);
 
   for (i = begin; i < end; ++i) {
-    ava_value val = list.v->index(list, i);
+    ava_value val = ava_list_index(ava_list_value_to_value(list), i);
     ava_esba_list_swizzle_down[format](dst, &val);
     dst += ava_esba_list_element_size_pointers[format];
   }
@@ -328,12 +328,12 @@ static size_t ava_esba_list_value_value_weight(ava_value list) {
   return ava_esba_weight(to_esba_from_value(list));
 }
 
-static size_t ava_esba_list_list_length(ava_list_value list) {
-  return ava_esba_length(to_esba(list));
+static size_t ava_esba_list_list_length(ava_value list) {
+  return ava_esba_length(to_esba_from_value(list));
 }
 
-static ava_value ava_esba_list_list_index(ava_list_value list, size_t ix) {
-  ava_esba esba = to_esba(list);
+static ava_value ava_esba_list_list_index(ava_value list, size_t ix) {
+  ava_esba esba = to_esba_from_value(list);
   const ava_esba_list_header* header = ava_esba_list_header_of(esba);
   ava_esba_tx tx;
   const pointer* base, * src;
@@ -358,7 +358,7 @@ static ava_value ava_esba_list_list_slice(ava_value list,
   if (begin == end)
     return ava_list_value_to_value(ava_empty_list);
 
-  if (0 == begin && ava_esba_list_list_length(ava_list_value_of(list)) == end)
+  if (0 == begin && ava_esba_list_list_length(list) == end)
     return list;
 
   if (end - begin < AVA_ARRAY_LIST_THRESH / 2)

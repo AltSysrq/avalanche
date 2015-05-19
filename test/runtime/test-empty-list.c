@@ -52,7 +52,7 @@ deftest(empty_list_is_weightless) {
 }
 
 deftest(empty_list_has_length_zero) {
-  ck_assert_int_eq(0, ava_empty_list.v->length(ava_empty_list));
+  ck_assert_int_eq(0, ava_list_length(empty_list_value));
 }
 
 deftest(empty_list_permits_slice_zero_to_zero) {
@@ -65,7 +65,7 @@ deftest_signal(empty_list_refuses_nonzero_slice, SIGABRT) {
 }
 
 deftest_signal(empty_list_refuses_index, SIGABRT) {
-  ava_empty_list.v->index(ava_empty_list, 0);
+  ava_list_index(empty_list_value, 0);
 }
 
 deftest(empty_list_appends_to_singleton_array_list) {

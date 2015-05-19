@@ -96,7 +96,7 @@ struct ava_list_trait_s {
    *
    * Complexity: O(1)
    */
-  size_t (*length)(ava_list_value list);
+  size_t (*length)(ava_value list);
   /**
    * Returns the element in the list at the given index.
    *
@@ -104,7 +104,7 @@ struct ava_list_trait_s {
    *
    * Complexity: Amortised O(1)
    */
-  ava_value (*index)(ava_list_value list, size_t index);
+  ava_value (*index)(ava_value list, size_t index);
   /**
    * Returns a new list containing the elements of list between begin,
    * inclusive, and end, exclusive.
@@ -231,12 +231,12 @@ ava_value ava_list_copy_set(ava_value list, size_t ix, ava_value val);
 
 static inline size_t ava_list_length(ava_value list_val) {
   ava_list_value list = ava_list_value_of(list_val);
-  return list.v->length(list);
+  return list.v->length(ava_list_value_to_value(list));
 }
 
 static inline ava_value ava_list_index(ava_value list_val, size_t ix) {
   ava_list_value list = ava_list_value_of(list_val);
-  return list.v->index(list, ix);
+  return list.v->index(ava_list_value_to_value(list), ix);
 }
 
 static inline ava_value ava_list_slice(ava_value list_val,

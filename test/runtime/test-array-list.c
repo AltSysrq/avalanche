@@ -42,15 +42,14 @@ static ava_bool values_equal(ava_value a, ava_value b) {
 }
 
 deftest(copied_from_array) {
-  ava_list_value list = ava_array_list_of_raw(values, 4);
-  ck_assert_int_eq(4, list.v->length(list));
+  ava_value list = ava_list_value_to_value(ava_array_list_of_raw(values, 4));
+  ck_assert_int_eq(4, ava_list_length(list));
 }
 
 deftest(stringification_produces_normal_form) {
-  ava_list_value list = ava_array_list_of_raw(values, 4);
+  ava_value list = ava_list_value_to_value(ava_array_list_of_raw(values, 4));
   ck_assert_str_eq("a b c d",
-                   ava_string_to_cstring(
-                     ava_to_string(ava_list_value_to_value(list))));
+                   ava_string_to_cstring(ava_to_string(list)));
 }
 
 deftest(value_weight_nonzero) {
@@ -60,12 +59,12 @@ deftest(value_weight_nonzero) {
 }
 
 deftest(simple_indexing) {
-  ava_list_value list = ava_array_list_of_raw(values, 4);
+  ava_value list = ava_list_value_to_value(ava_array_list_of_raw(values, 4));
   unsigned i;
 
   for (i = 0; i < 4; ++i)
     ck_assert_int_eq(values[i].r1.str.ascii9,
-                     list.v->index(list, i).r1.str.ascii9);
+                     ava_list_index(list, i).r1.str.ascii9);
 }
 
 deftest(copying_append) {
@@ -292,16 +291,15 @@ deftest(internal_delete) {
 
 deftest(set) {
   ava_value new_value = values[20];
-  ava_list_value orig = ava_array_list_of_raw(values, 8);
-  ava_list_value new = ava_list_value_of(
-    ava_list_set(ava_list_value_to_value(orig), 2, new_value));
+  ava_value orig = ava_list_value_to_value(ava_array_list_of_raw(values, 8));
+  ava_value new = ava_list_set(orig, 2, new_value);
   unsigned i;
 
-  ck_assert_int_eq(8, orig.v->length(orig));
-  ck_assert_int_eq(8, new.v->length(new));
+  ck_assert_int_eq(8, ava_list_length(orig));
+  ck_assert_int_eq(8, ava_list_length(new));
 
   for (i = 0; i < 8; ++i) {
-    ck_assert(values_equal(values[i], orig.v->index(orig, i)));
-    ck_assert(values_equal(values[2 == i? 20 : i], new.v->index(new, i)));
+    ck_assert(values_equal(values[i], ava_list_index(orig, i)));
+    ck_assert(values_equal(values[2 == i? 20 : i], ava_list_index(new, i)));
   }
 }

@@ -28,33 +28,34 @@
 
 defsuite(list);
 
-static ava_list_value list_of_cstring(const char* str) {
-  return ava_list_value_of(ava_value_of_string(ava_string_of_cstring(str)));
+static ava_value list_of_cstring(const char* str) {
+  return ava_list_value_to_value(
+    ava_list_value_of(ava_value_of_string(ava_string_of_cstring(str))));
 }
 
 deftest(empty_string_converted_to_empty_list) {
-  ava_list_value list = list_of_cstring("");
+  ava_value list = list_of_cstring("");
 
   ck_assert_int_eq(0, memcmp(&ava_empty_list, &list, sizeof(list)));
 }
 
 deftest(whitespace_string_converted_to_empty_list) {
-  ava_list_value list = list_of_cstring("  \t\r\n\t");
+  ava_value list = list_of_cstring("  \t\r\n\t");
 
   ck_assert_int_eq(0, memcmp(&ava_empty_list, &list, sizeof(list)));
 }
 
 deftest(normal_tokens_parsed_as_list_items) {
-  ava_list_value list = list_of_cstring(
+  ava_value list = list_of_cstring(
     "  foo \"bar baz\"\n \\{fum\\\\}  ");
 
-  ck_assert_int_eq(3, list.v->length(list));
+  ck_assert_int_eq(3, ava_list_length(list));
   ck_assert_str_eq("foo", ava_string_to_cstring(
-                     ava_to_string(list.v->index(list, 0))));
+                     ava_to_string(ava_list_index(list, 0))));
   ck_assert_str_eq("bar baz", ava_string_to_cstring(
-                     ava_to_string(list.v->index(list, 1))));
+                     ava_to_string(ava_list_index(list, 1))));
   ck_assert_str_eq("fum\\", ava_string_to_cstring(
-                     ava_to_string(list.v->index(list, 2))));
+                     ava_to_string(ava_list_index(list, 2))));
 }
 
 #define assert_format_exception(expr)                   \
@@ -137,7 +138,7 @@ deftest(verbatim_escapes_escaped_by_verbamit_backslash_escape) {
 deftest(all_two_char_strings_escaped_reversibly) {
   char in[2], out[2];
   ava_string in_str;
-  ava_list_value parsed_list;
+  ava_value parsed_list;
   ava_string out_str;
   unsigned i, j;
 
@@ -147,11 +148,10 @@ deftest(all_two_char_strings_escaped_reversibly) {
       in[1] = j;
 
       in_str = ava_string_of_bytes(in, 2);
-      parsed_list = ava_list_value_of(
-        ava_value_of_string(
-          ava_list_escape(in_str)));
-      ck_assert_int_eq(1, parsed_list.v->length(parsed_list));
-      out_str = ava_to_string(parsed_list.v->index(parsed_list, 0));
+      parsed_list = ava_list_value_to_value(
+        ava_list_value_of(ava_value_of_string(ava_list_escape(in_str))));
+      ck_assert_int_eq(1, ava_list_length(parsed_list));
+      out_str = ava_to_string(ava_list_index(parsed_list, 0));
       ck_assert_int_eq(2, ava_string_length(out_str));
       ava_string_to_bytes(out, out_str, 0, 2);
 
@@ -166,9 +166,10 @@ deftest(list_stringified_correctly) {
     ava_value_of_string(ava_string_of_cstring("foo bar")),
     ava_value_of_string(ava_string_of_cstring("xy\"zzy")),
   };
-  ava_list_value list = ava_list_of_values(values, 2);
+  ava_value list = ava_list_value_to_value(
+    ava_list_of_values(values, 2));
 
-  ava_string str = ava_to_string(ava_list_value_to_value(list));
+  ava_string str = ava_to_string(list);
 
   ck_assert_str_eq("\"foo bar\" \\{xy\"zzy\\}",
                    ava_string_to_cstring(str));
@@ -179,10 +180,10 @@ deftest(empty_string_is_quoted) {
     ava_value_of_string(AVA_EMPTY_STRING),
     ava_value_of_string(AVA_EMPTY_STRING),
   };
-  ava_list_value list = ava_list_of_values(values, 2);
+  ava_value list = ava_list_value_to_value(
+    ava_list_of_values(values, 2));
 
-  ava_string str = ava_to_string(ava_list_value_to_value(list));
+  ava_string str = ava_to_string(list);
 
-  ck_assert_str_eq("\"\" \"\"",
-                   ava_string_to_cstring(str));
+  ck_assert_str_eq("\"\" \"\"", ava_string_to_cstring(str));
 }

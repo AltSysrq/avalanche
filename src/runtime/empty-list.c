@@ -32,8 +32,8 @@ static ava_string ava_empty_list_value_iterate_string_chunk(
   ava_datum*restrict, ava_value);
 static size_t ava_empty_list_value_value_weight(ava_value);
 
-static size_t ava_empty_list_list_length(ava_list_value);
-static ava_value ava_empty_list_list_index(ava_list_value, size_t);
+static size_t ava_empty_list_list_length(ava_value);
+static ava_value ava_empty_list_list_index(ava_value, size_t);
 static ava_value ava_empty_list_list_slice(ava_value, size_t, size_t);
 static ava_value ava_empty_list_list_append(ava_value, ava_value);
 static ava_value ava_empty_list_list_concat(ava_value, ava_value);
@@ -85,11 +85,11 @@ static size_t ava_empty_list_value_value_weight(ava_value el) {
   return 0;
 }
 
-static size_t ava_empty_list_list_length(ava_list_value el) {
+static size_t ava_empty_list_list_length(ava_value el) {
   return 0;
 }
 
-static ava_value ava_empty_list_list_index(ava_list_value el, size_t ix) {
+static ava_value ava_empty_list_list_index(ava_value el, size_t ix) {
   abort();
 }
 
