@@ -87,9 +87,6 @@ static inline ava_value ava_list_value_to_value(ava_list_value list) {
  * All "mutating" methods can be implemented with the ava_list_copy_*()
  * functions, if the underlying implementation has no better way to implement
  * them.
- *
- * Most lists will use the ava_list_ix_iterator_*() functions to implement the
- * iterator section of the interface.
  */
 struct ava_list_trait_s {
   ava_attribute header;
@@ -151,62 +148,6 @@ struct ava_list_trait_s {
    * Complexity: Amortised O(1)
    */
   ava_list_value (*set)(ava_list_value list, size_t index, ava_value element);
-
-  /**
-   * The size of an iterator used for this list type.
-   *
-   * For all iterator_*() methods, the caller will supply a pointer-aligned
-   * region of memory whose size is at least this value.
-   *
-   * Iterators are expected to be pure values; eg, if an iterator value is
-   * copied, the copy and the original operate independently.
-   *
-   * Clients typically allocate iterators on the stack, so this should be
-   * reasonably small.
-   */
-  size_t (*iterator_size)(ava_list_value list);
-  /**
-   * Positions the given iterator at the given index within the given list.
-   *
-   * ix may be beyond the end of the list. The resulting iterator is considered
-   * invalid, but it must be possible to use iterator_move() to move the
-   * iterator back into a valid range.
-   *
-   * Complexity: Amortised O(log(length))
-   */
-  void (*iterator_place)(ava_list_value list, void*restrict iterator, size_t ix);
-  /**
-   * Returns the value within the given list currently addressed by the given
-   * iterator.
-   *
-   * The list must be the same list used with iterator_place().
-   *
-   * Effect is undefined if the iterator is outside the boundary of the list.
-   *
-   * Complexity: O(1)
-   */
-  ava_value (*iterator_get)(ava_list_value list, const void*restrict iterator);
-  /**
-   * Moves the given iterator within the given list by the given offset.
-   *
-   * The list must be the same list used with iterator_place().
-   *
-   * It is legal to move the iterator outside the string boundaries. Such an
-   * iterator is considered invalid, but later moves may make it valid if they
-   * move it back into the range of the list.
-   *
-   * Complexity: Amortised O(1) for small off
-   */
-  void (*iterator_move)(ava_list_value list, void*restrict iterator, ssize_t off);
-  /**
-   * Returns the current index of the given iterator, even if it is beyond the
-   * end of the list.
-   *
-   * The list must be the same list used with iterator_place().
-   *
-   * Complexity: O(1)
-   */
-  size_t (*iterator_index)(ava_list_value list, const void*restrict iterator);
 };
 
 /**
@@ -242,16 +183,6 @@ ava_list_value ava_list_copy_of(ava_list_value list, size_t begin, size_t end);
  */
 ava_list_value ava_list_of_values(const ava_value*restrict values,
                                   size_t count);
-
-/**
- * Declares a local variable named name which is usable as an iterator for the
- * given list.
- *
- * Note that the variable is an array, so it is passed to the iterator methods
- * without an explicit reference.
- */
-#define AVA_LIST_ITERATOR(list, name)                                   \
-  void* name[((list).v->iterator_size(list) + sizeof(void*) - 1)/sizeof(void*)]
 
 /**
  * Escapes the given string so that it can be used in a string representation
@@ -299,43 +230,6 @@ ava_list_value ava_list_copy_delete(
  * of unspecified type.
  */
 ava_list_value ava_list_copy_set(ava_list_value list, size_t ix, ava_value val);
-
-/**
- * Implementation of ava_list_trait.iterator_size.
- *
- * The ava_list_ix_iterator_*() function family implements list iterators by
- * delegating to the list's ava_list_trait.index method. If any
- * ava_list_ix_iterator_*() implementation is used on a list, they must all be,
- * as the format of the iterator is unspecified.
- */
-size_t ava_list_ix_iterator_size(ava_list_value list);
-/**
- * Implementation af ava_list_trait.iterator_place.
- *
- * @see ava_list_ix_iterator_size()
- */
-void ava_list_ix_iterator_place(ava_list_value list,
-                                void*restrict it, size_t ix);
-/**
- * Implementation of ava_list_trait.iterator_get.
- *
- * @see ava_list_ix_iterator_size()
- */
-ava_value ava_list_ix_iterator_get(ava_list_value list,
-                                   const void*restrict it);
-/**
- * Implementation of ava_list_trait.iterator_move.
- *
- * @see ava_list_ix_iterator_size()
- */
-void ava_list_ix_iterator_move(ava_list_value list,
-                               void*restrict it, ssize_t off);
-/**
- * Implementation of ava_list_trait.iterator_index.
- *
- * @see ava_list_ix_iterator_size()
- */
-size_t ava_list_ix_iterator_index(ava_list_value list, const void*restrict it);
 
 /**
  * The empty list.

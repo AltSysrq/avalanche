@@ -113,11 +113,6 @@ static const ava_list_trait ava_array_list_list_impl = {
   .concat = ava_array_list_list_concat,
   .delete = ava_array_list_list_delete,
   .set = ava_array_list_list_set,
-  .iterator_size = ava_list_ix_iterator_size,
-  .iterator_place = ava_list_ix_iterator_place,
-  .iterator_get = ava_list_ix_iterator_get,
-  .iterator_move = ava_list_ix_iterator_move,
-  .iterator_index = ava_list_ix_iterator_index,
 };
 
 unsigned ava_array_list_used(ava_list_value list) {
@@ -131,17 +126,13 @@ ava_list_value ava_array_list_copy_of(
   ava_array_list* al = ava_alloc(sizeof(ava_array_list) +
                                  sizeof(ava_value) * (end - begin));
   size_t weight = 0, i;
-  AVA_LIST_ITERATOR(list, it);
 
   al->capacity = end - begin;
   al->used = end - begin;
 
-  i = 0;
-  for (list.v->iterator_place(list, it, begin);
-       i < end - begin;
-       list.v->iterator_move(list, it, +1), ++i) {
-    al->values[i] = list.v->iterator_get(list, it);
-    weight += ava_value_weight(al->values[i]);
+  for (i = begin; i < end; ++i) {
+    al->values[i-begin] = list.v->index(list, i);
+    weight += ava_value_weight(al->values[i-begin]);
   }
 
   al->weight = weight + sizeof(ava_value) * (end - begin);
@@ -288,17 +279,13 @@ static ava_list_value ava_array_list_list_concat(ava_list_value list,
 
     mutate_al:;
     size_t added_weight = 0;
-    size_t i = 0;
-    AVA_LIST_ITERATOR(other, it);
-    for (other.v->iterator_place(other, it, 0);
-         i < other_length;
-         other.v->iterator_move(other, it, 1)) {
-      al->values[list.LENGTH + i] = other.v->iterator_get(other, it);
+    size_t i;
+    for (i = 0; i < other_length; ++i) {
+      al->values[list.LENGTH + i] = other.v->index(other, i);
       added_weight += ava_value_weight(al->values[list.LENGTH + i]);
-      ++i;
     }
 
-    AO_fetch_and_add(&al->weight, added_weight);
+    al->weight += added_weight;
     list.LENGTH += other_length;
     return list;
   } else {

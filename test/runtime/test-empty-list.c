@@ -100,19 +100,3 @@ deftest_signal(empty_list_refuses_nonzero_delete, SIGABRT) {
 deftest_signal(empty_list_refuses_set, SIGABRT) {
   ava_empty_list.v->set(ava_empty_list, 0, empty_list_value);
 }
-
-deftest(empty_list_iterator_retains_position) {
-  AVA_LIST_ITERATOR(ava_empty_list, it);
-
-  ava_empty_list.v->iterator_place(ava_empty_list, it, 5);
-  ck_assert_int_eq(5, ava_empty_list.v->iterator_index(ava_empty_list, it));
-  ava_empty_list.v->iterator_move(ava_empty_list, it, -2);
-  ck_assert_int_eq(3, ava_empty_list.v->iterator_index(ava_empty_list, it));
-}
-
-deftest_signal(empty_list_iterator_refuses_get, SIGABRT) {
-  AVA_LIST_ITERATOR(ava_empty_list, it);
-
-  ava_empty_list.v->iterator_place(ava_empty_list, it, 0);
-  ava_empty_list.v->iterator_get(ava_empty_list, it);
-}

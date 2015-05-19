@@ -62,11 +62,6 @@ static const ava_list_trait ava_empty_list_list_impl = {
   .concat = ava_empty_list_list_concat,
   .delete = ava_empty_list_list_delete,
   .set = ava_empty_list_list_set,
-  .iterator_size = ava_list_ix_iterator_size,
-  .iterator_place = ava_list_ix_iterator_place,
-  .iterator_get = ava_list_ix_iterator_get,
-  .iterator_move = ava_list_ix_iterator_move,
-  .iterator_index = ava_list_ix_iterator_index,
 };
 
 const ava_list_value ava_empty_list = {

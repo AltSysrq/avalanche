@@ -294,34 +294,6 @@ ava_list_value ava_list_copy_set(ava_list_value list,
   return list.v->set(list, ix, val);
 }
 
-size_t ava_list_ix_iterator_size(ava_list_value list) {
-  return sizeof(size_t);
-}
-
-void ava_list_ix_iterator_place(
-  ava_list_value list, void*restrict iterator, size_t ix
-) {
-  *(size_t*restrict)iterator = ix;
-}
-
-ava_value ava_list_ix_iterator_get(
-  ava_list_value list, const void*restrict iterator
-) {
-  return list.v->index(list, *(const size_t*restrict)iterator);
-}
-
-void ava_list_ix_iterator_move(
-  ava_list_value list, void*restrict iterator, ssize_t off
-) {
-  *(size_t*restrict)iterator += off;
-}
-
-size_t ava_list_ix_iterator_index(
-  ava_list_value el, const void*restrict iterator
-) {
-  return *(const size_t*restrict)iterator;
-}
-
 ava_datum ava_list_string_chunk_iterator(ava_value list) {
   return (ava_datum) { .ulong = 0 };
 }

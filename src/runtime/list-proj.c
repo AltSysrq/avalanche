@@ -84,11 +84,6 @@ static const ava_list_trait ava_list_proj_interleave_list_impl = {
   .concat = ava_list_copy_concat,
   .delete = ava_list_copy_delete,
   .set = ava_list_copy_set,
-  .iterator_size = ava_list_ix_iterator_size,
-  .iterator_place = ava_list_ix_iterator_place,
-  .iterator_get = ava_list_ix_iterator_get,
-  .iterator_move = ava_list_ix_iterator_move,
-  .iterator_index = ava_list_ix_iterator_index,
 };
 
 static const ava_value_trait ava_list_proj_demux_generic_impl = {
@@ -112,11 +107,6 @@ static const ava_list_trait ava_list_proj_demux_list_impl = {
   .concat = ava_list_copy_concat,
   .delete = ava_list_copy_delete,
   .set = ava_list_copy_set,
-  .iterator_size = ava_list_ix_iterator_size,
-  .iterator_place = ava_list_ix_iterator_place,
-  .iterator_get = ava_list_ix_iterator_get,
-  .iterator_move = ava_list_ix_iterator_move,
-  .iterator_index = ava_list_ix_iterator_index,
 };
 
 static const ava_value_trait ava_list_proj_group_generic_impl = {
@@ -140,11 +130,6 @@ static const ava_list_trait ava_list_proj_group_list_impl = {
   .concat = ava_list_copy_concat,
   .delete = ava_list_copy_delete,
   .set = ava_list_copy_set,
-  .iterator_size = ava_list_ix_iterator_size,
-  .iterator_place = ava_list_ix_iterator_place,
-  .iterator_get = ava_list_ix_iterator_get,
-  .iterator_move = ava_list_ix_iterator_move,
-  .iterator_index = ava_list_ix_iterator_index,
 };
 
 ava_list_value ava_list_proj_interleave(const ava_list_value*restrict lists,
@@ -340,11 +325,9 @@ ava_list_value ava_list_proj_flatten(ava_list_value list) {
 
   accum = ava_list_value_of(list.v->index(list, 0));
 
-  AVA_LIST_ITERATOR(list, it);
-  for (i = 1, list.v->iterator_place(list, it, 1);
-       i < n; ++i, list.v->iterator_move(list, it, +1))
+  for (i = 1; i < n; ++i)
     accum = accum.v->concat(
-      accum, ava_list_value_of(list.v->iterator_get(list, it)));
+      accum, ava_list_value_of(list.v->index(list, i)));
 
   return accum;
 }

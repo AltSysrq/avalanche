@@ -109,11 +109,6 @@ static const ava_list_trait ava_esba_list_list_impl = {
   .concat = ava_esba_list_list_concat,
   .delete = ava_esba_list_list_delete,
   .set = ava_esba_list_list_set,
-  .iterator_size = ava_list_ix_iterator_size,
-  .iterator_place = ava_list_ix_iterator_place,
-  .iterator_get = ava_list_ix_iterator_get,
-  .iterator_move = ava_list_ix_iterator_move,
-  .iterator_index = ava_list_ix_iterator_index,
 };
 
 static inline ava_esba to_esba(ava_list_value list) {
@@ -221,14 +216,10 @@ static unsigned ava_esba_list_accum_format(
       ava_esba_list_polymorphism(template, header->template);
   }
 
-  AVA_LIST_ITERATOR(list, it);
-  list.v->iterator_place(list, it, begin);
   format = 0;
-
   for (i = begin + 1; i < end && format != POLYMORPH_ALL; ++i) {
-    list.v->iterator_move(list, it, +1);
     format |= ava_esba_list_polymorphism(
-      template, list.v->iterator_get(list, it));
+      template, list.v->index(list, i));
   }
 
   return format;
@@ -244,13 +235,10 @@ static ava_esba ava_esba_list_append_sublist(
   if (list.v == &ava_esba_list_list_impl)
     return ava_esba_list_concat_esbas(esba, to_esba(list), begin, end);
 
-  AVA_LIST_ITERATOR(list, it);
   dst = ava_esba_start_append(&esba, end - begin);
 
-  for (i = begin, list.v->iterator_place(list, it, begin);
-       i < end;
-       ++i, list.v->iterator_move(list, it, +1)) {
-    ava_value val = list.v->iterator_get(list, it);
+  for (i = begin; i < end; ++i) {
+    ava_value val = list.v->index(list, i);
     ava_esba_list_swizzle_down[format](dst, &val);
     dst += ava_esba_list_element_size_pointers[format];
   }

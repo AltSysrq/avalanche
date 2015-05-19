@@ -306,13 +306,3 @@ deftest(set) {
     ck_assert(values_equal(values[2 == i? 20 : i], new.v->index(new, i)));
   }
 }
-
-deftest(iterator_preserves_index) {
-  ava_list_value orig = ava_array_list_of_raw(values, 2);
-  AVA_LIST_ITERATOR(orig, it);
-
-  orig.v->iterator_place(orig, it, 42);
-  ck_assert_int_eq(42, orig.v->iterator_index(orig, it));
-  orig.v->iterator_move(orig, it, -40);
-  ck_assert_int_eq(2, orig.v->iterator_index(orig, it));
-}
