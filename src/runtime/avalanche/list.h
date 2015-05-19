@@ -271,6 +271,6 @@ static inline ava_value ava_list_set(ava_value list, size_t index,
 /**
  * The empty list.
  */
-extern const ava_list_value ava_empty_list;
+extern const ava_value ava_empty_list;
 
 #endif /* AVA_RUNTIME_LIST_H_ */

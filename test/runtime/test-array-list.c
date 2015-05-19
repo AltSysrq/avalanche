@@ -183,7 +183,7 @@ deftest(inplace_self_concat) {
 
 deftest(empty_list_concat) {
   ava_value orig = ava_list_value_to_value(ava_array_list_of_raw(values, 2));
-  ava_value result = ava_list_concat(orig, ava_list_value_to_value(ava_empty_list));
+  ava_value result = ava_list_concat(orig, ava_empty_list);
 
   ck_assert_ptr_eq(orig.r1.ptr, result.r1.ptr);
 }
@@ -192,7 +192,7 @@ deftest(slice_to_empty) {
   ava_value orig = ava_list_value_to_value(ava_array_list_of_raw(values, 4));
   ava_value empty = ava_list_slice(orig, 1, 1);
 
-  ck_assert(values_equal(ava_list_value_to_value(ava_empty_list), empty));
+  ck_assert(values_equal(ava_empty_list, empty));
 }
 
 deftest(inplace_slice) {

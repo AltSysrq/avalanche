@@ -356,7 +356,7 @@ static ava_value ava_esba_list_list_slice(ava_value list,
   assert(end <= ava_esba_length(to_esba_from_value(list)));
 
   if (begin == end)
-    return ava_list_value_to_value(ava_empty_list);
+    return ava_empty_list;
 
   if (0 == begin && ava_esba_list_list_length(list) == end)
     return list;
@@ -429,7 +429,7 @@ static ava_value ava_esba_list_list_delete(
   assert(end <= length);
 
   if (0 == begin && length == end)
-    return ava_list_value_to_value(ava_empty_list);
+    return ava_empty_list;
 
   if (begin == end)
     return list;

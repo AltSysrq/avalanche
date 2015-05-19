@@ -59,7 +59,7 @@ ava_list_value ava_list_value_of(ava_value value) {
 static ava_value ava_list_value_of_string(ava_string str) {
   ava_lex_context* lex = ava_lex_new(str);
   ava_lex_result result;
-  ava_value accum = ava_list_value_to_value(ava_empty_list);
+  ava_value accum = ava_empty_list;
 
   ava_value buffer[64];
   unsigned buffer_ix = 0;
@@ -117,7 +117,7 @@ static ava_value ava_list_value_of_string(ava_string str) {
 
 ava_list_value ava_list_copy_of(ava_list_value list, size_t begin, size_t end) {
   if (end == begin)
-    return ava_empty_list;
+    return ava_list_value_of(ava_empty_list);
 
   if (end - begin <= AVA_ARRAY_LIST_THRESH)
     return ava_array_list_copy_of(list, begin, end);
@@ -127,7 +127,7 @@ ava_list_value ava_list_copy_of(ava_list_value list, size_t begin, size_t end) {
 
 ava_list_value ava_list_of_values(const ava_value*restrict values, size_t n) {
   if (0 == n)
-    return ava_empty_list;
+    return ava_list_value_of(ava_empty_list);
   else if (n <= AVA_ARRAY_LIST_THRESH)
     return ava_array_list_of_raw(values, n);
   else
@@ -287,7 +287,7 @@ ava_value ava_list_copy_delete(ava_value list_val,
   if (begin == end)
     return list_val;
   if (0 == begin && list.v->length(ava_list_value_to_value(list)) == end)
-    return ava_list_value_to_value(ava_empty_list);
+    return ava_empty_list;
 
   list = ava_list_copy_of(list, 0, list.v->length(ava_list_value_to_value(list)));
   return list.v->delete(ava_list_value_to_value(list), begin, end);

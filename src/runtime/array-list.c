@@ -199,7 +199,7 @@ static ava_value ava_array_list_list_slice(ava_value list,
   assert(end <= list.LENGTH);
 
   if (begin == end)
-    return ava_list_value_to_value(ava_empty_list);
+    return ava_empty_list;
 
   if (0 == begin && end * 2 >= al->capacity) {
     list.LENGTH = end;
