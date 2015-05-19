@@ -113,7 +113,7 @@ struct ava_list_trait_s {
    *
    * Complexity: Amortised O(log(length) + (end - begin))
    */
-  ava_list_value (*slice)(ava_list_value list, size_t begin, size_t end);
+  ava_value (*slice)(ava_value list, size_t begin, size_t end);
 
   /**
    * Returns a new list which contains all the elements of list followed by the
@@ -207,8 +207,7 @@ ava_string ava_list_iterate_string_chunk(ava_datum*restrict i,
  * Implementation of ava_list_trait.slice which copies the input list into a
  * new list of an unspecified type.
  */
-ava_list_value ava_list_copy_slice(
-  ava_list_value list, size_t begin, size_t end);
+ava_value ava_list_copy_slice(ava_value list, size_t begin, size_t end);
 /**
  * Implementation of ava_list_trait.append which copies the input list and new
  * element into a new list of an unspecified type.
@@ -223,8 +222,7 @@ ava_value ava_list_copy_concat(ava_value left, ava_value right);
  * Implementation of ava_list_trait.delete which copies the list into a new
  * list of unspecified type.
  */
-ava_value ava_list_copy_delete(
-  ava_value list, size_t begin, size_t end);
+ava_value ava_list_copy_delete(ava_value list, size_t begin, size_t end);
 /**
  * Implementation of ava_list_trait.copy which copies the list into a new list
  * of unspecified type.
@@ -244,7 +242,7 @@ static inline ava_value ava_list_index(ava_value list_val, size_t ix) {
 static inline ava_value ava_list_slice(ava_value list_val,
                                        size_t begin, size_t end) {
   ava_list_value list = ava_list_value_of(list_val);
-  return ava_list_value_to_value(list.v->slice(list, begin, end));
+  return list.v->slice(ava_list_value_to_value(list), begin, end);
 }
 
 static inline ava_value ava_list_append(ava_value list_val, ava_value elt) {

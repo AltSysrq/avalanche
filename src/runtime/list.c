@@ -263,10 +263,9 @@ ava_string ava_list_escape(ava_string str) {
   return escaped;
 }
 
-ava_list_value ava_list_copy_slice(
-  ava_list_value list, size_t begin, size_t end
-) {
-  return ava_list_copy_of(list, begin, end);
+ava_value ava_list_copy_slice(ava_value list, size_t begin, size_t end) {
+  return ava_list_value_to_value(
+    ava_list_copy_of(ava_list_value_of(list), begin, end));
 }
 
 ava_value ava_list_copy_append(ava_value list_val, ava_value elt) {

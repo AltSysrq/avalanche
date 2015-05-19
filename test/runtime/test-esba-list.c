@@ -143,11 +143,10 @@ deftest(slice_to_empty_list) {
     ava_value_of_integer(1),
     ava_value_of_integer(2),
   };
-  ava_list_value list = ava_esba_list_of_raw(values, 2);
-  ava_list_value empty = list.v->slice(list, 1, 1);
+  ava_value list = ava_list_value_to_value(ava_esba_list_of_raw(values, 2));
+  ava_value empty = ava_list_slice(list, 1, 1);
 
-  assert_values_equal(ava_list_value_to_value(ava_empty_list),
-                      ava_list_value_to_value(empty));
+  assert_values_equal(empty, ava_list_value_to_value(ava_empty_list));
 }
 
 deftest(slice_to_array_list) {

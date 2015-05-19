@@ -190,54 +190,53 @@ deftest(empty_list_concat) {
 }
 
 deftest(slice_to_empty) {
-  ava_list_value orig = ava_array_list_of_raw(values, 4);
-  ava_list_value empty = orig.v->slice(orig, 1, 1);
+  ava_value orig = ava_list_value_to_value(ava_array_list_of_raw(values, 4));
+  ava_value empty = ava_list_slice(orig, 1, 1);
 
-  ck_assert(values_equal(ava_list_value_to_value(ava_empty_list),
-                         ava_list_value_to_value(empty)));
+  ck_assert(values_equal(ava_list_value_to_value(ava_empty_list), empty));
 }
 
 deftest(inplace_slice) {
-  ava_list_value orig = ava_array_list_of_raw(values, 8);
-  ava_list_value slice = orig.v->slice(orig, 0, 4);
+  ava_value orig = ava_list_value_to_value(ava_array_list_of_raw(values, 8));
+  ava_value slice = ava_list_slice(orig, 0, 4);
   unsigned i;
 
-  ck_assert_int_eq(8, orig.v->length(orig));
-  ck_assert_int_eq(4, slice.v->length(slice));
+  ck_assert_int_eq(8, ava_list_length(orig));
+  ck_assert_int_eq(4, ava_list_length(slice));
   ck_assert_ptr_eq(orig.r1.ptr, slice.r1.ptr);
-  ck_assert_int_eq(8, ava_array_list_used(orig));
-  ck_assert_int_eq(8, ava_array_list_used(slice));
+  ck_assert_int_eq(8, ava_array_list_used(ava_list_value_of(orig)));
+  ck_assert_int_eq(8, ava_array_list_used(ava_list_value_of(slice)));
 
   for (i = 0; i < 4; ++i)
-    ck_assert(values_equal(values[i], slice.v->index(slice, i)));
+    ck_assert(values_equal(values[i], ava_list_index(slice, i)));
 }
 
 deftest(copying_slice_due_to_misalignment) {
-  ava_list_value orig = ava_array_list_of_raw(values, 8);
-  ava_list_value slice = orig.v->slice(orig, 1, 8);
+  ava_value orig = ava_list_value_to_value(ava_array_list_of_raw(values, 8));
+  ava_value slice = ava_list_slice(orig, 1, 8);
   unsigned i;
 
-  ck_assert_int_eq(8, orig.v->length(orig));
-  ck_assert_int_eq(7, slice.v->length(slice));
-  ck_assert_int_eq(8, ava_array_list_used(orig));
-  ck_assert_int_eq(7, ava_array_list_used(slice));
+  ck_assert_int_eq(8, ava_list_length(orig));
+  ck_assert_int_eq(7, ava_list_length(slice));
+  ck_assert_int_eq(8, ava_array_list_used(ava_list_value_of(orig)));
+  ck_assert_int_eq(7, ava_array_list_used(ava_list_value_of(slice)));
 
   for (i = 0; i < 7; ++i)
-    ck_assert(values_equal(values[i+1], slice.v->index(slice, i)));
+    ck_assert(values_equal(values[i+1], ava_list_index(slice, i)));
 }
 
 deftest(copying_slice_due_to_size_reduction) {
-  ava_list_value orig = ava_array_list_of_raw(values, 8);
-  ava_list_value slice = orig.v->slice(orig, 0, 2);
+  ava_value orig = ava_list_value_to_value(ava_array_list_of_raw(values, 8));
+  ava_value slice = ava_list_slice(orig, 0, 2);
   unsigned i;
 
-  ck_assert_int_eq(8, orig.v->length(orig));
-  ck_assert_int_eq(2, slice.v->length(slice));
-  ck_assert_int_eq(8, ava_array_list_used(orig));
-  ck_assert_int_eq(2, ava_array_list_used(slice));
+  ck_assert_int_eq(8, ava_list_length(orig));
+  ck_assert_int_eq(2, ava_list_length(slice));
+  ck_assert_int_eq(8, ava_array_list_used(ava_list_value_of(orig)));
+  ck_assert_int_eq(2, ava_array_list_used(ava_list_value_of(slice)));
 
   for (i = 0; i < 2; ++i)
-    ck_assert(values_equal(values[i], slice.v->index(slice, i)));
+    ck_assert(values_equal(values[i], ava_list_index(slice, i)));
 }
 
 deftest(noop_delete) {

@@ -86,7 +86,7 @@ static size_t ava_array_list_value_value_weight(ava_value);
 
 static size_t ava_array_list_list_length(ava_list_value);
 static ava_value ava_array_list_list_index(ava_list_value, size_t);
-static ava_list_value ava_array_list_list_slice(ava_list_value, size_t, size_t);
+static ava_value ava_array_list_list_slice(ava_value, size_t, size_t);
 static ava_value ava_array_list_list_append(ava_value, ava_value);
 static ava_value ava_array_list_list_concat(ava_value, ava_value);
 static ava_value ava_array_list_list_delete(ava_value, size_t, size_t);
@@ -191,24 +191,24 @@ static ava_value ava_array_list_list_index(ava_list_value list, size_t ix) {
   return al->values[ix];
 }
 
-static ava_list_value ava_array_list_list_slice(ava_list_value list,
-                                                size_t begin,
-                                                size_t end) {
+static ava_value ava_array_list_list_slice(ava_value list,
+                                           size_t begin, size_t end) {
   const ava_array_list*restrict al = list.LIST;
 
   assert(begin <= end);
   assert(end <= list.LENGTH);
 
   if (begin == end)
-    return ava_empty_list;
+    return ava_list_value_to_value(ava_empty_list);
 
   if (0 == begin && end * 2 >= al->capacity) {
     list.LENGTH = end;
     return list;
   }
 
-  return ava_array_list_of_raw(
-    al->values + begin, end - begin);
+  return ava_list_value_to_value(
+    ava_array_list_of_raw(
+      al->values + begin, end - begin));
 }
 
 static size_t ava_array_list_growing_capacity(size_t length) {
@@ -301,12 +301,10 @@ static ava_value ava_array_list_list_delete(
     return list;
 
   if (0 == begin)
-    return ava_list_value_to_value(
-      ava_array_list_list_slice(ava_list_value_of(list), end, list.LENGTH));
+    return  ava_array_list_list_slice(list, end, list.LENGTH);
 
   if (list.LENGTH == end)
-    return ava_list_value_to_value(
-      ava_array_list_list_slice(ava_list_value_of(list), 0, begin));
+    return ava_array_list_list_slice(list, 0, begin);
 
   ava_array_list*restrict nal = ava_array_list_of_array(
     al->values, begin, list.LENGTH - (end - begin));

@@ -56,12 +56,12 @@ deftest(empty_list_has_length_zero) {
 }
 
 deftest(empty_list_permits_slice_zero_to_zero) {
-  ava_list_value result = ava_empty_list.v->slice(ava_empty_list, 0, 0);
-  ck_assert_int_eq(0, memcmp(&result, &ava_empty_list, sizeof(result)));
+  ava_value result = ava_list_slice(empty_list_value, 0, 0);
+  ck_assert_int_eq(0, memcmp(&result, &empty_list_value, sizeof(result)));
 }
 
 deftest_signal(empty_list_refuses_nonzero_slice, SIGABRT) {
-  ava_empty_list.v->slice(ava_empty_list, 1, 1);
+  ava_list_slice(empty_list_value, 1, 1);
 }
 
 deftest_signal(empty_list_refuses_index, SIGABRT) {

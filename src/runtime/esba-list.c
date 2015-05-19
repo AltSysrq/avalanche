@@ -81,7 +81,7 @@ static size_t ava_esba_list_value_value_weight(ava_value);
 
 static size_t ava_esba_list_list_length(ava_list_value);
 static ava_value ava_esba_list_list_index(ava_list_value, size_t);
-static ava_list_value ava_esba_list_list_slice(ava_list_value, size_t, size_t);
+static ava_value ava_esba_list_list_slice(ava_value, size_t, size_t);
 static ava_value ava_esba_list_list_append(ava_value, ava_value);
 static ava_value ava_esba_list_list_concat(ava_value, ava_value);
 static ava_value ava_esba_list_list_delete(ava_value, size_t, size_t);
@@ -350,22 +350,23 @@ static ava_value ava_esba_list_list_index(ava_list_value list, size_t ix) {
   return ret;
 }
 
-static ava_list_value ava_esba_list_list_slice(ava_list_value list,
-                                               size_t begin,
-                                               size_t end) {
+static ava_value ava_esba_list_list_slice(ava_value list,
+                                          size_t begin, size_t end) {
   assert(begin <= end);
-  assert(end <= ava_esba_length(to_esba(list)));
+  assert(end <= ava_esba_length(to_esba_from_value(list)));
 
   if (begin == end)
-    return ava_empty_list;
+    return ava_list_value_to_value(ava_empty_list);
 
-  if (0 == begin && ava_esba_list_list_length(list) == end)
+  if (0 == begin && ava_esba_list_list_length(ava_list_value_of(list)) == end)
     return list;
 
   if (end - begin < AVA_ARRAY_LIST_THRESH / 2)
-    return ava_array_list_copy_of(list, begin, end);
+    return ava_list_value_to_value(
+      ava_array_list_copy_of(ava_list_value_of(list), begin, end));
 
-  return ava_esba_list_copy_of(list, begin, end);
+  return ava_list_value_to_value(
+    ava_esba_list_copy_of(ava_list_value_of(list), begin, end));
 }
 
 static ava_value ava_esba_list_list_append(ava_value list, ava_value elt) {

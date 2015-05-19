@@ -301,7 +301,8 @@ static ava_value ava_list_proj_group_list_index(
   delegate_length = this->delegate.v->length(this->delegate);
   if (end > delegate_length) end = delegate_length;
 
-  tmp = this->delegate.v->slice(this->delegate, begin, end);
+  tmp = ava_list_value_of(
+    this->delegate.v->slice(ava_list_value_to_value(this->delegate), begin, end));
   ret = ava_clone(&tmp, sizeof(tmp));
   /* Save in cache. If multiple threads hit this index simultaneously, they may
    * produce physically different results and write the cache multiple times.
