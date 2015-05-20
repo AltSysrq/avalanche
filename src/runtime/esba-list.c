@@ -130,8 +130,6 @@ static unsigned ava_esba_list_polymorphism(ava_value template, ava_value new) {
     ret |= POLYMORPH_ATTR;
   if (template.r1.ulong != new.r1.ulong)
     ret |= POLYMORPH_R1;
-  if (template.r2.ulong |= new.r2.ulong)
-    ret |= POLYMORPH_R2;
 
   return ret;
 }

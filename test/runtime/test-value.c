@@ -24,13 +24,13 @@ defsuite(value);
 /* For testing, our type represents a string with some integer number of
  * characters, starting from NUL at the very end of the string, and
  * incrementing for each preceding bytes. It stores this count in the ulong
- * field of r1, leaving r2 untouched.
+ * field of the value.
  *
  * Chunk iterators store the number of characters left; each chunk contains one
  * character.
  */
 static ava_datum xn_string_chunk_iterator(ava_value value) {
-  return value.r1;
+  return (ava_datum) { .ulong = ava_value_ulong(value) };
 }
 
 static ava_string xn_iterate_string_chunk(ava_datum*restrict it,
@@ -52,11 +52,7 @@ static const ava_value_trait xn_type = {
 };
 
 static ava_value xn_of(ava_ulong val) {
-  return (ava_value) {
-    .r1 = { .ulong = val },
-    .r2 = { .ulong = 0 },
-    .attr = (const ava_attribute*)&xn_type
-  };
+  return ava_value_with_ulong(&xn_type, val);
 }
 
 deftest(string_of_chunk_iterator_empty) {

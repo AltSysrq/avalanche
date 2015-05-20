@@ -130,9 +130,10 @@ struct ava_value_s {
    */
   const ava_attribute*restrict attr;
   /**
-   * The one or two representations of this value, as controlled by the type.
+   * The representation of this value, as controlled by the type. Some of the
+   * representation may be stored in attributes.
    */
-  ava_datum r1, r2;
+  ava_datum r1;
 };
 
 /**

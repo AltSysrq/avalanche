@@ -12,8 +12,7 @@ typedef void (*ava_esba_list_swizzle_up_f)(
 
 #define POLYMORPH_ATTR 1
 #define POLYMORPH_R1 2
-#define POLYMORPH_R2 4
-#define POLYMORPH_ALL (1|2|4)
+#define POLYMORPH_ALL (1|2)
 
 typedef struct {
 } ava_esba_list_swizzled_0;
@@ -31,7 +30,6 @@ static void ava_esba_list_swizzle_up_0(
 ) {
   dst->attr = template->attr;
   dst->r1 = template->r1;
-  dst->r2 = template->r2;
 }
 
 typedef struct {
@@ -52,7 +50,6 @@ static void ava_esba_list_swizzle_up_1(
 ) {
   dst->attr = src->attr;
   dst->r1 = template->r1;
-  dst->r2 = template->r2;
 }
 
 typedef struct {
@@ -73,7 +70,6 @@ static void ava_esba_list_swizzle_up_2(
 ) {
   dst->attr = template->attr;
   dst->r1 = src->r1;
-  dst->r2 = template->r2;
 }
 
 typedef struct {
@@ -96,133 +92,28 @@ static void ava_esba_list_swizzle_up_3(
 ) {
   dst->attr = src->attr;
   dst->r1 = src->r1;
-  dst->r2 = template->r2;
 }
 
-typedef struct {
-  ava_datum r2;
-} ava_esba_list_swizzled_4;
-
-static void ava_esba_list_swizzle_down_4(
-  ava_esba_list_swizzled_4*restrict dst,
-  const ava_value*restrict src
-) {
-  dst->r2 = src->r2;
-}
-
-static void ava_esba_list_swizzle_up_4(
-  ava_value*restrict dst,
-  const ava_value*restrict template,
-  const ava_esba_list_swizzled_4*restrict src
-) {
-  dst->attr = template->attr;
-  dst->r1 = template->r1;
-  dst->r2 = src->r2;
-}
-
-typedef struct {
-  const ava_attribute*restrict attr;
-  ava_datum r2;
-} ava_esba_list_swizzled_5;
-
-static void ava_esba_list_swizzle_down_5(
-  ava_esba_list_swizzled_5*restrict dst,
-  const ava_value*restrict src
-) {
-  dst->attr = src->attr;
-  dst->r2 = src->r2;
-}
-
-static void ava_esba_list_swizzle_up_5(
-  ava_value*restrict dst,
-  const ava_value*restrict template,
-  const ava_esba_list_swizzled_5*restrict src
-) {
-  dst->attr = src->attr;
-  dst->r1 = template->r1;
-  dst->r2 = src->r2;
-}
-
-typedef struct {
-  ava_datum r1;
-  ava_datum r2;
-} ava_esba_list_swizzled_6;
-
-static void ava_esba_list_swizzle_down_6(
-  ava_esba_list_swizzled_6*restrict dst,
-  const ava_value*restrict src
-) {
-  dst->r1 = src->r1;
-  dst->r2 = src->r2;
-}
-
-static void ava_esba_list_swizzle_up_6(
-  ava_value*restrict dst,
-  const ava_value*restrict template,
-  const ava_esba_list_swizzled_6*restrict src
-) {
-  dst->attr = template->attr;
-  dst->r1 = src->r1;
-  dst->r2 = src->r2;
-}
-
-typedef struct {
-  const ava_attribute*restrict attr;
-  ava_datum r1;
-  ava_datum r2;
-} ava_esba_list_swizzled_7;
-
-static void ava_esba_list_swizzle_down_7(
-  ava_esba_list_swizzled_7*restrict dst,
-  const ava_value*restrict src
-) {
-  dst->attr = src->attr;
-  dst->r1 = src->r1;
-  dst->r2 = src->r2;
-}
-
-static void ava_esba_list_swizzle_up_7(
-  ava_value*restrict dst,
-  const ava_value*restrict template,
-  const ava_esba_list_swizzled_7*restrict src
-) {
-  dst->attr = src->attr;
-  dst->r1 = src->r1;
-  dst->r2 = src->r2;
-}
-
-static const size_t ava_esba_list_element_size_pointers[8] = {
+static const size_t ava_esba_list_element_size_pointers[4] = {
   sizeof(ava_esba_list_swizzled_0) / sizeof(void*),
   sizeof(ava_esba_list_swizzled_1) / sizeof(void*),
   sizeof(ava_esba_list_swizzled_2) / sizeof(void*),
   sizeof(ava_esba_list_swizzled_3) / sizeof(void*),
-  sizeof(ava_esba_list_swizzled_4) / sizeof(void*),
-  sizeof(ava_esba_list_swizzled_5) / sizeof(void*),
-  sizeof(ava_esba_list_swizzled_6) / sizeof(void*),
-  sizeof(ava_esba_list_swizzled_7) / sizeof(void*),
 };
 
 static const ava_esba_list_swizzle_down_f
-ava_esba_list_swizzle_down[8] = {
+ava_esba_list_swizzle_down[4] = {
   (ava_esba_list_swizzle_down_f)ava_esba_list_swizzle_down_0,
   (ava_esba_list_swizzle_down_f)ava_esba_list_swizzle_down_1,
   (ava_esba_list_swizzle_down_f)ava_esba_list_swizzle_down_2,
   (ava_esba_list_swizzle_down_f)ava_esba_list_swizzle_down_3,
-  (ava_esba_list_swizzle_down_f)ava_esba_list_swizzle_down_4,
-  (ava_esba_list_swizzle_down_f)ava_esba_list_swizzle_down_5,
-  (ava_esba_list_swizzle_down_f)ava_esba_list_swizzle_down_6,
-  (ava_esba_list_swizzle_down_f)ava_esba_list_swizzle_down_7,
 };
 
 static const ava_esba_list_swizzle_up_f
-ava_esba_list_swizzle_up[8] = {
+ava_esba_list_swizzle_up[4] = {
   (ava_esba_list_swizzle_up_f)ava_esba_list_swizzle_up_0,
   (ava_esba_list_swizzle_up_f)ava_esba_list_swizzle_up_1,
   (ava_esba_list_swizzle_up_f)ava_esba_list_swizzle_up_2,
   (ava_esba_list_swizzle_up_f)ava_esba_list_swizzle_up_3,
-  (ava_esba_list_swizzle_up_f)ava_esba_list_swizzle_up_4,
-  (ava_esba_list_swizzle_up_f)ava_esba_list_swizzle_up_5,
-  (ava_esba_list_swizzle_up_f)ava_esba_list_swizzle_up_6,
-  (ava_esba_list_swizzle_up_f)ava_esba_list_swizzle_up_7,
 };
 
