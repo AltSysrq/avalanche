@@ -69,14 +69,6 @@ typedef struct {
 } ava_list_value;
 
 /**
- * TODO: Remove once ava_list_value is no longer so profusely spread about and
- * contains a proper ava_value.
- */
-static inline ava_value ava_list_value_to_value(ava_list_value list) {
-  return list.value;
-}
-
-/**
  * Defines the operations that can be performed on a list structure.
  *
  * Documnented complexities of methods are the worst acceptable complexities
@@ -229,41 +221,41 @@ ava_value ava_list_copy_set(ava_value list, size_t ix, ava_value val);
 
 static inline size_t ava_list_length(ava_value list_val) {
   ava_list_value list = ava_list_value_of(list_val);
-  return list.v->length(ava_list_value_to_value(list));
+  return list.v->length(list.value);
 }
 
 static inline ava_value ava_list_index(ava_value list_val, size_t ix) {
   ava_list_value list = ava_list_value_of(list_val);
-  return list.v->index(ava_list_value_to_value(list), ix);
+  return list.v->index(list.value, ix);
 }
 
 static inline ava_value ava_list_slice(ava_value list_val,
                                        size_t begin, size_t end) {
   ava_list_value list = ava_list_value_of(list_val);
-  return list.v->slice(ava_list_value_to_value(list), begin, end);
+  return list.v->slice(list.value, begin, end);
 }
 
 static inline ava_value ava_list_append(ava_value list_val, ava_value elt) {
   ava_list_value list = ava_list_value_of(list_val);
-  return list.v->append(ava_list_value_to_value(list), elt);
+  return list.v->append(list.value, elt);
 }
 
 static inline ava_value ava_list_concat(ava_value left, ava_value right) {
   ava_list_value list = ava_list_value_of(left);
-  return list.v->concat(ava_list_value_to_value(list), right);
+  return list.v->concat(list.value, right);
 }
 
 static inline ava_value ava_list_delete(
   ava_value list, size_t begin, size_t end
 ) {
   ava_list_value l = ava_list_value_of(list);
-  return l.v->delete(ava_list_value_to_value(l), begin, end);
+  return l.v->delete(l.value, begin, end);
 }
 
 static inline ava_value ava_list_set(ava_value list, size_t index,
                                      ava_value element) {
   ava_list_value l = ava_list_value_of(list);
-  return l.v->set(ava_list_value_to_value(l), index, element);
+  return l.v->set(l.value, index, element);
 }
 
 /**
