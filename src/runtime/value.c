@@ -108,11 +108,11 @@ ava_string ava_iterate_singleton_string_chunk(ava_datum*restrict it,
 
 static ava_string ava_string_value_to_string(ava_value value) AVA_CONSTFUN;
 static ava_string ava_string_value_to_string(ava_value value) {
-  return value.r1.str;
+  return ava_value_str(value);
 }
 
 static size_t ava_string_value_value_weight(ava_value value) {
-  return ava_string_length(value.r1.str);
+  return ava_string_length(ava_value_str(value));
 }
 
 static const ava_value_trait ava_string_generic_impl = {
@@ -128,11 +128,7 @@ static const ava_value_trait ava_string_generic_impl = {
  * caching for large values.
  */
 ava_value ava_value_of_string(ava_string str) {
-  return (ava_value) {
-    .r1 = { .str = str },
-    .r2 = { .ulong = 0 },
-    .attr = (const ava_attribute*)&ava_string_generic_impl,
-  };
+  return ava_value_with_str(&ava_string_generic_impl, str);
 }
 
 ava_value ava_value_of_cstring(const char* str) {
