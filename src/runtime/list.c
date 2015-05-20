@@ -49,11 +49,7 @@ ava_list_value ava_list_value_of(ava_value value) {
     assert(trait);
   }
 
-  return (ava_list_value) {
-    .v = trait,
-    .r1 = value.r1,
-    .r2 = value.r2
-  };
+  return (ava_list_value) { .v = trait, .value = value };
 }
 
 static ava_value ava_list_value_of_string(ava_string str) {

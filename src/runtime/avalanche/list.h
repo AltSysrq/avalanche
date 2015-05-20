@@ -55,7 +55,7 @@ extern const ava_attribute_tag ava_list_trait_tag;
 typedef struct ava_list_trait_s ava_list_trait;
 
 /**
- * Like an ava_value, but with a list vtable instead of a type.
+ * An ava_value with a pre-extracted ava_list_trait.
  */
 typedef struct {
   /**
@@ -63,9 +63,9 @@ typedef struct {
    */
   const ava_list_trait*restrict v;
   /**
-   * r1 and r2 from ava_value.
+   * The actual value.
    */
-  ava_datum r1, r2;
+  ava_value value;
 } ava_list_value;
 
 /**
@@ -73,9 +73,7 @@ typedef struct {
  * contains a proper ava_value.
  */
 static inline ava_value ava_list_value_to_value(ava_list_value list) {
-  return (ava_value) {
-    .attr = (const ava_attribute*)list.v, .r1 = list.r1, .r2 = list.r2
-  };
+  return list.value;
 }
 
 /**

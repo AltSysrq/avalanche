@@ -169,9 +169,13 @@ ava_value ava_list_proj_interleave(const ava_value*restrict lists,
    */
   return ava_list_value_to_value(DEMUX_LIST_C(lists[0])->delegate);
 
-  project:
+  project:;
+  ava_list_value* dst = ava_alloc(sizeof(ava_list_value) * num_lists);
+  for (i = 0; i < num_lists; ++i)
+    dst[i] = ava_list_value_of(lists[i]);
+
   ret.attr = (const ava_attribute*)&ava_list_proj_interleave_list_impl;
-  ret.INTERLEAVE_LISTS = ava_clone(lists, sizeof(ava_list_value) * num_lists);
+  ret.INTERLEAVE_LISTS = dst;
   ret.INTERLEAVE_NLISTS = num_lists;
   return ret;
 }
