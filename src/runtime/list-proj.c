@@ -30,9 +30,6 @@
 #include "avalanche/list.h"
 #include "avalanche/list-proj.h"
 
-#define GROUP_LIST r1.ptr
-#define GROUP_LIST_C(v) ((ava_list_proj_group_list*restrict)(v).GROUP_LIST)
-
 typedef struct {
   size_t num_lists;
   ava_fat_list_value lists[];
@@ -264,27 +261,23 @@ ava_value ava_list_proj_group(ava_value delegate, size_t group_size) {
   this->group_size = group_size;
   this->num_groups = num_groups;
 
-  return (ava_value) {
-    .attr = (const ava_attribute*)&ava_list_proj_group_list_impl,
-    .r1 = { .ptr = this },
-    .r2 = { .ulong = NULL }
-  };
+  return ava_value_with_ptr(&ava_list_proj_group_list_impl, this);
 }
 
 static size_t ava_list_proj_group_value_value_weight(ava_value val) {
-  const ava_fat_list_value*restrict delegate = &GROUP_LIST_C(val)->delegate;
-
-  return ava_value_weight(delegate->value);
+  const ava_list_proj_group_list*restrict this = ava_value_ptr(val);
+  return ava_value_weight(this->delegate.value);
 }
 
 static size_t ava_list_proj_group_list_length(ava_value list) {
-  return GROUP_LIST_C(list)->num_groups;
+  const ava_list_proj_group_list*restrict this = ava_value_ptr(list);
+  return this->num_groups;
 }
 
 static ava_value ava_list_proj_group_list_index(
   ava_value list, size_t ix
 ) {
-  ava_list_proj_group_list*restrict this = GROUP_LIST_C(list);
+  ava_list_proj_group_list*restrict this = (void*)ava_value_ptr(list);
   const ava_fat_list_value*restrict ret;
   ava_fat_list_value tmp;
   size_t begin, end, delegate_length;
@@ -316,8 +309,11 @@ ava_value ava_list_proj_flatten(ava_value list) {
   ava_value accum;
   size_t i, n;
 
-  if ((const ava_attribute*)&ava_list_proj_group_list_impl == list.attr)
-    return GROUP_LIST_C(list)->delegate.value;
+  if (&ava_list_proj_group_list_impl ==
+      ava_get_attribute(list, &ava_list_trait_tag)) {
+    const ava_list_proj_group_list*restrict group = ava_value_ptr(list);
+    return group->delegate.value;
+  }
 
   n = ava_list_length(list);
   if (0 == n)
