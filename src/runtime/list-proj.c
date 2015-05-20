@@ -30,13 +30,15 @@
 #include "avalanche/list.h"
 #include "avalanche/list-proj.h"
 
-#define INTERLEAVE_LISTS r1.ptr
-#define INTERLEAVE_LISTS_C(v) ((const ava_fat_list_value*restrict)(v).INTERLEAVE_LISTS)
-#define INTERLEAVE_NLISTS r2.ulong
 #define DEMUX_LIST r1.ptr
 #define DEMUX_LIST_C(v) ((const ava_list_proj_demux_list*restrict)(v).DEMUX_LIST)
 #define GROUP_LIST r1.ptr
 #define GROUP_LIST_C(v) ((ava_list_proj_group_list*restrict)(v).GROUP_LIST)
+
+typedef struct {
+  size_t num_lists;
+  ava_fat_list_value lists[];
+} ava_list_proj_interleave_list;
 
 typedef struct {
   ava_fat_list_value delegate;
@@ -137,7 +139,6 @@ ava_value ava_list_proj_interleave(const ava_value*restrict lists,
 #ifndef NDEBUG
   size_t first_list_length;
 #endif
-  ava_value ret;
 
   assert(num_lists > 0);
 #ifndef NDEBUG
@@ -170,46 +171,43 @@ ava_value ava_list_proj_interleave(const ava_value*restrict lists,
   return DEMUX_LIST_C(lists[0])->delegate.value;
 
   project:;
-  ava_fat_list_value* dst = ava_alloc(sizeof(ava_fat_list_value) * num_lists);
-  for (i = 0; i < num_lists; ++i)
-    dst[i] = ava_fat_list_value_of(lists[i]);
+  ava_list_proj_interleave_list* dst = ava_alloc(
+    sizeof(ava_list_proj_interleave_list) +
+    sizeof(ava_fat_list_value) * num_lists);
+  dst->num_lists = num_lists;
 
-  ret.attr = (const ava_attribute*)&ava_list_proj_interleave_list_impl;
-  ret.INTERLEAVE_LISTS = dst;
-  ret.INTERLEAVE_NLISTS = num_lists;
-  return ret;
+  for (i = 0; i < num_lists; ++i)
+    dst->lists[i] = ava_fat_list_value_of(lists[i]);
+
+  return ava_value_with_ptr(&ava_list_proj_interleave_list_impl, dst);
 }
 
 static size_t ava_list_proj_interleave_value_value_weight(ava_value val) {
-  const ava_fat_list_value*restrict sublist;
+  const ava_list_proj_interleave_list*restrict this = ava_value_ptr(val);
   size_t i, sum = 0;
 
-  for (i = 0; i < val.INTERLEAVE_NLISTS; ++i) {
-    sublist = INTERLEAVE_LISTS_C(val) + i;
-    sum += ava_value_weight(sublist->value);
-  }
+  for (i = 0; i < this->num_lists; ++i)
+    sum += ava_value_weight(this->lists[i].value);
 
   return sum;
 }
 
 static size_t ava_list_proj_interleave_list_length(ava_value list) {
-  const ava_fat_list_value*restrict delegate;
+  const ava_list_proj_interleave_list*restrict this = ava_value_ptr(list);
 
-  delegate = INTERLEAVE_LISTS_C(list);
-  return list.INTERLEAVE_NLISTS * delegate->v->length(delegate->value);
+  return this->num_lists * this->lists[0].v->length(this->lists[0].value);
 }
 
 static ava_value ava_list_proj_interleave_list_index(
   ava_value list, size_t ix
 ) {
+  const ava_list_proj_interleave_list*restrict this = ava_value_ptr(list);
   size_t which;
-  const ava_fat_list_value*restrict delegate;
 
-  which = ix % list.INTERLEAVE_NLISTS;
-  ix /= list.INTERLEAVE_NLISTS;
+  which = ix % this->num_lists;
+  ix /= this->num_lists;
 
-  delegate = INTERLEAVE_LISTS_C(list) + which;
-  return delegate->v->index(delegate->value, ix);
+  return this->lists[which].v->index(this->lists[which].value, ix);
 }
 
 ava_value ava_list_proj_demux(ava_value delegate,
@@ -221,10 +219,11 @@ ava_value ava_list_proj_demux(ava_value delegate,
 
   if (1 == stride) return delegate;
 
-  if ((const ava_attribute*)&ava_list_proj_interleave_list_impl ==
-      delegate.attr) {
-    if (stride == delegate.INTERLEAVE_NLISTS) {
-      return INTERLEAVE_LISTS_C(delegate)[offset].value;
+  if (&ava_list_proj_interleave_list_impl ==
+      ava_get_attribute(delegate, &ava_list_trait_tag)) {
+    const ava_list_proj_interleave_list*restrict il = ava_value_ptr(delegate);
+    if (stride == il->num_lists) {
+      return il->lists[offset].value;
     }
   }
 
