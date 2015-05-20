@@ -37,22 +37,22 @@ const ava_attribute_tag ava_list_trait_tag = {
   .name = "list"
 };
 
-static ava_value ava_list_value_of_string(ava_string);
+static ava_value ava_fat_list_value_of_string(ava_string);
 
-ava_list_value ava_list_value_of(ava_value value) {
+ava_fat_list_value ava_fat_list_value_of(ava_value value) {
   const ava_list_trait* trait = ava_get_attribute(
     value, &ava_list_trait_tag);
 
   if (!trait) {
-    value = ava_list_value_of_string(ava_to_string(value));
+    value = ava_fat_list_value_of_string(ava_to_string(value));
     trait = ava_get_attribute(value, &ava_list_trait_tag);
     assert(trait);
   }
 
-  return (ava_list_value) { .v = trait, .value = value };
+  return (ava_fat_list_value) { .v = trait, .value = value };
 }
 
-static ava_value ava_list_value_of_string(ava_string str) {
+static ava_value ava_fat_list_value_of_string(ava_string str) {
   ava_lex_context* lex = ava_lex_new(str);
   ava_lex_result result;
   ava_value accum = ava_empty_list;
@@ -111,15 +111,15 @@ static ava_value ava_list_value_of_string(ava_string str) {
   return accum;
 }
 
-ava_list_value ava_list_copy_of(ava_list_value list, size_t begin, size_t end) {
+ava_fat_list_value ava_list_copy_of(ava_fat_list_value list, size_t begin, size_t end) {
   if (end == begin)
-    return ava_list_value_of(ava_empty_list);
+    return ava_fat_list_value_of(ava_empty_list);
 
   if (end - begin <= AVA_ARRAY_LIST_THRESH)
-    return ava_list_value_of(ava_array_list_copy_of(
+    return ava_fat_list_value_of(ava_array_list_copy_of(
                                list.value, begin, end));
   else
-    return ava_list_value_of(ava_esba_list_copy_of(
+    return ava_fat_list_value_of(ava_esba_list_copy_of(
                                list.value, begin, end));
 }
 
@@ -262,24 +262,24 @@ ava_string ava_list_escape(ava_string str) {
 }
 
 ava_value ava_list_copy_slice(ava_value list, size_t begin, size_t end) {
-  return ava_list_copy_of(ava_list_value_of(list), begin, end).value;
+  return ava_list_copy_of(ava_fat_list_value_of(list), begin, end).value;
 }
 
 ava_value ava_list_copy_append(ava_value list_val, ava_value elt) {
-  ava_list_value list = ava_list_value_of(list_val);
+  ava_fat_list_value list = ava_fat_list_value_of(list_val);
   list = ava_list_copy_of(list, 0, list.v->length(list.value));
   return list.v->append(list.value, elt);
 }
 
 ava_value ava_list_copy_concat(ava_value left_val, ava_value right) {
-  ava_list_value left = ava_list_value_of(left_val);
+  ava_fat_list_value left = ava_fat_list_value_of(left_val);
   left = ava_list_copy_of(left, 0, left.v->length(left.value));
   return left.v->concat(left.value, right);
 }
 
 ava_value ava_list_copy_delete(ava_value list_val,
                                size_t begin, size_t end) {
-  ava_list_value list = ava_list_value_of(list_val);
+  ava_fat_list_value list = ava_fat_list_value_of(list_val);
 
   if (begin == end)
     return list_val;
@@ -292,7 +292,7 @@ ava_value ava_list_copy_delete(ava_value list_val,
 
 ava_value ava_list_copy_set(ava_value list_val,
                             size_t ix, ava_value val) {
-  ava_list_value list = ava_list_value_of(list_val);
+  ava_fat_list_value list = ava_fat_list_value_of(list_val);
   list = ava_list_copy_of(list, 0, list.v->length(list.value));
   return list.v->set(list.value, ix, val);
 }
@@ -304,7 +304,7 @@ ava_datum ava_list_string_chunk_iterator(ava_value list) {
 ava_string ava_list_iterate_string_chunk(
   ava_datum*restrict it, ava_value list_val
 ) {
-  ava_list_value list = ava_list_value_of(list_val);
+  ava_fat_list_value list = ava_fat_list_value_of(list_val);
   ava_string elt;
 
   if (it->ulong >= list.v->length(list.value))

@@ -66,7 +66,7 @@ typedef struct {
    * The actual value.
    */
   ava_value value;
-} ava_list_value;
+} ava_fat_list_value;
 
 /**
  * Defines the operations that can be performed on a list structure.
@@ -141,19 +141,19 @@ struct ava_list_trait_s {
 };
 
 /**
- * Produces a *possibly normalised* ava_list_value from the given ava_value.
+ * Produces a *normalised* ava_fat_list_value from the given ava_value.
  *
  * If the value does not currently have a type that permits efficient list
  * access, it will be converted to one that does. In such a case, the string
  * value of the new list will be the same as the string value of value. (I.e.,
  * no normalisation occurs).
  *
- * Note that ava_to_string(ava_list_value_of(x)) is not necessarily equivalent
+ * Note that ava_to_string(ava_fat_list_value_of(x)) is not necessarily equivalent
  * to ava_to_string(x); the returned value is conceptually different.
  *
  * @throws ava_format_exception if value is not conform to list format.
  */
-ava_list_value ava_list_value_of(ava_value value) AVA_PURE;
+ava_fat_list_value ava_fat_list_value_of(ava_value value) AVA_PURE;
 
 /**
  * Copies the given list into a new list using a reasonable type for the
@@ -162,7 +162,7 @@ ava_list_value ava_list_value_of(ava_value value) AVA_PURE;
  * The only real use for this is for pseudo-list implementations that cannot
  * actually implement list mutation operations themselves.
  */
-ava_list_value ava_list_copy_of(ava_list_value list, size_t begin, size_t end);
+ava_fat_list_value ava_list_copy_of(ava_fat_list_value list, size_t begin, size_t end);
 
 /**
  * Returns a list containing the given sequence of values.
@@ -220,41 +220,41 @@ ava_value ava_list_copy_delete(ava_value list, size_t begin, size_t end);
 ava_value ava_list_copy_set(ava_value list, size_t ix, ava_value val);
 
 static inline size_t ava_list_length(ava_value list_val) {
-  ava_list_value list = ava_list_value_of(list_val);
+  ava_fat_list_value list = ava_fat_list_value_of(list_val);
   return list.v->length(list.value);
 }
 
 static inline ava_value ava_list_index(ava_value list_val, size_t ix) {
-  ava_list_value list = ava_list_value_of(list_val);
+  ava_fat_list_value list = ava_fat_list_value_of(list_val);
   return list.v->index(list.value, ix);
 }
 
 static inline ava_value ava_list_slice(ava_value list_val,
                                        size_t begin, size_t end) {
-  ava_list_value list = ava_list_value_of(list_val);
+  ava_fat_list_value list = ava_fat_list_value_of(list_val);
   return list.v->slice(list.value, begin, end);
 }
 
 static inline ava_value ava_list_append(ava_value list_val, ava_value elt) {
-  ava_list_value list = ava_list_value_of(list_val);
+  ava_fat_list_value list = ava_fat_list_value_of(list_val);
   return list.v->append(list.value, elt);
 }
 
 static inline ava_value ava_list_concat(ava_value left, ava_value right) {
-  ava_list_value list = ava_list_value_of(left);
+  ava_fat_list_value list = ava_fat_list_value_of(left);
   return list.v->concat(list.value, right);
 }
 
 static inline ava_value ava_list_delete(
   ava_value list, size_t begin, size_t end
 ) {
-  ava_list_value l = ava_list_value_of(list);
+  ava_fat_list_value l = ava_fat_list_value_of(list);
   return l.v->delete(l.value, begin, end);
 }
 
 static inline ava_value ava_list_set(ava_value list, size_t index,
                                      ava_value element) {
-  ava_list_value l = ava_list_value_of(list);
+  ava_fat_list_value l = ava_fat_list_value_of(list);
   return l.v->set(l.value, index, element);
 }
 

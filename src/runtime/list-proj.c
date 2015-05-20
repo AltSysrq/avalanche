@@ -31,7 +31,7 @@
 #include "avalanche/list-proj.h"
 
 #define INTERLEAVE_LISTS r1.ptr
-#define INTERLEAVE_LISTS_C(v) ((const ava_list_value*restrict)(v).INTERLEAVE_LISTS)
+#define INTERLEAVE_LISTS_C(v) ((const ava_fat_list_value*restrict)(v).INTERLEAVE_LISTS)
 #define INTERLEAVE_NLISTS r2.ulong
 #define DEMUX_LIST r1.ptr
 #define DEMUX_LIST_C(v) ((const ava_list_proj_demux_list*restrict)(v).DEMUX_LIST)
@@ -39,15 +39,15 @@
 #define GROUP_LIST_C(v) ((ava_list_proj_group_list*restrict)(v).GROUP_LIST)
 
 typedef struct {
-  ava_list_value delegate;
+  ava_fat_list_value delegate;
   size_t offset, stride;
 } ava_list_proj_demux_list;
 
 typedef struct {
-  ava_list_value delegate;
+  ava_fat_list_value delegate;
   size_t group_size, num_groups;
   /* Groups are calculated once then cached here */
-  AO_t /* const ava_list_value*restrict */ groups[];
+  AO_t /* const ava_fat_list_value*restrict */ groups[];
 } ava_list_proj_group_list;
 
 static size_t ava_list_proj_interleave_value_value_weight(ava_value val);
@@ -160,7 +160,7 @@ ava_value ava_list_proj_interleave(const ava_value*restrict lists,
 
     if (memcmp(&DEMUX_LIST_C(lists[0])->delegate,
                &DEMUX_LIST_C(lists[i])->delegate,
-               sizeof(ava_list_value)))
+               sizeof(ava_fat_list_value)))
       goto project;
   }
 
@@ -170,9 +170,9 @@ ava_value ava_list_proj_interleave(const ava_value*restrict lists,
   return DEMUX_LIST_C(lists[0])->delegate.value;
 
   project:;
-  ava_list_value* dst = ava_alloc(sizeof(ava_list_value) * num_lists);
+  ava_fat_list_value* dst = ava_alloc(sizeof(ava_fat_list_value) * num_lists);
   for (i = 0; i < num_lists; ++i)
-    dst[i] = ava_list_value_of(lists[i]);
+    dst[i] = ava_fat_list_value_of(lists[i]);
 
   ret.attr = (const ava_attribute*)&ava_list_proj_interleave_list_impl;
   ret.INTERLEAVE_LISTS = dst;
@@ -181,7 +181,7 @@ ava_value ava_list_proj_interleave(const ava_value*restrict lists,
 }
 
 static size_t ava_list_proj_interleave_value_value_weight(ava_value val) {
-  const ava_list_value*restrict sublist;
+  const ava_fat_list_value*restrict sublist;
   size_t i, sum = 0;
 
   for (i = 0; i < val.INTERLEAVE_NLISTS; ++i) {
@@ -193,7 +193,7 @@ static size_t ava_list_proj_interleave_value_value_weight(ava_value val) {
 }
 
 static size_t ava_list_proj_interleave_list_length(ava_value list) {
-  const ava_list_value*restrict delegate;
+  const ava_fat_list_value*restrict delegate;
 
   delegate = INTERLEAVE_LISTS_C(list);
   return list.INTERLEAVE_NLISTS * delegate->v->length(delegate->value);
@@ -203,7 +203,7 @@ static ava_value ava_list_proj_interleave_list_index(
   ava_value list, size_t ix
 ) {
   size_t which;
-  const ava_list_value*restrict delegate;
+  const ava_fat_list_value*restrict delegate;
 
   which = ix % list.INTERLEAVE_NLISTS;
   ix /= list.INTERLEAVE_NLISTS;
@@ -229,7 +229,7 @@ ava_value ava_list_proj_demux(ava_value delegate,
   }
 
   this = AVA_NEW(ava_list_proj_demux_list);
-  this->delegate = ava_list_value_of(delegate);
+  this->delegate = ava_fat_list_value_of(delegate);
   this->offset = offset;
   this->stride = stride;
 
@@ -240,12 +240,12 @@ ava_value ava_list_proj_demux(ava_value delegate,
 }
 
 static size_t ava_list_proj_demux_value_value_weight(ava_value val) {
-  const ava_list_value*restrict delegate = &DEMUX_LIST_C(val)->delegate;
+  const ava_fat_list_value*restrict delegate = &DEMUX_LIST_C(val)->delegate;
   return ava_value_weight(delegate->value);
 }
 
 static size_t ava_list_proj_demux_list_length(ava_value list) {
-  const ava_list_value*restrict delegate = &DEMUX_LIST_C(list)->delegate;
+  const ava_fat_list_value*restrict delegate = &DEMUX_LIST_C(list)->delegate;
   return (delegate->v->length(delegate->value) -
           DEMUX_LIST_C(list)->offset +
           DEMUX_LIST_C(list)->stride-1) / DEMUX_LIST_C(list)->stride;
@@ -254,7 +254,7 @@ static size_t ava_list_proj_demux_list_length(ava_value list) {
 static ava_value ava_list_proj_demux_list_index(
   ava_value list, size_t ix
 ) {
-  const ava_list_value*restrict delegate = &DEMUX_LIST_C(list)->delegate;
+  const ava_fat_list_value*restrict delegate = &DEMUX_LIST_C(list)->delegate;
   return delegate->v->index(delegate->value,
                             DEMUX_LIST_C(list)->offset +
                             ix * DEMUX_LIST_C(list)->stride);
@@ -267,7 +267,7 @@ ava_value ava_list_proj_group(ava_value delegate, size_t group_size) {
 
   this = ava_alloc(sizeof(ava_list_proj_group_list) +
                    sizeof(AO_t) * num_groups);
-  this->delegate = ava_list_value_of(delegate);
+  this->delegate = ava_fat_list_value_of(delegate);
   this->group_size = group_size;
   this->num_groups = num_groups;
 
@@ -279,7 +279,7 @@ ava_value ava_list_proj_group(ava_value delegate, size_t group_size) {
 }
 
 static size_t ava_list_proj_group_value_value_weight(ava_value val) {
-  const ava_list_value*restrict delegate = &GROUP_LIST_C(val)->delegate;
+  const ava_fat_list_value*restrict delegate = &GROUP_LIST_C(val)->delegate;
 
   return ava_value_weight(delegate->value);
 }
@@ -292,13 +292,13 @@ static ava_value ava_list_proj_group_list_index(
   ava_value list, size_t ix
 ) {
   ava_list_proj_group_list*restrict this = GROUP_LIST_C(list);
-  const ava_list_value*restrict ret;
-  ava_list_value tmp;
+  const ava_fat_list_value*restrict ret;
+  ava_fat_list_value tmp;
   size_t begin, end, delegate_length;
 
   assert(ix < this->num_groups);
 
-  ret = (const ava_list_value*restrict)AO_load_acquire_read(this->groups + ix);
+  ret = (const ava_fat_list_value*restrict)AO_load_acquire_read(this->groups + ix);
   if (ret) return ret->value;
 
   /* Group not yet cached, create it */
@@ -307,7 +307,7 @@ static ava_value ava_list_proj_group_list_index(
   delegate_length = this->delegate.v->length(this->delegate.value);
   if (end > delegate_length) end = delegate_length;
 
-  tmp = ava_list_value_of(
+  tmp = ava_fat_list_value_of(
     this->delegate.v->slice(this->delegate.value, begin, end));
   ret = ava_clone(&tmp, sizeof(tmp));
   /* Save in cache. If multiple threads hit this index simultaneously, they may
