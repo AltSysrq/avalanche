@@ -136,6 +136,83 @@ struct ava_value_s {
 };
 
 /**
+ * Constructs a value using the given string as its datum.
+ */
+static inline ava_value ava_value_with_str(
+  const void* attr, ava_string str
+) {
+  return (ava_value) { .attr = attr, .r1 = { .str = str } };
+}
+
+/**
+ * Constructs a value using the given pointer as its datum.
+ */
+static inline ava_value ava_value_with_ptr(
+  const void* attr, const void* ptr
+) {
+  return (ava_value) { .attr = attr, .r1 = { .ptr = ptr } };
+}
+
+/**
+ * Constructs a value using the given signed long as its value.
+ */
+static inline ava_value ava_value_with_slong(
+  const void* attr, ava_slong sl
+) {
+  return (ava_value) { .attr = attr, .r1 = { .slong = sl } };
+}
+
+/**
+ * Constructs a value using the given unsigned long as its value.
+ *
+ * The ulong representation is suitable for opaquely moving ava_value contents
+ * around separately.
+ */
+static inline ava_value ava_value_with_ulong(
+  const void* attr, ava_ulong ul
+) {
+  return (ava_value) { .attr = attr, .r1 = { .ulong = ul } };
+}
+
+/**
+ * Returns the root attribute on the given ava_value.
+ */
+static inline const void* ava_value_attr(ava_value v) {
+  return v.attr;
+}
+
+/**
+ * Returns the datum of the given ava_value interpreted as a string.
+ */
+static inline ava_string ava_value_str(ava_value v) {
+  return v.r1.str;
+}
+
+/**
+ * Returns the datum of the given ava_value interpreted as a pointer.
+ */
+static inline const void* ava_value_ptr(ava_value v) {
+  return v.r1.ptr;
+}
+
+/**
+ * Returns the datum of the given ava_value interpreted as a signed long.
+ */
+static inline ava_slong ava_value_slong(ava_value v) {
+  return v.r1.slong;
+}
+
+/**
+ * Returns the datum of the given ava_value interpreted as an unsigned long.
+ *
+ * The ulong representation is suitable for opaquely moving ava_value contents
+ * around separately.
+ */
+static inline ava_ulong ava_value_ulong(ava_value v) {
+  return v.r1.ulong;
+}
+
+/**
  * The tag for ava_value_trait.
  */
 extern const ava_attribute_tag ava_value_trait_tag;
