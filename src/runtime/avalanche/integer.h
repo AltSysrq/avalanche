@@ -85,8 +85,7 @@ typedef ava_slong ava_integer;
  * the context; it is not directly representable as an ava_value, but must
  * first be subjected to normalisation.
  *
- * A value with integer type stores its integer value in r1.slong. r2 is unused
- * and contains NULL.
+ * A value with integer type stores its integer value in the value slong.
  */
 extern const ava_attribute ava_integer_type;
 #else /* AVA__IN_INTEGER_C */
@@ -114,8 +113,8 @@ static inline ava_integer ava_integer_of_value(
   ava_value value, ava_integer dfault
 ) {
   /* Optimise for constant propagation */
-  if ((const ava_attribute*)&ava_integer_type == value.attr)
-    return value.r1.slong;
+  if (&ava_integer_type == ava_value_attr(value))
+    return ava_value_slong(value);
 
   return ava_integer_of_noninteger_value(value, dfault);
 }
@@ -125,12 +124,7 @@ static inline ava_integer ava_integer_of_value(
  */
 static inline ava_value ava_value_of_integer(ava_integer i) AVA_CONSTFUN;
 static inline ava_value ava_value_of_integer(ava_integer i) {
-  ava_value ret = {
-    .r1 = { .slong = i },
-    .r2 = { .ulong = 0 },
-    .attr = (const ava_attribute*)&ava_integer_type
-  };
-  return ret;
+  return ava_value_with_slong(&ava_integer_type, i);
 }
 
 /**
