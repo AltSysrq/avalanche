@@ -208,27 +208,28 @@ static ava_value ava_list_proj_interleave_list_index(
   return delegate->v->index(ava_list_value_to_value(*delegate), ix);
 }
 
-ava_list_value ava_list_proj_demux(ava_list_value delegate,
-                                   size_t offset, size_t stride) {
+ava_value ava_list_proj_demux(ava_value delegate,
+                              size_t offset, size_t stride) {
   ava_list_proj_demux_list*restrict this;
-  ava_list_value ret;
+  ava_value ret;
 
   assert(offset < stride);
 
   if (1 == stride) return delegate;
 
-  if (&ava_list_proj_interleave_list_impl == delegate.v) {
+  if ((const ava_attribute*)&ava_list_proj_interleave_list_impl ==
+      delegate.attr) {
     if (stride == delegate.INTERLEAVE_NLISTS) {
-      return INTERLEAVE_LISTS_C(delegate)[offset];
+      return ava_list_value_to_value(INTERLEAVE_LISTS_C(delegate)[offset]);
     }
   }
 
   this = AVA_NEW(ava_list_proj_demux_list);
-  this->delegate = delegate;
+  this->delegate = ava_list_value_of(delegate);
   this->offset = offset;
   this->stride = stride;
 
-  ret.v = &ava_list_proj_demux_list_impl;
+  ret.attr = (const ava_attribute*)&ava_list_proj_demux_list_impl;
   ret.DEMUX_LIST = this;
   ret.r2.ulong = 0;
   return ret;

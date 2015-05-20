@@ -73,8 +73,8 @@ ava_list_value ava_list_proj_interleave(const ava_list_value*restrict lists,
  * @return A list containing every element at ix in list where
  * (offset == ix % stride).
  */
-ava_list_value ava_list_proj_demux(ava_list_value list,
-                                   size_t offset, size_t stride);
+ava_value ava_list_proj_demux(ava_value list,
+                              size_t offset, size_t stride);
 
 /**
  * Groups adjacent elements in the list into sub-lists.
