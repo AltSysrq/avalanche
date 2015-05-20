@@ -46,8 +46,8 @@
  * @param num_lists The number of elements in the lists array.
  * @return An interleaved list projection.
  */
-ava_list_value ava_list_proj_interleave(const ava_list_value*restrict lists,
-                                        size_t num_lists);
+ava_value ava_list_proj_interleave(const ava_value*restrict lists,
+                                   size_t num_lists);
 
 /**
  * Returns a list containing every strideth value, starting at offset.

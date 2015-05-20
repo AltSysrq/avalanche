@@ -131,19 +131,19 @@ static const ava_list_trait ava_list_proj_group_list_impl = {
   .set = ava_list_copy_set,
 };
 
-ava_list_value ava_list_proj_interleave(const ava_list_value*restrict lists,
-                                        size_t num_lists) {
+ava_value ava_list_proj_interleave(const ava_value*restrict lists,
+                                   size_t num_lists) {
   size_t i;
 #ifndef NDEBUG
   size_t first_list_length;
 #endif
-  ava_list_value ret;
+  ava_value ret;
 
   assert(num_lists > 0);
 #ifndef NDEBUG
-  first_list_length = lists[0].v->length(ava_list_value_to_value(lists[0]));
+  first_list_length = ava_list_length(lists[0]);
   for (i = 1; i < num_lists; ++i)
-    assert(first_list_length == lists[i].v->length(ava_list_value_to_value(lists[i])));
+    assert(first_list_length == ava_list_length(lists[i]));
 #endif
 
   if (1 == num_lists)
@@ -151,7 +151,7 @@ ava_list_value ava_list_proj_interleave(const ava_list_value*restrict lists,
 
   /* See if we can invert a demux */
   for (i = 0; i < num_lists; ++i) {
-    if (&ava_list_proj_demux_list_impl != lists[i].v)
+    if ((const ava_attribute*)&ava_list_proj_demux_list_impl != lists[i].attr)
       goto project;
 
     if (i != DEMUX_LIST_C(lists[i])->offset ||
@@ -167,10 +167,10 @@ ava_list_value ava_list_proj_interleave(const ava_list_value*restrict lists,
   /* All inputs are demuxes to the same delegate, with offset/stride pairs
    * compatible with this interleaving.
    */
-  return DEMUX_LIST_C(lists[0])->delegate;
+  return ava_list_value_to_value(DEMUX_LIST_C(lists[0])->delegate);
 
   project:
-  ret.v = &ava_list_proj_interleave_list_impl;
+  ret.attr = (const ava_attribute*)&ava_list_proj_interleave_list_impl;
   ret.INTERLEAVE_LISTS = ava_clone(lists, sizeof(ava_list_value) * num_lists);
   ret.INTERLEAVE_NLISTS = num_lists;
   return ret;

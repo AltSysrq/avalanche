@@ -26,14 +26,14 @@
 
 defsuite(list_proj);
 
-static ava_list_value range(unsigned low, unsigned high) {
+static ava_value range(unsigned low, unsigned high) {
   unsigned i;
   ava_value accum = ava_empty_list;
 
   for (i = low; i < high; ++i)
     accum = ava_list_append(accum, ava_value_of_integer(i));
 
-  return ava_list_value_of(accum);
+  return accum;
 }
 
 static void assert_looks_like(const char* expected, ava_value actual) {
@@ -41,29 +41,24 @@ static void assert_looks_like(const char* expected, ava_value actual) {
                      ava_to_string(actual)));
 }
 
-static size_t list_weight(ava_list_value list) {
-  return ava_value_weight(ava_list_value_to_value(list));
-}
-
 deftest(basic_interleave) {
-  ava_list_value input[3] = { range(0, 3), range(3, 6), range(6, 9) };
-  ava_value result = ava_list_value_to_value(
-    ava_list_proj_interleave(input, 3));
+  ava_value input[3] = { range(0, 3), range(3, 6), range(6, 9) };
+  ava_value result = ava_list_proj_interleave(input, 3);
 
   ck_assert_int_eq(9, ava_list_length(result));
-  ck_assert_int_eq(3 * list_weight(input[0]), ava_value_weight(result));
+  ck_assert_int_eq(3 * ava_value_weight(input[0]), ava_value_weight(result));
   assert_looks_like("0 3 6 1 4 7 2 5 8", result);
 }
 
 deftest(singlular_interleave) {
-  ava_list_value input = range(0, 3);
-  ava_list_value result = ava_list_proj_interleave(&input, 1);
+  ava_value input = range(0, 3);
+  ava_value result = ava_list_proj_interleave(&input, 1);
 
   ck_assert_int_eq(0, memcmp(&input, &result, sizeof(input)));
 }
 
 deftest(basic_demux) {
-  ava_value input = ava_list_value_to_value(range(0, 5));
+  ava_value input = range(0, 5);
   ava_value result[3] = {
     ava_list_proj_demux(input, 0, 3),
     ava_list_proj_demux(input, 1, 3),
@@ -82,7 +77,7 @@ deftest(basic_demux) {
 }
 
 deftest(noop_demux) {
-  ava_value input = ava_list_value_to_value(range(0, 5));
+  ava_value input = range(0, 5);
   ava_value result = ava_list_proj_demux(input, 0, 1);
 
   ck_assert_int_eq(0, memcmp(&input, &result, sizeof(input)));
@@ -94,62 +89,57 @@ deftest(empty_demux) {
 }
 
 deftest(interleave_inverts_demux) {
-  ava_value input = ava_list_value_to_value(range(0, 6));
-  ava_list_value demuxed[3] = {
-    ava_list_value_of(ava_list_proj_demux(input, 0, 3)),
-    ava_list_value_of(ava_list_proj_demux(input, 1, 3)),
-    ava_list_value_of(ava_list_proj_demux(input, 2, 3)),
+  ava_value input = range(0, 6);
+  ava_value demuxed[3] = {
+    ava_list_proj_demux(input, 0, 3),
+    ava_list_proj_demux(input, 1, 3),
+    ava_list_proj_demux(input, 2, 3),
   };
-  ava_value result = ava_list_value_to_value(
-    ava_list_proj_interleave(demuxed, 3));
+  ava_value result = ava_list_proj_interleave(demuxed, 3);
 
   ck_assert_int_eq(0, memcmp(&input, &result, sizeof(input)));
 }
 
 deftest(interleave_doesnt_invert_misordered_demux) {
-  ava_value input = ava_list_value_to_value(range(0, 6));
-  ava_list_value demuxed[3] = {
-    ava_list_value_of(ava_list_proj_demux(input, 0, 3)),
-    ava_list_value_of(ava_list_proj_demux(input, 2, 3)),
-    ava_list_value_of(ava_list_proj_demux(input, 1, 3)),
+  ava_value input = range(0, 6);
+  ava_value demuxed[3] = {
+    ava_list_proj_demux(input, 0, 3),
+    ava_list_proj_demux(input, 2, 3),
+    ava_list_proj_demux(input, 1, 3),
   };
-  ava_value result = ava_list_value_to_value(
-    ava_list_proj_interleave(demuxed, 3));
+  ava_value result = ava_list_proj_interleave(demuxed, 3);
 
   ck_assert_int_ne(0, memcmp(&input, &result, sizeof(input)));
 }
 
 deftest(interleave_doesnt_invert_misstrided_demux) {
-  ava_value input = ava_list_value_to_value(range(0, 6));
-  ava_list_value demuxed[3] = {
-    ava_list_value_of(ava_list_proj_demux(input, 0, 3)),
-    ava_list_value_of(ava_list_proj_demux(input, 2, 3)),
-    ava_list_value_of(ava_list_proj_demux(input, 1, 3)),
+  ava_value input = range(0, 6);
+  ava_value demuxed[3] = {
+    ava_list_proj_demux(input, 0, 3),
+    ava_list_proj_demux(input, 2, 3),
+    ava_list_proj_demux(input, 1, 3),
   };
-  ava_value result = ava_list_value_to_value(
-    ava_list_proj_interleave(demuxed, 2));
+  ava_value result = ava_list_proj_interleave(demuxed, 2);
 
   ck_assert_int_ne(0, memcmp(&input, &result, sizeof(input)));
 }
 
 deftest(interleave_doesnt_invert_mismatched_demux) {
-  ava_value input = ava_list_value_to_value(range(0, 6));
-  ava_value other_input = ava_list_value_to_value(range(10, 16));
-  ava_list_value demuxed[3] = {
-    ava_list_value_of(ava_list_proj_demux(input, 0, 3)),
-    ava_list_value_of(ava_list_proj_demux(input, 1, 3)),
-    ava_list_value_of(ava_list_proj_demux(other_input, 2, 3)),
+  ava_value input = range(0, 6);
+  ava_value other_input = range(10, 16);
+  ava_value demuxed[3] = {
+    ava_list_proj_demux(input, 0, 3),
+    ava_list_proj_demux(input, 1, 3),
+    ava_list_proj_demux(other_input, 2, 3),
   };
-  ava_value result = ava_list_value_to_value(
-    ava_list_proj_interleave(demuxed, 3));
+  ava_value result = ava_list_proj_interleave(demuxed, 3);
 
   ck_assert_int_ne(0, memcmp(&input, &result, sizeof(input)));
 }
 
 deftest(demux_inverts_interleave) {
-  ava_list_value input[3] = { range(0, 3), range(3, 6), range(6, 9) };
-  ava_value muxed = ava_list_value_to_value(
-    ava_list_proj_interleave(input, 3));
+  ava_value input[3] = { range(0, 3), range(3, 6), range(6, 9) };
+  ava_value muxed = ava_list_proj_interleave(input, 3);
   ava_value result[3] = {
     ava_list_proj_demux(muxed, 0, 3),
     ava_list_proj_demux(muxed, 1, 3),
@@ -160,9 +150,8 @@ deftest(demux_inverts_interleave) {
 }
 
 deftest(demux_doesnt_invert_misstrided_interleave) {
-  ava_list_value input[3] = { range(0, 3), range(3, 6), range(6, 9) };
-  ava_value muxed = ava_list_value_to_value(
-    ava_list_proj_interleave(input, 3));
+  ava_value input[3] = { range(0, 3), range(3, 6), range(6, 9) };
+  ava_value muxed = ava_list_proj_interleave(input, 3);
   ava_value result[3] = {
     ava_list_proj_demux(muxed, 0, 4),
     ava_list_proj_demux(muxed, 1, 4),
@@ -173,7 +162,7 @@ deftest(demux_doesnt_invert_misstrided_interleave) {
 }
 
 deftest(basic_group) {
-  ava_value input = ava_list_value_to_value(range(0, 8));
+  ava_value input = range(0, 8);
   ava_value result = ava_list_proj_group(input, 3);
 
   ck_assert_int_eq(3, ava_list_length(result));
@@ -182,7 +171,7 @@ deftest(basic_group) {
 }
 
 deftest(group_caches_members) {
-  ava_value input = ava_list_value_to_value(range(0, 8));
+  ava_value input = range(0, 8);
   ava_value result = ava_list_proj_group(input, 3);
   ava_value r0 = ava_list_index(result, 0);
   ava_value r1 = ava_list_index(result, 0);
@@ -204,7 +193,7 @@ deftest(basic_flatten) {
 }
 
 deftest(flatten_inverts_group) {
-  ava_value input = ava_list_value_to_value(range(0, 10));
+  ava_value input = range(0, 10);
   ava_value grouped = ava_list_proj_group(input, 4);
   ava_value result = ava_list_proj_flatten(grouped);
 
