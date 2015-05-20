@@ -62,7 +62,9 @@ deftest(normal_tokens_parsed_as_list_items) {
   do {                                                  \
     ava_exception_handler handler;                      \
     ava_try (handler) {                                 \
-      expr;                                             \
+      /* Need to do something with expr so it is not */ \
+      /* optimised away */                              \
+      ck_assert_ptr_ne(NULL, (expr).attr);              \
       ck_abort_msg("no exception thrown");              \
     } ava_catch (handler, ava_format_exception) {       \
       /* ok */                                          \
