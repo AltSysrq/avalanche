@@ -35,14 +35,16 @@ static ava_value list_of_cstring(const char* str) {
 
 deftest(empty_string_converted_to_empty_list) {
   ava_value list = list_of_cstring("");
+  ava_value empty = ava_empty_list();
 
-  ck_assert_int_eq(0, memcmp(&ava_empty_list, &list, sizeof(list)));
+  ck_assert_int_eq(0, memcmp(&empty, &list, sizeof(list)));
 }
 
 deftest(whitespace_string_converted_to_empty_list) {
   ava_value list = list_of_cstring("  \t\r\n\t");
+  ava_value empty = ava_empty_list();
 
-  ck_assert_int_eq(0, memcmp(&ava_empty_list, &list, sizeof(list)));
+  ck_assert_int_eq(0, memcmp(&empty, &list, sizeof(list)));
 }
 
 deftest(normal_tokens_parsed_as_list_items) {
@@ -64,7 +66,7 @@ deftest(normal_tokens_parsed_as_list_items) {
     ava_try (handler) {                                 \
       /* Need to do something with expr so it is not */ \
       /* optimised away */                              \
-      ck_assert_ptr_ne(NULL, (expr).attr);              \
+      ck_assert_ptr_ne(NULL, ava_value_attr(expr));     \
       ck_abort_msg("no exception thrown");              \
     } ava_catch (handler, ava_format_exception) {       \
       /* ok */                                          \

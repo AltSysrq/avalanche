@@ -197,7 +197,7 @@ static ava_value ava_array_list_list_slice(ava_value list,
   assert(end <= ava_value_ulong(list));
 
   if (begin == end)
-    return ava_empty_list;
+    return ava_empty_list();
 
   if (0 == begin && end * 2 >= al->capacity)
     return ava_value_with_ulong(al, end);

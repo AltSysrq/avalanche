@@ -25,6 +25,14 @@
 
 /******************** VALUE AND TYPE SYSTEM ********************/
 
+#if (defined(__GNUC__) && (__GNUC__ > 4 ||                           \
+                           __GNUC__ == 4 && __GNUC_MINOR__ >= 7)) || \
+  defined(__clang__)
+#define AVA_VECTOR_VALUE 1
+#else
+#define AVA_VECTOR_VALUE 0
+#endif
+
 /**
  * Avalanche's "everything is a string" type system, as in later Tcl versions,
  * is merely an illusion. In reality, higher-level representations of values
@@ -77,7 +85,11 @@
  * (and usually do) define themselves to produce _normalised_ values, in which
  * case this does not apply. (Eg, "0x0a"+"0" produces "10", not "0x0a".)
  */
+#if AVA_VECTOR_VALUE
+typedef unsigned long long ava_value __attribute__((__vector_size__(16)));
+#else
 typedef struct ava_value_s ava_value;
+#endif
 
 /**
  * A single representation of a value.
@@ -131,17 +143,16 @@ struct ava_attribute_s {
   const ava_attribute*restrict next;
 };
 
+#if AVA_VECTOR_VALUE
+#define AVA_VALUE_INIT(a,b) { (ava_ulong)(a), (ava_ulong)(b) }
+#define AVA_VALUE_SUB(a,n) ((a)[n])
+#else /* ! AVA_VECTOR_VALUE */
 struct ava_value_s {
-  /**
-   * The dynamic type and attributes of this value.
-   */
-  const ava_attribute*restrict attr;
-  /**
-   * The representation of this value, as controlled by the type. Some of the
-   * representation may be stored in attributes.
-   */
-  ava_datum r1;
+  ava_ulong v[2];
 };
+#define AVA_VALUE_INIT(a,b) {{ (ava_ulong)(a), (ava_ulong)(b) }}
+#define AVA_VALUE_SUB(a,n) ((a).v[n])
+#endif /* AVA_VECTOR_VALUE */
 
 /**
  * Converts an ava_string to an ava_datum.
@@ -168,8 +179,7 @@ static inline ava_string ava_string_of_datum(ava_datum datum) {
 static inline ava_value ava_value_with_str(
   const void* attr, ava_string str
 ) {
-  return (ava_value) { .attr = attr,
-                       .r1 = ava_string_to_datum(str) };
+  return (ava_value) AVA_VALUE_INIT(attr, str.ascii9);
 }
 
 /**
@@ -178,7 +188,7 @@ static inline ava_value ava_value_with_str(
 static inline ava_value ava_value_with_ptr(
   const void* attr, const void* ptr
 ) {
-  return (ava_value) { .attr = attr, .r1 = { .ptr = ptr } };
+  return (ava_value) AVA_VALUE_INIT(attr, ptr);
 }
 
 /**
@@ -187,7 +197,7 @@ static inline ava_value ava_value_with_ptr(
 static inline ava_value ava_value_with_slong(
   const void* attr, ava_slong sl
 ) {
-  return (ava_value) { .attr = attr, .r1 = { .slong = sl } };
+  return (ava_value) AVA_VALUE_INIT(attr, sl);
 }
 
 /**
@@ -199,35 +209,35 @@ static inline ava_value ava_value_with_slong(
 static inline ava_value ava_value_with_ulong(
   const void* attr, ava_ulong ul
 ) {
-  return (ava_value) { .attr = attr, .r1 = { .ulong = ul } };
+  return (ava_value) AVA_VALUE_INIT(attr, ul);
 }
 
 /**
  * Returns the root attribute on the given ava_value.
  */
 static inline const void* ava_value_attr(ava_value v) {
-  return v.attr;
+  return (const void*)AVA_VALUE_SUB(v, 0);
 }
 
 /**
  * Returns the datum of the given ava_value interpreted as a string.
  */
 static inline ava_string ava_value_str(ava_value v) {
-  return ava_string_of_datum(v.r1);
+  return (ava_string) { .ascii9 = AVA_VALUE_SUB(v, 1) };
 }
 
 /**
  * Returns the datum of the given ava_value interpreted as a pointer.
  */
 static inline const void* ava_value_ptr(ava_value v) {
-  return v.r1.ptr;
+  return (const void*)AVA_VALUE_SUB(v, 1);
 }
 
 /**
  * Returns the datum of the given ava_value interpreted as a signed long.
  */
 static inline ava_slong ava_value_slong(ava_value v) {
-  return v.r1.slong;
+  return AVA_VALUE_SUB(v, 1);
 }
 
 /**
@@ -237,7 +247,7 @@ static inline ava_slong ava_value_slong(ava_value v) {
  * around separately.
  */
 static inline ava_ulong ava_value_ulong(ava_value v) {
-  return v.r1.ulong;
+  return AVA_VALUE_SUB(v, 1);
 }
 
 /**

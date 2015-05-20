@@ -317,7 +317,7 @@ ava_value ava_list_proj_flatten(ava_value list) {
 
   n = ava_list_length(list);
   if (0 == n)
-    return ava_empty_list;
+    return ava_empty_list();
 
   accum = ava_list_index(list, 0);
 

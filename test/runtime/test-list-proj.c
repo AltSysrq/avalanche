@@ -28,7 +28,7 @@ defsuite(list_proj);
 
 static ava_value range(unsigned low, unsigned high) {
   unsigned i;
-  ava_value accum = ava_empty_list;
+  ava_value accum = ava_empty_list();
 
   for (i = low; i < high; ++i)
     accum = ava_list_append(accum, ava_value_of_integer(i));
@@ -84,7 +84,7 @@ deftest(noop_demux) {
 }
 
 deftest(empty_demux) {
-  ava_value result = ava_list_proj_demux(ava_empty_list, 0, 2);
+  ava_value result = ava_list_proj_demux(ava_empty_list(), 0, 2);
   ck_assert_int_eq(0, ava_list_length(result));
 }
 
@@ -201,7 +201,8 @@ deftest(flatten_inverts_group) {
 }
 
 deftest(empty_flatten) {
-  ava_value result = ava_list_proj_flatten(ava_empty_list);
+  ava_value result = ava_list_proj_flatten(ava_empty_list());
+  ava_value empty = ava_empty_list();
 
-  ck_assert_int_eq(0, memcmp(&ava_empty_list, &result, sizeof(result)));
+  ck_assert_int_eq(0, memcmp(&empty, &result, sizeof(result)));
 }

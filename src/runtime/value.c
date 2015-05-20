@@ -47,7 +47,7 @@ const void* ava_get_attribute(ava_value value,
                               const ava_attribute_tag*restrict tag) {
   const ava_attribute*restrict attr;
 
-  for (attr = value.attr; attr; attr = attr->next)
+  for (attr = ava_value_attr(value); attr; attr = attr->next)
     if (tag == attr->tag)
       return attr;
 
