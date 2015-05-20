@@ -16,6 +16,9 @@
 #ifndef AVA_RUNTIME__ESBA_H_
 #define AVA_RUNTIME__ESBA_H_
 
+#include "avalanche/defs.h"
+#include "avalanche/value.h"
+
 /**
  * @file
  *
@@ -32,8 +35,15 @@
 
 /**
  * Opaque structure which contains esba data.
+ *
+ * An ava_esba_handle is an ava_attribute tagged with ava_esba_handle_tag.
  */
 typedef struct ava_esba_handle_s ava_esba_handle;
+
+/**
+ * Tag attached to ava_esba_handles.
+ */
+extern const ava_attribute_tag ava_esba_handle_tag;
 
 /**
  * A "fat pointer" to an ESBA.
@@ -42,13 +52,13 @@ typedef struct {
   /**
    * The handle on the ESBA.
    *
-   * In an ava_value, conventionally in r1.ptr.
+   * In an ava_value, used as an attribute.
    */
   ava_esba_handle* handle;
   /**
    * The length of the ESBA.
    *
-   * In an ava_value, conventionally in r2.ulong.
+   * In an ava_value, conventionally in the value ulong.
    *
    * Don't access this directly; use ava_esba_length() instead, as the
    * semantics of this value are not guaranteed.
@@ -68,13 +78,13 @@ typedef struct {
 /**
  * Function to "weigh" elements in an ESBA.
  *
- * @param userdata Any userdata associated with the array in use.
+ * @param next_attr The value of "next_attr" passed into ava_esba_new().
  * @param elements The elements to weigh.
  * @param num_elements The number of elements pointed to by elements.
  * @return The total weight of the elements.
  */
 typedef size_t (*ava_esba_weight_function)(
-  const void*restrict userdata,
+  const void*restrict next_attr,
   const void*restrict elements,
   size_t num_elements);
 
@@ -89,15 +99,16 @@ typedef size_t (*ava_esba_weight_function)(
  * @param allocator Function compatible with ava_alloc_atomic() to use to
  * allocate the array and any arrays derived from it. Callers must provide
  * ava_alloc() if their elements may have pointers within.
- * @param userdata Arbitrary pointer to associate with the array. This is not
- * stored in memory allocated by allocator.
+ * @param next_attr The value of the "next" field on the attribute field of the
+ * handle. It need not be an actual ava_attribute unless the handle is used in
+ * a context that would require it to be.
  * @return The new, empty array.
  */
 ava_esba ava_esba_new(size_t element_size,
                       size_t initial_capacity,
                       ava_esba_weight_function weight_function,
                       void* (*allocator)(size_t),
-                      void* userdata);
+                      const void*restrict next_attr);
 
 /**
  * Starts a read transaction against the given ESBA.
@@ -245,14 +256,11 @@ static inline size_t ava_esba_length(ava_esba esba) {
 size_t ava_esba_weight(ava_esba esba);
 
 /**
- * Returns the userdata that was associated with the given esba when it was
+ * Returns the next_attr that was associated with the given esba when it was
  * created.
  */
-static inline void* ava_esba_userdata(ava_esba esba) {
-  /* XXX Evil cast so that we don't need a relocated function call just to
-   * dereference a pointer.
-   */
-  return *(void*const restrict*)esba.handle;
+static inline const void* ava_esba_next_attr(ava_esba esba) {
+  return ((const ava_attribute*restrict)esba.handle)->next;
 }
 
 #endif /* AVA_RUNTIME__ESBA_H_ */

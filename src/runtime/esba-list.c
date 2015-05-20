@@ -32,8 +32,12 @@
 
 #include "esba-list-swizzle.inc"
 
+static const ava_attribute_tag ava_esba_list_header_tag = {
+  .name = "esba-list-header"
+};
+
 /**
- * Structure used as userdata on an ESBA.
+ * Structure used as next_attr on an ESBA.
  *
  * To optimise for the common case of one or more ava_value fields being
  * monomorphic, we store a template at the head of the list (which contains the
@@ -41,6 +45,7 @@
  * template, that field is not actually added to the ESBA.
  */
 typedef struct {
+  ava_attribute header;
   /**
    * An intex into the arrays defined in esba-list-swizzle.inc, indicating the
    * format of this list.
@@ -75,7 +80,7 @@ static ava_esba ava_esba_list_concat_esbas(
 static ava_esba ava_esba_list_make_compatible(
   ava_esba esba, unsigned new_format);
 static size_t ava_esba_list_weight_function(
-  const void*restrict userdata, const void*restrict data, size_t nvalues);
+  const void*restrict next_attr, const void*restrict data, size_t nvalues);
 
 static size_t ava_esba_list_value_value_weight(ava_value);
 
@@ -109,15 +114,14 @@ static const ava_list_trait ava_esba_list_list_impl = {
 };
 
 static inline ava_esba to_esba(ava_value val) {
-  return (ava_esba) { .handle = (void*)val.r1.ptr, .length = val.r2.ulong };
+  return (ava_esba) {
+    .handle = (void*)ava_value_attr(val),
+    .length = ava_value_ulong(val)
+  };
 }
 
 static inline ava_value to_value(ava_esba esba) {
-  return (ava_value) {
-    .attr = (const ava_attribute*)&ava_esba_list_list_impl,
-    .r1 = { .ptr = esba.handle },
-    .r2 = { .ulong = esba.length },
-  };
+  return ava_value_with_ulong(esba.handle, esba.length);
 }
 
 static unsigned ava_esba_list_polymorphism(ava_value template, ava_value new) {
@@ -133,13 +137,13 @@ static unsigned ava_esba_list_polymorphism(ava_value template, ava_value new) {
 }
 
 static const ava_esba_list_header* ava_esba_list_header_of(ava_esba esba) {
-  return ava_esba_userdata(esba);
+  return ava_esba_next_attr(esba);
 }
 
-static size_t ava_esba_list_weight_function(const void*restrict userdata,
+static size_t ava_esba_list_weight_function(const void*restrict next_attr,
                                             const void*restrict vvalues,
                                             size_t nvalues) {
-  const ava_esba_list_header*restrict header = userdata;
+  const ava_esba_list_header*restrict header = next_attr;
   const pointer*restrict values = vvalues;
   ava_value value;
   size_t sum = 0;
@@ -160,6 +164,8 @@ static ava_esba ava_esba_list_create_esba(
   unsigned format, ava_value template, size_t capacity
 ) {
   ava_esba_list_header* header = AVA_NEW(ava_esba_list_header);
+  header->header.tag = &ava_esba_list_header_tag;
+  header->header.next = (const ava_attribute*)&ava_esba_list_list_impl;
   header->format = format;
   header->template = template;
 
@@ -198,12 +204,11 @@ ava_value ava_esba_list_copy_of(
 static unsigned ava_esba_list_accum_format(
   ava_value list, size_t begin, size_t end, ava_value template
 ) {
+  const ava_esba_list_header*restrict header;
   unsigned format;
   size_t i;
 
-  if (list.attr == (const ava_attribute*)&ava_esba_list_list_impl) {
-    const ava_esba_list_header*restrict header =
-      ava_esba_list_header_of(to_esba(list));
+  if ((header = ava_get_attribute(list, &ava_esba_list_header_tag))) {
     return header->format |
       ava_esba_list_polymorphism(template, header->template);
   }
@@ -224,7 +229,7 @@ static ava_esba ava_esba_list_append_sublist(
   size_t i;
   pointer*restrict dst;
 
-  if (list.attr == (const ava_attribute*)&ava_esba_list_list_impl)
+  if (ava_get_attribute(list, &ava_esba_list_header_tag))
     return ava_esba_list_concat_esbas(esba, to_esba(list), begin, end);
 
   dst = ava_esba_start_append(&esba, end - begin);

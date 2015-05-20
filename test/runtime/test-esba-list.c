@@ -97,6 +97,24 @@ deftest(polymorphic_value_and_type_append) {
   assert_values_equal(string, ava_list_index(list, 1));
 }
 
+/* This is a separate test because it exposed a bug in the past; it no longer
+ * tests anything specifically, other than those paths.
+ */
+deftest(polymorphic_append_2) {
+  ava_value fourty_two = ava_value_of_integer(42);
+  ava_value string = ava_value_of_string(ava_string_of_cstring("hello world"));
+  ava_value list = ava_esba_list_of_raw(&fourty_two, 1);
+  list = ava_list_append(list, string);
+
+  ava_value list_value = list;
+  list = ava_list_append(list, list_value);
+
+  ck_assert_int_eq(3, ava_list_length(list));
+  assert_values_equal(fourty_two, ava_list_index(list, 0));
+  assert_values_equal(string, ava_list_index(list, 1));
+  assert_values_equal(list_value, ava_list_index(list, 2));
+}
+
 deftest(fully_polymorphic_append) {
   ava_value fourty_two = ava_value_of_integer(42);
   ava_value string = ava_value_of_string(ava_string_of_cstring("hello world"));
@@ -104,6 +122,7 @@ deftest(fully_polymorphic_append) {
   list = ava_list_append(list, string);
 
   ava_value list_value = list;
+  list_value.r2.ulong = 42;
   list = ava_list_append(list, list_value);
 
   ck_assert_int_eq(3, ava_list_length(list));
