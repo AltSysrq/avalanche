@@ -194,23 +194,23 @@ deftest(basic_flatten) {
     ava_value_of_cstring(""),
   };
   ava_value input = ava_list_of_values(values, 3);
-  ava_value result = ava_list_value_to_value(
-    ava_list_proj_flatten(ava_list_value_of(input)));
+  ava_value result = ava_list_proj_flatten(input);
 
   ck_assert_int_eq(6, ava_list_length(result));
   assert_looks_like("hello world 1 2 3 4", result);
 }
 
 deftest(flatten_inverts_group) {
-  ava_list_value input = range(0, 10);
-  ava_list_value grouped = ava_list_proj_group(input, 4);
-  ava_list_value result = ava_list_proj_flatten(grouped);
+  ava_value input = ava_list_value_to_value(range(0, 10));
+  ava_value grouped = ava_list_value_to_value(
+    ava_list_proj_group(ava_list_value_of(input), 4));
+  ava_value result = ava_list_proj_flatten(grouped);
 
   ck_assert_int_eq(0, memcmp(&input, &result, sizeof(input)));
 }
 
 deftest(empty_flatten) {
-  ava_list_value result = ava_list_proj_flatten(ava_list_value_of(ava_empty_list));
+  ava_value result = ava_list_proj_flatten(ava_empty_list);
 
   ck_assert_int_eq(0, memcmp(&ava_empty_list, &result, sizeof(result)));
 }

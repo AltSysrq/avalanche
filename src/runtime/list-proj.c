@@ -315,21 +315,21 @@ static ava_value ava_list_proj_group_list_index(
   return ava_list_value_to_value(*ret);
 }
 
-ava_list_value ava_list_proj_flatten(ava_list_value list) {
+ava_value ava_list_proj_flatten(ava_value list) {
   ava_value accum;
   size_t i, n;
 
-  if (&ava_list_proj_group_list_impl == list.v)
-    return GROUP_LIST_C(list)->delegate;
+  if ((const ava_attribute*)&ava_list_proj_group_list_impl == list.attr)
+    return ava_list_value_to_value(GROUP_LIST_C(list)->delegate);
 
-  n = list.v->length(ava_list_value_to_value(list));
+  n = ava_list_length(list);
   if (0 == n)
-    return ava_list_value_of(ava_empty_list);
+    return ava_empty_list;
 
-  accum = list.v->index(ava_list_value_to_value(list), 0);
+  accum = ava_list_index(list, 0);
 
   for (i = 1; i < n; ++i)
-    accum = ava_list_concat(accum, list.v->index(ava_list_value_to_value(list), i));
+    accum = ava_list_concat(accum, ava_list_index(list, i));
 
-  return ava_list_value_of(accum);
+  return accum;
 }

@@ -105,6 +105,6 @@ ava_list_value ava_list_proj_group(ava_list_value list, size_t group_sz);
  * @param list The list to flatten.
  * @return The flattened list.
  */
-ava_list_value ava_list_proj_flatten(ava_list_value list);
+ava_value ava_list_proj_flatten(ava_value list);
 
 #endif /* AVA_RUNTIME_LIST_PROJ_H_ */
