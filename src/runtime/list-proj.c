@@ -30,8 +30,6 @@
 #include "avalanche/list.h"
 #include "avalanche/list-proj.h"
 
-#define DEMUX_LIST r1.ptr
-#define DEMUX_LIST_C(v) ((const ava_list_proj_demux_list*restrict)(v).DEMUX_LIST)
 #define GROUP_LIST r1.ptr
 #define GROUP_LIST_C(v) ((ava_list_proj_group_list*restrict)(v).GROUP_LIST)
 
@@ -151,16 +149,18 @@ ava_value ava_list_proj_interleave(const ava_value*restrict lists,
     return lists[0];
 
   /* See if we can invert a demux */
+  const ava_list_proj_demux_list*restrict demux0 = ava_value_ptr(lists[0]);
   for (i = 0; i < num_lists; ++i) {
-    if ((const ava_attribute*)&ava_list_proj_demux_list_impl != lists[i].attr)
+    if (&ava_list_proj_demux_list_impl !=
+        ava_get_attribute(lists[i], &ava_list_trait_tag))
       goto project;
 
-    if (i != DEMUX_LIST_C(lists[i])->offset ||
-        num_lists != DEMUX_LIST_C(lists[i])->stride)
+    const ava_list_proj_demux_list*restrict demux = ava_value_ptr(lists[i]);
+
+    if (i != demux->offset || num_lists != demux->stride)
       goto project;
 
-    if (memcmp(&DEMUX_LIST_C(lists[0])->delegate,
-               &DEMUX_LIST_C(lists[i])->delegate,
+    if (memcmp(&demux->delegate, &demux0->delegate,
                sizeof(ava_fat_list_value)))
       goto project;
   }
@@ -168,7 +168,7 @@ ava_value ava_list_proj_interleave(const ava_value*restrict lists,
   /* All inputs are demuxes to the same delegate, with offset/stride pairs
    * compatible with this interleaving.
    */
-  return DEMUX_LIST_C(lists[0])->delegate.value;
+  return demux0->delegate.value;
 
   project:;
   ava_list_proj_interleave_list* dst = ava_alloc(
@@ -213,7 +213,6 @@ static ava_value ava_list_proj_interleave_list_index(
 ava_value ava_list_proj_demux(ava_value delegate,
                               size_t offset, size_t stride) {
   ava_list_proj_demux_list*restrict this;
-  ava_value ret;
 
   assert(offset < stride);
 
@@ -232,31 +231,26 @@ ava_value ava_list_proj_demux(ava_value delegate,
   this->offset = offset;
   this->stride = stride;
 
-  ret.attr = (const ava_attribute*)&ava_list_proj_demux_list_impl;
-  ret.DEMUX_LIST = this;
-  ret.r2.ulong = 0;
-  return ret;
+  return ava_value_with_ptr(&ava_list_proj_demux_list_impl, this);
 }
 
 static size_t ava_list_proj_demux_value_value_weight(ava_value val) {
-  const ava_fat_list_value*restrict delegate = &DEMUX_LIST_C(val)->delegate;
-  return ava_value_weight(delegate->value);
+  const ava_list_proj_demux_list*restrict this = ava_value_ptr(val);
+  return ava_value_weight(this->delegate.value);
 }
 
 static size_t ava_list_proj_demux_list_length(ava_value list) {
-  const ava_fat_list_value*restrict delegate = &DEMUX_LIST_C(list)->delegate;
-  return (delegate->v->length(delegate->value) -
-          DEMUX_LIST_C(list)->offset +
-          DEMUX_LIST_C(list)->stride-1) / DEMUX_LIST_C(list)->stride;
+  const ava_list_proj_demux_list*restrict this = ava_value_ptr(list);
+  return (this->delegate.v->length(this->delegate.value) -
+          this->offset + this->stride-1) / this->stride;
 }
 
 static ava_value ava_list_proj_demux_list_index(
   ava_value list, size_t ix
 ) {
-  const ava_fat_list_value*restrict delegate = &DEMUX_LIST_C(list)->delegate;
-  return delegate->v->index(delegate->value,
-                            DEMUX_LIST_C(list)->offset +
-                            ix * DEMUX_LIST_C(list)->stride);
+  const ava_list_proj_demux_list*restrict this = ava_value_ptr(list);
+  return this->delegate.v->index(this->delegate.value,
+                                 this->offset + ix * this->stride);
 }
 
 ava_value ava_list_proj_group(ava_value delegate, size_t group_size) {
