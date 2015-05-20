@@ -88,7 +88,14 @@ typedef union {
   ava_ulong             ulong;
   ava_slong             slong;
   const void*restrict   ptr;
-  ava_string            str;
+  /* There is no field
+   *   ava_string       str;
+   * because, on the System V AMD64 ABI, this (nesting unions) prevents the
+   * value from being passed/returned in registers during function calls.
+   *
+   * Use ava_string_to_datum() and ava_string_of_datum() to store strings
+   * within an ava_datumj
+   */
 } ava_datum;
 
 /**
@@ -137,12 +144,32 @@ struct ava_value_s {
 };
 
 /**
+ * Converts an ava_string to an ava_datum.
+ *
+ * This can be reversed by ava_string_of_datum().
+ */
+static inline ava_datum ava_string_to_datum(ava_string str) {
+  return (ava_datum) { .ulong = str.ascii9 };
+}
+
+/**
+ * Converts an ava_datum to an ava_string.
+ *
+ * (This does not mean stringification; it merely inverts
+ * ava_string_to_datum().)
+ */
+static inline ava_string ava_string_of_datum(ava_datum datum) {
+  return (ava_string) { .ascii9 = datum.ulong };
+}
+
+/**
  * Constructs a value using the given string as its datum.
  */
 static inline ava_value ava_value_with_str(
   const void* attr, ava_string str
 ) {
-  return (ava_value) { .attr = attr, .r1 = { .str = str } };
+  return (ava_value) { .attr = attr,
+                       .r1 = ava_string_to_datum(str) };
 }
 
 /**
@@ -186,7 +213,7 @@ static inline const void* ava_value_attr(ava_value v) {
  * Returns the datum of the given ava_value interpreted as a string.
  */
 static inline ava_string ava_value_str(ava_value v) {
-  return v.r1.str;
+  return ava_string_of_datum(v.r1);
 }
 
 /**

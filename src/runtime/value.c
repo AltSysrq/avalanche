@@ -96,13 +96,13 @@ ava_string ava_string_of_chunk_iterator(ava_value value) {
 }
 
 ava_datum ava_singleton_string_chunk_iterator(ava_value value) {
-  return (ava_datum) { .str = ava_to_string(value) };
+  return ava_string_to_datum(ava_to_string(value));
 }
 
 ava_string ava_iterate_singleton_string_chunk(ava_datum*restrict it,
                                               ava_value value) {
-  ava_string ret = it->str;
-  it->str = AVA_ABSENT_STRING;
+  ava_string ret = ava_string_of_datum(*it);
+  *it = ava_string_to_datum(AVA_ABSENT_STRING);
   return ret;
 }
 
