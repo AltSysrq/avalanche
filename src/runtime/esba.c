@@ -585,8 +585,11 @@ static ava_esba_handle_value ava_esba_handle_read_consistent(
   val = ava_esba_handle_read(handle);
 
   while (AVA_UNLIKELY(!ava_esba_handle_is_consistent(val))) {
-#if defined(__GNUC__) && defined(__SSE2__)
+#if defined(__GNUC__) && defined(__SSE2__) && !defined(__clang__)
     __builtin_ia32_pause();
+#elif defined(__SSE2__) && defined(__clang__)
+    /* Strangely, clang lacks the above builtin */
+    asm volatile ("pause" : );
 #endif
     val = ava_esba_handle_read(handle);
   }
