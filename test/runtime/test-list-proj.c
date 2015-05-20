@@ -168,19 +168,17 @@ deftest(demux_doesnt_invert_misstrided_interleave) {
 }
 
 deftest(basic_group) {
-  ava_list_value input = range(0, 8);
-  ava_value result = ava_list_value_to_value(
-    ava_list_proj_group(input, 3));
+  ava_value input = ava_list_value_to_value(range(0, 8));
+  ava_value result = ava_list_proj_group(input, 3);
 
   ck_assert_int_eq(3, ava_list_length(result));
-  ck_assert_int_eq(list_weight(input), ava_value_weight(result));
+  ck_assert_int_eq(ava_value_weight(input), ava_value_weight(result));
   assert_looks_like("\"0 1 2\" \"3 4 5\" \"6 7\"", result);
 }
 
 deftest(group_caches_members) {
-  ava_list_value input = range(0, 8);
-  ava_value result = ava_list_value_to_value(
-    ava_list_proj_group(input, 3));
+  ava_value input = ava_list_value_to_value(range(0, 8));
+  ava_value result = ava_list_proj_group(input, 3);
   ava_value r0 = ava_list_index(result, 0);
   ava_value r1 = ava_list_index(result, 0);
 
@@ -202,8 +200,7 @@ deftest(basic_flatten) {
 
 deftest(flatten_inverts_group) {
   ava_value input = ava_list_value_to_value(range(0, 10));
-  ava_value grouped = ava_list_value_to_value(
-    ava_list_proj_group(ava_list_value_of(input), 4));
+  ava_value grouped = ava_list_proj_group(input, 4);
   ava_value result = ava_list_proj_flatten(grouped);
 
   ck_assert_int_eq(0, memcmp(&input, &result, sizeof(input)));

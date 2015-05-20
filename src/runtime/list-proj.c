@@ -255,20 +255,19 @@ static ava_value ava_list_proj_demux_list_index(
                             ix * DEMUX_LIST_C(list)->stride);
 }
 
-ava_list_value ava_list_proj_group(ava_list_value delegate, size_t group_size) {
+ava_value ava_list_proj_group(ava_value delegate, size_t group_size) {
   ava_list_proj_group_list* this;
   size_t num_groups =
-    (delegate.v->length(ava_list_value_to_value(delegate)) +
-     group_size-1) / group_size;
+    (ava_list_length(delegate) + group_size-1) / group_size;
 
   this = ava_alloc(sizeof(ava_list_proj_group_list) +
                    sizeof(AO_t) * num_groups);
-  this->delegate = delegate;
+  this->delegate = ava_list_value_of(delegate);
   this->group_size = group_size;
   this->num_groups = num_groups;
 
-  return (ava_list_value) {
-    .v = &ava_list_proj_group_list_impl,
+  return (ava_value) {
+    .attr = (const ava_attribute*)&ava_list_proj_group_list_impl,
     .r1 = { .ptr = this },
     .r2 = { .ulong = NULL }
   };

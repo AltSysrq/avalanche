@@ -89,7 +89,7 @@ ava_list_value ava_list_proj_demux(ava_list_value list,
  * @param group_sz The size of each group.
  * @return A list containing the elements of list grouped into sub-lists.
  */
-ava_list_value ava_list_proj_group(ava_list_value list, size_t group_sz);
+ava_value ava_list_proj_group(ava_value list, size_t group_sz);
 
 /**
  * Flattens a list.
