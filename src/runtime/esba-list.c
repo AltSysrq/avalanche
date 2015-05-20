@@ -126,10 +126,10 @@ static inline ava_value to_value(ava_esba esba) {
 
 static unsigned ava_esba_list_polymorphism(ava_value template, ava_value new) {
   unsigned ret = 0;
-  if (template.attr != new.attr)
+  if (ava_value_attr(template) != ava_value_attr(new))
     ret |= POLYMORPH_ATTR;
-  if (template.r1.ulong != new.r1.ulong)
-    ret |= POLYMORPH_R1;
+  if (ava_value_ulong(template) != ava_value_ulong(new))
+    ret |= POLYMORPH_ULONG;
 
   return ret;
 }

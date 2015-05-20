@@ -11,7 +11,7 @@ typedef void (*ava_esba_list_swizzle_up_f)(
 
 
 #define POLYMORPH_ATTR 1
-#define POLYMORPH_R1 2
+#define POLYMORPH_ULONG 2
 #define POLYMORPH_ALL (1|2)
 
 typedef struct {
@@ -28,8 +28,11 @@ static void ava_esba_list_swizzle_up_0(
   const ava_value*restrict template,
   const ava_esba_list_swizzled_0*restrict src
 ) {
-  dst->attr = template->attr;
-  dst->r1 = template->r1;
+  const ava_attribute*restrict attr;
+  ava_ulong ulong;
+  attr = ava_value_attr(*template);
+  ulong = ava_value_ulong(*template);
+  *dst = ava_value_with_ulong(attr, ulong);
 }
 
 typedef struct {
@@ -40,7 +43,7 @@ static void ava_esba_list_swizzle_down_1(
   ava_esba_list_swizzled_1*restrict dst,
   const ava_value*restrict src
 ) {
-  dst->attr = src->attr;
+  dst->attr = ava_value_attr(*src);
 }
 
 static void ava_esba_list_swizzle_up_1(
@@ -48,19 +51,22 @@ static void ava_esba_list_swizzle_up_1(
   const ava_value*restrict template,
   const ava_esba_list_swizzled_1*restrict src
 ) {
-  dst->attr = src->attr;
-  dst->r1 = template->r1;
+  const ava_attribute*restrict attr;
+  ava_ulong ulong;
+  attr = src->attr;
+  ulong = ava_value_ulong(*template);
+  *dst = ava_value_with_ulong(attr, ulong);
 }
 
 typedef struct {
-  ava_datum r1;
+  ava_ulong ulong;
 } ava_esba_list_swizzled_2;
 
 static void ava_esba_list_swizzle_down_2(
   ava_esba_list_swizzled_2*restrict dst,
   const ava_value*restrict src
 ) {
-  dst->r1 = src->r1;
+  dst->ulong = ava_value_ulong(*src);
 }
 
 static void ava_esba_list_swizzle_up_2(
@@ -68,21 +74,24 @@ static void ava_esba_list_swizzle_up_2(
   const ava_value*restrict template,
   const ava_esba_list_swizzled_2*restrict src
 ) {
-  dst->attr = template->attr;
-  dst->r1 = src->r1;
+  const ava_attribute*restrict attr;
+  ava_ulong ulong;
+  attr = ava_value_attr(*template);
+  ulong = src->ulong;
+  *dst = ava_value_with_ulong(attr, ulong);
 }
 
 typedef struct {
   const ava_attribute*restrict attr;
-  ava_datum r1;
+  ava_ulong ulong;
 } ava_esba_list_swizzled_3;
 
 static void ava_esba_list_swizzle_down_3(
   ava_esba_list_swizzled_3*restrict dst,
   const ava_value*restrict src
 ) {
-  dst->attr = src->attr;
-  dst->r1 = src->r1;
+  dst->attr = ava_value_attr(*src);
+  dst->ulong = ava_value_ulong(*src);
 }
 
 static void ava_esba_list_swizzle_up_3(
@@ -90,8 +99,11 @@ static void ava_esba_list_swizzle_up_3(
   const ava_value*restrict template,
   const ava_esba_list_swizzled_3*restrict src
 ) {
-  dst->attr = src->attr;
-  dst->r1 = src->r1;
+  const ava_attribute*restrict attr;
+  ava_ulong ulong;
+  attr = src->attr;
+  ulong = src->ulong;
+  *dst = ava_value_with_ulong(attr, ulong);
 }
 
 static const size_t ava_esba_list_element_size_pointers[4] = {
