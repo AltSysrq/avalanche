@@ -34,13 +34,17 @@
 
 #define AVA_ARRAY_LIST_MIN_CAPACITY 8
 
+static const ava_attribute_tag ava_array_list_data_tag = {
+  .name = "array-list-data"
+};
+
 /**
  * The body of an array list value.
  *
- * This is stored in r1.ptr. The length of the array is stored in r2.ulong.
- * Initially, array lists are allocated to be just big enough for their
- * contents, since many lists are constructed then never modified. Upon a
- * reallocation, the new list will have a capacity of
+ * This is stored as the first attribute on the value. The length of the array
+ * is stored in the value ulong. Initially, array lists are allocated to be
+ * just big enough for their contents, since many lists are constructed then
+ * never modified. Upon a reallocation, the new list will have a capacity of
  * AVA_ARRAY_LIST_MIN_CAPACITY or twice what is needed, whichever is larger.
  *
  * When an item is appended, we first check whether the length is less than the
@@ -54,6 +58,7 @@
  * already involves the necessary memory barrier.
  */
 typedef struct {
+  ava_attribute header;
   /**
    * The actual length of values.
    */
@@ -75,9 +80,6 @@ typedef struct {
    */
   ava_value values[];
 } ava_array_list;
-
-#define LIST r1.ptr
-#define LENGTH r2.ulong
 
 static ava_array_list* ava_array_list_of_array(
   const ava_value*restrict, size_t, size_t);
@@ -113,7 +115,7 @@ static const ava_list_trait ava_array_list_list_impl = {
 };
 
 unsigned ava_array_list_used(ava_value list) {
-  const ava_array_list*restrict al = list.LIST;
+  const ava_array_list*restrict al = ava_value_attr(list);
   return al->used;
 }
 
@@ -124,6 +126,8 @@ ava_value ava_array_list_copy_of(
                                  sizeof(ava_value) * (end - begin));
   size_t weight = 0, i;
 
+  al->header.tag = &ava_array_list_data_tag;
+  al->header.next = (const ava_attribute*)&ava_array_list_list_impl;
   al->capacity = end - begin;
   al->used = end - begin;
 
@@ -134,11 +138,7 @@ ava_value ava_array_list_copy_of(
 
   al->weight = weight + sizeof(ava_value) * (end - begin);
 
-  return (ava_value) {
-    .attr = (const ava_attribute*)&ava_array_list_list_impl,
-    .r1 = { .ptr = al },
-    .r2 = { .ulong = end - begin },
-  };
+  return ava_value_with_ulong(al, end - begin);
 }
 
 static ava_array_list* ava_array_list_of_array(
@@ -150,6 +150,8 @@ static ava_array_list* ava_array_list_of_array(
                                  sizeof(ava_value) * cap);
   size_t weight = 0, i;
 
+  al->header.tag = &ava_array_list_data_tag;
+  al->header.next = (const ava_attribute*)&ava_array_list_list_impl;
   al->capacity = cap;
   al->used = length;
 
@@ -168,43 +170,37 @@ ava_value ava_array_list_of_raw(
 ) {
   ava_array_list* al = ava_array_list_of_array(array, length, length);
 
-  return (ava_value) {
-    .attr = (const ava_attribute*)&ava_array_list_list_impl,
-    .r1 = { .ptr = al },
-    .r2 = { .ulong = length },
-  };
+  return ava_value_with_ulong(al, length);
 }
 
 static size_t ava_array_list_value_value_weight(ava_value list) {
-  const ava_array_list*restrict al = list.LIST;
+  const ava_array_list*restrict al = ava_value_attr(list);
   return al->weight;
 }
 
 static size_t ava_array_list_list_length(ava_value list) {
-  return list.LENGTH;
+  return ava_value_ulong(list);
 }
 
 static ava_value ava_array_list_list_index(ava_value list, size_t ix) {
-  const ava_array_list*restrict al = list.LIST;
+  const ava_array_list*restrict al = ava_value_attr(list);
 
-  assert(ix < list.LENGTH);
+  assert(ix < ava_value_ulong(list));
   return al->values[ix];
 }
 
 static ava_value ava_array_list_list_slice(ava_value list,
                                            size_t begin, size_t end) {
-  const ava_array_list*restrict al = list.LIST;
+  const ava_array_list*restrict al = ava_value_attr(list);
 
   assert(begin <= end);
-  assert(end <= list.LENGTH);
+  assert(end <= ava_value_ulong(list));
 
   if (begin == end)
     return ava_empty_list;
 
-  if (0 == begin && end * 2 >= al->capacity) {
-    list.LENGTH = end;
-    return list;
-  }
+  if (0 == begin && end * 2 >= al->capacity)
+    return ava_value_with_ulong(al, end);
 
   return ava_array_list_of_raw(al->values + begin, end - begin);
 }
@@ -215,74 +211,71 @@ static size_t ava_array_list_growing_capacity(size_t length) {
 }
 
 static ava_value ava_array_list_list_append(ava_value list, ava_value elt) {
-  ava_array_list*restrict al = (ava_array_list*restrict)list.LIST;
+  ava_array_list*restrict al = (ava_array_list*)ava_value_attr(list);
+  size_t length = ava_value_ulong(list);
 
-  if (list.LENGTH < al->capacity) {
+  if (ava_value_ulong(list) < al->capacity) {
     /* Try to append in-place */
-    if (AO_compare_and_swap(&al->used, list.LENGTH, list.LENGTH + 1)) {
+    if (AO_compare_and_swap(&al->used, length, length + 1)) {
       /* Success */
-      al->values[list.LENGTH] = elt;
+      al->values[length] = elt;
       AO_fetch_and_add(&al->weight, ava_value_weight(elt));
-      ++list.LENGTH;
-      return list;
+
+      return ava_value_with_ulong(al, length + 1);
     }
   }
 
   /* Failed, create a new allocation */
-  if (list.LENGTH + 1 <= AVA_ARRAY_LIST_THRESH) {
-    al = ava_array_list_of_array(al->values, list.LENGTH,
+  if (length + 1 <= AVA_ARRAY_LIST_THRESH) {
+    al = ava_array_list_of_array(al->values, length,
                                  ava_array_list_growing_capacity(
-                                   list.LENGTH + 1));
-    al->values[list.LENGTH] = elt;
+                                   length + 1));
+    al->values[length] = elt;
     ++al->used;
     al->weight += ava_value_weight(elt);
 
-    list.LIST = al;
-    ++list.LENGTH;
-
-    return list;
+    return ava_value_with_ulong(al, length + 1);
   } else {
-    list = ava_esba_list_of_raw(al->values, list.LENGTH);
+    list = ava_esba_list_of_raw(al->values, length);
     return ava_list_append(list, elt);
   }
 }
 
 static ava_value ava_array_list_list_concat(ava_value list, ava_value other) {
-  ava_array_list*restrict al = (ava_array_list*restrict)list.LIST;
+  ava_array_list*restrict al = (ava_array_list*)ava_value_attr(list);
+  size_t this_length = ava_value_ulong(list);
   size_t other_length = ava_list_length(other);
 
   if (0 == other_length) return list;
 
-  if (list.LENGTH + other_length <= al->capacity) {
+  if (this_length + other_length <= al->capacity) {
     /* Try to append in-place */
-    if (AO_compare_and_swap(&al->used, list.LENGTH,
-                            list.LENGTH + other_length)) {
+    if (AO_compare_and_swap(&al->used, this_length,
+                            this_length + other_length)) {
       /* Success, skip reallocation */
       goto mutate_al;
     }
   }
 
   /* Can't concat in-place, create a new allocation */
-  if (list.LENGTH + other_length <= AVA_ARRAY_LIST_THRESH) {
-    al = ava_array_list_of_array(al->values, list.LENGTH,
+  if (this_length + other_length <= AVA_ARRAY_LIST_THRESH) {
+    al = ava_array_list_of_array(al->values, this_length,
                                  ava_array_list_growing_capacity(
-                                   list.LENGTH + other_length));
+                                   this_length + other_length));
     al->used += other_length;
-    list.LIST = al;
 
     mutate_al:;
     size_t added_weight = 0;
     size_t i;
     for (i = 0; i < other_length; ++i) {
-      al->values[list.LENGTH + i] = ava_list_index(other, i);
-      added_weight += ava_value_weight(al->values[list.LENGTH + i]);
+      al->values[this_length + i] = ava_list_index(other, i);
+      added_weight += ava_value_weight(al->values[this_length + i]);
     }
 
     al->weight += added_weight;
-    list.LENGTH += other_length;
-    return list;
+    return ava_value_with_ulong(al, this_length + other_length);
   } else {
-    list = ava_esba_list_of_raw(al->values, list.LENGTH);
+    list = ava_esba_list_of_raw(al->values, this_length);
     return ava_list_concat(list, other);
   }
 }
@@ -290,47 +283,46 @@ static ava_value ava_array_list_list_concat(ava_value list, ava_value other) {
 static ava_value ava_array_list_list_delete(
   ava_value list, size_t begin, size_t end
 ) {
-  const ava_array_list*restrict al = list.LIST;
+  const ava_array_list*restrict al = ava_value_attr(list);
+  size_t length = ava_value_ulong(list);
 
   assert(begin <= end);
-  assert(end <= list.LENGTH);
+  assert(end <= length);
 
   if (begin == end)
     return list;
 
   if (0 == begin)
-    return  ava_array_list_list_slice(list, end, list.LENGTH);
+    return  ava_array_list_list_slice(list, end, length);
 
-  if (list.LENGTH == end)
+  if (length == end)
     return ava_array_list_list_slice(list, 0, begin);
 
   ava_array_list*restrict nal = ava_array_list_of_array(
-    al->values, begin, list.LENGTH - (end - begin));
+    al->values, begin, length - (end - begin));
   size_t i;
-  for (i = end; i < list.LENGTH; ++i) {
+  for (i = end; i < length; ++i) {
     nal->values[i - (end - begin)] = al->values[i];
     nal->weight += ava_value_weight(al->values[i]);
   }
-  nal->used += list.LENGTH - end;
+  nal->used += length - end;
 
-  list.LIST = nal;
-  list.LENGTH -= end - begin;
-  return list;
+  return ava_value_with_ulong(nal, length - (end - begin));
 }
 
 static ava_value ava_array_list_list_set(
   ava_value list, size_t index, ava_value value
 ) {
-  const ava_array_list*restrict al = list.LIST;
+  const ava_array_list*restrict al = ava_value_attr(list);
+  size_t length = ava_value_ulong(list);
 
-  assert(index < list.LENGTH);
+  assert(index < length);
 
   ava_array_list*restrict mal = ava_array_list_of_array(
-    al->values, list.LENGTH, list.LENGTH);
+    al->values, length, length);
   mal->weight -= ava_value_weight(mal->values[index]);
   mal->weight += ava_value_weight(value);
   mal->values[index] = value;
 
-  list.LIST = mal;
-  return list;
+  return ava_value_with_ulong(mal, length);
 }

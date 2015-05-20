@@ -63,8 +63,8 @@ deftest(simple_indexing) {
   unsigned i;
 
   for (i = 0; i < 4; ++i)
-    ck_assert_int_eq(values[i].r1.str.ascii9,
-                     ava_list_index(list, i).r1.str.ascii9);
+    ck_assert_int_eq(ava_value_str(values[i]).ascii9,
+                     ava_value_str(ava_list_index(list, i)).ascii9);
 }
 
 deftest(copying_append) {
@@ -86,7 +86,7 @@ deftest(inplace_append) {
   ava_value old = ava_list_append(orig, values[1]);
   /* Next one will use the same array */
   ava_value new = ava_list_append(old, values[2]);
-  ck_assert_ptr_eq(old.r1.ptr, new.r1.ptr);
+  ck_assert_ptr_eq(ava_value_attr(old), ava_value_attr(new));
 
   ck_assert_int_eq(2, ava_list_length(old));
   ck_assert_int_eq(3, ava_list_length(new));
@@ -132,7 +132,7 @@ deftest(inplace_concat) {
   ava_value new = ava_list_concat(old, o45);
   unsigned i;
 
-  ck_assert_ptr_eq(old.r1.ptr, new.r1.ptr);
+  ck_assert_ptr_eq(ava_value_attr(old), ava_value_attr(new));
   ck_assert_int_eq(4, ava_list_length(old));
   ck_assert_int_eq(6, ava_list_length(new));
   ck_assert_int_eq(6, ava_array_list_used(old));
@@ -150,7 +150,7 @@ deftest(conflicting_concat) {
   ava_value left = ava_list_concat(base, o45);
   ava_value right = ava_list_concat(base, o67);
 
-  ck_assert_ptr_eq(base.r1.ptr, left.r1.ptr);
+  ck_assert_ptr_eq(ava_value_attr(base), ava_value_attr(left));
   ck_assert_int_eq(4, ava_list_length(base));
   ck_assert_int_eq(6, ava_list_length(left));
   ck_assert_int_eq(6, ava_list_length(right));
@@ -170,7 +170,7 @@ deftest(inplace_self_concat) {
   ava_value result = ava_list_concat(base, base);
   unsigned i;
 
-  ck_assert_ptr_eq(base.r1.ptr, result.r1.ptr);
+  ck_assert_ptr_eq(ava_value_attr(base), ava_value_attr(result));
   ck_assert_int_eq(4, ava_list_length(base));
   ck_assert_int_eq(8, ava_list_length(result));
   ck_assert_int_eq(8, ava_array_list_used(result));
@@ -185,7 +185,7 @@ deftest(empty_list_concat) {
   ava_value orig = ava_array_list_of_raw(values, 2);
   ava_value result = ava_list_concat(orig, ava_empty_list);
 
-  ck_assert_ptr_eq(orig.r1.ptr, result.r1.ptr);
+  ck_assert_ptr_eq(ava_value_attr(orig), ava_value_attr(result));
 }
 
 deftest(slice_to_empty) {
@@ -202,7 +202,7 @@ deftest(inplace_slice) {
 
   ck_assert_int_eq(8, ava_list_length(orig));
   ck_assert_int_eq(4, ava_list_length(slice));
-  ck_assert_ptr_eq(orig.r1.ptr, slice.r1.ptr);
+  ck_assert_ptr_eq(ava_value_attr(orig), ava_value_attr(slice));
   ck_assert_int_eq(8, ava_array_list_used(orig));
   ck_assert_int_eq(8, ava_array_list_used(slice));
 
