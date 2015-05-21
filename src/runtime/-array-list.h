@@ -39,7 +39,8 @@
 /**
  * Copies elements in the given range of the given list into a new array list.
  */
-ava_value ava_array_list_copy_of(ava_value list, size_t begin, size_t end);
+ava_list_value ava_array_list_copy_of(ava_list_value list,
+                                      size_t begin, size_t end);
 
 /**
  * Creates a new array list whose contents are the given array of the given
@@ -47,7 +48,7 @@ ava_value ava_array_list_copy_of(ava_value list, size_t begin, size_t end);
  *
  * The array is copied, not referenced.
  */
-ava_value ava_array_list_of_raw(
+ava_list_value ava_array_list_of_raw(
   const ava_value*restrict array,
   size_t length);
 

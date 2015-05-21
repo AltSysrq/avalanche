@@ -95,7 +95,7 @@ struct ava_list_trait_s {
    *
    * Complexity: O(1)
    */
-  size_t (*length)(ava_value list);
+  size_t (*length)(ava_list_value list);
   /**
    * Returns the element in the list at the given index.
    *
@@ -103,7 +103,7 @@ struct ava_list_trait_s {
    *
    * Complexity: Amortised O(1)
    */
-  ava_value (*index)(ava_value list, size_t index);
+  ava_value (*index)(ava_list_value list, size_t index);
   /**
    * Returns a new list containing the elements of list between begin,
    * inclusive, and end, exclusive.
@@ -112,7 +112,7 @@ struct ava_list_trait_s {
    *
    * Complexity: Amortised O(log(length) + (end - begin))
    */
-  ava_value (*slice)(ava_value list, size_t begin, size_t end);
+  ava_list_value (*slice)(ava_list_value list, size_t begin, size_t end);
 
   /**
    * Returns a new list which contains all the elements of list followed by the
@@ -120,14 +120,14 @@ struct ava_list_trait_s {
    *
    * Complexity: Amortised O(1)
    */
-  ava_value (*append)(ava_value list, ava_value element);
+  ava_list_value (*append)(ava_list_value list, ava_value element);
   /**
    * Returns a new list which contains all the elements of left followed by all
    * the elements of right.
    *
    * Complexity: Amortised O(length)
    */
-  ava_value (*concat)(ava_value left, ava_value right);
+  ava_list_value (*concat)(ava_list_value left, ava_list_value right);
   /**
    * Returns a new list which contains the elements in list from 0 to begin
    * exclusive, and from end inclusive to the end of list.
@@ -136,7 +136,7 @@ struct ava_list_trait_s {
    *
    * Complexity: Amortised O(length)
    */
-  ava_value (*delete)(ava_value list, size_t begin, size_t end);
+  ava_list_value (*delete)(ava_list_value list, size_t begin, size_t end);
 
   /**
    * Returns a new list which contains the elements in list, except with the
@@ -146,7 +146,7 @@ struct ava_list_trait_s {
    *
    * Complexity: Amortised O(1)
    */
-  ava_value (*set)(ava_value list, size_t index, ava_value element);
+  ava_list_value (*set)(ava_list_value list, size_t index, ava_value element);
 };
 
 /**
@@ -213,27 +213,28 @@ ava_string ava_list_iterate_string_chunk(ava_datum*restrict i,
  * Implementation of ava_list_trait.slice which copies the input list into a
  * new list of an unspecified type.
  */
-ava_value ava_list_copy_slice(ava_value list, size_t begin, size_t end);
+ava_list_value ava_list_copy_slice(ava_list_value list, size_t begin, size_t end);
 /**
  * Implementation of ava_list_trait.append which copies the input list and new
  * element into a new list of an unspecified type.
  */
-ava_value ava_list_copy_append(ava_value list, ava_value elt);
+ava_list_value ava_list_copy_append(ava_list_value list, ava_value elt);
 /**
  * Implementation of ava_list_trait.concat which copies the lists into a new
  * list of an unspecified type.
  */
-ava_value ava_list_copy_concat(ava_value left, ava_value right);
+ava_list_value ava_list_copy_concat(ava_list_value left, ava_list_value right);
 /**
  * Implementation of ava_list_trait.delete which copies the list into a new
  * list of unspecified type.
  */
-ava_value ava_list_copy_delete(ava_value list, size_t begin, size_t end);
+ava_list_value ava_list_copy_delete(ava_list_value list,
+                                    size_t begin, size_t end);
 /**
  * Implementation of ava_list_trait.copy which copies the list into a new list
  * of unspecified type.
  */
-ava_value ava_list_copy_set(ava_value list, size_t ix, ava_value val);
+ava_list_value ava_list_copy_set(ava_list_value list, size_t ix, ava_value val);
 
 #define ava_list_length(list)                                   \
   _Generic((list),                                              \
@@ -242,7 +243,7 @@ ava_value ava_list_copy_set(ava_value list, size_t ix, ava_value val);
 
 static inline size_t ava_list_length_v(ava_value list_val) {
   ava_fat_list_value list = ava_fat_list_value_of(list_val);
-  return list.v->length(list.lv.v);
+  return list.v->length(list.lv);
 }
 
 static inline size_t ava_list_length_lv(ava_list_value list_val) {
@@ -257,7 +258,7 @@ static inline size_t ava_list_length_lv(ava_list_value list_val) {
 
 static inline ava_value ava_list_index_v(ava_value list_val, size_t ix) {
   ava_fat_list_value list = ava_fat_list_value_of(list_val);
-  return list.v->index(list.lv.v, ix);
+  return list.v->index(list.lv, ix);
 }
 
 static inline ava_value ava_list_index_lv(ava_list_value list_val, size_t ix) {
@@ -273,7 +274,7 @@ static inline ava_value ava_list_index_lv(ava_list_value list_val, size_t ix) {
 static inline ava_list_value ava_list_slice_lv(ava_list_value list_val,
                                                size_t begin, size_t end) {
   ava_fat_list_value list = ava_fat_list_value_of(list_val.v);
-  return (ava_list_value) { list.v->slice(list.lv.v, begin, end) };
+  return list.v->slice(list.lv, begin, end);
 }
 
 static inline ava_value ava_list_slice_v(ava_value list_val,
@@ -290,7 +291,7 @@ static inline ava_value ava_list_slice_v(ava_value list_val,
 static inline ava_list_value ava_list_append_lv(ava_list_value list_val,
                                                 ava_value elt) {
   ava_fat_list_value list = ava_fat_list_value_of(list_val.v);
-  return (ava_list_value) { list.v->append(list.lv.v, elt) };
+  return list.v->append(list.lv, elt);
 }
 
 static inline ava_value ava_list_append_v(ava_value list_val, ava_value elt) {
@@ -306,7 +307,7 @@ static inline ava_value ava_list_append_v(ava_value list_val, ava_value elt) {
 static inline ava_list_value ava_list_concat_lv(ava_list_value left,
                                                 ava_list_value right) {
   ava_fat_list_value list = ava_fat_list_value_of(left.v);
-  return (ava_list_value) { list.v->concat(list.lv.v, right.v) };
+  return list.v->concat(list.lv, right);
 }
 
 static inline ava_value ava_list_concat_v(ava_value left, ava_value right) {
@@ -324,7 +325,7 @@ static inline ava_list_value ava_list_delete_lv(
   ava_list_value list, size_t begin, size_t end
 ) {
   ava_fat_list_value l = ava_fat_list_value_of(list.v);
-  return (ava_list_value) { l.v->delete(l.lv.v, begin, end) };
+  return l.v->delete(l.lv, begin, end);
 }
 
 static inline ava_value ava_list_delete_v(
@@ -344,7 +345,7 @@ static inline ava_list_value ava_list_set_lv(
   ava_list_value list, size_t index, ava_value element
 ) {
   ava_fat_list_value l = ava_fat_list_value_of(list.v);
-  return (ava_list_value) { l.v->set(l.lv.v, index, element) };
+  return l.v->set(l.lv, index, element);
 }
 
 static inline ava_value ava_list_set_v(

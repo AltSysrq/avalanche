@@ -48,16 +48,16 @@ typedef struct {
 } ava_list_proj_group_list;
 
 static size_t ava_list_proj_interleave_value_value_weight(ava_value val);
-static size_t ava_list_proj_interleave_list_length(ava_value list);
-static ava_value ava_list_proj_interleave_list_index(ava_value list, size_t ix);
+static size_t ava_list_proj_interleave_list_length(ava_list_value list);
+static ava_value ava_list_proj_interleave_list_index(ava_list_value list, size_t ix);
 
 static size_t ava_list_proj_demux_value_value_weight(ava_value val);
-static size_t ava_list_proj_demux_list_length(ava_value list);
-static ava_value ava_list_proj_demux_list_index(ava_value list, size_t ix);
+static size_t ava_list_proj_demux_list_length(ava_list_value list);
+static ava_value ava_list_proj_demux_list_index(ava_list_value list, size_t ix);
 
 static size_t ava_list_proj_group_value_value_weight(ava_value val);
-static size_t ava_list_proj_group_list_length(ava_value list);
-static ava_value ava_list_proj_group_list_index(ava_value list, size_t ix);
+static size_t ava_list_proj_group_list_length(ava_list_value list);
+static ava_value ava_list_proj_group_list_index(ava_list_value list, size_t ix);
 
 static const ava_value_trait ava_list_proj_interleave_generic_impl = {
   .header = { .tag = &ava_value_trait_tag, .next = NULL },
@@ -191,22 +191,22 @@ static size_t ava_list_proj_interleave_value_value_weight(ava_value val) {
   return sum;
 }
 
-static size_t ava_list_proj_interleave_list_length(ava_value list) {
-  const ava_list_proj_interleave_list*restrict this = ava_value_ptr(list);
+static size_t ava_list_proj_interleave_list_length(ava_list_value list) {
+  const ava_list_proj_interleave_list*restrict this = ava_value_ptr(list.v);
 
-  return this->num_lists * this->lists[0].v->length(this->lists[0].lv.v);
+  return this->num_lists * this->lists[0].v->length(this->lists[0].lv);
 }
 
 static ava_value ava_list_proj_interleave_list_index(
-  ava_value list, size_t ix
+  ava_list_value list, size_t ix
 ) {
-  const ava_list_proj_interleave_list*restrict this = ava_value_ptr(list);
+  const ava_list_proj_interleave_list*restrict this = ava_value_ptr(list.v);
   size_t which;
 
   which = ix % this->num_lists;
   ix /= this->num_lists;
 
-  return this->lists[which].v->index(this->lists[which].lv.v, ix);
+  return this->lists[which].v->index(this->lists[which].lv, ix);
 }
 
 ava_list_value ava_list_proj_demux(ava_list_value delegate,
@@ -240,17 +240,17 @@ static size_t ava_list_proj_demux_value_value_weight(ava_value val) {
   return ava_value_weight(this->delegate.lv.v);
 }
 
-static size_t ava_list_proj_demux_list_length(ava_value list) {
-  const ava_list_proj_demux_list*restrict this = ava_value_ptr(list);
-  return (this->delegate.v->length(this->delegate.lv.v) -
+static size_t ava_list_proj_demux_list_length(ava_list_value list) {
+  const ava_list_proj_demux_list*restrict this = ava_value_ptr(list.v);
+  return (this->delegate.v->length(this->delegate.lv) -
           this->offset + this->stride-1) / this->stride;
 }
 
 static ava_value ava_list_proj_demux_list_index(
-  ava_value list, size_t ix
+  ava_list_value list, size_t ix
 ) {
-  const ava_list_proj_demux_list*restrict this = ava_value_ptr(list);
-  return this->delegate.v->index(this->delegate.lv.v,
+  const ava_list_proj_demux_list*restrict this = ava_value_ptr(list.v);
+  return this->delegate.v->index(this->delegate.lv,
                                  this->offset + ix * this->stride);
 }
 
@@ -275,15 +275,15 @@ static size_t ava_list_proj_group_value_value_weight(ava_value val) {
   return ava_value_weight(this->delegate.lv.v);
 }
 
-static size_t ava_list_proj_group_list_length(ava_value list) {
-  const ava_list_proj_group_list*restrict this = ava_value_ptr(list);
+static size_t ava_list_proj_group_list_length(ava_list_value list) {
+  const ava_list_proj_group_list*restrict this = ava_value_ptr(list.v);
   return this->num_groups;
 }
 
 static ava_value ava_list_proj_group_list_index(
-  ava_value list, size_t ix
+  ava_list_value list, size_t ix
 ) {
-  ava_list_proj_group_list*restrict this = (void*)ava_value_ptr(list);
+  ava_list_proj_group_list*restrict this = (void*)ava_value_ptr(list.v);
   const ava_list_value*restrict ret;
   ava_list_value tmp;
   size_t begin, end, delegate_length;
@@ -296,11 +296,10 @@ static ava_value ava_list_proj_group_list_index(
   /* Group not yet cached, create it */
   begin = ix * this->group_size;
   end = begin + this->group_size;
-  delegate_length = this->delegate.v->length(this->delegate.lv.v);
+  delegate_length = this->delegate.v->length(this->delegate.lv);
   if (end > delegate_length) end = delegate_length;
 
-  tmp = ava_list_value_of(
-    this->delegate.v->slice(this->delegate.lv.v, begin, end));
+  tmp = this->delegate.v->slice(this->delegate.lv, begin, end);
   ret = ava_clone(&tmp, sizeof(tmp));
   /* Save in cache. If multiple threads hit this index simultaneously, they may
    * produce physically different results and write the cache multiple times.
@@ -321,15 +320,14 @@ ava_list_value ava_list_proj_flatten(ava_list_value list) {
     return group->delegate.lv;
   }
 
-  n = ava_list_length(list.v);
+  n = ava_list_length(list);
   if (0 == n)
     return ava_empty_list();
 
-  accum = ava_list_value_of(ava_list_index(list.v, 0));
+  accum = ava_list_value_of(ava_list_index(list, 0));
 
   for (i = 1; i < n; ++i)
-    accum = ava_list_value_of(
-      ava_list_concat(accum.v, ava_list_index(list.v, i)));
+    accum = ava_list_concat(accum, ava_list_value_of(ava_list_index(list, i)));
 
   return accum;
 }

@@ -32,13 +32,13 @@ static ava_string ava_empty_list_value_iterate_string_chunk(
   ava_datum*restrict, ava_value);
 static size_t ava_empty_list_value_value_weight(ava_value);
 
-static size_t ava_empty_list_list_length(ava_value);
-static ava_value ava_empty_list_list_index(ava_value, size_t);
-static ava_value ava_empty_list_list_slice(ava_value, size_t, size_t);
-static ava_value ava_empty_list_list_append(ava_value, ava_value);
-static ava_value ava_empty_list_list_concat(ava_value, ava_value);
-static ava_value ava_empty_list_list_delete(ava_value, size_t, size_t);
-static ava_value ava_empty_list_list_set(ava_value, size_t, ava_value);
+static size_t ava_empty_list_list_length(ava_list_value);
+static ava_value ava_empty_list_list_index(ava_list_value, size_t);
+static ava_list_value ava_empty_list_list_slice(ava_list_value, size_t, size_t);
+static ava_list_value ava_empty_list_list_append(ava_list_value, ava_value);
+static ava_list_value ava_empty_list_list_concat(ava_list_value, ava_list_value);
+static ava_list_value ava_empty_list_list_delete(ava_list_value, size_t, size_t);
+static ava_list_value ava_empty_list_list_set(ava_list_value, size_t, ava_value);
 
 static const ava_value_trait ava_empty_list_generic_impl = {
   .header = { .tag = &ava_value_trait_tag, .next = NULL },
@@ -85,39 +85,42 @@ static size_t ava_empty_list_value_value_weight(ava_value el) {
   return 0;
 }
 
-static size_t ava_empty_list_list_length(ava_value el) {
+static size_t ava_empty_list_list_length(ava_list_value el) {
   return 0;
 }
 
-static ava_value ava_empty_list_list_index(ava_value el, size_t ix) {
+static ava_value ava_empty_list_list_index(ava_list_value el, size_t ix) {
   abort();
 }
 
-static ava_value ava_empty_list_list_slice(ava_value el,
-                                           size_t begin, size_t end) {
+static ava_list_value ava_empty_list_list_slice(ava_list_value el,
+                                                size_t begin, size_t end) {
   if (begin || end) abort();
 
   return el;
 }
 
-static ava_value ava_empty_list_list_append(ava_value el, ava_value elt) {
+static ava_list_value ava_empty_list_list_append(ava_list_value el,
+                                                 ava_value elt) {
   return ava_array_list_of_raw(&elt, 1);
 }
 
-static ava_value ava_empty_list_list_concat(ava_value el, ava_value other) {
+static ava_list_value ava_empty_list_list_concat(
+  ava_list_value el, ava_list_value other
+) {
   return other;
 }
 
-static ava_value ava_empty_list_list_delete(
-  ava_value el, size_t begin, size_t end
+static ava_list_value ava_empty_list_list_delete(
+  ava_list_value el, size_t begin, size_t end
 ) {
   if (begin || end) abort();
 
   return el;
 }
 
-static ava_value ava_empty_list_list_set(
-  ava_value el, size_t index, ava_value value
+static ava_list_value ava_empty_list_list_set(
+  ava_list_value el, size_t index, ava_value value
 ) {
   abort();
 }

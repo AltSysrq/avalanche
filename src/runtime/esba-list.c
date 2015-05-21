@@ -70,11 +70,11 @@ static ava_esba ava_esba_list_create_esba(
 static ava_esba ava_esba_list_create_esba_with_header(
   const ava_esba_list_header* header, size_t capacity);
 static unsigned ava_esba_list_accum_format(
-  ava_value list, size_t begin, size_t end,
+  ava_list_value list, size_t begin, size_t end,
   ava_value template);
 static ava_esba ava_esba_list_append_sublist(
   ava_esba esba, unsigned format,
-  ava_value list, size_t begin, size_t end);
+  ava_list_value list, size_t begin, size_t end);
 static ava_esba ava_esba_list_concat_esbas(
   ava_esba dst, ava_esba src, size_t begin, size_t end);
 static ava_esba ava_esba_list_make_compatible(
@@ -84,13 +84,13 @@ static size_t ava_esba_list_weight_function(
 
 static size_t ava_esba_list_value_value_weight(ava_value);
 
-static size_t ava_esba_list_list_length(ava_value);
-static ava_value ava_esba_list_list_index(ava_value, size_t);
-static ava_value ava_esba_list_list_slice(ava_value, size_t, size_t);
-static ava_value ava_esba_list_list_append(ava_value, ava_value);
-static ava_value ava_esba_list_list_concat(ava_value, ava_value);
-static ava_value ava_esba_list_list_delete(ava_value, size_t, size_t);
-static ava_value ava_esba_list_list_set(ava_value, size_t, ava_value);
+static size_t ava_esba_list_list_length(ava_list_value);
+static ava_value ava_esba_list_list_index(ava_list_value, size_t);
+static ava_list_value ava_esba_list_list_slice(ava_list_value, size_t, size_t);
+static ava_list_value ava_esba_list_list_append(ava_list_value, ava_value);
+static ava_list_value ava_esba_list_list_concat(ava_list_value, ava_list_value);
+static ava_list_value ava_esba_list_list_delete(ava_list_value, size_t, size_t);
+static ava_list_value ava_esba_list_list_set(ava_list_value, size_t, ava_value);
 
 static const ava_value_trait ava_esba_list_generic_impl = {
   .header = { .tag = &ava_value_trait_tag, .next = NULL },
@@ -122,6 +122,10 @@ static inline ava_esba to_esba(ava_value val) {
 
 static inline ava_value to_value(ava_esba esba) {
   return ava_value_with_ulong(esba.handle, esba.length);
+}
+
+static inline ava_list_value to_list_value(ava_esba esba) {
+  return (ava_list_value) { to_value(esba) };
 }
 
 static unsigned ava_esba_list_polymorphism(ava_value template, ava_value new) {
@@ -180,8 +184,8 @@ static ava_esba ava_esba_list_create_esba_with_header(
     ava_alloc, (void*)header);
 }
 
-ava_value ava_esba_list_copy_of(
-  ava_value list, size_t begin, size_t end
+ava_list_value ava_esba_list_copy_of(
+  ava_list_value list, size_t begin, size_t end
 ) {
   unsigned format;
   ava_value template;
@@ -196,17 +200,17 @@ ava_value ava_esba_list_copy_of(
   ava_esba esba = ava_esba_list_create_esba(format, template, end - begin);
   esba = ava_esba_list_append_sublist(esba, format, list, begin, end);
 
-  return to_value(esba);
+  return to_list_value(esba);
 }
 
 static unsigned ava_esba_list_accum_format(
-  ava_value list, size_t begin, size_t end, ava_value template
+  ava_list_value list, size_t begin, size_t end, ava_value template
 ) {
   const ava_esba_list_header*restrict header;
   unsigned format;
   size_t i;
 
-  if ((header = ava_get_attribute(list, &ava_esba_list_header_tag))) {
+  if ((header = ava_get_attribute(list.v, &ava_esba_list_header_tag))) {
     return header->format |
       ava_esba_list_polymorphism(template, header->template);
   }
@@ -222,13 +226,13 @@ static unsigned ava_esba_list_accum_format(
 
 static ava_esba ava_esba_list_append_sublist(
   ava_esba esba, unsigned format,
-  ava_value list, size_t begin, size_t end
+  ava_list_value list, size_t begin, size_t end
 ) {
   size_t i;
   pointer*restrict dst;
 
-  if (ava_get_attribute(list, &ava_esba_list_header_tag))
-    return ava_esba_list_concat_esbas(esba, to_esba(list), begin, end);
+  if (ava_get_attribute(list.v, &ava_esba_list_header_tag))
+    return ava_esba_list_concat_esbas(esba, to_esba(list.v), begin, end);
 
   dst = ava_esba_start_append(&esba, end - begin);
 
@@ -285,7 +289,7 @@ static ava_esba ava_esba_list_concat_esbas(ava_esba dst_esba, ava_esba src_esba,
   return dst_esba;
 }
 
-ava_value ava_esba_list_of_raw(
+ava_list_value ava_esba_list_of_raw(
   const ava_value*restrict array,
   size_t length
 ) {
@@ -311,19 +315,19 @@ ava_value ava_esba_list_of_raw(
 
   ava_esba_finish_append(esba, length);
 
-  return to_value(esba);
+  return to_list_value(esba);
 }
 
 static size_t ava_esba_list_value_value_weight(ava_value list) {
   return ava_esba_weight(to_esba(list));
 }
 
-static size_t ava_esba_list_list_length(ava_value list) {
-  return ava_esba_length(to_esba(list));
+static size_t ava_esba_list_list_length(ava_list_value list) {
+  return ava_esba_length(to_esba(list.v));
 }
 
-static ava_value ava_esba_list_list_index(ava_value list, size_t ix) {
-  ava_esba esba = to_esba(list);
+static ava_value ava_esba_list_list_index(ava_list_value list, size_t ix) {
+  ava_esba esba = to_esba(list.v);
   const ava_esba_list_header* header = ava_esba_list_header_of(esba);
   ava_esba_tx tx;
   const pointer* base, * src;
@@ -340,13 +344,13 @@ static ava_value ava_esba_list_list_index(ava_value list, size_t ix) {
   return ret;
 }
 
-static ava_value ava_esba_list_list_slice(ava_value list,
-                                          size_t begin, size_t end) {
+static ava_list_value ava_esba_list_list_slice(ava_list_value list,
+                                               size_t begin, size_t end) {
   assert(begin <= end);
-  assert(end <= ava_esba_length(to_esba(list)));
+  assert(end <= ava_esba_length(to_esba(list.v)));
 
   if (begin == end)
-    return ava_empty_list().v;
+    return ava_empty_list();
 
   if (0 == begin && ava_esba_list_list_length(list) == end)
     return list;
@@ -357,11 +361,12 @@ static ava_value ava_esba_list_list_slice(ava_value list,
   return ava_esba_list_copy_of(list, begin, end);
 }
 
-static ava_value ava_esba_list_list_append(ava_value list, ava_value elt) {
+static ava_list_value ava_esba_list_list_append(ava_list_value list,
+                                                ava_value elt) {
   ava_esba esba;
   const ava_esba_list_header*restrict header;
 
-  esba = to_esba(list);
+  esba = to_esba(list.v);
   header = ava_esba_list_header_of(esba);
   esba = ava_esba_list_make_compatible(
     esba, ava_esba_list_polymorphism(header->template, elt));
@@ -370,7 +375,7 @@ static ava_value ava_esba_list_list_append(ava_value list, ava_value elt) {
   pointer swizzled[ava_esba_list_element_size_pointers[header->format]];
   ava_esba_list_swizzle_down[header->format](swizzled, &elt);
 
-  return to_value(ava_esba_append(esba, swizzled, 1));
+  return to_list_value(ava_esba_append(esba, swizzled, 1));
 }
 
 static ava_esba ava_esba_list_make_compatible(ava_esba src_esba,
@@ -387,8 +392,9 @@ static ava_esba ava_esba_list_make_compatible(ava_esba src_esba,
                                     0, ava_esba_length(src_esba));
 }
 
-static ava_value ava_esba_list_list_concat(ava_value list, ava_value other) {
-  ava_esba esba = to_esba(list);
+static ava_list_value ava_esba_list_list_concat(ava_list_value list,
+                                                ava_list_value other) {
+  ava_esba esba = to_esba(list.v);
   const ava_esba_list_header*restrict header;
 
   size_t other_length = ava_list_length(other);
@@ -402,13 +408,13 @@ static ava_value ava_esba_list_list_concat(ava_value list, ava_value other) {
   esba = ava_esba_list_append_sublist(esba, header->format,
                                       other, 0, other_length);
 
-  return to_value(esba);
+  return to_list_value(esba);
 }
 
-static ava_value ava_esba_list_list_delete(
-  ava_value list, size_t begin, size_t end
+static ava_list_value ava_esba_list_list_delete(
+  ava_list_value list, size_t begin, size_t end
 ) {
-  ava_esba src_esba = to_esba(list);
+  ava_esba src_esba = to_esba(list.v);
   const ava_esba_list_header*restrict header =
     ava_esba_list_header_of(src_esba);
   size_t length = ava_esba_length(src_esba);
@@ -417,7 +423,7 @@ static ava_value ava_esba_list_list_delete(
   assert(end <= length);
 
   if (0 == begin && length == end)
-    return ava_empty_list().v;
+    return ava_empty_list();
 
   if (begin == end)
     return list;
@@ -427,13 +433,13 @@ static ava_value ava_esba_list_list_delete(
   dst_esba = ava_esba_list_concat_esbas(dst_esba, src_esba, 0, begin);
   dst_esba = ava_esba_list_concat_esbas(dst_esba, src_esba, end, length);
 
-  return to_value(dst_esba);
+  return to_list_value(dst_esba);
 }
 
-static ava_value ava_esba_list_list_set(
-  ava_value list, size_t index, ava_value value
+static ava_list_value ava_esba_list_list_set(
+  ava_list_value list, size_t index, ava_value value
 ) {
-  ava_esba esba = to_esba(list);
+  ava_esba esba = to_esba(list.v);
   const ava_esba_list_header*restrict header;
 
   header = ava_esba_list_header_of(esba);
@@ -446,7 +452,7 @@ static ava_value ava_esba_list_list_set(
   ava_esba_list_swizzle_down[header->format](swizzled, &value);
   esba = ava_esba_set(esba, index, swizzled);
 
-  return to_value(esba);
+  return to_list_value(esba);
 }
 
 size_t ava_esba_list_element_size(ava_value list) {

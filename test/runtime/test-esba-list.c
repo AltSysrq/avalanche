@@ -34,11 +34,11 @@ static void assert_values_equal(ava_value a, ava_value b) {
 
 deftest(single_element_list) {
   ava_value fourty_two = ava_value_of_integer(42);
-  ava_value list = ava_esba_list_of_raw(&fourty_two, 1);
+  ava_list_value list = ava_esba_list_of_raw(&fourty_two, 1);
 
   ck_assert_int_eq(1, ava_list_length(list));
   assert_values_equal(fourty_two, ava_list_index(list, 0));
-  ck_assert_int_eq(0, ava_esba_list_element_size(list));
+  ck_assert_int_eq(0, ava_esba_list_element_size(list.v));
 }
 
 /* The following couple of tests specifically test handling of zero-sized
@@ -46,41 +46,41 @@ deftest(single_element_list) {
  */
 deftest(identical_append) {
   ava_value fourty_two = ava_value_of_integer(42);
-  ava_value list = ava_esba_list_of_raw(&fourty_two, 1);
+  ava_list_value list = ava_esba_list_of_raw(&fourty_two, 1);
   unsigned i;
 
   for (i = 1; i < 256; ++i)
     list = ava_list_append(list, fourty_two);
 
   ck_assert_int_eq(256, ava_list_length(list));
-  ck_assert_int_eq(0, ava_esba_list_element_size(list));
+  ck_assert_int_eq(0, ava_esba_list_element_size(list.v));
   for (i = 0; i < 256; ++i)
     assert_values_equal(fourty_two, ava_list_index(list, i));
 }
 
 deftest(identical_set) {
   ava_value fourty_two = ava_value_of_integer(42);
-  ava_value list = ava_esba_list_of_raw(&fourty_two, 1);
+  ava_list_value list = ava_esba_list_of_raw(&fourty_two, 1);
   unsigned i;
 
   for (i = 1; i < 256; ++i)
     list = ava_list_set(list, 0, fourty_two);
 
   ck_assert_int_eq(1, ava_list_length(list));
-  ck_assert_int_eq(0, ava_esba_list_element_size(list));
+  ck_assert_int_eq(0, ava_esba_list_element_size(list.v));
   assert_values_equal(fourty_two, ava_list_index(list, 0));
 }
 
 deftest(polymorphic_value_append) {
   ava_value zero = ava_value_of_integer(0);
-  ava_value list = ava_esba_list_of_raw(&zero, 1);
+  ava_list_value list = ava_esba_list_of_raw(&zero, 1);
   unsigned i;
 
   for (i = 1; i < 256; ++i)
     list = ava_list_append(list, ava_value_of_integer(i));
 
   ck_assert_int_eq(256, ava_list_length(list));
-  ck_assert_int_eq(sizeof(ava_ulong), ava_esba_list_element_size(list));
+  ck_assert_int_eq(sizeof(ava_ulong), ava_esba_list_element_size(list.v));
   for (i = 0; i < 256; ++i)
     ck_assert_int_eq(i, ava_integer_of_value(ava_list_index(list, i), -1));
 }
@@ -88,11 +88,11 @@ deftest(polymorphic_value_append) {
 deftest(polymorphic_value_and_type_append) {
   ava_value fourty_two = ava_value_of_integer(42);
   ava_value string = ava_value_of_string(ava_string_of_cstring("hello world"));
-  ava_value list = ava_esba_list_of_raw(&fourty_two, 1);
+  ava_list_value list = ava_esba_list_of_raw(&fourty_two, 1);
   list = ava_list_append(list, string);
 
   ck_assert_int_eq(2, ava_list_length(list));
-  ck_assert_int_eq(sizeof(ava_value), ava_esba_list_element_size(list));
+  ck_assert_int_eq(sizeof(ava_value), ava_esba_list_element_size(list.v));
   assert_values_equal(fourty_two, ava_list_index(list, 0));
   assert_values_equal(string, ava_list_index(list, 1));
 }
@@ -100,14 +100,14 @@ deftest(polymorphic_value_and_type_append) {
 deftest(fully_polymorphic_append) {
   ava_value fourty_two = ava_value_of_integer(42);
   ava_value string = ava_value_of_string(ava_string_of_cstring("hello world"));
-  ava_value list = ava_esba_list_of_raw(&fourty_two, 1);
+  ava_list_value list = ava_esba_list_of_raw(&fourty_two, 1);
   list = ava_list_append(list, string);
 
-  ava_value list_value = list;
+  ava_value list_value = list.v;
   list = ava_list_append(list, list_value);
 
   ck_assert_int_eq(3, ava_list_length(list));
-  ck_assert_int_eq(sizeof(ava_value), ava_esba_list_element_size(list));
+  ck_assert_int_eq(sizeof(ava_value), ava_esba_list_element_size(list.v));
   assert_values_equal(fourty_two, ava_list_index(list, 0));
   assert_values_equal(string, ava_list_index(list, 1));
   assert_values_equal(list_value, ava_list_index(list, 2));
@@ -118,7 +118,7 @@ deftest(polymorphic_create_from_array) {
     ava_value_of_integer(42),
     ava_value_of_string(ava_string_of_cstring("hello world")),
   };
-  ava_value list = ava_esba_list_of_raw(values, 2);
+  ava_list_value list = ava_esba_list_of_raw(values, 2);
 
   ck_assert_int_eq(2, ava_list_length(list));
   assert_values_equal(values[0], ava_list_index(list, 0));
@@ -130,8 +130,8 @@ deftest(polymorphic_create_from_list) {
     ava_value_of_integer(42),
     ava_value_of_string(ava_string_of_cstring("hello world")),
   };
-  ava_value array_list = ava_array_list_of_raw(values, 2);
-  ava_value list = ava_esba_list_copy_of(array_list, 0, 2);
+  ava_list_value array_list = ava_array_list_of_raw(values, 2);
+  ava_list_value list = ava_esba_list_copy_of(array_list, 0, 2);
 
   ck_assert_int_eq(2, ava_list_length(list));
   assert_values_equal(values[0], ava_list_index(list, 0));
@@ -143,16 +143,16 @@ deftest(slice_to_empty_list) {
     ava_value_of_integer(1),
     ava_value_of_integer(2),
   };
-  ava_value list = ava_esba_list_of_raw(values, 2);
-  ava_value empty = ava_list_slice(list, 1, 1);
+  ava_list_value list = ava_esba_list_of_raw(values, 2);
+  ava_list_value empty = ava_list_slice(list, 1, 1);
 
-  assert_values_equal(empty, ava_empty_list().v);
+  assert_values_equal(empty.v, ava_empty_list().v);
 }
 
 deftest(slice_to_array_list) {
   ava_value zero = ava_value_of_integer(0);
-  ava_value list = ava_esba_list_of_raw(&zero, 1);
-  ava_value result;
+  ava_list_value list = ava_esba_list_of_raw(&zero, 1);
+  ava_list_value result;
   unsigned i;
 
   for (i = 1; i < 64; ++i)
@@ -160,8 +160,8 @@ deftest(slice_to_array_list) {
 
   result = ava_list_slice(list, 5, 8);
 
-  ck_assert_int_eq(3, ava_array_list_used(result));
-  ck_assert_int_eq(3, ava_list_length(result));
+  ck_assert_int_eq(3, ava_array_list_used(result.v));
+  ck_assert_int_eq(3, ava_list_length(result.v));
   ck_assert_int_eq(5, ava_integer_of_value(
                      ava_list_index(result, 0), -1));
   ck_assert_int_eq(6, ava_integer_of_value(
@@ -172,8 +172,8 @@ deftest(slice_to_array_list) {
 
 deftest(slice_to_esba_list) {
   ava_value zero = ava_value_of_integer(0);
-  ava_value list = ava_esba_list_of_raw(&zero, 1);
-  ava_value result;
+  ava_list_value list = ava_esba_list_of_raw(&zero, 1);
+  ava_list_value result;
   unsigned i;
 
   for (i = 1; i < 64; ++i)
@@ -188,8 +188,8 @@ deftest(slice_to_esba_list) {
 
 deftest(noop_slice) {
   ava_value zero = ava_value_of_integer(0);
-  ava_value list = ava_esba_list_of_raw(&zero, 1);
-  ava_value result;
+  ava_list_value list = ava_esba_list_of_raw(&zero, 1);
+  ava_list_value result;
 
   result = ava_list_slice(list, 0, 1);
   ck_assert_int_eq(0, memcmp(&list, &result, sizeof(list)));
@@ -202,7 +202,7 @@ deftest(concat_with_compatible_esba_list) {
     ava_value_of_integer(2),
     ava_value_of_integer(3),
   };
-  ava_value left, right, result;
+  ava_list_value left, right, result;
   unsigned i;
 
   left = ava_esba_list_of_raw(values, 2);
@@ -221,7 +221,7 @@ deftest(concat_with_incompatible_esba_list) {
     ava_value_of_string(ava_string_of_cstring("foo")),
     ava_value_of_string(ava_string_of_cstring("bar")),
   };
-  ava_value left, right, result;
+  ava_list_value left, right, result;
   unsigned i;
 
   left = ava_esba_list_of_raw(values, 2);
@@ -240,7 +240,7 @@ deftest(concat_with_compatible_other_list) {
     ava_value_of_integer(2),
     ava_value_of_integer(3),
   };
-  ava_value left, right, result;
+  ava_list_value left, right, result;
   unsigned i;
 
   left = ava_esba_list_of_raw(values, 2);
@@ -259,7 +259,7 @@ deftest(concat_with_incompatible_other_list) {
     ava_value_of_string(ava_string_of_cstring("foo")),
     ava_value_of_string(ava_string_of_cstring("bar")),
   };
-  ava_value left, right, result;
+  ava_list_value left, right, result;
   unsigned i;
 
   left = ava_esba_list_of_raw(values, 2);
@@ -273,8 +273,8 @@ deftest(concat_with_incompatible_other_list) {
 
 deftest(noop_delete) {
   ava_value zero = ava_value_of_integer(0);
-  ava_value list = ava_esba_list_of_raw(&zero, 1);
-  ava_value result = ava_list_delete(list, 1, 1);
+  ava_list_value list = ava_esba_list_of_raw(&zero, 1);
+  ava_list_value result = ava_list_delete(list, 1, 1);
 
   ck_assert_int_eq(0, memcmp(&list, &result, sizeof(list)));
 }
@@ -284,9 +284,9 @@ deftest(delete_to_empty_list) {
     ava_value_of_integer(42),
     ava_value_of_integer(56),
   };
-  ava_value list = ava_esba_list_of_raw(values, 2);
-  ava_value result = ava_list_delete(list, 0, 2);
-  ava_value empty = ava_empty_list().v;
+  ava_list_value list = ava_esba_list_of_raw(values, 2);
+  ava_list_value result = ava_list_delete(list, 0, 2);
+  ava_list_value empty = ava_empty_list();
 
   ck_assert_int_eq(0, memcmp(&empty, &result, sizeof(result)));
 }
@@ -299,8 +299,8 @@ deftest(delete_from_begin) {
     ava_value_of_integer(3),
     ava_value_of_integer(4),
   };
-  ava_value list = ava_esba_list_of_raw(values, 5);
-  ava_value result = ava_list_delete(list, 0, 2);
+  ava_list_value list = ava_esba_list_of_raw(values, 5);
+  ava_list_value result = ava_list_delete(list, 0, 2);
 
   ck_assert_int_eq(3, ava_list_length(result));
   assert_values_equal(values[2], ava_list_index(result, 0));
@@ -316,8 +316,8 @@ deftest(delete_from_middle) {
     ava_value_of_integer(3),
     ava_value_of_integer(4),
   };
-  ava_value list = ava_esba_list_of_raw(values, 5);
-  ava_value result = ava_list_delete(list, 2, 4);
+  ava_list_value list = ava_esba_list_of_raw(values, 5);
+  ava_list_value result = ava_list_delete(list, 2, 4);
 
   ck_assert_int_eq(3, ava_list_length(result));
   assert_values_equal(values[0], ava_list_index(result, 0));
@@ -333,8 +333,8 @@ deftest(delete_from_end) {
     ava_value_of_integer(3),
     ava_value_of_integer(4),
   };
-  ava_value list = ava_esba_list_of_raw(values, 5);
-  ava_value result = ava_list_delete(list, 3, 5);
+  ava_list_value list = ava_esba_list_of_raw(values, 5);
+  ava_list_value result = ava_list_delete(list, 3, 5);
 
   ck_assert_int_eq(3, ava_list_length(result));
   assert_values_equal(values[0], ava_list_index(result, 0));
@@ -348,8 +348,8 @@ deftest(compatible_set) {
     ava_value_of_integer(1),
     ava_value_of_integer(2),
   };
-  ava_value list = ava_esba_list_of_raw(values, 3);
-  ava_value result = ava_list_set(list, 1, ava_value_of_integer(42));
+  ava_list_value list = ava_esba_list_of_raw(values, 3);
+  ava_list_value result = ava_list_set(list, 1, ava_value_of_integer(42));
 
   ck_assert_int_eq(3, ava_list_length(result));
   assert_values_equal(values[0], ava_list_index(result, 0));
@@ -365,8 +365,8 @@ deftest(incompatible_set) {
     ava_value_of_integer(2),
   };
   ava_value str = ava_value_of_string(ava_string_of_cstring("foo"));
-  ava_value list = ava_esba_list_of_raw(values, 3);
-  ava_value result = ava_list_set(list, 1, str);
+  ava_list_value list = ava_esba_list_of_raw(values, 3);
+  ava_list_value result = ava_list_set(list, 1, str);
 
   ck_assert_int_eq(3, ava_list_length(result));
   assert_values_equal(values[0], ava_list_index(result, 0));

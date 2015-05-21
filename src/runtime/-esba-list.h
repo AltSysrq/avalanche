@@ -35,7 +35,8 @@
  *
  * end may not be equal to begin.
  */
-ava_value ava_esba_list_copy_of(ava_value list, size_t begin, size_t end);
+ava_list_value ava_esba_list_copy_of(ava_list_value list,
+                                     size_t begin, size_t end);
 
 /**
  * Creates a new ESBA list whose contents are the given array of the given
@@ -45,7 +46,8 @@ ava_value ava_esba_list_copy_of(ava_value list, size_t begin, size_t end);
  *
  * length must not be zero.
  */
-ava_value ava_esba_list_of_raw(const ava_value*restrict array, size_t length);
+ava_list_value ava_esba_list_of_raw(const ava_value*restrict array,
+                                    size_t length);
 
 /**
  * This is only for testing.
