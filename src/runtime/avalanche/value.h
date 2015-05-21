@@ -79,6 +79,11 @@
  *   but not all attributes are traits. Certain types may store actual data in
  *   an attribute, which is then typically the first attribute in the chain.
  *
+ * - Normal value of format X. A value stored in a structure conventionally
+ *   named X_value (eg, ava_list_value) which implies that the value strictly
+ *   adheres to some particular format, and furthermore is in the normalised
+ *   form of that format.
+ *
  * An important thing to note is that values *always* preserve their native
  * string representation. If a string "0x01" is interpreted as integer 1, the
  * value remains the string "0x01". Functions which return *new* values may

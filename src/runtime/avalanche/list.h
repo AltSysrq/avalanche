@@ -28,19 +28,25 @@
  *
  * Defines common semantics for lists.
  *
+ * A list's elements are roughly the tokens produced by tokenising the string;
+ * see ava_list_value for more details. Elements of a list are indexed from 0.
+ *
+ * There is no single "list" type; the list trait is used to access efficient
+ * list manuplation functionality independent of the type.
+ */
+
+/**
+ * A normal value of list format.
+ *
  * A list is a string acceptable by the standard lexer. Only simple tokens (ie,
  * barewords, a-strings, and verbatims) and newline tokens are permitted. The
  * list is said to contain one element for each simple token it contains;
  * newline tokens are discarded.
  *
- * Elements of a list are indexed from 0.
- *
  * Normal form for a list is comprised of each element string escaped with
  * ava_list_escape(), separated by exactly one space character.
- *
- * There is no single "list" type; the list trait is used to access efficient
- * list manuplation functionality independent of the type.
  */
+typedef struct { ava_value value; } ava_list_value;
 
 /**
  * Trait tag for list manipulation.
