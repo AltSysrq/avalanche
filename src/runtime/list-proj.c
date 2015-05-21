@@ -44,7 +44,7 @@ typedef struct {
   ava_fat_list_value delegate;
   size_t group_size, num_groups;
   /* Groups are calculated once then cached here */
-  AO_t /* const ava_fat_list_value*restrict */ groups[];
+  AO_t /* const ava_list_value*restrict */ groups[];
 } ava_list_proj_group_list;
 
 static size_t ava_list_proj_interleave_value_value_weight(ava_value val);
@@ -278,14 +278,14 @@ static ava_value ava_list_proj_group_list_index(
   ava_value list, size_t ix
 ) {
   ava_list_proj_group_list*restrict this = (void*)ava_value_ptr(list);
-  const ava_fat_list_value*restrict ret;
-  ava_fat_list_value tmp;
+  const ava_list_value*restrict ret;
+  ava_list_value tmp;
   size_t begin, end, delegate_length;
 
   assert(ix < this->num_groups);
 
-  ret = (const ava_fat_list_value*restrict)AO_load_acquire_read(this->groups + ix);
-  if (ret) return ret->value.value;
+  ret = (const ava_list_value*restrict)AO_load_acquire_read(this->groups + ix);
+  if (ret) return ret->value;
 
   /* Group not yet cached, create it */
   begin = ix * this->group_size;
@@ -293,7 +293,7 @@ static ava_value ava_list_proj_group_list_index(
   delegate_length = this->delegate.v->length(this->delegate.value.value);
   if (end > delegate_length) end = delegate_length;
 
-  tmp = ava_fat_list_value_of(
+  tmp = ava_list_value_of(
     this->delegate.v->slice(this->delegate.value.value, begin, end));
   ret = ava_clone(&tmp, sizeof(tmp));
   /* Save in cache. If multiple threads hit this index simultaneously, they may
@@ -302,7 +302,7 @@ static ava_value ava_list_proj_group_list_index(
    */
   AO_store_release_write(this->groups + ix, (AO_t)ret);
 
-  return ret->value.value;
+  return ret->value;
 }
 
 ava_value ava_list_proj_flatten(ava_value list) {
