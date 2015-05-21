@@ -235,43 +235,122 @@ ava_value ava_list_copy_delete(ava_value list, size_t begin, size_t end);
  */
 ava_value ava_list_copy_set(ava_value list, size_t ix, ava_value val);
 
-static inline size_t ava_list_length(ava_value list_val) {
+#define ava_list_length(list)                                   \
+  _Generic((list),                                              \
+           ava_value:           ava_list_length_v,              \
+           ava_list_value:      ava_list_length_lv)(list)
+
+static inline size_t ava_list_length_v(ava_value list_val) {
   ava_fat_list_value list = ava_fat_list_value_of(list_val);
   return list.v->length(list.lv.v);
 }
 
-static inline ava_value ava_list_index(ava_value list_val, size_t ix) {
+static inline size_t ava_list_length_lv(ava_list_value list_val) {
+  return ava_list_length_v(list_val.v);
+}
+
+#define ava_list_index(list, ix)                        \
+  _Generic((list),                                      \
+           ava_value:           ava_list_index_v,       \
+           ava_list_value:      ava_list_index_lv)      \
+  ((list), (ix))
+
+static inline ava_value ava_list_index_v(ava_value list_val, size_t ix) {
   ava_fat_list_value list = ava_fat_list_value_of(list_val);
   return list.v->index(list.lv.v, ix);
 }
 
-static inline ava_value ava_list_slice(ava_value list_val,
-                                       size_t begin, size_t end) {
-  ava_fat_list_value list = ava_fat_list_value_of(list_val);
-  return list.v->slice(list.lv.v, begin, end);
+static inline ava_value ava_list_index_lv(ava_list_value list_val, size_t ix) {
+  return ava_list_index_v(list_val.v, ix);
 }
 
-static inline ava_value ava_list_append(ava_value list_val, ava_value elt) {
-  ava_fat_list_value list = ava_fat_list_value_of(list_val);
-  return list.v->append(list.lv.v, elt);
+#define ava_list_slice(list, begin, end)                \
+  _Generic((list),                                      \
+           ava_value:           ava_list_slice_v,       \
+           ava_list_value:      ava_list_slice_lv)      \
+  ((list), (begin), (end))
+
+static inline ava_list_value ava_list_slice_lv(ava_list_value list_val,
+                                               size_t begin, size_t end) {
+  ava_fat_list_value list = ava_fat_list_value_of(list_val.v);
+  return (ava_list_value) { list.v->slice(list.lv.v, begin, end) };
 }
 
-static inline ava_value ava_list_concat(ava_value left, ava_value right) {
-  ava_fat_list_value list = ava_fat_list_value_of(left);
-  return list.v->concat(list.lv.v, right);
+static inline ava_value ava_list_slice_v(ava_value list_val,
+                                         size_t begin, size_t end) {
+  return ava_list_slice_lv(ava_list_value_of(list_val), begin, end).v;
 }
 
-static inline ava_value ava_list_delete(
+#define ava_list_append(list, elt)                      \
+  _Generic((list),                                      \
+           ava_value:           ava_list_append_v,      \
+           ava_list_value:      ava_list_append_lv)     \
+  ((list), (elt))
+
+static inline ava_list_value ava_list_append_lv(ava_list_value list_val,
+                                                ava_value elt) {
+  ava_fat_list_value list = ava_fat_list_value_of(list_val.v);
+  return (ava_list_value) { list.v->append(list.lv.v, elt) };
+}
+
+static inline ava_value ava_list_append_v(ava_value list_val, ava_value elt) {
+  return ava_list_append_lv(ava_list_value_of(list_val), elt).v;
+}
+
+#define ava_list_concat(left, right)                    \
+  _Generic((left),                                      \
+           ava_value:           ava_list_concat_v,      \
+           ava_list_value:      ava_list_concat_lv)     \
+  ((left), (right))
+
+static inline ava_list_value ava_list_concat_lv(ava_list_value left,
+                                                ava_list_value right) {
+  ava_fat_list_value list = ava_fat_list_value_of(left.v);
+  return (ava_list_value) { list.v->concat(list.lv.v, right.v) };
+}
+
+static inline ava_value ava_list_concat_v(ava_value left, ava_value right) {
+  return ava_list_concat_lv(
+    ava_list_value_of(left), ava_list_value_of(right)).v;
+}
+
+#define ava_list_delete(list, begin, end)               \
+  _Generic((list),                                      \
+           ava_value:           ava_list_delete_v,      \
+           ava_list_value:      ava_list_delete_lv)     \
+  ((list), (begin), (end))
+
+static inline ava_list_value ava_list_delete_lv(
+  ava_list_value list, size_t begin, size_t end
+) {
+  ava_fat_list_value l = ava_fat_list_value_of(list.v);
+  return (ava_list_value) { l.v->delete(l.lv.v, begin, end) };
+}
+
+static inline ava_value ava_list_delete_v(
   ava_value list, size_t begin, size_t end
 ) {
-  ava_fat_list_value l = ava_fat_list_value_of(list);
-  return l.v->delete(l.lv.v, begin, end);
+  return ava_list_delete_lv(ava_list_value_of(list),
+                            begin, end).v;
 }
 
-static inline ava_value ava_list_set(ava_value list, size_t index,
-                                     ava_value element) {
-  ava_fat_list_value l = ava_fat_list_value_of(list);
-  return l.v->set(l.lv.v, index, element);
+#define ava_list_set(list, index, element)              \
+  _Generic((list),                                      \
+           ava_value:           ava_list_set_v,         \
+           ava_list_value:      ava_list_set_lv)        \
+  ((list), (index), (element))
+
+static inline ava_list_value ava_list_set_lv(
+  ava_list_value list, size_t index, ava_value element
+) {
+  ava_fat_list_value l = ava_fat_list_value_of(list.v);
+  return (ava_list_value) { l.v->set(l.lv.v, index, element) };
+}
+
+static inline ava_value ava_list_set_v(
+  ava_value list, size_t index, ava_value element
+) {
+  return ava_list_set_lv(ava_list_value_of(list), index, element).v;
 }
 
 /**
