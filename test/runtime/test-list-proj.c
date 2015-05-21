@@ -28,7 +28,7 @@ defsuite(list_proj);
 
 static ava_list_value range(unsigned low, unsigned high) {
   unsigned i;
-  ava_value accum = ava_empty_list();
+  ava_value accum = ava_empty_list().v;
 
   for (i = low; i < high; ++i)
     accum = ava_list_append(accum, ava_value_of_integer(i));
@@ -86,7 +86,7 @@ deftest(noop_demux) {
 
 deftest(empty_demux) {
   ava_list_value result = ava_list_proj_demux(
-    ava_list_value_of(ava_empty_list()), 0, 2);
+    ava_empty_list(), 0, 2);
   ck_assert_int_eq(0, ava_list_length(result.v));
 }
 
@@ -187,7 +187,7 @@ deftest(basic_flatten) {
     ava_value_of_cstring("1 2 3 4"),
     ava_value_of_cstring(""),
   };
-  ava_list_value input = ava_list_value_of(ava_list_of_values(values, 3));
+  ava_list_value input = ava_list_of_values(values, 3);
   ava_list_value result = ava_list_proj_flatten(input);
 
   ck_assert_int_eq(6, ava_list_length(result.v));
@@ -203,9 +203,8 @@ deftest(flatten_inverts_group) {
 }
 
 deftest(empty_flatten) {
-  ava_list_value result = ava_list_proj_flatten(
-    ava_list_value_of(ava_empty_list()));
-  ava_list_value empty = ava_list_value_of(ava_empty_list());
+  ava_list_value result = ava_list_proj_flatten(ava_empty_list());
+  ava_list_value empty = ava_empty_list();
 
   ck_assert_int_eq(0, memcmp(&empty, &result, sizeof(result)));
 }

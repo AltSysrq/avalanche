@@ -39,14 +39,14 @@ static ava_value value_of_cstring(const char* str) {
 
 deftest(empty_string_converted_to_empty_list) {
   ava_value list = value_of_cstring("");
-  ava_value empty = ava_empty_list();
+  ava_value empty = ava_empty_list().v;
 
   ck_assert_int_eq(0, memcmp(&empty, &list, sizeof(list)));
 }
 
 deftest(whitespace_string_converted_to_empty_list) {
   ava_value list = value_of_cstring("  \t\r\n\t");
-  ava_value empty = ava_empty_list();
+  ava_value empty = ava_empty_list().v;
 
   ck_assert_int_eq(0, memcmp(&empty, &list, sizeof(list)));
 }
@@ -174,7 +174,7 @@ deftest(list_stringified_correctly) {
     ava_value_of_string(ava_string_of_cstring("foo bar")),
     ava_value_of_string(ava_string_of_cstring("xy\"zzy")),
   };
-  ava_value list = ava_list_of_values(values, 2);
+  ava_value list = ava_list_of_values(values, 2).v;
 
   ava_string str = ava_to_string(list);
 
@@ -187,7 +187,7 @@ deftest(empty_string_is_quoted) {
     ava_value_of_string(AVA_EMPTY_STRING),
     ava_value_of_string(AVA_EMPTY_STRING),
   };
-  ava_value list = ava_list_of_values(values, 2);
+  ava_value list = ava_list_of_values(values, 2).v;
 
   ava_string str = ava_to_string(list);
 

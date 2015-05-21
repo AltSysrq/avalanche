@@ -61,8 +61,10 @@ static const ava_list_trait ava_empty_list_list_impl = {
   .set = ava_empty_list_list_set,
 };
 
-ava_value ava_empty_list(void) {
-  return ava_value_with_ptr(&ava_empty_list_list_impl, NULL);
+ava_list_value ava_empty_list(void) {
+  return (ava_list_value) {
+    ava_value_with_ptr(&ava_empty_list_list_impl, NULL)
+  };
 }
 
 static ava_string ava_empty_list_value_to_string(ava_value el) {

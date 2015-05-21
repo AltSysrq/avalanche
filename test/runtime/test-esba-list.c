@@ -146,7 +146,7 @@ deftest(slice_to_empty_list) {
   ava_value list = ava_esba_list_of_raw(values, 2);
   ava_value empty = ava_list_slice(list, 1, 1);
 
-  assert_values_equal(empty, ava_empty_list());
+  assert_values_equal(empty, ava_empty_list().v);
 }
 
 deftest(slice_to_array_list) {
@@ -286,7 +286,7 @@ deftest(delete_to_empty_list) {
   };
   ava_value list = ava_esba_list_of_raw(values, 2);
   ava_value result = ava_list_delete(list, 0, 2);
-  ava_value empty = ava_empty_list();
+  ava_value empty = ava_empty_list().v;
 
   ck_assert_int_eq(0, memcmp(&empty, &result, sizeof(result)));
 }

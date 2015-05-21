@@ -187,8 +187,8 @@ ava_fat_list_value ava_list_copy_of(ava_fat_list_value list, size_t begin, size_
  * need not be prerved after this function returns.
  * @param count The number of values to copy.
  */
-ava_value ava_list_of_values(const ava_value*restrict values,
-                             size_t count);
+ava_list_value ava_list_of_values(const ava_value*restrict values,
+                                  size_t count);
 
 /**
  * Escapes the given string so that it can be used in a string representation
@@ -277,6 +277,6 @@ static inline ava_value ava_list_set(ava_value list, size_t index,
 /**
  * The empty list.
  */
-ava_value ava_empty_list(void);
+ava_list_value ava_empty_list(void);
 
 #endif /* AVA_RUNTIME_LIST_H_ */
