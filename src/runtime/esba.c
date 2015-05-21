@@ -187,6 +187,10 @@
 
  */
 
+const ava_attribute_tag ava_esba_handle_tag = {
+  .name = "esba-handle"
+};
+
 static inline void static_assert_ao_t_can_hold_pointer(void) AVA_UNUSED;
 static inline void static_assert_ao_t_can_hold_pointer(void) {
   switch (0) {
@@ -274,11 +278,8 @@ typedef struct {
 } ava_esba_array;
 
 struct ava_esba_handle_s {
-  /**
-   * The userdata on the ESBA. This needs to be the first element in the
-   * structure.
-   */
-  void* userdata;
+  ava_attribute header;
+
   /**
    * A pointer to the array backing this handle.
    *
@@ -344,7 +345,7 @@ static ava_esba_array* ava_esba_array_new(
   void* (*allocator)(size_t));
 
 static ava_esba_handle* ava_esba_handle_new(
-  void* userdata,
+  const void* next_attr,
   ava_esba_array* array, AO_t version, size_t max_length);
 
 /**
@@ -384,10 +385,12 @@ static inline ava_bool ava_esba_handle_is_stale(
  * @param consistent_handle The handle whose logical value to copy; may be
  * stale.
  * @param length The number of pointers to copy out of the original array.
+ * @param length_elts The number of elements to copy out of the original array.
  * @param capacity The number of pointers for which to allocate space.
  */
 static ava_esba_array* ava_esba_handle_copy_out(
-  const ava_esba_handle* handle, size_t length, size_t capacity);
+  const ava_esba_handle* handle, size_t length, size_t length_elts,
+  size_t capacity);
 
 /**
  * Builds a new array to use as a backing for the given handle, which is
@@ -426,7 +429,7 @@ ava_esba ava_esba_new(size_t element_size,
                       size_t initial_capacity,
                       ava_esba_weight_function weight_function,
                       void* (*allocator)(size_t),
-                      void* userdata) {
+                      const void* next_attr) {
   assert(0 == element_size % sizeof(pointer));
 
   element_size /= sizeof(pointer);
@@ -435,7 +438,7 @@ ava_esba ava_esba_new(size_t element_size,
     weight_function, allocator);
 
   ava_esba_handle* handle = ava_esba_handle_new(
-    userdata, array, array->true_version, 0);
+    next_attr, array, array->true_version, 0);
 
   return (ava_esba) { .handle = handle, .length = 0 };
 }
@@ -465,11 +468,12 @@ static ava_esba_array* ava_esba_array_new(
 }
 
 static ava_esba_handle* ava_esba_handle_new(
-  void* userdata,
+  const void* next_attr,
   ava_esba_array* array, AO_t version, size_t max_length
 ) {
   ava_esba_handle* handle = AVA_NEW(ava_esba_handle);
-  handle->userdata = userdata;
+  handle->header.tag = &ava_esba_handle_tag;
+  handle->header.next = next_attr;
   handle->head = (AO_t)array;
   handle->version = version;
   handle->max_length = max_length;
@@ -581,8 +585,11 @@ static ava_esba_handle_value ava_esba_handle_read_consistent(
   val = ava_esba_handle_read(handle);
 
   while (AVA_UNLIKELY(!ava_esba_handle_is_consistent(val))) {
-#if defined(__GNUC__) && defined(__SSE2__)
+#if defined(__GNUC__) && defined(__SSE2__) && !defined(__clang__)
     __builtin_ia32_pause();
+#elif defined(__SSE2__) && defined(__clang__)
+    /* Strangely, clang lacks the above builtin */
+    asm volatile ("pause" : );
 #endif
     val = ava_esba_handle_read(handle);
   }
@@ -612,7 +619,7 @@ static ava_esba_handle_value ava_esba_handle_make_fresh(
      */
     size_t length = AO_load(&handle->max_length);
     ava_esba_array* copy = ava_esba_handle_copy_out(
-      handle, length * old.head->element_size,
+      handle, length * old.head->element_size, length,
       length*2 * old.head->element_size);
 
     /* Successfully built an array with the desired version, install it into
@@ -638,7 +645,8 @@ static ava_esba_handle_value ava_esba_handle_make_fresh(
 }
 
 static ava_esba_array* ava_esba_handle_copy_out(
-  const ava_esba_handle* handle, size_t length, size_t capacity
+  const ava_esba_handle* handle, size_t length, size_t length_elts,
+  size_t capacity
 ) {
   /* Get a current snapshot of the handle, since we need to read from both the
    * head and the version.
@@ -703,7 +711,8 @@ static ava_esba_array* ava_esba_handle_copy_out(
   /* The destination array is now fully consistent; calculate it's weight and
    * we're done.
    */
-  dst->weight = (*dst->weight_function)(handle->userdata, dst->data, length);
+  dst->weight = (*dst->weight_function)(handle->header.next, dst->data,
+                                        length_elts);
   return dst;
 }
 
@@ -738,7 +747,7 @@ static void ava_esba_finish_append_impl(ava_esba esba, size_t num_elements,
    * only writer.
    */
   val.head->weight += (*val.head->weight_function)(
-    esba.handle->userdata,
+    esba.handle->header.next,
     val.head->data + old_length * element_size, num_elements);
 }
 
@@ -802,11 +811,11 @@ ava_esba ava_esba_set(ava_esba esba, size_t index, const void*restrict data) {
    * No atomicity or barrier needed since we're the only writer.
    */
   val.head->weight += (*val.head->weight_function)(
-    esba.handle->userdata, data, 1);
+    esba.handle->header.next, data, 1);
 
   /* Create a new handle for the new version. */
   esba.handle = ava_esba_handle_new(
-    esba.handle->userdata, val.head, (AO_t)undo, esba.length);
+    esba.handle->header.next, val.head, (AO_t)undo, esba.length);
 
   return esba;
 }
@@ -849,11 +858,11 @@ static void ava_esba_make_mutable(
      * write; need to copy.
      */
     val->head = ava_esba_handle_copy_out(
-      esba->handle, believed_live_size,
+      esba->handle, believed_live_size, esba->length,
       new_capacity * 2 * val->head->element_size);
     val->version = (const ava_esba_undead_element*)val->head->end;
     esba->handle = ava_esba_handle_new(
-      esba->handle->userdata,
+      esba->handle->header.next,
       val->head, (AO_t)val->version, esba->length);
 
     /* Set the correct dead size */

@@ -25,6 +25,14 @@
 
 /******************** VALUE AND TYPE SYSTEM ********************/
 
+#if (defined(__GNUC__) && (__GNUC__ > 4 ||                           \
+                           __GNUC__ == 4 && __GNUC_MINOR__ >= 7)) || \
+  defined(__clang__)
+#define AVA_VECTOR_VALUE 1
+#else
+#define AVA_VECTOR_VALUE 0
+#endif
+
 /**
  * Avalanche's "everything is a string" type system, as in later Tcl versions,
  * is merely an illusion. In reality, higher-level representations of values
@@ -48,22 +56,45 @@
  *   subset the set of all strings; (b) a higher-level internal representation
  *   that may be more performant than raw strings; (c) a set of method
  *   implementations. The finite set of types in the process is determined at
- *   compile time; types can only be introduced by C code. Constructing a value
- *   of a particular type from another value is to "imbue" the value with that
- *   type.
+ *   compile time; types can only be introduced by C code. Note tha types are
+ *   mostly conceptual, rather than a physical part of the API. For the most
+ *   part, a type can essentially be considered as the set of trait
+ *   implementations on a value.
  *
  * - Representation. The physical way a value is stored. Without knowledge of
  *   the particular type, the representation of a value is totally opaque.
  *   Certain types, such as ava_string_type, MAY make their representation
  *   public.
  *
+ * - Trait. A trait is a set of operations that are *guaranteed* to be
+ *   supported on a value, generally in a manner more efficient than direct
+ *   string manuplation. Traits are usually (but not necessarily) intimately
+ *   connected to the type of a value. The lack of a trait on a value does
+ *   *not* imply the operation cannot be performed on that value; rather, the
+ *   value must first be reparsed as a type that does. There is no simple
+ *   ava_trait structure; the generic API works with attributes directly, and
+ *   every trait is a different extension of the attribute structure.
+ *
+ * - Attribute. A structure attached to a value. Every trait is an attribute,
+ *   but not all attributes are traits. Certain types may store actual data in
+ *   an attribute, which is then typically the first attribute in the chain.
+ *
+ * - Normal value of format X. A value stored in a structure conventionally
+ *   named X_value (eg, ava_list_value) which implies that the value strictly
+ *   adheres to some particular format, and furthermore is in the normalised
+ *   form of that format.
+ *
  * An important thing to note is that values *always* preserve their native
- * string representation. If a string "0x01" is converted to integer 1, it must
- * still appear to be the string "0x01". Functions which return *new* values
- * may define themselves to produce _normalised_ values, in which case this
- * does not apply. (Eg, "0x0a"+"0" produces "10", not "0x0a".)
+ * string representation. If a string "0x01" is interpreted as integer 1, the
+ * value remains the string "0x01". Functions which return *new* values may
+ * (and usually do) define themselves to produce _normalised_ values, in which
+ * case this does not apply. (Eg, "0x0a"+"0" produces "10", not "0x0a".)
  */
+#if AVA_VECTOR_VALUE
+typedef unsigned long long ava_value __attribute__((__vector_size__(16)));
+#else
 typedef struct ava_value_s ava_value;
+#endif
 
 /**
  * A single representation of a value.
@@ -71,87 +102,173 @@ typedef struct ava_value_s ava_value;
  * The usage of this union is entirely up to the type on the value.
  */
 typedef union {
-  ava_ubyte             ubytes[8];
-  ava_sbyte             sbytes[8];
-  char                  chars[8];
-  ava_ushort            ushorts[4];
-  ava_sshort            sshorts[4];
-  ava_uint              uint[2];
-  ava_sint              sint[2];
   ava_ulong             ulong;
   ava_slong             slong;
   const void*restrict   ptr;
-  ava_string            str;
+  /* There is no field
+   *   ava_string       str;
+   * because, on the System V AMD64 ABI, this (nesting unions) prevents the
+   * value from being passed/returned in registers during function calls.
+   *
+   * Use ava_string_to_datum() and ava_string_of_datum() to store strings
+   * within an ava_datumj
+   */
 } ava_datum;
 
 /**
- * Defines the type of a value and how its representation is interpreted.
+ * A tag identifying the type of an attribute on a value.
  *
- * As previously described, types provide *performance*, not functionality.
- * This is formalised by several rules:
- *
- * - Every value of every type has a string representation which perfectly
- *   represents the value. to_type(to_string(value_of_type)) == value_of_type
- *
- * - Every value of every type provides sufficient information to reproduce the
- *   original string. This means that types supporting denormalised string
- *   representations must typically preserve the original string until passed
- *   through some explicitly normalising operation.
- *   to_string(to_type(string)) == string
- *
- * - The effect of performing any operation on a value of a type is exactly
- *   equivalent to having performed the same operation on the string
- *   representation. f(value_of_type) == f(to_string(value_of_type))
- */
-typedef struct ava_value_type_s ava_value_type;
-
-struct ava_value_s {
-  /**
-   * The one or two representations of this value, as controlled by the type.
-   */
-  ava_datum r1, r2;
-  /**
-   * The dynamic type of this value.
-   */
-  const ava_value_type*restrict type;
-};
-
-/**
- * An accelerator identifies a set of operations that can be performed on any
- * value, but which may be implemented more efficiently on particular types.
- *
- * An ava_accelerator itself contains no information; it is meerly a pointer
- * used to guarantee uniqueness.
- *
- * Use the AVA_DECLARE_ACCELERATOR and AVA_DEFINE_ACCELERATOR to define values
- * of this type.
+ * Generally, code does nothing with this structure except compare pointers to
+ * it.
  */
 typedef struct {
   /**
-   * sizeof(ava_accelerator)
+   * A human-readable name for this attribute type.
    */
-  size_t size;
-} ava_accelerator;
+  const char* name;
+} ava_attribute_tag;
 
 /**
- * Declares the existence of a particular accelerator, appropriate for use in a
- * header file.
+ * The basic structure shared by all attributes.
+ *
+ * This structure is not in and of itself useful, except to locate a desired
+ * attribute; clients must cast it to the structure they actually want.
  */
-#define AVA_DECLARE_ACCELERATOR(name) extern const ava_accelerator name
-/**
- * Defines an accelerator; must be located in a source file.
- */
-#define AVA_DEFINE_ACCELERATOR(name) \
-  const ava_accelerator name = { .size = sizeof(ava_accelerator) }
+typedef struct ava_attribute_s ava_attribute;
 
-struct ava_value_type_s {
+struct ava_attribute_s {
   /**
-   * sizeof(ava_value_type)
+   * The tag identifying the meaning and usage of this attribute.
    */
-  size_t size;
+  const ava_attribute_tag*restrict tag;
+  /**
+   * The next attribute in the list, or NULL if there are no further
+   * attributes.
+   */
+  const ava_attribute*restrict next;
+};
+
+#if AVA_VECTOR_VALUE
+#define AVA_VALUE_INIT(a,b) { (ava_ulong)(a), (ava_ulong)(b) }
+#define AVA_VALUE_SUB(a,n) ((a)[n])
+#else /* ! AVA_VECTOR_VALUE */
+struct ava_value_s {
+  ava_ulong v[2];
+};
+#define AVA_VALUE_INIT(a,b) {{ (ava_ulong)(a), (ava_ulong)(b) }}
+#define AVA_VALUE_SUB(a,n) ((a).v[n])
+#endif /* AVA_VECTOR_VALUE */
+
+/**
+ * Converts an ava_string to an ava_datum.
+ *
+ * This can be reversed by ava_string_of_datum().
+ */
+static inline ava_datum ava_string_to_datum(ava_string str) {
+  return (ava_datum) { .ulong = str.ascii9 };
+}
+
+/**
+ * Converts an ava_datum to an ava_string.
+ *
+ * (This does not mean stringification; it merely inverts
+ * ava_string_to_datum().)
+ */
+static inline ava_string ava_string_of_datum(ava_datum datum) {
+  return (ava_string) { .ascii9 = datum.ulong };
+}
+
+/**
+ * Constructs a value using the given string as its datum.
+ */
+static inline ava_value ava_value_with_str(
+  const void* attr, ava_string str
+) {
+  return (ava_value) AVA_VALUE_INIT(attr, str.ascii9);
+}
+
+/**
+ * Constructs a value using the given pointer as its datum.
+ */
+static inline ava_value ava_value_with_ptr(
+  const void* attr, const void* ptr
+) {
+  return (ava_value) AVA_VALUE_INIT(attr, ptr);
+}
+
+/**
+ * Constructs a value using the given signed long as its value.
+ */
+static inline ava_value ava_value_with_slong(
+  const void* attr, ava_slong sl
+) {
+  return (ava_value) AVA_VALUE_INIT(attr, sl);
+}
+
+/**
+ * Constructs a value using the given unsigned long as its value.
+ *
+ * The ulong representation is suitable for opaquely moving ava_value contents
+ * around separately.
+ */
+static inline ava_value ava_value_with_ulong(
+  const void* attr, ava_ulong ul
+) {
+  return (ava_value) AVA_VALUE_INIT(attr, ul);
+}
+
+/**
+ * Returns the root attribute on the given ava_value.
+ */
+static inline const void* ava_value_attr(ava_value v) {
+  return (const void*)AVA_VALUE_SUB(v, 0);
+}
+
+/**
+ * Returns the datum of the given ava_value interpreted as a string.
+ */
+static inline ava_string ava_value_str(ava_value v) {
+  return (ava_string) { .ascii9 = AVA_VALUE_SUB(v, 1) };
+}
+
+/**
+ * Returns the datum of the given ava_value interpreted as a pointer.
+ */
+static inline const void* ava_value_ptr(ava_value v) {
+  return (const void*)AVA_VALUE_SUB(v, 1);
+}
+
+/**
+ * Returns the datum of the given ava_value interpreted as a signed long.
+ */
+static inline ava_slong ava_value_slong(ava_value v) {
+  return AVA_VALUE_SUB(v, 1);
+}
+
+/**
+ * Returns the datum of the given ava_value interpreted as an unsigned long.
+ *
+ * The ulong representation is suitable for opaquely moving ava_value contents
+ * around separately.
+ */
+static inline ava_ulong ava_value_ulong(ava_value v) {
+  return AVA_VALUE_SUB(v, 1);
+}
+
+/**
+ * The tag for ava_value_trait.
+ */
+extern const ava_attribute_tag ava_value_trait_tag;
+
+/**
+ * The generic trait, which is present on all values.
+ */
+typedef struct {
+  ava_attribute header;
 
   /**
-   * A human-readable name of this type, for diagnostic and debugging purposes.
+   * A human-readable name of the type of the value, for diagnostic and
+   * debugging purposes.
    */
   const char* name;
 
@@ -166,7 +283,7 @@ struct ava_value_type_s {
    * iterate_string_chunk() instead and use ava_string_of_chunk_iterator
    * instead.
    *
-   * This function is assumed to be pure.
+   * This function is must be pure.
    *
    * @param value The value which is to be converted to a string; guaranteed to
    * have a type equal to this type.
@@ -214,32 +331,6 @@ struct ava_value_type_s {
                                      ava_value value);
 
   /**
-   * Queries whether the type supports the given accelerator.
-   *
-   * Do not call this function directly; use ava_query_accelerator() instead.
-   *
-   * If the type recognises the given accelerator, it MAY return a value
-   * particular to that type; otherwise, it MUST return dfault.
-   *
-   * The exact semantics of dfault and the return value are entirely dependent
-   * on the accelerator; typically, it will be a struct containing function
-   * pointers and possibly some properties global to the type.
-   *
-   * Generally, dfault should provide an implementation of the operations that
-   * operates on string values.
-   *
-   * The implementation may not inspect the contents of *accel, and may not do
-   * anything whatsoever with dfault except return it.
-   *
-   * @see ava_noop_query_accelerator()
-   * @param accel The accelerator being queried.
-   * @param dfault The value to return if the type does not know about accel.
-   * @return An accelerator-dependent value.
-   */
-  const void* (*query_accelerator)(const ava_accelerator* accel,
-                                   const void* dfault);
-
-  /**
    * Queries the "cost" of maintaining a reference to the given value.
    *
    * Do not call this function directly; use ava_value_weight() instead.
@@ -257,92 +348,70 @@ struct ava_value_type_s {
    * make the value become lighter or heavier dynamically.
    */
   size_t (*value_weight)(ava_value);
-};
+} ava_value_trait;
+
+/**
+ * Returns the first attribute on value matching the given tag, or NULL if none
+ * can be found with that identity.
+ *
+ * @see AVA_GET_ATTRIBUTE
+ */
+const void* ava_get_attribute(
+  ava_value value, const ava_attribute_tag*restrict tag) AVA_PURE;
+
+/**
+ * Returns a pointer to the first attribute tagged with type_tag, cast to const
+ * type*restrict.
+ */
+#define AVA_GET_ATTRIBUTE(value, type) \
+  ((const type*restrict)ava_get_attribute((value), &type##_tag))
 
 /**
  * Converts the given value into a monolithic string.
  *
- * @see ava_value_type.to_string()
+ * @see ava_value_trait.to_string()
  */
 static inline ava_string ava_to_string(ava_value value) AVA_PURE;
 static inline ava_string ava_to_string(ava_value value) {
-  return (*value.type->to_string)(value);
+  return AVA_GET_ATTRIBUTE(value, ava_value_trait)->to_string(value);
 }
 
 /**
  * Begins iterating string chunks in the given value.
  *
- * @see ava_value_type.string_chunk_iterator()
+ * @see ava_value_trait.string_chunk_iterator()
  */
 static inline ava_datum ava_string_chunk_iterator(ava_value value) {
-  return (*value.type->string_chunk_iterator)(value);
+  return AVA_GET_ATTRIBUTE(value, ava_value_trait)
+    ->string_chunk_iterator(value);
 }
 
 /**
  * Continues iterating string chunks in the given value.
  *
- * @see ava_value_type.iterate_string_chunk()
+ * @see ava_value_trait.iterate_string_chunk()
  */
 static inline ava_string ava_iterate_string_chunk(
   ava_datum*restrict it, ava_value value
 ) {
-  return (*value.type->iterate_string_chunk)(it, value);
-}
-
-/**
- * This is a workaround to hint to GCC that (*type->query_accelerator) is
- * const, since there doesn't seem to be any way to attach attributes to
- * function pointers.
- *
- * This is not considered part of the public API; do not call it yourself.
- */
-static inline const void* ava___invoke_query_accelerator_const(
-  const void* (*f)(const ava_accelerator*, const void*),
-  const ava_accelerator* accel,
-  const void* dfault
-) AVA_CONSTFUN;
-/**
- * Returns the implementation corresponding to the given accelerator of the
- * type associated with the given value.
- *
- * @see ava_value_type.query_accelerator()
- */
-static inline const void* ava_query_accelerator(
-  ava_value value,
-  const ava_accelerator* accel,
-  const void* dfault
-) AVA_PURE;
-
-static inline const void* ava___invoke_query_accelerator_const(
-  const void* (*f)(const ava_accelerator*, const void*),
-  const ava_accelerator* accel,
-  const void* dfault
-) {
-  return (*f)(accel, dfault);
-}
-
-static inline const void* ava_query_accelerator(
-  ava_value value,
-  const ava_accelerator* accel,
-  const void* dfault
-) {
-  return ava___invoke_query_accelerator_const(
-    value.type->query_accelerator, accel, dfault);
+  return AVA_GET_ATTRIBUTE(value, ava_value_trait)
+    ->iterate_string_chunk(it, value);
 }
 
 /**
  * Returns the approximate "weight" of the given value.
  *
- * @see ava_value_type.value_weight()
+ * @see ava_value_trait.value_weight()
  */
 static inline size_t ava_value_weight(ava_value value) {
-  return (*value.type->value_weight)(value);
+  return AVA_GET_ATTRIBUTE(value, ava_value_trait)
+    ->value_weight(value);
 }
 
 /**
  * Constructs a string by using the chunk-iterator API on the given value.
  *
- * This is a good implementation of ava_value_type.to_string() for types that
+ * This is a good implementation of ava_value_trait.to_string() for types that
  * implement string_chunk_iterator() and iterate_string_chunk() naturally.
  */
 ava_string ava_string_of_chunk_iterator(ava_value value) AVA_PURE;
@@ -351,7 +420,7 @@ ava_string ava_string_of_chunk_iterator(ava_value value) AVA_PURE;
  * Prepares an iterator for use with ava_iterate_singleton_string_chunk().
  *
  * This is a reasonable implementation of
- * ava_value_type.string_chunk_iterator() for types that only implement
+ * ava_value_trait.string_chunk_iterator() for types that only implement
  * to_string() naturally.
  */
 ava_datum ava_singleton_string_chunk_iterator(ava_value value);
@@ -359,7 +428,7 @@ ava_datum ava_singleton_string_chunk_iterator(ava_value value);
 /**
  * Iterates a value as a single string chunk.
  *
- * This is a reasonable implementation of ava_value_type.iterate_string_chunk()
+ * This is a reasonable implementation of ava_value_trait.iterate_string_chunk()
  * for types that only implement to_string() naturally. It must be used with
  * ava_singleton_string_chunk_iterator().
  */
@@ -367,34 +436,9 @@ ava_string ava_iterate_singleton_string_chunk(ava_datum* rep,
                                               ava_value value);
 
 /**
- * Implementation for ava_value_type.query_accelerator() that always returns
- * the default.
- */
-const void* ava_noop_query_accelerator(const ava_accelerator* accel,
-                                       const void* dfault) AVA_CONSTFUN;
-
-/**
- * The type for string values, the universal type.
- *
- * Representational semantics:
- *
- * - r1 has the str field set to the string value.
- *
- * - r2 may be used internally.
- *
- * ava_value_of_string() is the appropriate means to create a value holding a
- * string. ava_string_imbue() creates a string value from any value, and is
- * strongly preferred over ava_value_of_string(ava_to_string(value)).
- */
-extern const ava_value_type ava_string_type;
-/**
  * Returns a value which contains the given string, with a string type.
  */
 ava_value ava_value_of_string(ava_string str) AVA_PURE;
-/**
- * Returns a value which contains the string representation of the input value.
- */
-ava_value ava_string_imbue(ava_value value) AVA_PURE;
 
 /**
  * Convenience for ava_value_of_string(ava_value_of_cstring(str)).

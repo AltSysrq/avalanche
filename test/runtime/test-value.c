@@ -24,13 +24,13 @@ defsuite(value);
 /* For testing, our type represents a string with some integer number of
  * characters, starting from NUL at the very end of the string, and
  * incrementing for each preceding bytes. It stores this count in the ulong
- * field of r1, leaving r2 untouched.
+ * field of the value.
  *
  * Chunk iterators store the number of characters left; each chunk contains one
  * character.
  */
 static ava_datum xn_string_chunk_iterator(ava_value value) {
-  return value.r1;
+  return (ava_datum) { .ulong = ava_value_ulong(value) };
 }
 
 static ava_string xn_iterate_string_chunk(ava_datum*restrict it,
@@ -43,21 +43,16 @@ static ava_string xn_iterate_string_chunk(ava_datum*restrict it,
   }
 }
 
-static const ava_value_type xn_type = {
-  .size = sizeof(ava_value_type),
+static const ava_value_trait xn_type = {
+  .header = { .tag = &ava_value_trait_tag, .next = NULL },
   .name = "xn",
   .to_string = ava_string_of_chunk_iterator,
   .string_chunk_iterator = xn_string_chunk_iterator,
   .iterate_string_chunk = xn_iterate_string_chunk,
-  .query_accelerator = ava_noop_query_accelerator
 };
 
 static ava_value xn_of(ava_ulong val) {
-  return (ava_value) {
-    .r1 = { .ulong = val },
-    .r2 = { .ulong = 0 },
-    .type = &xn_type
-  };
+  return ava_value_with_ulong(&xn_type, val);
 }
 
 deftest(string_of_chunk_iterator_empty) {
@@ -114,40 +109,6 @@ deftest(singleton_chunk_iterator) {
     accum = ava_string_concat(accum, chunk);
 
   ck_assert_str_eq("avalanches", ava_string_to_cstring(accum));
-}
-
-AVA_DECLARE_ACCELERATOR(foo_accelerator);
-AVA_DEFINE_ACCELERATOR(foo_accelerator);
-
-deftest(noop_query_accelerator) {
-  ava_value val = ava_value_of_string(AVA_EMPTY_STRING);
-
-  ck_assert_ptr_eq(&val, ava_query_accelerator(val, &foo_accelerator, &val));
-  ck_assert_ptr_eq(NULL, ava_query_accelerator(val, &foo_accelerator, NULL));
-}
-
-deftest(string_imbue_of_string_is_noop) {
-  ava_value orig, new;
-
-  orig = ava_value_of_string(AVA_EMPTY_STRING);
-  /* Put something in r2 to make sure it gets preserved. */
-  orig.r2.ptr = &orig;
-
-  new = ava_string_imbue(orig);
-  ck_assert_int_eq(orig.r1.str.ascii9, new.r1.str.ascii9);
-  ck_assert_ptr_eq(&orig, new.r2.ptr);
-  ck_assert_ptr_eq(&ava_string_type, new.type);
-}
-
-deftest(string_imbue_stringifies_other_types) {
-  ava_value orig, new;
-
-  orig = xn_of(5);
-
-  new = ava_string_imbue(orig);
-  ck_assert_str_eq("\4\3\2\1", ava_string_to_cstring(new.r1.str));
-  ck_assert_ptr_eq(NULL, new.r2.ptr);
-  ck_assert_ptr_eq(&ava_string_type, new.type);
 }
 
 deftest(weight_of_string_is_its_length) {

@@ -31,12 +31,28 @@
  */
 #define AVA_SIPHASH_C 2
 #endif
+
+#ifndef AVA_SIPHASH_D
 /**
  * The number of finishing hash rounds.
  */
-#ifndef AVA_SIPHASH_D
 #define AVA_SIPHASH_D 4
 #endif
+
+const ava_attribute_tag ava_value_trait_tag = {
+  .name = "generic"
+};
+
+const void* ava_get_attribute(ava_value value,
+                              const ava_attribute_tag*restrict tag) {
+  const ava_attribute*restrict attr;
+
+  for (attr = ava_value_attr(value); attr; attr = attr->next)
+    if (tag == attr->tag)
+      return attr;
+
+  return NULL;
+}
 
 ava_string ava_string_of_chunk_iterator(ava_value value) {
   /* Produce a near-optimal string by concatting the chunks in a perfect binary
@@ -80,60 +96,43 @@ ava_string ava_string_of_chunk_iterator(ava_value value) {
 }
 
 ava_datum ava_singleton_string_chunk_iterator(ava_value value) {
-  return (ava_datum) { .str = ava_to_string(value) };
+  return ava_string_to_datum(ava_to_string(value));
 }
 
 ava_string ava_iterate_singleton_string_chunk(ava_datum*restrict it,
                                               ava_value value) {
-  ava_string ret = it->str;
-  it->str = AVA_ABSENT_STRING;
+  ava_string ret = ava_string_of_datum(*it);
+  *it = ava_string_to_datum(AVA_ABSENT_STRING);
   return ret;
 }
 
-const void* ava_noop_query_accelerator(const ava_accelerator* accel,
-                                       const void* dfault) {
-  return dfault;
+static ava_string ava_string_value_to_string(ava_value value) AVA_CONSTFUN;
+static ava_string ava_string_value_to_string(ava_value value) {
+  return ava_value_str(value);
 }
 
-static ava_string ava_string_type_to_string(ava_value value) AVA_CONSTFUN;
-static ava_string ava_string_type_to_string(ava_value value) {
-  return value.r1.str;
+static size_t ava_string_value_value_weight(ava_value value) {
+  return ava_string_length(ava_value_str(value));
 }
 
-static size_t ava_string_type_value_weight(ava_value value) {
-  return ava_string_length(value.r1.str);
-}
-
-const ava_value_type ava_string_type = {
-  .size = sizeof(ava_value_type),
+static const ava_value_trait ava_string_generic_impl = {
+  .header = { .tag = &ava_value_trait_tag, .next = NULL },
   .name = "string",
-  .to_string = ava_string_type_to_string,
+  .to_string = ava_string_value_to_string,
   .string_chunk_iterator = ava_singleton_string_chunk_iterator,
   .iterate_string_chunk = ava_iterate_singleton_string_chunk,
-  .query_accelerator  = ava_noop_query_accelerator,
-  .value_weight = ava_string_type_value_weight,
+  .value_weight = ava_string_value_value_weight,
 };
 
 /* The string representation will become a bit more interesting once we have
  * caching for large values.
  */
 ava_value ava_value_of_string(ava_string str) {
-  return (ava_value) {
-    .r1 = { .str = str },
-    .r2 = { .ulong = 0 },
-    .type = &ava_string_type,
-  };
+  return ava_value_with_str(&ava_string_generic_impl, str);
 }
 
 ava_value ava_value_of_cstring(const char* str) {
   return ava_value_of_string(ava_string_of_cstring(str));
-}
-
-ava_value ava_string_imbue(ava_value value) {
-  if (&ava_string_type == value.type)
-    return value;
-  else
-    return ava_value_of_string(ava_to_string(value));
 }
 
 ava_bool ava_value_equal(ava_value a, ava_value b) {

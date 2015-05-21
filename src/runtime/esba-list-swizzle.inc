@@ -10,10 +10,9 @@ typedef void (*ava_esba_list_swizzle_up_f)(
   const void*restrict src);
 
 
-#define POLYMORPH_TYPE 1
-#define POLYMORPH_R1 2
-#define POLYMORPH_R2 4
-#define POLYMORPH_ALL (1|2|4)
+#define POLYMORPH_ATTR 1
+#define POLYMORPH_ULONG 2
+#define POLYMORPH_ALL (1|2)
 
 typedef struct {
 } ava_esba_list_swizzled_0;
@@ -29,20 +28,22 @@ static void ava_esba_list_swizzle_up_0(
   const ava_value*restrict template,
   const ava_esba_list_swizzled_0*restrict src
 ) {
-  dst->type = template->type;
-  dst->r1 = template->r1;
-  dst->r2 = template->r2;
+  const ava_attribute*restrict attr;
+  ava_ulong ulong;
+  attr = ava_value_attr(*template);
+  ulong = ava_value_ulong(*template);
+  *dst = ava_value_with_ulong(attr, ulong);
 }
 
 typedef struct {
-  const ava_value_type*restrict type;
+  const ava_attribute*restrict attr;
 } ava_esba_list_swizzled_1;
 
 static void ava_esba_list_swizzle_down_1(
   ava_esba_list_swizzled_1*restrict dst,
   const ava_value*restrict src
 ) {
-  dst->type = src->type;
+  dst->attr = ava_value_attr(*src);
 }
 
 static void ava_esba_list_swizzle_up_1(
@@ -50,20 +51,22 @@ static void ava_esba_list_swizzle_up_1(
   const ava_value*restrict template,
   const ava_esba_list_swizzled_1*restrict src
 ) {
-  dst->type = src->type;
-  dst->r1 = template->r1;
-  dst->r2 = template->r2;
+  const ava_attribute*restrict attr;
+  ava_ulong ulong;
+  attr = src->attr;
+  ulong = ava_value_ulong(*template);
+  *dst = ava_value_with_ulong(attr, ulong);
 }
 
 typedef struct {
-  ava_datum r1;
+  ava_ulong ulong;
 } ava_esba_list_swizzled_2;
 
 static void ava_esba_list_swizzle_down_2(
   ava_esba_list_swizzled_2*restrict dst,
   const ava_value*restrict src
 ) {
-  dst->r1 = src->r1;
+  dst->ulong = ava_value_ulong(*src);
 }
 
 static void ava_esba_list_swizzle_up_2(
@@ -71,22 +74,24 @@ static void ava_esba_list_swizzle_up_2(
   const ava_value*restrict template,
   const ava_esba_list_swizzled_2*restrict src
 ) {
-  dst->type = template->type;
-  dst->r1 = src->r1;
-  dst->r2 = template->r2;
+  const ava_attribute*restrict attr;
+  ava_ulong ulong;
+  attr = ava_value_attr(*template);
+  ulong = src->ulong;
+  *dst = ava_value_with_ulong(attr, ulong);
 }
 
 typedef struct {
-  const ava_value_type*restrict type;
-  ava_datum r1;
+  const ava_attribute*restrict attr;
+  ava_ulong ulong;
 } ava_esba_list_swizzled_3;
 
 static void ava_esba_list_swizzle_down_3(
   ava_esba_list_swizzled_3*restrict dst,
   const ava_value*restrict src
 ) {
-  dst->type = src->type;
-  dst->r1 = src->r1;
+  dst->attr = ava_value_attr(*src);
+  dst->ulong = ava_value_ulong(*src);
 }
 
 static void ava_esba_list_swizzle_up_3(
@@ -94,135 +99,33 @@ static void ava_esba_list_swizzle_up_3(
   const ava_value*restrict template,
   const ava_esba_list_swizzled_3*restrict src
 ) {
-  dst->type = src->type;
-  dst->r1 = src->r1;
-  dst->r2 = template->r2;
+  const ava_attribute*restrict attr;
+  ava_ulong ulong;
+  attr = src->attr;
+  ulong = src->ulong;
+  *dst = ava_value_with_ulong(attr, ulong);
 }
 
-typedef struct {
-  ava_datum r2;
-} ava_esba_list_swizzled_4;
-
-static void ava_esba_list_swizzle_down_4(
-  ava_esba_list_swizzled_4*restrict dst,
-  const ava_value*restrict src
-) {
-  dst->r2 = src->r2;
-}
-
-static void ava_esba_list_swizzle_up_4(
-  ava_value*restrict dst,
-  const ava_value*restrict template,
-  const ava_esba_list_swizzled_4*restrict src
-) {
-  dst->type = template->type;
-  dst->r1 = template->r1;
-  dst->r2 = src->r2;
-}
-
-typedef struct {
-  const ava_value_type*restrict type;
-  ava_datum r2;
-} ava_esba_list_swizzled_5;
-
-static void ava_esba_list_swizzle_down_5(
-  ava_esba_list_swizzled_5*restrict dst,
-  const ava_value*restrict src
-) {
-  dst->type = src->type;
-  dst->r2 = src->r2;
-}
-
-static void ava_esba_list_swizzle_up_5(
-  ava_value*restrict dst,
-  const ava_value*restrict template,
-  const ava_esba_list_swizzled_5*restrict src
-) {
-  dst->type = src->type;
-  dst->r1 = template->r1;
-  dst->r2 = src->r2;
-}
-
-typedef struct {
-  ava_datum r1;
-  ava_datum r2;
-} ava_esba_list_swizzled_6;
-
-static void ava_esba_list_swizzle_down_6(
-  ava_esba_list_swizzled_6*restrict dst,
-  const ava_value*restrict src
-) {
-  dst->r1 = src->r1;
-  dst->r2 = src->r2;
-}
-
-static void ava_esba_list_swizzle_up_6(
-  ava_value*restrict dst,
-  const ava_value*restrict template,
-  const ava_esba_list_swizzled_6*restrict src
-) {
-  dst->type = template->type;
-  dst->r1 = src->r1;
-  dst->r2 = src->r2;
-}
-
-typedef struct {
-  const ava_value_type*restrict type;
-  ava_datum r1;
-  ava_datum r2;
-} ava_esba_list_swizzled_7;
-
-static void ava_esba_list_swizzle_down_7(
-  ava_esba_list_swizzled_7*restrict dst,
-  const ava_value*restrict src
-) {
-  dst->type = src->type;
-  dst->r1 = src->r1;
-  dst->r2 = src->r2;
-}
-
-static void ava_esba_list_swizzle_up_7(
-  ava_value*restrict dst,
-  const ava_value*restrict template,
-  const ava_esba_list_swizzled_7*restrict src
-) {
-  dst->type = src->type;
-  dst->r1 = src->r1;
-  dst->r2 = src->r2;
-}
-
-static const size_t ava_esba_list_element_size_pointers[8] = {
+static const size_t ava_esba_list_element_size_pointers[4] = {
   sizeof(ava_esba_list_swizzled_0) / sizeof(void*),
   sizeof(ava_esba_list_swizzled_1) / sizeof(void*),
   sizeof(ava_esba_list_swizzled_2) / sizeof(void*),
   sizeof(ava_esba_list_swizzled_3) / sizeof(void*),
-  sizeof(ava_esba_list_swizzled_4) / sizeof(void*),
-  sizeof(ava_esba_list_swizzled_5) / sizeof(void*),
-  sizeof(ava_esba_list_swizzled_6) / sizeof(void*),
-  sizeof(ava_esba_list_swizzled_7) / sizeof(void*),
 };
 
 static const ava_esba_list_swizzle_down_f
-ava_esba_list_swizzle_down[8] = {
+ava_esba_list_swizzle_down[4] = {
   (ava_esba_list_swizzle_down_f)ava_esba_list_swizzle_down_0,
   (ava_esba_list_swizzle_down_f)ava_esba_list_swizzle_down_1,
   (ava_esba_list_swizzle_down_f)ava_esba_list_swizzle_down_2,
   (ava_esba_list_swizzle_down_f)ava_esba_list_swizzle_down_3,
-  (ava_esba_list_swizzle_down_f)ava_esba_list_swizzle_down_4,
-  (ava_esba_list_swizzle_down_f)ava_esba_list_swizzle_down_5,
-  (ava_esba_list_swizzle_down_f)ava_esba_list_swizzle_down_6,
-  (ava_esba_list_swizzle_down_f)ava_esba_list_swizzle_down_7,
 };
 
 static const ava_esba_list_swizzle_up_f
-ava_esba_list_swizzle_up[8] = {
+ava_esba_list_swizzle_up[4] = {
   (ava_esba_list_swizzle_up_f)ava_esba_list_swizzle_up_0,
   (ava_esba_list_swizzle_up_f)ava_esba_list_swizzle_up_1,
   (ava_esba_list_swizzle_up_f)ava_esba_list_swizzle_up_2,
   (ava_esba_list_swizzle_up_f)ava_esba_list_swizzle_up_3,
-  (ava_esba_list_swizzle_up_f)ava_esba_list_swizzle_up_4,
-  (ava_esba_list_swizzle_up_f)ava_esba_list_swizzle_up_5,
-  (ava_esba_list_swizzle_up_f)ava_esba_list_swizzle_up_6,
-  (ava_esba_list_swizzle_up_f)ava_esba_list_swizzle_up_7,
 };
 

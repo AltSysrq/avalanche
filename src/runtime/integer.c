@@ -20,6 +20,7 @@
 #include <assert.h>
 
 #define AVA__INTERNAL_INCLUDE 1
+#define AVA__IN_INTEGER_C
 
 #include "avalanche/defs.h"
 #include "avalanche/string.h"
@@ -30,9 +31,6 @@
 #include "-integer-fast-dec.h"
 
 static ava_string ava_integer_to_string(ava_value value) AVA_PURE;
-static const void* ava_integer_query_accelerator(
-  const ava_accelerator* accel,
-  const void* dfault) AVA_CONSTFUN;
 static size_t ava_integer_value_weight(ava_value value) AVA_CONSTFUN;
 static const char* consume_sign_and_radix(
   const char*restrict ch, const char*restrict end,
@@ -48,28 +46,27 @@ static ava_integer ava_integer_parse_dec(const char*restrict tok,
 static ava_integer ava_integer_parse_hex(const char*restrict tok,
                                          const char*restrict end);
 
-const ava_value_type ava_integer_type = {
-  .size = sizeof(ava_value_type),
+const ava_value_trait ava_integer_type = {
+  .header = { .tag = &ava_value_trait_tag, .next = NULL },
   .name = "integer",
   .to_string = ava_integer_to_string,
   .string_chunk_iterator = ava_singleton_string_chunk_iterator,
   .iterate_string_chunk = ava_iterate_singleton_string_chunk,
-  .query_accelerator = ava_integer_query_accelerator,
   .value_weight = ava_integer_value_weight,
 };
 
 static ava_string ava_integer_to_string(ava_value value) {
   char str[20];
-  ava_bool negative = (value.r1.slong < 0);
-  ava_ulong i = negative? -value.r1.slong : value.r1.slong;
+  ava_bool negative = (ava_value_slong(value) < 0);
+  ava_ulong i = negative? -ava_value_slong(value) : ava_value_slong(value);
   unsigned ix = sizeof(str);
 
   /* Need a special case for 0 anyway, so handle all single-digit integers the
    * same way.
    */
-  if (value.r1.slong >= 0 && value.r1.slong < 10) {
+  if (ava_value_slong(value) >= 0 && ava_value_slong(value) < 10) {
     return (ava_string) {
-      .ascii9 = 1ULL | ((value.r1.slong + '0') << 57)
+      .ascii9 = 1ULL | ((ava_value_slong(value) + '0') << 57)
     };
   }
 
@@ -82,13 +79,6 @@ static ava_string ava_integer_to_string(ava_value value) {
     str[--ix] = '-';
 
   return ava_string_of_bytes(str + ix, sizeof(str) - ix);
-}
-
-static const void* ava_integer_query_accelerator(
-  const ava_accelerator* accel,
-  const void* dfault
-) {
-  return dfault;
 }
 
 static size_t ava_integer_value_weight(ava_value value) {
@@ -234,7 +224,8 @@ ava_integer ava_integer_of_noninteger_value(
   const char*restrict tok;
   const char* error_message;
   char tmpbuff[9];
-  size_t strdata_len, strlen;
+  size_t strdata_len AVA_UNUSED;
+  size_t strlen;
 
   strlen = ava_string_length(str);
 
@@ -339,7 +330,8 @@ ava_bool ava_string_is_integer(ava_string str) {
   ava_string_iterator iterator;
   const char*restrict strdata, *restrict cursor, * restrict marker = NULL;
   char tmpbuff[9];
-  size_t strdata_len, strlen;
+  size_t strdata_len AVA_UNUSED;
+  size_t strlen;
 
   strlen = ava_string_length(str);
 

@@ -28,38 +28,26 @@ defsuite(list_proj);
 
 static ava_list_value range(unsigned low, unsigned high) {
   unsigned i;
-  ava_list_value accum = ava_empty_list;
+  ava_value accum = ava_empty_list().v;
 
   for (i = low; i < high; ++i)
-    accum = accum.v->append(accum, ava_value_of_integer(i));
+    accum = ava_list_append(accum, ava_value_of_integer(i));
 
-  return accum;
+  return ava_list_value_of(accum);
 }
 
 static void assert_looks_like(const char* expected, ava_list_value actual) {
   ck_assert_str_eq(expected, ava_string_to_cstring(
-                     ava_to_string(actual.v->to_value(actual))));
+                     ava_to_string(actual.v)));
 }
-
-static size_t list_weight(ava_list_value list) {
-  return ava_value_weight(list.v->to_value(list));
-}
-
-static const void* list_qa_or_null(ava_list_value list,
-                                   const ava_accelerator* accel) {
-  return ava_query_accelerator(list.v->to_value(list), accel, NULL);
-}
-
-AVA_DEFINE_ACCELERATOR(unrelated_accelerator);
 
 deftest(basic_interleave) {
   ava_list_value input[3] = { range(0, 3), range(3, 6), range(6, 9) };
   ava_list_value result = ava_list_proj_interleave(input, 3);
 
-  ck_assert_int_eq(9, result.v->length(result));
-  ck_assert_int_eq(3 * list_weight(input[0]), list_weight(result));
-  ck_assert_ptr_ne(NULL, list_qa_or_null(result, &ava_list_accelerator));
-  ck_assert_ptr_eq(NULL, list_qa_or_null(result, &unrelated_accelerator));
+  ck_assert_int_eq(9, ava_list_length(result.v));
+  ck_assert_int_eq(3 * ava_value_weight(input[0].v),
+                   ava_value_weight(result.v));
   assert_looks_like("0 3 6 1 4 7 2 5 8", result);
 }
 
@@ -78,14 +66,12 @@ deftest(basic_demux) {
     ava_list_proj_demux(input, 2, 3),
   };
 
-  ck_assert_int_eq(2, result[0].v->length(result[0]));
-  ck_assert_int_eq(2, result[1].v->length(result[1]));
-  ck_assert_int_eq(1, result[2].v->length(result[2]));
-  ck_assert_int_eq(list_weight(input), list_weight(result[0]));
-  ck_assert_int_eq(list_weight(input), list_weight(result[1]));
-  ck_assert_int_eq(list_weight(input), list_weight(result[2]));
-  ck_assert_ptr_ne(NULL, list_qa_or_null(result[0], &ava_list_accelerator));
-  ck_assert_ptr_eq(NULL, list_qa_or_null(result[0], &unrelated_accelerator));
+  ck_assert_int_eq(2, ava_list_length(result[0].v));
+  ck_assert_int_eq(2, ava_list_length(result[1].v));
+  ck_assert_int_eq(1, ava_list_length(result[2].v));
+  ck_assert_int_eq(ava_value_weight(input.v), ava_value_weight(result[0].v));
+  ck_assert_int_eq(ava_value_weight(input.v), ava_value_weight(result[1].v));
+  ck_assert_int_eq(ava_value_weight(input.v), ava_value_weight(result[2].v));
   assert_looks_like("0 3", result[0]);
   assert_looks_like("1 4", result[1]);
   assert_looks_like("2", result[2]);
@@ -99,8 +85,9 @@ deftest(noop_demux) {
 }
 
 deftest(empty_demux) {
-  ava_list_value result = ava_list_proj_demux(ava_empty_list, 0, 2);
-  ck_assert_int_eq(0, result.v->length(result));
+  ava_list_value result = ava_list_proj_demux(
+    ava_empty_list(), 0, 2);
+  ck_assert_int_eq(0, ava_list_length(result.v));
 }
 
 deftest(interleave_inverts_demux) {
@@ -180,18 +167,16 @@ deftest(basic_group) {
   ava_list_value input = range(0, 8);
   ava_list_value result = ava_list_proj_group(input, 3);
 
-  ck_assert_int_eq(3, result.v->length(result));
-  ck_assert_int_eq(list_weight(input), list_weight(result));
-  ck_assert_ptr_ne(NULL, list_qa_or_null(result, &ava_list_accelerator));
-  ck_assert_ptr_eq(NULL, list_qa_or_null(result, &unrelated_accelerator));
+  ck_assert_int_eq(3, ava_list_length(result.v));
+  ck_assert_int_eq(ava_value_weight(input.v), ava_value_weight(result.v));
   assert_looks_like("\"0 1 2\" \"3 4 5\" \"6 7\"", result);
 }
 
 deftest(group_caches_members) {
   ava_list_value input = range(0, 8);
   ava_list_value result = ava_list_proj_group(input, 3);
-  ava_value r0 = result.v->index(result, 0);
-  ava_value r1 = result.v->index(result, 0);
+  ava_value r0 = ava_list_index(result.v, 0);
+  ava_value r1 = ava_list_index(result.v, 0);
 
   ck_assert_int_eq(0, memcmp(&r0, &r1, sizeof(r0)));
 }
@@ -205,7 +190,7 @@ deftest(basic_flatten) {
   ava_list_value input = ava_list_of_values(values, 3);
   ava_list_value result = ava_list_proj_flatten(input);
 
-  ck_assert_int_eq(6, result.v->length(result));
+  ck_assert_int_eq(6, ava_list_length(result.v));
   assert_looks_like("hello world 1 2 3 4", result);
 }
 
@@ -218,7 +203,8 @@ deftest(flatten_inverts_group) {
 }
 
 deftest(empty_flatten) {
-  ava_list_value result = ava_list_proj_flatten(ava_empty_list);
+  ava_list_value result = ava_list_proj_flatten(ava_empty_list());
+  ava_list_value empty = ava_empty_list();
 
-  ck_assert_int_eq(0, memcmp(&ava_empty_list, &result, sizeof(result)));
+  ck_assert_int_eq(0, memcmp(&empty, &result, sizeof(result)));
 }
