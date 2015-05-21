@@ -28,27 +28,31 @@
 
 defsuite(list);
 
-static ava_value list_of_cstring(const char* str) {
+static ava_list_value list_of_cstring(const char* str) {
   return
     ava_fat_list_value_of(ava_value_of_string(ava_string_of_cstring(str))).value;
 }
 
+static ava_value value_of_cstring(const char* str) {
+  return list_of_cstring(str).value;
+}
+
 deftest(empty_string_converted_to_empty_list) {
-  ava_value list = list_of_cstring("");
+  ava_value list = value_of_cstring("");
   ava_value empty = ava_empty_list();
 
   ck_assert_int_eq(0, memcmp(&empty, &list, sizeof(list)));
 }
 
 deftest(whitespace_string_converted_to_empty_list) {
-  ava_value list = list_of_cstring("  \t\r\n\t");
+  ava_value list = value_of_cstring("  \t\r\n\t");
   ava_value empty = ava_empty_list();
 
   ck_assert_int_eq(0, memcmp(&empty, &list, sizeof(list)));
 }
 
 deftest(normal_tokens_parsed_as_list_items) {
-  ava_value list = list_of_cstring(
+  ava_value list = value_of_cstring(
     "  foo \"bar baz\"\n \\{fum\\\\}  ");
 
   ck_assert_int_eq(3, ava_list_length(list));
@@ -76,21 +80,21 @@ deftest(normal_tokens_parsed_as_list_items) {
   } while (0)
 
 deftest(lexer_errors_propagated) {
-  assert_format_exception(list_of_cstring("\""));
+  assert_format_exception(value_of_cstring("\""));
 }
 
 deftest(non_astrings_rejected) {
-  assert_format_exception(list_of_cstring("`lr`"));
-  assert_format_exception(list_of_cstring("`l\""));
-  assert_format_exception(list_of_cstring("\"r`"));
+  assert_format_exception(value_of_cstring("`lr`"));
+  assert_format_exception(value_of_cstring("`l\""));
+  assert_format_exception(value_of_cstring("\"r`"));
 }
 
 deftest(enclosures_rejected) {
-  assert_format_exception(list_of_cstring("(a)"));
-  assert_format_exception(list_of_cstring("a()"));
-  assert_format_exception(list_of_cstring("[b]"));
-  assert_format_exception(list_of_cstring("b[]"));
-  assert_format_exception(list_of_cstring("{c}"));
+  assert_format_exception(value_of_cstring("(a)"));
+  assert_format_exception(value_of_cstring("a()"));
+  assert_format_exception(value_of_cstring("[b]"));
+  assert_format_exception(value_of_cstring("b[]"));
+  assert_format_exception(value_of_cstring("{c}"));
 }
 
 const char* escape(const char* str) {
@@ -153,7 +157,7 @@ deftest(all_two_char_strings_escaped_reversibly) {
 
       in_str = ava_string_of_bytes(in, 2);
       parsed_list =
-        ava_fat_list_value_of(ava_value_of_string(ava_list_escape(in_str))).value;
+        ava_fat_list_value_of(ava_value_of_string(ava_list_escape(in_str))).value.value;
       ck_assert_int_eq(1, ava_list_length(parsed_list));
       out_str = ava_to_string(ava_list_index(parsed_list, 0));
       ck_assert_int_eq(2, ava_string_length(out_str));

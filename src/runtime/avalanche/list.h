@@ -71,11 +71,14 @@ typedef struct {
   /**
    * The actual value.
    */
-  ava_value value;
+  ava_list_value value;
 } ava_fat_list_value;
 
 /**
  * Defines the operations that can be performed on a list structure.
+ *
+ * Supporting this trait implies that the value can be used directly as an
+ * ava_list_value; ie, that it is a normal value of list format.
  *
  * Documnented complexities of methods are the worst acceptable complexities
  * for implementations; implementations are often better in practise.
@@ -145,6 +148,13 @@ struct ava_list_trait_s {
    */
   ava_value (*set)(ava_value list, size_t index, ava_value element);
 };
+
+/**
+ * Converts the given value into a normal value of list format.
+ *
+ * @throws ava_format_exception if value is not conform to list format.
+ */
+ava_list_value ava_list_value_of(ava_value value) AVA_PURE;
 
 /**
  * Produces a *normalised* ava_fat_list_value from the given ava_value.
@@ -227,41 +237,41 @@ ava_value ava_list_copy_set(ava_value list, size_t ix, ava_value val);
 
 static inline size_t ava_list_length(ava_value list_val) {
   ava_fat_list_value list = ava_fat_list_value_of(list_val);
-  return list.v->length(list.value);
+  return list.v->length(list.value.value);
 }
 
 static inline ava_value ava_list_index(ava_value list_val, size_t ix) {
   ava_fat_list_value list = ava_fat_list_value_of(list_val);
-  return list.v->index(list.value, ix);
+  return list.v->index(list.value.value, ix);
 }
 
 static inline ava_value ava_list_slice(ava_value list_val,
                                        size_t begin, size_t end) {
   ava_fat_list_value list = ava_fat_list_value_of(list_val);
-  return list.v->slice(list.value, begin, end);
+  return list.v->slice(list.value.value, begin, end);
 }
 
 static inline ava_value ava_list_append(ava_value list_val, ava_value elt) {
   ava_fat_list_value list = ava_fat_list_value_of(list_val);
-  return list.v->append(list.value, elt);
+  return list.v->append(list.value.value, elt);
 }
 
 static inline ava_value ava_list_concat(ava_value left, ava_value right) {
   ava_fat_list_value list = ava_fat_list_value_of(left);
-  return list.v->concat(list.value, right);
+  return list.v->concat(list.value.value, right);
 }
 
 static inline ava_value ava_list_delete(
   ava_value list, size_t begin, size_t end
 ) {
   ava_fat_list_value l = ava_fat_list_value_of(list);
-  return l.v->delete(l.value, begin, end);
+  return l.v->delete(l.value.value, begin, end);
 }
 
 static inline ava_value ava_list_set(ava_value list, size_t index,
                                      ava_value element) {
   ava_fat_list_value l = ava_fat_list_value_of(list);
-  return l.v->set(l.value, index, element);
+  return l.v->set(l.value.value, index, element);
 }
 
 /**
