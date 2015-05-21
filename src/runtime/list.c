@@ -51,12 +51,12 @@ ava_fat_list_value ava_fat_list_value_of(ava_value value) {
     value, &ava_list_trait_tag);
 
   if (!trait) {
-    value = ava_list_value_of_string(ava_to_string(value)).value;
+    value = ava_list_value_of_string(ava_to_string(value)).v;
     trait = ava_get_attribute(value, &ava_list_trait_tag);
     assert(trait);
   }
 
-  return (ava_fat_list_value) { .v = trait, .value = { value } };
+  return (ava_fat_list_value) { .v = trait, .lv = { value } };
 }
 
 static ava_list_value ava_list_value_of_string(ava_string str) {
@@ -124,10 +124,10 @@ ava_fat_list_value ava_list_copy_of(ava_fat_list_value list, size_t begin, size_
 
   if (end - begin <= AVA_ARRAY_LIST_THRESH)
     return ava_fat_list_value_of(ava_array_list_copy_of(
-                                   list.value.value, begin, end));
+                                   list.lv.v, begin, end));
   else
     return ava_fat_list_value_of(ava_esba_list_copy_of(
-                                   list.value.value, begin, end));
+                                   list.lv.v, begin, end));
 }
 
 ava_value ava_list_of_values(const ava_value*restrict values, size_t n) {
@@ -269,19 +269,19 @@ ava_string ava_list_escape(ava_string str) {
 }
 
 ava_value ava_list_copy_slice(ava_value list, size_t begin, size_t end) {
-  return ava_list_copy_of(ava_fat_list_value_of(list), begin, end).value.value;
+  return ava_list_copy_of(ava_fat_list_value_of(list), begin, end).lv.v;
 }
 
 ava_value ava_list_copy_append(ava_value list_val, ava_value elt) {
   ava_fat_list_value list = ava_fat_list_value_of(list_val);
-  list = ava_list_copy_of(list, 0, list.v->length(list.value.value));
-  return list.v->append(list.value.value, elt);
+  list = ava_list_copy_of(list, 0, list.v->length(list.lv.v));
+  return list.v->append(list.lv.v, elt);
 }
 
 ava_value ava_list_copy_concat(ava_value left_val, ava_value right) {
   ava_fat_list_value left = ava_fat_list_value_of(left_val);
-  left = ava_list_copy_of(left, 0, left.v->length(left.value.value));
-  return left.v->concat(left.value.value, right);
+  left = ava_list_copy_of(left, 0, left.v->length(left.lv.v));
+  return left.v->concat(left.lv.v, right);
 }
 
 ava_value ava_list_copy_delete(ava_value list_val,
@@ -290,18 +290,18 @@ ava_value ava_list_copy_delete(ava_value list_val,
 
   if (begin == end)
     return list_val;
-  if (0 == begin && list.v->length(list.value.value) == end)
+  if (0 == begin && list.v->length(list.lv.v) == end)
     return ava_empty_list();
 
-  list = ava_list_copy_of(list, 0, list.v->length(list.value.value));
-  return list.v->delete(list.value.value, begin, end);
+  list = ava_list_copy_of(list, 0, list.v->length(list.lv.v));
+  return list.v->delete(list.lv.v, begin, end);
 }
 
 ava_value ava_list_copy_set(ava_value list_val,
                             size_t ix, ava_value val) {
   ava_fat_list_value list = ava_fat_list_value_of(list_val);
-  list = ava_list_copy_of(list, 0, list.v->length(list.value.value));
-  return list.v->set(list.value.value, ix, val);
+  list = ava_list_copy_of(list, 0, list.v->length(list.lv.v));
+  return list.v->set(list.lv.v, ix, val);
 }
 
 ava_datum ava_list_string_chunk_iterator(ava_value list) {
@@ -314,10 +314,10 @@ ava_string ava_list_iterate_string_chunk(
   ava_fat_list_value list = ava_fat_list_value_of(list_val);
   ava_string elt;
 
-  if (it->ulong >= list.v->length(list.value.value))
+  if (it->ulong >= list.v->length(list.lv.v))
     return AVA_ABSENT_STRING;
 
-  elt = ava_to_string(list.v->index(list.value.value, it->ulong++));
+  elt = ava_to_string(list.v->index(list.lv.v, it->ulong++));
   elt = ava_list_escape(elt);
 
   if (it->ulong > 1)

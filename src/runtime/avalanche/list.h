@@ -46,7 +46,7 @@
  * Normal form for a list is comprised of each element string escaped with
  * ava_list_escape(), separated by exactly one space character.
  */
-typedef struct { ava_value value; } ava_list_value;
+typedef struct { ava_value v; } ava_list_value;
 
 /**
  * Trait tag for list manipulation.
@@ -71,7 +71,7 @@ typedef struct {
   /**
    * The actual value.
    */
-  ava_list_value value;
+  ava_list_value lv;
 } ava_fat_list_value;
 
 /**
@@ -237,41 +237,41 @@ ava_value ava_list_copy_set(ava_value list, size_t ix, ava_value val);
 
 static inline size_t ava_list_length(ava_value list_val) {
   ava_fat_list_value list = ava_fat_list_value_of(list_val);
-  return list.v->length(list.value.value);
+  return list.v->length(list.lv.v);
 }
 
 static inline ava_value ava_list_index(ava_value list_val, size_t ix) {
   ava_fat_list_value list = ava_fat_list_value_of(list_val);
-  return list.v->index(list.value.value, ix);
+  return list.v->index(list.lv.v, ix);
 }
 
 static inline ava_value ava_list_slice(ava_value list_val,
                                        size_t begin, size_t end) {
   ava_fat_list_value list = ava_fat_list_value_of(list_val);
-  return list.v->slice(list.value.value, begin, end);
+  return list.v->slice(list.lv.v, begin, end);
 }
 
 static inline ava_value ava_list_append(ava_value list_val, ava_value elt) {
   ava_fat_list_value list = ava_fat_list_value_of(list_val);
-  return list.v->append(list.value.value, elt);
+  return list.v->append(list.lv.v, elt);
 }
 
 static inline ava_value ava_list_concat(ava_value left, ava_value right) {
   ava_fat_list_value list = ava_fat_list_value_of(left);
-  return list.v->concat(list.value.value, right);
+  return list.v->concat(list.lv.v, right);
 }
 
 static inline ava_value ava_list_delete(
   ava_value list, size_t begin, size_t end
 ) {
   ava_fat_list_value l = ava_fat_list_value_of(list);
-  return l.v->delete(l.value.value, begin, end);
+  return l.v->delete(l.lv.v, begin, end);
 }
 
 static inline ava_value ava_list_set(ava_value list, size_t index,
                                      ava_value element) {
   ava_fat_list_value l = ava_fat_list_value_of(list);
-  return l.v->set(l.value.value, index, element);
+  return l.v->set(l.lv.v, index, element);
 }
 
 /**

@@ -165,7 +165,7 @@ ava_value ava_list_proj_interleave(const ava_value*restrict lists,
   /* All inputs are demuxes to the same delegate, with offset/stride pairs
    * compatible with this interleaving.
    */
-  return demux0->delegate.value.value;
+  return demux0->delegate.lv.v;
 
   project:;
   ava_list_proj_interleave_list* dst = ava_alloc(
@@ -184,7 +184,7 @@ static size_t ava_list_proj_interleave_value_value_weight(ava_value val) {
   size_t i, sum = 0;
 
   for (i = 0; i < this->num_lists; ++i)
-    sum += ava_value_weight(this->lists[i].value.value);
+    sum += ava_value_weight(this->lists[i].lv.v);
 
   return sum;
 }
@@ -192,7 +192,7 @@ static size_t ava_list_proj_interleave_value_value_weight(ava_value val) {
 static size_t ava_list_proj_interleave_list_length(ava_value list) {
   const ava_list_proj_interleave_list*restrict this = ava_value_ptr(list);
 
-  return this->num_lists * this->lists[0].v->length(this->lists[0].value.value);
+  return this->num_lists * this->lists[0].v->length(this->lists[0].lv.v);
 }
 
 static ava_value ava_list_proj_interleave_list_index(
@@ -204,7 +204,7 @@ static ava_value ava_list_proj_interleave_list_index(
   which = ix % this->num_lists;
   ix /= this->num_lists;
 
-  return this->lists[which].v->index(this->lists[which].value.value, ix);
+  return this->lists[which].v->index(this->lists[which].lv.v, ix);
 }
 
 ava_value ava_list_proj_demux(ava_value delegate,
@@ -219,7 +219,7 @@ ava_value ava_list_proj_demux(ava_value delegate,
       ava_get_attribute(delegate, &ava_list_trait_tag)) {
     const ava_list_proj_interleave_list*restrict il = ava_value_ptr(delegate);
     if (stride == il->num_lists) {
-      return il->lists[offset].value.value;
+      return il->lists[offset].lv.v;
     }
   }
 
@@ -233,12 +233,12 @@ ava_value ava_list_proj_demux(ava_value delegate,
 
 static size_t ava_list_proj_demux_value_value_weight(ava_value val) {
   const ava_list_proj_demux_list*restrict this = ava_value_ptr(val);
-  return ava_value_weight(this->delegate.value.value);
+  return ava_value_weight(this->delegate.lv.v);
 }
 
 static size_t ava_list_proj_demux_list_length(ava_value list) {
   const ava_list_proj_demux_list*restrict this = ava_value_ptr(list);
-  return (this->delegate.v->length(this->delegate.value.value) -
+  return (this->delegate.v->length(this->delegate.lv.v) -
           this->offset + this->stride-1) / this->stride;
 }
 
@@ -246,7 +246,7 @@ static ava_value ava_list_proj_demux_list_index(
   ava_value list, size_t ix
 ) {
   const ava_list_proj_demux_list*restrict this = ava_value_ptr(list);
-  return this->delegate.v->index(this->delegate.value.value,
+  return this->delegate.v->index(this->delegate.lv.v,
                                  this->offset + ix * this->stride);
 }
 
@@ -266,7 +266,7 @@ ava_value ava_list_proj_group(ava_value delegate, size_t group_size) {
 
 static size_t ava_list_proj_group_value_value_weight(ava_value val) {
   const ava_list_proj_group_list*restrict this = ava_value_ptr(val);
-  return ava_value_weight(this->delegate.value.value);
+  return ava_value_weight(this->delegate.lv.v);
 }
 
 static size_t ava_list_proj_group_list_length(ava_value list) {
@@ -285,16 +285,16 @@ static ava_value ava_list_proj_group_list_index(
   assert(ix < this->num_groups);
 
   ret = (const ava_list_value*restrict)AO_load_acquire_read(this->groups + ix);
-  if (ret) return ret->value;
+  if (ret) return ret->v;
 
   /* Group not yet cached, create it */
   begin = ix * this->group_size;
   end = begin + this->group_size;
-  delegate_length = this->delegate.v->length(this->delegate.value.value);
+  delegate_length = this->delegate.v->length(this->delegate.lv.v);
   if (end > delegate_length) end = delegate_length;
 
   tmp = ava_list_value_of(
-    this->delegate.v->slice(this->delegate.value.value, begin, end));
+    this->delegate.v->slice(this->delegate.lv.v, begin, end));
   ret = ava_clone(&tmp, sizeof(tmp));
   /* Save in cache. If multiple threads hit this index simultaneously, they may
    * produce physically different results and write the cache multiple times.
@@ -302,7 +302,7 @@ static ava_value ava_list_proj_group_list_index(
    */
   AO_store_release_write(this->groups + ix, (AO_t)ret);
 
-  return ret->value;
+  return ret->v;
 }
 
 ava_value ava_list_proj_flatten(ava_value list) {
@@ -312,7 +312,7 @@ ava_value ava_list_proj_flatten(ava_value list) {
   if (&ava_list_proj_group_list_impl ==
       ava_get_attribute(list, &ava_list_trait_tag)) {
     const ava_list_proj_group_list*restrict group = ava_value_ptr(list);
-    return group->delegate.value.value;
+    return group->delegate.lv.v;
   }
 
   n = ava_list_length(list);
