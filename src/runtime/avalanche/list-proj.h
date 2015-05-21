@@ -46,8 +46,8 @@
  * @param num_lists The number of elements in the lists array.
  * @return An interleaved list projection.
  */
-ava_value ava_list_proj_interleave(const ava_value*restrict lists,
-                                   size_t num_lists);
+ava_list_value ava_list_proj_interleave(const ava_list_value*restrict lists,
+                                        size_t num_lists);
 
 /**
  * Returns a list containing every strideth value, starting at offset.
@@ -73,8 +73,8 @@ ava_value ava_list_proj_interleave(const ava_value*restrict lists,
  * @return A list containing every element at ix in list where
  * (offset == ix % stride).
  */
-ava_value ava_list_proj_demux(ava_value list,
-                              size_t offset, size_t stride);
+ava_list_value ava_list_proj_demux(ava_list_value list,
+                                   size_t offset, size_t stride);
 
 /**
  * Groups adjacent elements in the list into sub-lists.
@@ -89,7 +89,7 @@ ava_value ava_list_proj_demux(ava_value list,
  * @param group_sz The size of each group.
  * @return A list containing the elements of list grouped into sub-lists.
  */
-ava_value ava_list_proj_group(ava_value list, size_t group_sz);
+ava_list_value ava_list_proj_group(ava_list_value list, size_t group_sz);
 
 /**
  * Flattens a list.
@@ -105,6 +105,6 @@ ava_value ava_list_proj_group(ava_value list, size_t group_sz);
  * @param list The list to flatten.
  * @return The flattened list.
  */
-ava_value ava_list_proj_flatten(ava_value list);
+ava_list_value ava_list_proj_flatten(ava_list_value list);
 
 #endif /* AVA_RUNTIME_LIST_PROJ_H_ */

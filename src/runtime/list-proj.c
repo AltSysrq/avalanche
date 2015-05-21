@@ -128,8 +128,8 @@ static const ava_list_trait ava_list_proj_group_list_impl = {
   .set = ava_list_copy_set,
 };
 
-ava_value ava_list_proj_interleave(const ava_value*restrict lists,
-                                   size_t num_lists) {
+ava_list_value ava_list_proj_interleave(const ava_list_value*restrict lists,
+                                        size_t num_lists) {
   size_t i;
 #ifndef NDEBUG
   size_t first_list_length;
@@ -137,22 +137,22 @@ ava_value ava_list_proj_interleave(const ava_value*restrict lists,
 
   assert(num_lists > 0);
 #ifndef NDEBUG
-  first_list_length = ava_list_length(lists[0]);
+  first_list_length = ava_list_length(lists[0].v);
   for (i = 1; i < num_lists; ++i)
-    assert(first_list_length == ava_list_length(lists[i]));
+    assert(first_list_length == ava_list_length(lists[i].v));
 #endif
 
   if (1 == num_lists)
     return lists[0];
 
   /* See if we can invert a demux */
-  const ava_list_proj_demux_list*restrict demux0 = ava_value_ptr(lists[0]);
+  const ava_list_proj_demux_list*restrict demux0 = ava_value_ptr(lists[0].v);
   for (i = 0; i < num_lists; ++i) {
     if (&ava_list_proj_demux_list_impl !=
-        ava_get_attribute(lists[i], &ava_list_trait_tag))
+        ava_get_attribute(lists[i].v, &ava_list_trait_tag))
       goto project;
 
-    const ava_list_proj_demux_list*restrict demux = ava_value_ptr(lists[i]);
+    const ava_list_proj_demux_list*restrict demux = ava_value_ptr(lists[i].v);
 
     if (i != demux->offset || num_lists != demux->stride)
       goto project;
@@ -165,7 +165,7 @@ ava_value ava_list_proj_interleave(const ava_value*restrict lists,
   /* All inputs are demuxes to the same delegate, with offset/stride pairs
    * compatible with this interleaving.
    */
-  return demux0->delegate.lv.v;
+  return demux0->delegate.lv;
 
   project:;
   ava_list_proj_interleave_list* dst = ava_alloc(
@@ -174,9 +174,11 @@ ava_value ava_list_proj_interleave(const ava_value*restrict lists,
   dst->num_lists = num_lists;
 
   for (i = 0; i < num_lists; ++i)
-    dst->lists[i] = ava_fat_list_value_of(lists[i]);
+    dst->lists[i] = ava_fat_list_value_of(lists[i].v);
 
-  return ava_value_with_ptr(&ava_list_proj_interleave_list_impl, dst);
+  return (ava_list_value) {
+    ava_value_with_ptr(&ava_list_proj_interleave_list_impl, dst)
+  };
 }
 
 static size_t ava_list_proj_interleave_value_value_weight(ava_value val) {
@@ -207,8 +209,8 @@ static ava_value ava_list_proj_interleave_list_index(
   return this->lists[which].v->index(this->lists[which].lv.v, ix);
 }
 
-ava_value ava_list_proj_demux(ava_value delegate,
-                              size_t offset, size_t stride) {
+ava_list_value ava_list_proj_demux(ava_list_value delegate,
+                                   size_t offset, size_t stride) {
   ava_list_proj_demux_list*restrict this;
 
   assert(offset < stride);
@@ -216,19 +218,21 @@ ava_value ava_list_proj_demux(ava_value delegate,
   if (1 == stride) return delegate;
 
   if (&ava_list_proj_interleave_list_impl ==
-      ava_get_attribute(delegate, &ava_list_trait_tag)) {
-    const ava_list_proj_interleave_list*restrict il = ava_value_ptr(delegate);
+      ava_get_attribute(delegate.v, &ava_list_trait_tag)) {
+    const ava_list_proj_interleave_list*restrict il = ava_value_ptr(delegate.v);
     if (stride == il->num_lists) {
-      return il->lists[offset].lv.v;
+      return il->lists[offset].lv;
     }
   }
 
   this = AVA_NEW(ava_list_proj_demux_list);
-  this->delegate = ava_fat_list_value_of(delegate);
+  this->delegate = ava_fat_list_value_of(delegate.v);
   this->offset = offset;
   this->stride = stride;
 
-  return ava_value_with_ptr(&ava_list_proj_demux_list_impl, this);
+  return (ava_list_value) {
+    ava_value_with_ptr(&ava_list_proj_demux_list_impl, this)
+  };
 }
 
 static size_t ava_list_proj_demux_value_value_weight(ava_value val) {
@@ -250,18 +254,20 @@ static ava_value ava_list_proj_demux_list_index(
                                  this->offset + ix * this->stride);
 }
 
-ava_value ava_list_proj_group(ava_value delegate, size_t group_size) {
+ava_list_value ava_list_proj_group(ava_list_value delegate, size_t group_size) {
   ava_list_proj_group_list* this;
   size_t num_groups =
-    (ava_list_length(delegate) + group_size-1) / group_size;
+    (ava_list_length(delegate.v) + group_size-1) / group_size;
 
   this = ava_alloc(sizeof(ava_list_proj_group_list) +
                    sizeof(AO_t) * num_groups);
-  this->delegate = ava_fat_list_value_of(delegate);
+  this->delegate = ava_fat_list_value_of(delegate.v);
   this->group_size = group_size;
   this->num_groups = num_groups;
 
-  return ava_value_with_ptr(&ava_list_proj_group_list_impl, this);
+  return (ava_list_value) {
+    ava_value_with_ptr(&ava_list_proj_group_list_impl, this)
+  };
 }
 
 static size_t ava_list_proj_group_value_value_weight(ava_value val) {
@@ -305,24 +311,25 @@ static ava_value ava_list_proj_group_list_index(
   return ret->v;
 }
 
-ava_value ava_list_proj_flatten(ava_value list) {
-  ava_value accum;
+ava_list_value ava_list_proj_flatten(ava_list_value list) {
+  ava_list_value accum;
   size_t i, n;
 
   if (&ava_list_proj_group_list_impl ==
-      ava_get_attribute(list, &ava_list_trait_tag)) {
-    const ava_list_proj_group_list*restrict group = ava_value_ptr(list);
-    return group->delegate.lv.v;
+      ava_get_attribute(list.v, &ava_list_trait_tag)) {
+    const ava_list_proj_group_list*restrict group = ava_value_ptr(list.v);
+    return group->delegate.lv;
   }
 
-  n = ava_list_length(list);
+  n = ava_list_length(list.v);
   if (0 == n)
-    return ava_empty_list();
+    return ava_list_value_of(ava_empty_list());
 
-  accum = ava_list_index(list, 0);
+  accum = ava_list_value_of(ava_list_index(list.v, 0));
 
   for (i = 1; i < n; ++i)
-    accum = ava_list_concat(accum, ava_list_index(list, i));
+    accum = ava_list_value_of(
+      ava_list_concat(accum.v, ava_list_index(list.v, i)));
 
   return accum;
 }
