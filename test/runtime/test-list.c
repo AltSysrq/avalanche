@@ -30,7 +30,7 @@ defsuite(list);
 
 static ava_list_value list_of_cstring(const char* str) {
   return
-    ava_fat_list_value_of(ava_value_of_string(ava_string_of_cstring(str))).lv;
+    ava_fat_list_value_of(ava_value_of_string(ava_string_of_cstring(str))).c;
 }
 
 static ava_value value_of_cstring(const char* str) {
@@ -157,7 +157,7 @@ deftest(all_two_char_strings_escaped_reversibly) {
 
       in_str = ava_string_of_bytes(in, 2);
       parsed_list =
-        ava_fat_list_value_of(ava_value_of_string(ava_list_escape(in_str))).lv.v;
+        ava_fat_list_value_of(ava_value_of_string(ava_list_escape(in_str))).c.v;
       ck_assert_int_eq(1, ava_list_length(parsed_list));
       out_str = ava_to_string(ava_list_index(parsed_list, 0));
       ck_assert_int_eq(2, ava_string_length(out_str));

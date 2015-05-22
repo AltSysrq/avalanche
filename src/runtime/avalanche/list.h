@@ -71,7 +71,7 @@ typedef struct {
   /**
    * The actual value.
    */
-  ava_list_value lv;
+  ava_list_value c;
 } ava_fat_list_value;
 
 /**
@@ -243,7 +243,7 @@ ava_list_value ava_list_copy_set(ava_list_value list, size_t ix, ava_value val);
 
 static inline size_t ava_list_length_v(ava_value list_val) {
   ava_fat_list_value list = ava_fat_list_value_of(list_val);
-  return list.v->length(list.lv);
+  return list.v->length(list.c);
 }
 
 static inline size_t ava_list_length_lv(ava_list_value list_val) {
@@ -258,7 +258,7 @@ static inline size_t ava_list_length_lv(ava_list_value list_val) {
 
 static inline ava_value ava_list_index_v(ava_value list_val, size_t ix) {
   ava_fat_list_value list = ava_fat_list_value_of(list_val);
-  return list.v->index(list.lv, ix);
+  return list.v->index(list.c, ix);
 }
 
 static inline ava_value ava_list_index_lv(ava_list_value list_val, size_t ix) {
@@ -274,7 +274,7 @@ static inline ava_value ava_list_index_lv(ava_list_value list_val, size_t ix) {
 static inline ava_list_value ava_list_slice_lv(ava_list_value list_val,
                                                size_t begin, size_t end) {
   ava_fat_list_value list = ava_fat_list_value_of(list_val.v);
-  return list.v->slice(list.lv, begin, end);
+  return list.v->slice(list.c, begin, end);
 }
 
 static inline ava_value ava_list_slice_v(ava_value list_val,
@@ -291,7 +291,7 @@ static inline ava_value ava_list_slice_v(ava_value list_val,
 static inline ava_list_value ava_list_append_lv(ava_list_value list_val,
                                                 ava_value elt) {
   ava_fat_list_value list = ava_fat_list_value_of(list_val.v);
-  return list.v->append(list.lv, elt);
+  return list.v->append(list.c, elt);
 }
 
 static inline ava_value ava_list_append_v(ava_value list_val, ava_value elt) {
@@ -307,7 +307,7 @@ static inline ava_value ava_list_append_v(ava_value list_val, ava_value elt) {
 static inline ava_list_value ava_list_concat_lv(ava_list_value left,
                                                 ava_list_value right) {
   ava_fat_list_value list = ava_fat_list_value_of(left.v);
-  return list.v->concat(list.lv, right);
+  return list.v->concat(list.c, right);
 }
 
 static inline ava_value ava_list_concat_v(ava_value left, ava_value right) {
@@ -325,7 +325,7 @@ static inline ava_list_value ava_list_delete_lv(
   ava_list_value list, size_t begin, size_t end
 ) {
   ava_fat_list_value l = ava_fat_list_value_of(list.v);
-  return l.v->delete(l.lv, begin, end);
+  return l.v->delete(l.c, begin, end);
 }
 
 static inline ava_value ava_list_delete_v(
@@ -345,7 +345,7 @@ static inline ava_list_value ava_list_set_lv(
   ava_list_value list, size_t index, ava_value element
 ) {
   ava_fat_list_value l = ava_fat_list_value_of(list.v);
-  return l.v->set(l.lv, index, element);
+  return l.v->set(l.c, index, element);
 }
 
 static inline ava_value ava_list_set_v(

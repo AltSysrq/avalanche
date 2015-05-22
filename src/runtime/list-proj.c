@@ -165,7 +165,7 @@ ava_list_value ava_list_proj_interleave(const ava_list_value*restrict lists,
   /* All inputs are demuxes to the same delegate, with offset/stride pairs
    * compatible with this interleaving.
    */
-  return demux0->delegate.lv;
+  return demux0->delegate.c;
 
   project:;
   ava_list_proj_interleave_list* dst = ava_alloc(
@@ -186,7 +186,7 @@ static size_t ava_list_proj_interleave_value_value_weight(ava_value val) {
   size_t i, sum = 0;
 
   for (i = 0; i < this->num_lists; ++i)
-    sum += ava_value_weight(this->lists[i].lv.v);
+    sum += ava_value_weight(this->lists[i].c.v);
 
   return sum;
 }
@@ -194,7 +194,7 @@ static size_t ava_list_proj_interleave_value_value_weight(ava_value val) {
 static size_t ava_list_proj_interleave_list_length(ava_list_value list) {
   const ava_list_proj_interleave_list*restrict this = ava_value_ptr(list.v);
 
-  return this->num_lists * this->lists[0].v->length(this->lists[0].lv);
+  return this->num_lists * this->lists[0].v->length(this->lists[0].c);
 }
 
 static ava_value ava_list_proj_interleave_list_index(
@@ -206,7 +206,7 @@ static ava_value ava_list_proj_interleave_list_index(
   which = ix % this->num_lists;
   ix /= this->num_lists;
 
-  return this->lists[which].v->index(this->lists[which].lv, ix);
+  return this->lists[which].v->index(this->lists[which].c, ix);
 }
 
 ava_list_value ava_list_proj_demux(ava_list_value delegate,
@@ -221,7 +221,7 @@ ava_list_value ava_list_proj_demux(ava_list_value delegate,
       ava_get_attribute(delegate.v, &ava_list_trait_tag)) {
     const ava_list_proj_interleave_list*restrict il = ava_value_ptr(delegate.v);
     if (stride == il->num_lists) {
-      return il->lists[offset].lv;
+      return il->lists[offset].c;
     }
   }
 
@@ -237,12 +237,12 @@ ava_list_value ava_list_proj_demux(ava_list_value delegate,
 
 static size_t ava_list_proj_demux_value_value_weight(ava_value val) {
   const ava_list_proj_demux_list*restrict this = ava_value_ptr(val);
-  return ava_value_weight(this->delegate.lv.v);
+  return ava_value_weight(this->delegate.c.v);
 }
 
 static size_t ava_list_proj_demux_list_length(ava_list_value list) {
   const ava_list_proj_demux_list*restrict this = ava_value_ptr(list.v);
-  return (this->delegate.v->length(this->delegate.lv) -
+  return (this->delegate.v->length(this->delegate.c) -
           this->offset + this->stride-1) / this->stride;
 }
 
@@ -250,7 +250,7 @@ static ava_value ava_list_proj_demux_list_index(
   ava_list_value list, size_t ix
 ) {
   const ava_list_proj_demux_list*restrict this = ava_value_ptr(list.v);
-  return this->delegate.v->index(this->delegate.lv,
+  return this->delegate.v->index(this->delegate.c,
                                  this->offset + ix * this->stride);
 }
 
@@ -272,7 +272,7 @@ ava_list_value ava_list_proj_group(ava_list_value delegate, size_t group_size) {
 
 static size_t ava_list_proj_group_value_value_weight(ava_value val) {
   const ava_list_proj_group_list*restrict this = ava_value_ptr(val);
-  return ava_value_weight(this->delegate.lv.v);
+  return ava_value_weight(this->delegate.c.v);
 }
 
 static size_t ava_list_proj_group_list_length(ava_list_value list) {
@@ -296,10 +296,10 @@ static ava_value ava_list_proj_group_list_index(
   /* Group not yet cached, create it */
   begin = ix * this->group_size;
   end = begin + this->group_size;
-  delegate_length = this->delegate.v->length(this->delegate.lv);
+  delegate_length = this->delegate.v->length(this->delegate.c);
   if (end > delegate_length) end = delegate_length;
 
-  tmp = this->delegate.v->slice(this->delegate.lv, begin, end);
+  tmp = this->delegate.v->slice(this->delegate.c, begin, end);
   ret = ava_clone(&tmp, sizeof(tmp));
   /* Save in cache. If multiple threads hit this index simultaneously, they may
    * produce physically different results and write the cache multiple times.
@@ -317,7 +317,7 @@ ava_list_value ava_list_proj_flatten(ava_list_value list) {
   if (&ava_list_proj_group_list_impl ==
       ava_get_attribute(list.v, &ava_list_trait_tag)) {
     const ava_list_proj_group_list*restrict group = ava_value_ptr(list.v);
-    return group->delegate.lv;
+    return group->delegate.c;
   }
 
   n = ava_list_length(list);
