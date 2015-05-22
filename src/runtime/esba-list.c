@@ -84,14 +84,6 @@ static size_t ava_esba_list_weight_function(
 
 static size_t ava_esba_list_value_value_weight(ava_value);
 
-static size_t ava_esba_list_list_length(ava_list_value);
-static ava_value ava_esba_list_list_index(ava_list_value, size_t);
-static ava_list_value ava_esba_list_list_slice(ava_list_value, size_t, size_t);
-static ava_list_value ava_esba_list_list_append(ava_list_value, ava_value);
-static ava_list_value ava_esba_list_list_concat(ava_list_value, ava_list_value);
-static ava_list_value ava_esba_list_list_delete(ava_list_value, size_t, size_t);
-static ava_list_value ava_esba_list_list_set(ava_list_value, size_t, ava_value);
-
 static const ava_value_trait ava_esba_list_generic_impl = {
   .header = { .tag = &ava_value_trait_tag, .next = NULL },
   .name = "esba-list",
@@ -101,17 +93,7 @@ static const ava_value_trait ava_esba_list_generic_impl = {
   .value_weight = ava_esba_list_value_value_weight,
 };
 
-static const ava_list_trait ava_esba_list_list_impl = {
-  .header = { .tag = &ava_list_trait_tag,
-              .next = (const ava_attribute*)&ava_esba_list_generic_impl },
-  .length = ava_esba_list_list_length,
-  .index = ava_esba_list_list_index,
-  .slice = ava_esba_list_list_slice,
-  .append = ava_esba_list_list_append,
-  .concat = ava_esba_list_list_concat,
-  .delete = ava_esba_list_list_delete,
-  .set = ava_esba_list_list_set,
-};
+AVA_LIST_DEFIMPL(ava_esba_list, &ava_esba_list_generic_impl)
 
 static inline ava_esba to_esba(ava_value val) {
   return (ava_esba) {

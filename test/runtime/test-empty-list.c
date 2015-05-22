@@ -26,6 +26,10 @@
 
 defsuite(empty_list);
 
+static void force(ava_value list) {
+  ava_string_chunk_iterator(list);
+}
+
 deftest(empty_list_stringifies_to_empty_string) {
   ck_assert_str_eq("", ava_string_to_cstring(
                      ava_to_string(ava_empty_list().v)));
@@ -54,11 +58,11 @@ deftest(empty_list_permits_slice_zero_to_zero) {
 }
 
 deftest_signal(empty_list_refuses_nonzero_slice, SIGABRT) {
-  ava_list_slice(ava_empty_list().v, 1, 1);
+  force(ava_list_slice(ava_empty_list().v, 1, 1));
 }
 
 deftest_signal(empty_list_refuses_index, SIGABRT) {
-  ava_list_index(ava_empty_list().v, 0);
+  force(ava_list_index(ava_empty_list().v, 0));
 }
 
 deftest(empty_list_appends_to_singleton_array_list) {
@@ -82,9 +86,9 @@ deftest(empty_list_permits_zero_to_zero_delete) {
 }
 
 deftest_signal(empty_list_refuses_nonzero_delete, SIGABRT) {
-  ava_list_delete(ava_empty_list().v, 1, 1);
+  force(ava_list_delete(ava_empty_list().v, 1, 1));
 }
 
 deftest_signal(empty_list_refuses_set, SIGABRT) {
-  ava_list_set(ava_empty_list().v, 0, ava_empty_list().v);
+  force(ava_list_set(ava_empty_list().v, 0, ava_empty_list().v));
 }

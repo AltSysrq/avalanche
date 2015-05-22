@@ -1,0 +1,84 @@
+doc {
+  A list is a string acceptable by the standard lexer. Only simple tokens (ie,
+  barewords, a-strings, and verbatims) and newline tokens are permitted. The
+  list is said to contain one element for each simple token it contains;
+  newline tokens are discarded.
+
+  Normal form for a list is comprised of each element string escaped with
+  ava_list_escape(), separated by exactly one space character.
+
+  Implementing this trait implies that (a) every value of the backing type is
+  guaranteed to conform to the list format; (b) the underlying type can
+  provide efficient amortised access to the elements of the list as defined by
+  that format.
+}
+trait ava list {
+  doc {
+    Returns the number of elements in the list.
+
+    Complexity: O(1)
+  }
+  method size_t length {} AVA_PURE
+
+  doc {
+    Returns the element in the list at the given index.
+
+    Effect is undefined if index >= length().
+
+    Complexity: Amortised O(1)
+
+    @param index The index of the element to access.
+  }
+  method ava_value index {size_t index} AVA_PURE
+
+  doc {
+    Returns a new list containing the elements of this between
+    begin, inclusive, and end, exclusive.
+
+    Effect is undefined if begin > end or end > length().
+
+    Complexity: Amortised O(end - begin)
+
+    @param begin The index of the first element copied to the new list.
+    @param end The index of the first element not copied to the new list.
+  }
+
+  method SELF slice {size_t begin size_t end} AVA_PURE
+  doc {
+    Returns a new list which contains all the elements of this followed by the
+    given element.
+
+    Complexity: Amortised O(1)
+
+    @param element The element to append.
+  }
+  method SELF append {ava_value element} AVA_PURE
+
+  doc {
+    Returns a new list which contains all the elements of this followed by all
+    the elements of that.
+
+    Complexity: Amortised O(length)
+  }
+  method SELF concat {SELF that} AVA_PURE
+
+  doc {
+    Returns a new list which contains the elements of this from 0 to begin
+    exclusive, and from end inclusive to the end of this.
+
+    Effect is undefined if begin > end or end > length().
+
+    Complexity: Amortised O(length)
+  }
+  method SELF delete {size_t begin size_t end} AVA_PURE
+
+  doc {
+    Returns a new list which contains the elements in this, except with the
+    element at the selected index replaced with the given value.
+
+    Behaviour is undefined if index >= length().
+
+    Complexity: Amortised O(1)
+  }
+  method SELF set {size_t index ava_value element} AVA_PURE
+}

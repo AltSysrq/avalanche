@@ -32,3 +32,4 @@ bootstrap-avac
 *.gcov
 gen-*
 ava-config.h
+*-trait.h
