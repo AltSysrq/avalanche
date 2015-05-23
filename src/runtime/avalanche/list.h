@@ -105,6 +105,6 @@ ava_list_value ava_list_copy_set(ava_list_value list, size_t ix, ava_value val);
 /**
  * The empty list.
  */
-ava_list_value ava_empty_list(void);
+ava_list_value ava_empty_list(void) AVA_CONSTFUN;
 
 #endif /* AVA_RUNTIME_LIST_H_ */
