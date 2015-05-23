@@ -276,7 +276,11 @@ $mdoc
 #define ${prefix}_${name}_${mname}($argnames) \\
               _Generic((this), \\
                        ava_value: ${prefix}_${name}_${mname}_v, \\
-                       ${valtype}: ${prefix}_${name}_${mname}_f) \\
+                       ${valtype}: ${prefix}_${name}_${mname}_f, \\
+                       /* Clang requires const versions to be */ \\
+                       /* here too. */ \\
+                       const ava_value: ${prefix}_${name}_${mname}_v, \\
+                       const ${valtype}: ${prefix}_${name}_${mname}_f) \\
                 ($arguse)
 "
     foreach {sfx self} [list v ava_value f "${valtype}"] {
