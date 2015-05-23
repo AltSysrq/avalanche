@@ -493,4 +493,24 @@ size_t ava_string_iterator_access(const char*restrict* dst,
  */
 size_t ava_string_iterator_index(const ava_string_iterator*) AVA_PURE;
 
+/**
+ * Returns a 32-bit hash of the given ASCII9 string.
+ *
+ * Any two invocations of this function with the same input within the same
+ * process will return the same result. Different inputs will usually produce
+ * different results. Hash values are effectively randomly distributed through
+ * a large subset of the 32-bit integer space.
+ *
+ * Note that this hash function is entirely unrelated to ava_value_hash(), and
+ * will return different values for the same string.
+ *
+ * This function is far less collision-resistent than ava_value_hash(); care
+ * should be taken when using it. If the whole result cannot be used, the lower
+ * bits should be preferred.
+ */
+/* Note: Implemented in value.c since it uses the same initialisation vector as
+ * ava_value_hash().
+ */
+ava_uint ava_ascii9_hash(ava_ascii9_string str) AVA_CONSTFUN;
+
 #endif /* AVA_RUNTIME_STRING_H_ */

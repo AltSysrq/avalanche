@@ -785,3 +785,9 @@ deftest(rope_flat_iterator_access) {
   ck_assert_int_eq(127, ava_string_iterator_access(&access, &it, tmpbuff));
   ck_assert_int_eq(0, memcmp(large_string + 1, access, 127));
 }
+
+deftest(ascii9_hash) {
+  /* This has a small chance of failing spuriously */
+  ck_assert_int_ne(ava_ascii9_hash(AVA_ASCII9_STRING("foo").ascii9),
+                   ava_ascii9_hash(AVA_ASCII9_STRING("bar").ascii9));
+}

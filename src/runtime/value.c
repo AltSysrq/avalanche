@@ -21,6 +21,10 @@
 #include <string.h>
 #include <time.h>
 
+#ifdef HAVE_NMMINTRIN_H
+#include <nmmintrin.h>
+#endif
+
 #define AVA__INTERNAL_INCLUDE 1
 #include "avalanche/string.h"
 #include "avalanche/value.h"
@@ -337,4 +341,52 @@ ava_ulong ava_value_hash(ava_value value) {
 
   SIPROUNDS(AVA_SIPHASH_D);
   return v0 ^ v1 ^ v2 ^ v3;
+}
+
+ava_uint ava_ascii9_hash(ava_ascii9_string str) {
+  /* Hashing ASCII9 values is a bit difficult, since the lower bits are often
+   * all zeroes.
+   *
+   * When reasonably possible, return a CPU-provided CRC of the value.
+   * Otherwise fall back on a simple algorithm that produces reasonably
+   * well-distributed lower bits.
+   *
+   * All results include the siphash key, even if it does not improve
+   * collision-resistence, so that this function will always return different
+   * results in different processes (ie, to catch programming errors assuming
+   * otherwise).
+   *
+   * This is designed for speeed for use in a hash table with no specific value
+   * distribution than to be resistent to hash-collision attacks.
+   */
+
+  ava_ulong k0 = ava_siphash_k[0];
+  unsigned h;
+#if defined(__GNUC__) && defined(__SSE4_2__)
+#ifdef HAVE_NMMINTRIN_H
+  h = _mm_crc32_u64(k0, str);
+#else
+  h = __builtin_ia32_crc32di(k0, str);
+#endif /* HAVE_NMMINTRIN_H */
+  /* Mix the upper 16 bits with the lower 16 bits, since the entropy is better
+   * there.
+   */
+  h += h >> 16;
+  return h;
+#else /* Not gcc/clang or don't have SSE4.2 */
+  h = str;
+  h ^= str >> 32;
+  h ^= k0;
+
+  /* Thomas Wang's algorithm from
+   * http://burtleburtle.net/bob/hash/integer.html
+   */
+  h += ~(h << 15);
+  h ^=  (h >> 10);
+  h +=  (h << 3);
+  h ^=  (h >> 6);
+  h += ~(h << 11);
+  h ^=  (h >> 16);
+  return h;
+#endif
 }
