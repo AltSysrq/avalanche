@@ -27,7 +27,9 @@
  * example, if every value is a string, each element will be only 8 bytes wide
  * instead of 24.
  *
- * ESBA lists can*not* be empty.
+ * ESBA lists can*not* be empty. All operations on an ESBA list that produce
+ * new lists also return an ESBA list, except for slice() and operations which
+ * result in an empty list.
  */
 
 /**
