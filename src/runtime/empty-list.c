@@ -24,6 +24,7 @@
 #include "avalanche/string.h"
 #include "avalanche/value.h"
 #include "avalanche/list.h"
+#include "avalanche/map.h"
 #include "-array-list.h"
 
 static ava_string ava_empty_list_value_to_string(ava_value);
@@ -41,10 +42,17 @@ static const ava_value_trait ava_empty_list_generic_impl = {
   .value_weight = ava_empty_list_value_value_weight,
 };
 
-AVA_LIST_DEFIMPL(ava_empty_list, &ava_empty_list_generic_impl)
+AVA_MAP_DEFIMPL(ava_empty_list, &ava_empty_list_generic_impl)
+AVA_LIST_DEFIMPL(ava_empty_list, &ava_empty_list_map_impl)
 
 ava_list_value ava_empty_list(void) {
   return (ava_list_value) {
+    ava_value_with_ptr(&ava_empty_list_list_impl, NULL)
+  };
+}
+
+ava_map_value ava_empty_map(void) {
+  return (ava_map_value) {
     ava_value_with_ptr(&ava_empty_list_list_impl, NULL)
   };
 }
@@ -104,5 +112,48 @@ static ava_list_value ava_empty_list_list_delete(
 static ava_list_value ava_empty_list_list_set(
   ava_list_value el, size_t index, ava_value value
 ) {
+  abort();
+}
+
+static size_t ava_empty_list_map_npairs(ava_map_value el) {
+  return 0;
+}
+
+static ava_map_cursor ava_empty_list_map_find(ava_map_value el, ava_value key) {
+  return AVA_MAP_CURSOR_NONE;
+}
+
+static ava_map_cursor ava_empty_list_map_next(ava_map_value el,
+                                              ava_map_cursor cursor) {
+  abort();
+}
+
+static ava_value ava_empty_list_map_get(ava_map_value el,
+                                        ava_map_cursor cursor) {
+  abort();
+}
+
+static ava_value ava_empty_list_map_get_key(ava_map_value el,
+                                            ava_map_cursor cursor) {
+  abort();
+}
+
+static ava_map_value ava_empty_list_map_set(ava_map_value el,
+                                            ava_map_cursor cursor,
+                                            ava_value value) {
+  abort();
+}
+
+static ava_map_value ava_empty_list_map_delete(ava_map_value el,
+                                               ava_map_cursor cursor) {
+  abort();
+}
+
+static ava_map_value ava_empty_list_map_add(ava_map_value el,
+                                            ava_value key,
+                                            ava_value value) {
+  /* TODO
+  return ava_map_of_values(&key, 0, &value, 0, 1);
+  */
   abort();
 }
