@@ -25,6 +25,7 @@ runtime/hexes.c \
 runtime/init.c \
 runtime/integer-fast-dec.c \
 runtime/list.c \
+runtime/list-map.c \
 runtime/list-proj.c \
 runtime/map.c \
 runtime/string.c \
