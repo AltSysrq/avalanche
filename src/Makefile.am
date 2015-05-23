@@ -26,6 +26,7 @@ runtime/init.c \
 runtime/integer-fast-dec.c \
 runtime/list.c \
 runtime/list-proj.c \
+runtime/map.c \
 runtime/string.c \
 runtime/value.c
 libavart_la_LIBADD = $(LIBUNWIND_LIBS)

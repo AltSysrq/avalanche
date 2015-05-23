@@ -1,0 +1,152 @@
+#-
+# Copyright (c) 2015 Jason Lingle
+#
+# Permission to  use, copy,  modify, and/or distribute  this software  for any
+# purpose  with or  without fee  is hereby  granted, provided  that the  above
+# copyright notice and this permission notice appear in all copies.
+#
+# THE SOFTWARE  IS PROVIDED "AS  IS" AND  THE AUTHOR DISCLAIMS  ALL WARRANTIES
+# WITH  REGARD   TO  THIS  SOFTWARE   INCLUDING  ALL  IMPLIED   WARRANTIES  OF
+# MERCHANTABILITY AND FITNESS. IN NO EVENT  SHALL THE AUTHOR BE LIABLE FOR ANY
+# SPECIAL,  DIRECT,   INDIRECT,  OR  CONSEQUENTIAL  DAMAGES   OR  ANY  DAMAGES
+# WHATSOEVER RESULTING FROM LOSS OF USE, DATA OR PROFITS, WHETHER IN AN ACTION
+# OF  CONTRACT, NEGLIGENCE  OR OTHER  TORTIOUS ACTION,  ARISING OUT  OF OR  IN
+# CONNECTION WITH THE USE OR PERFORMANCE OF THIS SOFTWARE.
+
+doc {
+  A map is an ordered, 1:N associative array between arbitrary values. It takes
+  the format of a list (see ava_list_value) with an even number of elements,
+  where every element at an even index is a key, and the following element at
+  an odd index is the value corresponding to that key.
+
+  For example, the string
+
+    foo bar baz quux foo xyzzy
+
+  maps the values "bar" and "xyzzy" to the key "foo", and the value "quux" to
+  the key "baz".
+
+  All map operations preserve the order of the key/value pairs.
+
+  Normal form of a map is the same as the normal form for a list.
+
+  Implementing this trait implies that (a) every value of the backing type is
+  guaranteed to conform to the normal map format; (b) the underlying type can
+  provide efficient amortised access to the elements of the map. When
+  reasonably possible, implementations should also implement ava_list_trait,
+  though this is not required.
+}
+trait ava map {
+  doc {
+    Returns the number of key-value pairs in the list.
+
+    Complexity: O(1)
+  }
+  method size_t npairs {} AVA_PURE
+
+  doc {
+    Returns a cursor to the first element in the map with the given key, if
+    there is such an element.
+
+    Complexity: Amortised O(1)
+
+    @param key The key for which to search.
+    @return An opaque cursor, or AVA_MAP_CURSOR_NONE if the given key does not
+            occur within this map.
+  }
+  method ava_map_cursor find {ava_value key} AVA_PURE
+
+  doc {
+    Returns a cursor to the next element in the map which shares the same key
+    as the one indicated by the given cursor, if there is such an element.
+
+    Behaviour is undefined if the cursor was not produced by a call to find()
+    or next() on this map, or if the value is AVA_MAP_CURSOR_NONE.
+
+    Complexity: Amortised O(1)
+
+    @param cursor Cursor to the element to skip.
+    @return An opaque cursor, or AVA_MAP_CURSOR_NONE if there are no further
+            elements with the same key as the current.
+  }
+  method ava_map_cursor next {ava_map_cursor cursor} AVA_PURE
+
+  doc {
+    Returns the value bound to the element at the given cursor.
+
+    Behaviour is undefined if the cursor was not produced by a call to find()
+    or next() on this map, or if the value is AVA_MAP_CURSOR_NONE.
+
+    Complexity: O(1)
+
+    @param cursor The cursor to the element to read.
+    @return The value of the element at the given cursor.
+  }
+  method ava_value get {ava_map_cursor cursor} AVA_PURE
+
+  doc {
+    Returns the kye bound to the element at the given cursor.
+
+    Behaviour is undefined if the cursor was not produced by a call to find()
+    or next() on this map, or if the value is AVA_MAP_CURSOR_NONE.
+
+    Complexity: O(1)
+
+    @param cursor The cursor to the element to read.
+    @return The key of the element at the given cursor.
+  }
+  method ava_value get_key {ava_map_cursor cursor} AVA_PURE
+
+  doc {
+    Alters the value at the given cursor to the new chosen value.
+
+    Behaviour is undefined if the cursor was not produced by a call to find()
+    or next() on this map, or if the value is AVA_MAP_CURSOR_NONE.
+
+    Complexity: Amortised O(1)
+
+    @param cursor Cursor to the key/value pair to edit.
+    @param value The new value of the key/value pair.
+    @return A new map containing the same elements as this map, but with the
+    key at the given index mapped to the new value. The location of the key
+    with respect to the ordering is unchanged.
+  }
+  method SELF set {ava_map_cursor cursor ava_value value} AVA_PURE
+
+  doc {
+    Adds a new key/value pair to the end of the map.
+
+    Existing pairs with the same key (and even the same value) make are
+    unaffected, and do not themselves affect this operation; this operation is
+    equivalent to reinterpreting the map as a list and concatenating it with a
+    two-element list comprised of the key and the value.
+
+    This always increases the size of the map by exactly 1.
+
+    Complexity: Amortised O(1)
+
+    @param key The key of the new key/value pair.
+    @param value The value of the new key/value pair.
+    @return A map containing the same elements as this, followed by a key/value
+    pair comprised of key and value.
+  }
+  method SELF add {ava_value key ava_value value} AVA_PURE
+
+  doc {
+    Removes the key/value pair at the given cursor.
+
+    Behaviour is undefined if the cursor was not produced by a call to find()
+    or next() on this map, or if the value is AVA_MAP_CURSOR_NONE.
+
+    The relative ordering of elements other than the one deleted remains
+    unchanged; in effect, all elements ordered after the deleted elements have
+    their index reduced by 2 (in list indexing terms).
+
+    Complexity: Amortised O(1)
+
+    @param cursor Cursor to the key/value pair to delete.
+    @return A map containing the same key/value pairs as this one, in the same
+    order, except without the pair at the chosen index.
+  }
+  method SELF delete {ava_map_cursor cursor} AVA_PURE
+}

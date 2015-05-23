@@ -12,6 +12,8 @@ avalanche/lex.h \
 avalanche/list.h \
 avalanche/list-proj.h \
 avalanche/list-trait.h \
+avalanche/map.h \
+avalanche/map-trait.h \
 avalanche/string.h \
 avalanche/value.h
 
@@ -22,3 +24,7 @@ avalanche/ava-config.h: $(top_srcdir)/config.h
 avalanche/list-trait.h: avalanche/generate-trait.tcl avalanche/list.trait
 	$(AM_V_GEN)$(TCLSH) avalanche/generate-trait.tcl avalanche/list.trait \
 		>avalanche/list-trait.h
+
+avalanche/map-trait.h: avalanche/generate-trait.tcl avalanche/map.trait
+	$(AM_V_GEN)$(TCLSH) avalanche/generate-trait.tcl avalanche/map.trait \
+		>avalanche/map-trait.h
