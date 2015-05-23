@@ -502,12 +502,19 @@ const void* ava_esba_access(ava_esba esba, ava_esba_tx* tx) {
 
 ava_bool ava_esba_check_access(ava_esba esba, const void* accessed,
                                ava_esba_tx tx) {
+  ava_esba_handle_value val;
+
+  /* Perform an isolated read barrier to ensure that all client reads have
+   * completed before we read the handle to check for changes.
+   */
+  AO_nop_read();
+
   /* Read the current handle. We don't need it to be consistent; even if we
    * waited for it to become consistent, the below check would fail anyway
    * since that it had been in an inconsintent state guarantees that at least
    * one of the fields on the handles changed.
    */
-  ava_esba_handle_value val = ava_esba_handle_read(esba.handle);
+  val = ava_esba_handle_read(esba.handle);
 
   /* The transaction fails if:
    *
