@@ -435,6 +435,15 @@ ava_datum ava_singleton_string_chunk_iterator(ava_value value);
 ava_string ava_iterate_singleton_string_chunk(ava_datum* rep,
                                               ava_value value);
 
+#ifndef AVA_IN_VALUE_C
+/**
+ * Value attribute indicating the value is a simple string.
+ *
+ * Strings store their data in the ulong of the value.
+ */
+extern const ava_attribute ava_string_type;
+#endif
+
 /**
  * Returns a value which contains the given string, with a string type.
  */

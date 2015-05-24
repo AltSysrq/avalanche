@@ -26,6 +26,7 @@
 #endif
 
 #define AVA__INTERNAL_INCLUDE 1
+#define AVA_IN_VALUE_C
 #include "avalanche/string.h"
 #include "avalanche/value.h"
 
@@ -119,7 +120,7 @@ static size_t ava_string_value_value_weight(ava_value value) {
   return ava_string_length(ava_value_str(value));
 }
 
-static const ava_value_trait ava_string_generic_impl = {
+static const ava_value_trait ava_string_type = {
   .header = { .tag = &ava_value_trait_tag, .next = NULL },
   .name = "string",
   .to_string = ava_string_value_to_string,
@@ -132,7 +133,7 @@ static const ava_value_trait ava_string_generic_impl = {
  * caching for large values.
  */
 ava_value ava_value_of_string(ava_string str) {
-  return ava_value_with_str(&ava_string_generic_impl, str);
+  return ava_value_with_str(&ava_string_type, str);
 }
 
 ava_value ava_value_of_cstring(const char* str) {
