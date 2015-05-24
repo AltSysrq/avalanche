@@ -275,27 +275,35 @@ ava_list_value ava_esba_list_of_raw(
   const ava_value*restrict array,
   size_t length
 ) {
+  return ava_esba_list_of_raw_strided(array, length, 1);
+}
+
+ava_list_value ava_esba_list_of_raw_strided(
+  const ava_value*restrict array,
+  size_t count, size_t stride
+) {
   unsigned format;
   ava_value template;
   size_t i;
 
-  assert(length > 0);
+  assert(count > 0);
+  assert(stride > 0);
 
   /* First pass to determine format */
   format = 0;
   template = array[0];
-  for (i = 1; i < length && format != POLYMORPH_ALL; ++i)
-    format |= ava_esba_list_polymorphism(template, array[i]);
+  for (i = 1; i < count && format != POLYMORPH_ALL; ++i)
+    format |= ava_esba_list_polymorphism(template, array[i*stride]);
 
   /* Second pass to copy data */
-  ava_esba esba = ava_esba_list_create_esba(format, template, length);
-  pointer* dst = ava_esba_start_append(&esba, length);
-  for (i = 0; i < length; ++i) {
-    ava_esba_list_swizzle_down[format](dst, array + i);
+  ava_esba esba = ava_esba_list_create_esba(format, template, count);
+  pointer* dst = ava_esba_start_append(&esba, count);
+  for (i = 0; i < count; ++i) {
+    ava_esba_list_swizzle_down[format](dst, array + i * stride);
     dst += ava_esba_list_element_size_pointers[format];
   }
 
-  ava_esba_finish_append(esba, length);
+  ava_esba_finish_append(esba, count);
 
   return to_list_value(esba);
 }

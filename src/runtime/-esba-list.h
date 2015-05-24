@@ -47,9 +47,22 @@ ava_list_value ava_esba_list_copy_of(ava_list_value list,
  * The array is copied rather than referenced.
  *
  * length must not be zero.
+ *
+ * Equivalent to ava_esba_list_of_raw_strided(array, length, 1).
  */
 ava_list_value ava_esba_list_of_raw(const ava_value*restrict array,
                                     size_t length);
+
+/**
+ * Creates a new ESBA list containing the first count elements at each strideth
+ * offset within the given array.
+ *
+ * The array is copied rather than referenced.
+ *
+ * length and stride must not be zero.
+ */
+ava_list_value ava_esba_list_of_raw_strided(
+  const ava_value*restrict array, size_t count, size_t stride);
 
 /**
  * This is only for testing.

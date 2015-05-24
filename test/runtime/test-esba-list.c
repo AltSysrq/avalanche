@@ -138,6 +138,24 @@ deftest(polymorphic_create_from_list) {
   assert_values_equal(values[1], ava_list_index(list, 1));
 }
 
+deftest(strided_create_from_array) {
+  ava_value values[3] = {
+    ava_value_of_integer(42),
+    ava_value_of_cstring("hello world"),
+    ava_value_of_integer(56),
+  };
+  ava_list_value first = ava_esba_list_of_raw_strided(
+    values, 2, 2);
+  ava_list_value second = ava_esba_list_of_raw_strided(
+    values + 1, 1, 2);
+
+  ck_assert_int_eq(2, ava_list_length(first));
+  ck_assert_str_eq("42 56", ava_string_to_cstring(
+                     ava_to_string(first.v)));
+  ck_assert_str_eq("\"hello world\"", ava_string_to_cstring(
+                     ava_to_string(second.v)));
+}
+
 deftest(slice_to_empty_list) {
   ava_value values[2] = {
     ava_value_of_integer(1),
