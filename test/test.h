@@ -36,6 +36,9 @@
 #include "runtime/avalanche/value.h"
 #include "runtime/avalanche/context.h"
 
+#define WORD(txt) ava_value_of_cstring(#txt)
+#define INT(n) ava_value_of_integer(n)
+
 extern const char* suite_names[1024];
 extern void (*suite_impls[1024])(Suite*);
 extern unsigned suite_num;
@@ -73,6 +76,22 @@ static ava_value run_function(void* f) {
   (*(void(*)(void))f)();
   return ava_value_of_string(AVA_EMPTY_STRING);
 }
+
+#define assert_values_equal(a,b)                                \
+  ck_assert_msg(ava_value_equal((a), (b)),                      \
+                "Assertion '" #a " == " #b "' failed: "         \
+                "%s != %s",                                     \
+                ava_string_to_cstring(ava_to_string(a)),        \
+                ava_string_to_cstring(ava_to_string(b)))
+
+#define assert_value_equals_str(str,val)                \
+  assert_values_equal(ava_value_of_cstring(str), val)
+
+#define assert_values_same(a,b)                                 \
+  ck_assert_msg(0 == memcmp((ava_value[]) {a},                  \
+                            (ava_value[]) {b},                  \
+                            sizeof(ava_value)),                 \
+                "Assertion '" #a " same-as " #b "' failed.")
 
 #define defsuite(name)                          \
   static void _register_suite_##name(void)      \

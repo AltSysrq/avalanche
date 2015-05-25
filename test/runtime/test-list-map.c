@@ -24,10 +24,6 @@
 
 defsuite(list_map);
 
-static void assert_values_equal(ava_value a, ava_value b) {
-  ck_assert_int_eq(0, ava_value_strcmp(a, b));
-}
-
 deftest(basic_construct) {
   ava_value values[] = {
     ava_value_of_cstring("foo"), ava_value_of_cstring("bar"),

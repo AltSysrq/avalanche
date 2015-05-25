@@ -28,10 +28,6 @@
 
 defsuite(esba_list);
 
-static void assert_values_equal(ava_value a, ava_value b) {
-  ck_assert_int_eq(0, memcmp(&a, &b, sizeof(a)));
-}
-
 deftest(single_element_list) {
   ava_value fourty_two = ava_value_of_integer(42);
   ava_list_value list = ava_esba_list_of_raw(&fourty_two, 1);

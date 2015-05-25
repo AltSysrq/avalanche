@@ -120,7 +120,7 @@ static size_t ava_string_value_value_weight(ava_value value) {
   return ava_string_length(ava_value_str(value));
 }
 
-static const ava_value_trait ava_string_type = {
+const ava_value_trait ava_string_type = {
   .header = { .tag = &ava_value_trait_tag, .next = NULL },
   .name = "string",
   .to_string = ava_string_value_to_string,

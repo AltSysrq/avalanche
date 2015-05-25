@@ -21,6 +21,7 @@ runtime/esba-list.c \
 runtime/exception.c \
 runtime/gen-integer.c \
 runtime/gen-lex.c \
+runtime/hash-map.c \
 runtime/hexes.c \
 runtime/init.c \
 runtime/integer-fast-dec.c \

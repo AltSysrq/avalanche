@@ -60,8 +60,7 @@ typedef struct {
    *
    * In an ava_value, conventionally in the value ulong.
    *
-   * Don't access this directly; use ava_esba_length() instead, as the
-   * semantics of this value are not guaranteed.
+   * Don't access this directly; use ava_esba_length() instead.
    */
   size_t length;
 } ava_esba;
