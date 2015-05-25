@@ -664,7 +664,7 @@ static ava_esba_array* ava_esba_handle_copy_out(
   ava_esba_array* dst = ava_esba_array_new(
     old.head->element_size, capacity,
     old.head->weight_function, old.head->allocator);
-  dst->dead_segment_size = capacity - length;
+  dst->dead_segment_size -= length;
 
   /* Do a trivial copy of the main data.
    *

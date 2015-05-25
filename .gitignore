@@ -33,3 +33,4 @@ bootstrap-avac
 gen-*
 ava-config.h
 *-trait.h
+*.class

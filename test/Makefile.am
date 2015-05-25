@@ -17,12 +17,14 @@ runtime/test-map.t \
 runtime/test-string.t \
 runtime/test-value.t
 
+BENCHMARKS = benchmarks/list/avalanche.t benchmarks/map/avalanche.t
+
 EXTRA_CFLAGS =
 AM_CFLAGS = $(CHECK_CFLAGS) -I../src $(EXTRA_CFLAGS) -funwind-tables
 AM_LDFLAGS = $(CHECK_LIBS) ../src/libavart.la
 
 check_PROGRAMS = $(TESTS)
-noinst_PROGRAMS = runtime/rope-vis.t
+noinst_PROGRAMS = runtime/rope-vis.t $(BENCHMARKS)
 runtime_rope_vis_t_SOURCES = runtime/rope-vis.c
 
 runtime_test_array_list_t_SOURCES = runtime/test-array-list.c
@@ -38,3 +40,6 @@ runtime_test_list_proj_t_SOURCES = runtime/test-list-proj.c
 runtime_test_list_t_SOURCES = runtime/test-list.c
 runtime_test_string_t_SOURCES = runtime/test-string.c
 runtime_test_value_t_SOURCES = runtime/test-value.c
+
+benchmarks_list_avalanche_t_SOURCES = benchmarks/list/avalanche.c
+benchmarks_map_avalanche_t_SOURCES = benchmarks/map/avalanche.c

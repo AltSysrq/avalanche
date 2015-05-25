@@ -26,10 +26,12 @@ AVA_BEGIN_DECLS
 #include "avalanche/string.h"
 #include "avalanche/lex.h"
 #include "avalanche/value.h"
+#include "avalanche/integer.h"
 #include "avalanche/exception.h"
 #include "avalanche/context.h"
 #include "avalanche/list.h"
 #include "avalanche/list-proj.h"
+#include "avalanche/map.h"
 
 /**
  * Initialises the avalanche runtime.

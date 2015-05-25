@@ -1,0 +1,12 @@
+This directory contains benchmarks comparing Avalanche's performance of
+particular operations to the nearest equivalent in other languages/runtimes.
+
+The main build system only builds the Avalanche-based benchmarks; those for
+other systems must be built by hand. Instructions are included at the top of
+each ifle.
+
+C++ STL benchmarks are not included due to varying implementations and the
+ability for the compiler to optimise for the benchmark itself.
+
+Interpreted languages obviously incur a penalty for their interpretation. Java
+pays a heavy price for start-up.
