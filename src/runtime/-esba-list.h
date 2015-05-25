@@ -59,7 +59,7 @@ ava_list_value ava_esba_list_of_raw(const ava_value*restrict array,
  *
  * The array is copied rather than referenced.
  *
- * length and stride must not be zero.
+ * length must not be zero.
  */
 ava_list_value ava_esba_list_of_raw_strided(
   const ava_value*restrict array, size_t count, size_t stride);

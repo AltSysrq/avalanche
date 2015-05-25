@@ -287,7 +287,6 @@ ava_list_value ava_esba_list_of_raw_strided(
   size_t i;
 
   assert(count > 0);
-  assert(stride > 0);
 
   /* First pass to determine format */
   format = 0;
