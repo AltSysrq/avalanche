@@ -487,8 +487,8 @@ static ava_hash_map_index* ava_hash_map_index_new(size_t base_cap) {
 
   while (cap < base_cap) cap <<= 1;
 
-  index = ava_alloc_atomic(sizeof(ava_hash_map_index) +
-                           sizeof(index->indices[0]) * cap);
+  index = ava_alloc_atomic_precise(sizeof(ava_hash_map_index) +
+                                   sizeof(index->indices[0]) * cap);
   index->mask = cap-1;
   return index;
 }
@@ -920,7 +920,7 @@ static ava_map_value ava_hash_map_map_delete(ava_map_value map,
   if (0 == this.num_deleted_entries) {
     this.deleted_entries = ava_esba_new(
       sizeof(ava_ulong), required_bitset_elements,
-      bitmap_weight_function, ava_alloc_atomic, NULL);
+      bitmap_weight_function, ava_alloc_atomic_precise, NULL);
   }
 
   /* Extend the bitmap to be sufficient to hold this bit */
@@ -1000,8 +1000,8 @@ static const ava_hash_map_list_indices* ava_hash_map_build_effective_indices(
   ava_esba_tx tx;
   ava_hash_map_list_indices*restrict dst;
 
-  dst = ava_alloc_atomic(sizeof(ava_hash_map_list_indices) +
-                         sizeof(ava_map_cursor) * num_inputs);
+  dst = ava_alloc_atomic_precise(sizeof(ava_hash_map_list_indices) +
+                                 sizeof(ava_map_cursor) * num_inputs);
   dst->n = num_inputs;
   bitmap_nelt = ava_esba_length(this->deleted_entries);
 

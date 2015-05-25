@@ -163,7 +163,7 @@ static ava_esba ava_esba_list_create_esba_with_header(
     sizeof(pointer) * ava_esba_list_element_size_pointers[header->format],
     capacity,
     ava_esba_list_weight_function,
-    ava_alloc, (void*)header);
+    ava_alloc_precise, (void*)header);
 }
 
 ava_list_value ava_esba_list_copy_of(

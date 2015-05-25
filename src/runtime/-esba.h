@@ -95,9 +95,10 @@ typedef size_t (*ava_esba_weight_function)(
  * @param initial_capacity The minimum number of elements the ESBA is
  * guaranteed to be able to hold. Actual capacity may be greater.
  * @param weight_function A function to "weigh" elements added to the array.
- * @param allocator Function compatible with ava_alloc_atomic() to use to
+ * @param allocator Function compatible with ava_alloc() to use to
  * allocate the array and any arrays derived from it. Callers must provide
- * ava_alloc() if their elements may have pointers within.
+ * ava_alloc() if their elements may have pointers within. All managed
+ * allocation functions (atomic and/or precise) are permitted.
  * @param next_attr The value of the "next" field on the attribute field of the
  * handle. It need not be an actual ava_attribute unless the handle is used in
  * a context that would require it to be.

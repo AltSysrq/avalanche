@@ -68,8 +68,16 @@ void* ava_alloc(size_t sz) {
   return ava_oom_if_null(GC_MALLOC(sz));
 }
 
+void* ava_alloc_precise(size_t sz) {
+  return ava_oom_if_null(GC_MALLOC_IGNORE_OFF_PAGE(sz));
+}
+
 void* ava_alloc_atomic(size_t sz) {
   return ava_oom_if_null(GC_MALLOC_ATOMIC(sz));
+}
+
+void* ava_alloc_atomic_precise(size_t sz) {
+  return ava_oom_if_null(GC_MALLOC_ATOMIC_IGNORE_OFF_PAGE(sz));
 }
 
 void* ava_alloc_unmanaged(size_t sz) {

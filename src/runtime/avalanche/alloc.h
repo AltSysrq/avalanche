@@ -41,19 +41,48 @@ void ava_heap_init(void);
  *
  * If memory allocation fails, the process is aborted.
  */
-void* ava_alloc(size_t) AVA_MALLOC;
+void* ava_alloc(size_t sz) AVA_MALLOC;
+/**
+ * Allocates and returns a block of memory of at least the given size. The
+ * memory is initialised to zeroes.
+ *
+ * Like ava_alloc(), this memory will be reclaimed automatically; however, the
+ * caller MUST ensure that it always holds a reference to the exact pointer
+ * returned, rather than any memory in the block.
+ *
+ * This call should be preferred to ava_alloc() for large sizes, eg, arrays.
+ *
+ * If memory allocation fails, the process is aborted.
+ */
+void* ava_alloc_precise(size_t sz) AVA_MALLOC;
 /**
  * Allocates and returns a block of memory of at least the given size. The
  * memory is *not* initialised to zeroes; its contents are undefined.
  *
- * The caller may not store any pointers in this memory.
+ * The caller may not store any managed pointers in this memory.
  *
  * There is no way to explicitly free this memory; it will be released
  * automatically when no GC-visible pointers remain.
  *
  * If memory allocation fails, the process is aborted.
  */
-void* ava_alloc_atomic(size_t) AVA_MALLOC;
+void* ava_alloc_atomic(size_t sz) AVA_MALLOC;
+/**
+ * Allocates and returns a block of memory of at least the given size. The
+ * memory is *not* initialised to zeroes; its contents are undefined.
+ *
+ * The caller may not store any managed pointers in this memory.
+ *
+ * Like ava_alloc_atomic(), this memory will be reclaimed automatically;
+ * however, the caller MUST ensure that it always holds a reference to the
+ * exact pointer returned, rather than any memory in the block.
+ *
+ * This call should be preferred to ava_alloc_atomic() for large sizes, eg,
+ * arrays.
+ *
+ * If memory allocation fails, the process is aborted.
+ */
+void* ava_alloc_atomic_precise(size_t sz) AVA_MALLOC;
 /**
  * Allocates and returns a block of memory of at least the given size.
  *
