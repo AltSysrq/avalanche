@@ -152,8 +152,5 @@ static ava_map_value ava_empty_list_map_delete(ava_map_value el,
 static ava_map_value ava_empty_list_map_add(ava_map_value el,
                                             ava_value key,
                                             ava_value value) {
-  /* TODO
   return ava_map_of_values(&key, 0, &value, 0, 1);
-  */
-  abort();
 }

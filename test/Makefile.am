@@ -13,6 +13,7 @@ runtime/test-lex.t \
 runtime/test-list-map.t \
 runtime/test-list-proj.t \
 runtime/test-list.t \
+runtime/test-map.t \
 runtime/test-string.t \
 runtime/test-value.t
 

@@ -20,6 +20,7 @@
 #include "runtime/avalanche/value.h"
 #include "runtime/avalanche/list.h"
 #include "runtime/avalanche/map.h"
+#include "runtime/avalanche/integer.h"
 #include "runtime/-list-map.h"
 
 defsuite(list_map);
@@ -256,4 +257,23 @@ deftest(list_operations) {
                       ava_list_delete(map, 1, 3));
   assert_values_equal(ava_value_of_cstring("foo bar plugh quux"),
                       ava_list_set(map, 2, ava_value_of_cstring("plugh")));
+}
+
+deftest(grows_into_better_map_type) {
+  ava_map_value map = ava_list_map_of_list(ava_empty_list());
+  unsigned i;
+  ava_map_cursor cursor;
+
+  for (i = 0; i < 64; ++i)
+    map = ava_map_add(map, INT(i), INT(i));
+
+  ck_assert_str_ne("list-map",
+                   ((const ava_attribute*)ava_value_attr(map.v))->tag->name);
+  ck_assert_int_eq(64, ava_map_npairs(map));
+
+  for (i = 0; i < 64; ++i) {
+    cursor = ava_map_find(map, INT(i));
+    ck_assert_int_ne(AVA_MAP_CURSOR_NONE, cursor);
+    assert_values_equal(INT(i), ava_map_get(map, cursor));
+  }
 }

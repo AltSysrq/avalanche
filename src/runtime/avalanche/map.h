@@ -77,43 +77,6 @@ ava_map_value ava_map_of_values(const ava_value*restrict keys,
                                 size_t count);
 
 /**
- * Convenience implementation of ava_map_trait.next() which always returns
- * AVA_MAP_CURSOR_NONE.
- */
-ava_map_cursor ava_map_unique_next(
-  ava_map_value map, ava_map_cursor cursor) AVA_PURE;
-
-/**
- * Implementation of ava_map_trait.set() which copies the source map into a new
- * map, for implementations that do not directly implement this operation.
- *
- * This requires that the underlying implementation use element indices for
- * cursors, as documented in ava_map_cursor.
- */
-ava_map_value ava_map_copy_set(
-  ava_map_value this, ava_map_cursor cursor, ava_value value) AVA_PURE;
-
-/**
- * Implementation of ava_map_trait.add() which copies the source map into a new
- * map, for implementations that do not directly implement this operation.
- *
- * This requires that the underlying implementation use element indices for
- * cursors, as documented in ava_map_cursor.
- */
-ava_map_value ava_map_copy_add(
-  ava_map_value this, ava_value key, ava_value value) AVA_PURE;
-
-/**
- * Implementation of ava_map_trait.delete() which copies the source map into a
- * new map, for implementations that do not directly implement this operation.
- *
- * This requires that the underlying implementation use element indices for
- * cursors, as documented in ava_map_cursor.
- */
-ava_map_value ava_map_copy_delete(
-  ava_map_value this, ava_map_cursor cursor, ava_value value) AVA_PURE;
-
-/**
  * The empty map.
  */
 ava_map_value ava_empty_map(void) AVA_CONSTFUN;

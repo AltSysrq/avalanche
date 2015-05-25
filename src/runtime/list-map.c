@@ -25,6 +25,7 @@
 #include "avalanche/value.h"
 #include "avalanche/list.h"
 #include "avalanche/map.h"
+#include "-hash-map.h"
 #include "-list-map.h"
 
 /**
@@ -173,11 +174,14 @@ static ava_map_value ava_list_map_map_set(ava_map_value this,
 static ava_map_value ava_list_map_map_add(ava_map_value this,
                                           ava_value key,
                                           ava_value value) {
-  /* TODO: Promote to a better map type if the length exceeds the threshold. */
   ava_list_value new_delegate = DELEGATE(this, append,, key);
   new_delegate = ava_list_append(new_delegate, value);
 
-  return ava_list_map_redelegate(this, new_delegate);
+  if (ava_list_length(new_delegate) <= AVA_LIST_MAP_THRESH) {
+    return ava_list_map_redelegate(this, new_delegate);
+  } else {
+    return ava_hash_map_of_list(new_delegate);
+  }
 }
 
 static ava_map_value ava_list_map_map_delete(ava_map_value this,

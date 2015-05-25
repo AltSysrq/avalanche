@@ -27,6 +27,8 @@
 #include "avalanche/exception.h"
 #include "avalanche/list.h"
 #include "avalanche/map.h"
+#include "-list-map.h"
+#include "-hash-map.h"
 
 const ava_attribute_tag ava_map_trait_tag = {
   .name = "map"
@@ -57,13 +59,42 @@ ava_fat_map_value ava_fat_map_value_of(ava_value value) {
 static ava_map_value ava_map_value_of_list(ava_list_value list) {
   AVA_STATIC_STRING(odd_length_message,
                     "list of odd length cannot be interpreted as map");
+  size_t length;
 
-  if (ava_list_length(list) % 2) {
+  length = ava_list_length(list);
+  if (length % 2) {
     ava_throw(&ava_format_exception,
               ava_value_of_string(odd_length_message),
               NULL);
   }
 
-  /* TODO */
-  abort();
+  if (0 == length)
+    return ava_empty_map();
+
+  if (length <= AVA_LIST_MAP_THRESH)
+    return ava_list_map_of_list(list);
+  else
+    return ava_hash_map_of_list(list);
+}
+
+ava_map_value ava_map_of_values(const ava_value*restrict keys,
+                                size_t key_stride,
+                                const ava_value*restrict values,
+                                size_t value_stride,
+                                size_t count) {
+  if (0 == count) {
+    return ava_empty_map();
+  } else if (count <= AVA_LIST_MAP_THRESH) {
+    ava_value interleaved[2*count];
+    size_t i;
+
+    for (i = 0; i < count; ++i) {
+      interleaved[i*2 + 0] = keys[i * key_stride];
+      interleaved[i*2 + 1] = values[i * value_stride];
+    }
+
+    return ava_list_map_of_list(ava_list_of_values(interleaved, count*2));
+  } else {
+    return ava_hash_map_of_raw(keys, key_stride, values, value_stride, count);
+  }
 }
