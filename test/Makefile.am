@@ -17,7 +17,7 @@ runtime/test-map.t \
 runtime/test-string.t \
 runtime/test-value.t
 
-BENCHMARKS = benchmarks/list/avalanche.t
+BENCHMARKS = benchmarks/list/avalanche.t benchmarks/map/avalanche.t
 
 EXTRA_CFLAGS =
 AM_CFLAGS = $(CHECK_CFLAGS) -I../src $(EXTRA_CFLAGS) -funwind-tables
@@ -42,3 +42,4 @@ runtime_test_string_t_SOURCES = runtime/test-string.c
 runtime_test_value_t_SOURCES = runtime/test-value.c
 
 benchmarks_list_avalanche_t_SOURCES = benchmarks/list/avalanche.c
+benchmarks_map_avalanche_t_SOURCES = benchmarks/map/avalanche.c
