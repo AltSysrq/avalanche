@@ -38,6 +38,8 @@
 #define GC_MALLOC(sz) (calloc(1, (sz)))
 #define GC_MALLOC_ATOMIC(sz) (malloc(sz))
 #define GC_MALLOC_UNCOLLECTABLE(sz) (calloc(1, (sz)))
+#define GC_MALLOC_IGNORE_OFF_PAGE(sz) (calloc(1, (sz)))
+#define GC_MALLOC_ATOMIC_IGNORE_OFF_PAGE(sz) (malloc(sz))
 #define GC_FREE(ptr) (free(ptr))
 #endif /* !AVA_NOGC */
 
