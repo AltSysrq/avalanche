@@ -24,8 +24,7 @@ AM_CFLAGS = $(CHECK_CFLAGS) -I../src $(EXTRA_CFLAGS) -funwind-tables
 AM_LDFLAGS = $(CHECK_LIBS) ../src/libavart.la
 
 check_PROGRAMS = $(TESTS)
-noinst_PROGRAMS = runtime/rope-vis.t $(BENCHMARKS)
-runtime_rope_vis_t_SOURCES = runtime/rope-vis.c
+noinst_PROGRAMS =  $(BENCHMARKS)
 
 runtime_test_array_list_t_SOURCES = runtime/test-array-list.c
 runtime_test_empty_list_t_SOURCES = runtime/test-empty-list.c
