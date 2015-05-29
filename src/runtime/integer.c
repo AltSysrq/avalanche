@@ -29,22 +29,10 @@
 #include "avalanche/integer.h"
 #include "-hexes.h"
 #include "-integer-fast-dec.h"
+#include "-integer-parse.h"
 
 static ava_string ava_integer_to_string(ava_value value) AVA_PURE;
 static size_t ava_integer_value_weight(ava_value value) AVA_CONSTFUN;
-static const char* consume_sign_and_radix(
-  const char*restrict ch, const char*restrict end,
-  ava_bool* negative, char radixl, char radixu);
-static void throw_overflow(const char*restrict begin,
-                           const char*restrict end);
-static ava_integer ava_integer_parse_bin(const char*restrict tok,
-                                         const char*restrict end);
-static ava_integer ava_integer_parse_oct(const char*restrict tok,
-                                         const char*restrict end);
-static ava_integer ava_integer_parse_dec(const char*restrict tok,
-                                         const char*restrict end);
-static ava_integer ava_integer_parse_hex(const char*restrict tok,
-                                         const char*restrict end);
 
 const ava_value_trait ava_integer_type = {
   .header = { .tag = &ava_value_trait_tag, .next = NULL },
@@ -85,146 +73,20 @@ static size_t ava_integer_value_weight(ava_value value) {
   return 0;
 }
 
-static const char* consume_sign_and_radix(
-  const char*restrict ch, const char*restrict end,
-  ava_bool* negative, char radixl, char radixu
-) {
-  /* Consume sign */
-  if (*ch == '+' || *ch == '-') {
-    *negative = *ch == '-';
-    ++ch;
-  }
-
-  /* Skip radix prefix */
-  if (ch[0] == '0' && ch+1 < end &&
-      (ch[1] == radixl || ch[1] == radixu))
-    ch += 2;
-
-  if (ch[0] == radixl || ch[0] == radixu)
-    ++ch;
-
-  return ch;
-}
-
-static void throw_overflow(const char*restrict begin,
-                           const char*restrict end) {
-  ava_throw(&ava_format_exception,
-            ava_value_of_string(
-              ava_string_concat(
-                ava_string_of_shared_cstring("integer flows over: "),
-                ava_string_of_bytes(begin, end - begin))),
-            NULL);
-}
-
-/* All of the parse_*() functions get strings that are already known to be
- * valid, possibly with trailing whitespace.
- */
-static ava_integer ava_integer_parse_bin(const char*restrict begin,
-                                         const char*restrict end) {
-  const char*restrict ch = begin;
-  ava_ulong accum = 0;
-  unsigned bits = 0;
-  ava_bool negative = 0;
-
-  ch = consume_sign_and_radix(ch, end, &negative, 'b', 'B');
-
-  while (ch < end && (*ch == '0' || *ch == '1')) {
-    accum <<= 1;
-    accum |= *ch == '1';
-    bits += bits || *ch == '1';
-    ++ch;
-  }
-
-  if (bits > 64) throw_overflow(begin, end);
-
-  return negative? -accum : accum;
-}
-
-static ava_integer ava_integer_parse_oct(const char*restrict begin,
-                                         const char*restrict end) {
-  const char*restrict ch = begin;
-  ava_ulong accum = 0;
-  unsigned bits = 0;
-  ava_bool negative = 0;
-
-  ch = consume_sign_and_radix(ch, end, &negative, 'o', 'O');
-
-  while (ch < end && *ch >= '0' && *ch <= '7') {
-    accum <<= 3;
-    accum |= *ch - '0';
-    /* We actually do need to care about the number of bits in the first octit,
-     * since 3 does not divide evenly into 64.
-     */
-    if (bits)
-      bits += 3;
-    else
-      bits += *ch >= '4'? 3 : *ch >= '2'? 2 : *ch >= 1? 1 : 0;
-    ++ch;
-  }
-
-  if (bits > 64) throw_overflow(begin, end);
-
-  return negative? -accum : accum;
-}
-
-static ava_integer ava_integer_parse_hex(const char*restrict begin,
-                                         const char*restrict end) {
-  const char*restrict ch = begin;
-  ava_ulong accum = 0;
-  unsigned bits = 0;
-  ava_bool negative = 0;
-
-  ch = consume_sign_and_radix(ch, end, &negative, 'x', 'X');
-
-  while (ch < end && ((*ch >= '0' && *ch <= '9') ||
-                      (*ch >= 'a' && *ch <= 'f') ||
-                      (*ch >= 'A' && *ch <= 'F'))) {
-    accum <<= 4;
-    accum |= ava_hexes[*ch & 0x7F];
-    bits += 4 * (bits || *ch != '0');
-    ++ch;
-  }
-
-  if (bits > 64) throw_overflow(begin, end);
-
-  return negative? -accum : accum;
-}
-
-static ava_integer ava_integer_parse_dec(const char*restrict begin,
-                                         const char*restrict end) {
-  const char*restrict ch = begin;
-  ava_ulong accum = 0;
-  unsigned val;
-  ava_bool negative = 0;
-
-  ch = consume_sign_and_radix(ch, end, &negative, 'z', 'Z');
-
-  while (ch < end && *ch >= '0' && *ch <= '9') {
-    val = *ch - '0';
-    if (accum > 0xFFFFFFFFFFFFFFFFULL/10ULL)
-      throw_overflow(begin, end);
-
-    accum *= 10;
-    if (0xFFFFFFFFFFFFFFFFULL - accum < val)
-      throw_overflow(begin, end);
-
-    accum += val;
-    ++ch;
-  }
-
-  return negative? -accum : accum;
-}
-
 ava_integer ava_integer_of_noninteger_value(
   ava_value value, ava_integer dfault
 ) {
+  AVA_STATIC_STRING(not_an_integer, "not an integer: ");
+  AVA_STATIC_STRING(
+    too_long, "string too long to be interpreted as integer: ");
+  AVA_STATIC_STRING(
+    trailing_garbage, "trailing garbage at end of integer: ");
+
   ava_string str = ava_to_string(value);
-  ava_string_iterator iterator;
+  ava_string error_message;
   const char*restrict strdata, *restrict cursor, *restrict marker = NULL;
   const char*restrict tok;
-  const char* error_message;
-  char tmpbuff[9];
-  size_t strdata_len AVA_UNUSED;
+  char tmpbuff[AVA_STR_TMPSZ];
   size_t strlen;
 
   strlen = ava_string_length(str);
@@ -241,19 +103,13 @@ ava_integer ava_integer_of_noninteger_value(
   }
 
   if (strlen > MAX_INTEGER_LENGTH) {
-    error_message = "string too long to be interpreted as ingeger: ";
+    error_message = too_long;
     goto error;
   }
 
-  /* Integers are always shorter than the maximum guaranteed atomic string
-   * length, so just grab the whole array at once.
-   */
-  ava_string_iterator_place(&iterator, str, 0);
-  strdata_len = ava_string_iterator_access(
-    &strdata, &iterator, tmpbuff);
-  assert(strlen == strdata_len);
+  strdata = ava_string_to_cstring_buff(tmpbuff, str);
 
-  cursor = strdata;
+  strdata = cursor = strdata;
 
 #define YYCTYPE unsigned char
 #define YYPEEK() (cursor < strdata + strlen? *cursor : 0)
@@ -262,11 +118,11 @@ ava_integer ava_integer_of_noninteger_value(
 #define YYRESTORE() (cursor = marker)
 #define YYLESSTHAN(n) (strdata + strlen - cursor < (n))
 #define YYFILL(n) do {} while (0)
-#define END() do {                                              \
-    if (cursor != strdata + strlen) {                           \
-      error_message = "trailing garbage at end of integer: ";   \
-      goto error;                                               \
-    }                                                           \
+#define END() do {                                                  \
+    if (cursor != strdata + strlen) {                               \
+      error_message = trailing_garbage;                             \
+      goto error;                                                   \
+    }                                                               \
   } while (0)
 
   while (cursor < strdata + strlen) {
@@ -300,7 +156,7 @@ ava_integer ava_integer_of_noninteger_value(
       OCT_LITERAL WS*           { END(); return ava_integer_parse_oct(tok, cursor); }
       HEX_LITERAL WS*           { END(); return ava_integer_parse_hex(tok, cursor); }
       DEC_LITERAL WS*           { END(); return ava_integer_parse_dec(tok, cursor); }
-      *                         { error_message = "not an integer: ";
+      *                         { error_message = not_an_integer;
                                   goto error; }
      */
   }
@@ -319,18 +175,14 @@ ava_integer ava_integer_of_noninteger_value(
   error:
   ava_throw(&ava_format_exception,
             ava_value_of_string(
-              ava_string_concat(
-                ava_string_of_shared_cstring(error_message),
-                str)),
+              ava_string_concat(error_message, str)),
             NULL);
   /* unreachable */
 }
 
 ava_bool ava_string_is_integer(ava_string str) {
-  ava_string_iterator iterator;
   const char*restrict strdata, *restrict cursor, * restrict marker = NULL;
-  char tmpbuff[9];
-  size_t strdata_len AVA_UNUSED;
+  char tmpbuff[AVA_STR_TMPSZ];
   size_t strlen;
 
   strlen = ava_string_length(str);
@@ -342,12 +194,7 @@ ava_bool ava_string_is_integer(ava_string str) {
       PARSE_DEC_FAST_ERROR != ava_integer_parse_dec_fast(str.ascii9, strlen))
     return 1;
 
-  ava_string_iterator_place(&iterator, str, 0);
-  strdata_len = ava_string_iterator_access(
-    &strdata, &iterator, tmpbuff);
-  assert(strlen == strdata_len);
-
-  cursor = strdata;
+  strdata = cursor = ava_string_to_cstring_buff(tmpbuff, str);
 
 #define YYCTYPE unsigned char
 #define YYPEEK() (cursor < strdata + strlen? *cursor : 0)

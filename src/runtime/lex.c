@@ -36,7 +36,6 @@ typedef struct {
 struct ava_lex_context_s {
   ava_string str;
   size_t strlen;
-  ava_string_iterator it;
   ava_lex_pos p;
 
   /* Misc state that needs to be passed around */
@@ -46,8 +45,8 @@ struct ava_lex_context_s {
   char string_started_with;
 
   const char*restrict buffer;
-  char tmpbuff[9];
-  unsigned buffer_off, buffer_max;
+  char tmpbuff[AVA_STR_TMPSZ];
+  size_t buffer_off;
   /* The most recent 4 characters, excluding the one under the cursor, to
    * guarantee that, eg, string escaping doesn't have to go deep-diving in the
    * string to find what it's working on.
@@ -207,31 +206,22 @@ ava_lex_context* ava_lex_new(ava_string str) {
   lex->p.column = 1;
   lex->p.line_offset = 0;
   lex->p.index = 0;
-  lex->buffer_off = lex->buffer_max = 0;
+  lex->buffer = ava_string_to_cstring_buff(lex->tmpbuff, str);
 
   lex->verbatim_depth = 0;
-
-  ava_string_iterator_place(&lex->it, str, 0);
 
   return lex;
 }
 
 static unsigned char ava_lex_get(ava_lex_context* lex) {
-  if (lex->buffer_off >= lex->buffer_max) {
-    ava_string_iterator_move(&lex->it, lex->buffer_max);
-    lex->buffer_off = 0;
-    lex->buffer_max = ava_string_iterator_access(
-      &lex->buffer, &lex->it, lex->tmpbuff);
-  }
-
-  if (lex->buffer_off >= lex->buffer_max)
+  if (lex->buffer_off >= lex->strlen)
     return 0;
 
   return lex->buffer[lex->buffer_off];
 }
 
 static void ava_lex_consume(ava_lex_context* lex) {
-  if (lex->buffer_off >= lex->buffer_max) return;
+  if (lex->buffer_off >= lex->strlen) return;
 
   lex->prev_char <<= 8;
   lex->prev_char |= lex->buffer[lex->buffer_off] & 0xFF;
@@ -244,7 +234,7 @@ static void ava_lex_consume(ava_lex_context* lex) {
   case '\n':
     ++lex->p.line;
     lex->p.column = 1;
-    lex->p.line_offset = ava_string_iterator_index(&lex->it) + lex->buffer_off + 1;
+    lex->p.line_offset = lex->buffer_off + 1;
     break;
 
   default:
