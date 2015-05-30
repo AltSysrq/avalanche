@@ -92,6 +92,20 @@ typedef union {
     )
 
 /**
+ * This is an internal structure.
+ */
+typedef union {
+  /**
+   * For a slice, the offset within the body at which the slice begins.
+   */
+  size_t offset;
+  /**
+   * For a concat, the right string.
+   */
+  ava_string string;
+} ava_twine_tail_other;
+
+/**
  * This is an internal structure. It is only present in the header to permit
  * static intialisation. While the structure is partially documented here,
  * there is no guarantee that the documented semantics will be preserved.
@@ -127,20 +141,7 @@ struct ava_twine_s {
      * The "other" piece of data needed for the current form of this twine
      * node.
      */
-    union {
-      /**
-       * For a slice, the offset within the body at which the slice begins.
-       */
-      size_t offset;
-      /**
-       * For a concat, the right string.
-       */
-      ava_string string;
-      /**
-       * For busy nodes, the current parent pointer.
-       */
-      void* parent;
-    } other;
+    ava_twine_tail_other other;
   } tail;
 };
 

@@ -104,6 +104,11 @@ typedef ava_uint64_t  ava_ulong;
 #else
 typedef uint64_t      ava_ulong;
 #endif
+#ifdef ava_intptr_t
+typedef ava_intptr_t  ava_intptr;
+#else
+typedef intptr_t      ava_intptr;
+#endif
 
 #define AVA_GLUE(x,y) AVA__GLUE(x,y)
 #define AVA__GLUE(x,y) x##y
