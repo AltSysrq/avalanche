@@ -17,10 +17,18 @@
 
 #include <stdlib.h>
 
-#define AVA__INTERNAL_INCLUDE 1
 #include "runtime/avalanche/string.h"
 
 static char large_string[65536];
+
+/* Note that a lot of the tests in this file refer in name to the older
+ * rope-based string design. A "rope" referred to a concatenation node, and
+ * "flat" to a node that contained a simple heap-allocated string. Nodes could
+ * also contain ASCII9 strings themselves.
+ *
+ * These tests are still valid, though they don't necessarily test any
+ * execution path in particular.
+ */
 
 defsuite(string);
 
@@ -440,6 +448,56 @@ deftest(rope_slice_across_ascii9) {
   ava_string str = ava_string_slice(orig, 1, 255);
 
   assert_matches_large_string(str, 1, 255);
+}
+
+deftest(slice_to_concat_left_only) {
+  ava_string in = ava_string_concat(
+    ava_string_of_bytes(large_string, 256),
+    ava_string_of_bytes(large_string + 256, 256));
+  ava_string result = ava_string_slice(in, 32, 64);
+
+  assert_matches_large_string(result, 32, 64);
+}
+
+deftest(slice_to_concat_ascii9_right_only) {
+  ava_string in = ava_string_concat(
+    ava_string_of_bytes(large_string, 512),
+    AVA_ASCII9_STRING("avalanche"));
+  ava_string result = ava_string_slice(in, 513, 516);
+
+  ck_assert_str_eq("val", ava_string_to_cstring(result));
+}
+
+deftest(slice_to_concat_twine_right_only) {
+  ava_string in = ava_string_concat(
+    ava_string_of_bytes(large_string, 256),
+    ava_string_of_bytes(large_string + 256, 256));
+  ava_string result = ava_string_slice(in, 300, 400);
+
+  assert_matches_large_string(result, 300, 400);
+}
+
+deftest(slice_to_concat_ascii9_right_only_complex) {
+  ava_string in = ava_string_concat(
+    ava_string_concat(
+      ava_string_of_bytes(large_string, 250),
+      ava_string_of_bytes(large_string + 250, 6)),
+    ava_string_of_bytes(large_string + 256, 256));
+  ava_string result = ava_string_slice(in, 252, 300);
+
+  assert_matches_large_string(result, 252, 300);
+}
+
+deftest(slice_to_tocnac_left_only_complex) {
+  ava_string in = ava_string_concat(
+      ava_string_of_bytes(large_string, 250),
+    ava_string_concat(
+      ava_string_of_bytes(large_string + 250, 6),
+      ava_string_of_bytes(large_string + 256, 256)));
+  ava_string result = ava_string_slice(in, 200, 252);
+
+  assert_matches_large_string(result, 200, 252);
+
 }
 
 deftest(ascii9_to_bytes_whole) {
