@@ -218,10 +218,6 @@ typedef struct {
    */
   size_t element_size;
   /**
-   * The weight function for the elements in this array.
-   */
-  ava_esba_weight_function weight_function;
-  /**
    * The allocator used to allocate this array, and copies derived therefrom.
    *
    * Note that while this structure does have pointers, they always point into
@@ -263,11 +259,6 @@ typedef struct {
    * This is written once when the array is allocated.
    */
   const pointer* end;
-
-  /**
-   * The cumulative weight of this array.
-   */
-  size_t weight;
 
   /**
    * The data in this array. The live segment begins here and runs to
@@ -341,7 +332,6 @@ typedef struct {
 static ava_esba_array* ava_esba_array_new(
   size_t element_size,
   size_t initial_capacity,
-  ava_esba_weight_function weight_function,
   void* (*allocator)(size_t));
 
 static ava_esba_handle* ava_esba_handle_new(
@@ -427,15 +417,13 @@ static void ava_esba_make_mutable(
 
 ava_esba ava_esba_new(size_t element_size,
                       size_t initial_capacity,
-                      ava_esba_weight_function weight_function,
                       void* (*allocator)(size_t),
                       const void* next_attr) {
   assert(0 == element_size % sizeof(pointer));
 
   element_size /= sizeof(pointer);
   ava_esba_array* array = ava_esba_array_new(
-    element_size, initial_capacity * element_size,
-    weight_function, allocator);
+    element_size, initial_capacity * element_size, allocator);
 
   ava_esba_handle* handle = ava_esba_handle_new(
     next_attr, array, array->true_version, 0);
@@ -445,7 +433,6 @@ ava_esba ava_esba_new(size_t element_size,
 
 static ava_esba_array* ava_esba_array_new(
   size_t element_size, size_t initial_capacity,
-  ava_esba_weight_function weight_function,
   void* (*allocator)(size_t)
 ) {
   ava_esba_array* array = (*allocator)(
@@ -455,14 +442,12 @@ static ava_esba_array* ava_esba_array_new(
     sizeof_ptr(ava_esba_undead_element));
 
   array->element_size = element_size;
-  array->weight_function = weight_function;
   array->allocator = allocator;
   array->dead_segment_size = initial_capacity * element_size +
     sizeof_ptr(ava_esba_undead_element);
   array->end = array->data + initial_capacity * element_size +
     sizeof_ptr(ava_esba_undead_element);
   array->true_version = (AO_t)array->end;
-  array->weight = 0;
 
   return array;
 }
@@ -662,8 +647,7 @@ static ava_esba_array* ava_esba_handle_copy_out(
 
   /* Allocate a new, private array to use as a destination. */
   ava_esba_array* dst = ava_esba_array_new(
-    old.head->element_size, capacity,
-    old.head->weight_function, old.head->allocator);
+    old.head->element_size, capacity, old.head->allocator);
   dst->dead_segment_size -= length;
 
   /* Do a trivial copy of the main data.
@@ -715,11 +699,6 @@ static ava_esba_array* ava_esba_handle_copy_out(
     }
   }
 
-  /* The destination array is now fully consistent; calculate it's weight and
-   * we're done.
-   */
-  dst->weight = (*dst->weight_function)(handle->header.next, dst->data,
-                                        length_elts);
   return dst;
 }
 
@@ -740,9 +719,7 @@ void* ava_esba_start_append(ava_esba* esba, size_t num_elements) {
 
 static void ava_esba_finish_append_impl(ava_esba esba, size_t num_elements,
                                         ava_esba_handle_value val) {
-  size_t old_length = esba.length - num_elements;
   size_t new_length = esba.length;
-  size_t element_size = val.head->element_size;
 
   /* Update the handle with the new maximum length.
    *
@@ -750,12 +727,6 @@ static void ava_esba_finish_append_impl(ava_esba esba, size_t num_elements,
    * length if the handle goes stale.
    */
   AO_store_release_write(&esba.handle->max_length, new_length);
-  /* Update the weight; this can be incremental and non-atomic since we're the
-   * only writer.
-   */
-  val.head->weight += (*val.head->weight_function)(
-    esba.handle->header.next,
-    val.head->data + old_length * element_size, num_elements);
 }
 
 
@@ -812,13 +783,6 @@ ava_esba ava_esba_set(ava_esba esba, size_t index, const void*restrict data) {
    */
   memcpy(val.head->data + index * element_size, data,
          element_size * sizeof(pointer));
-  /* Update the weight. Note that we still pay for the weight of the old datum
-   * since it lives in the undo log.
-   *
-   * No atomicity or barrier needed since we're the only writer.
-   */
-  val.head->weight += (*val.head->weight_function)(
-    esba.handle->header.next, data, 1);
 
   /* Create a new handle for the new version. */
   esba.handle = ava_esba_handle_new(
@@ -875,8 +839,4 @@ static void ava_esba_make_mutable(
     /* Set the correct dead size */
     val->head->dead_segment_size -= required_space;
   }
-}
-
-size_t ava_esba_weight(ava_esba esba) {
-  return ava_esba_handle_read(esba.handle).head->weight;
 }

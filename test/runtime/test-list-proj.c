@@ -46,8 +46,6 @@ deftest(basic_interleave) {
   ava_list_value result = ava_list_proj_interleave(input, 3);
 
   ck_assert_int_eq(9, ava_list_length(result.v));
-  ck_assert_int_eq(3 * ava_value_weight(input[0].v),
-                   ava_value_weight(result.v));
   assert_looks_like("0 3 6 1 4 7 2 5 8", result);
 }
 
@@ -69,9 +67,6 @@ deftest(basic_demux) {
   ck_assert_int_eq(2, ava_list_length(result[0].v));
   ck_assert_int_eq(2, ava_list_length(result[1].v));
   ck_assert_int_eq(1, ava_list_length(result[2].v));
-  ck_assert_int_eq(ava_value_weight(input.v), ava_value_weight(result[0].v));
-  ck_assert_int_eq(ava_value_weight(input.v), ava_value_weight(result[1].v));
-  ck_assert_int_eq(ava_value_weight(input.v), ava_value_weight(result[2].v));
   assert_looks_like("0 3", result[0]);
   assert_looks_like("1 4", result[1]);
   assert_looks_like("2", result[2]);
@@ -168,7 +163,6 @@ deftest(basic_group) {
   ava_list_value result = ava_list_proj_group(input, 3);
 
   ck_assert_int_eq(3, ava_list_length(result.v));
-  ck_assert_int_eq(ava_value_weight(input.v), ava_value_weight(result.v));
   assert_looks_like("\"0 1 2\" \"3 4 5\" \"6 7\"", result);
 }
 

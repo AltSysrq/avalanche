@@ -283,14 +283,11 @@ typedef struct {
   AO_t /* const ava_hash_map_list_indices*restrict */ effective_indices;
 } ava_hash_map;
 
-static size_t ava_hash_map_value_value_weight(ava_value map);
-
 static const ava_value_trait ava_hash_map_value_impl = {
   .header = { .tag = &ava_value_trait_tag, .next = NULL },
   .to_string = ava_string_of_chunk_iterator,
   .string_chunk_iterator = ava_list_string_chunk_iterator,
   .iterate_string_chunk = ava_list_iterate_string_chunk,
-  .value_weight = ava_hash_map_value_value_weight,
 };
 
 AVA_LIST_DEFIMPL(ava_hash_map, &ava_hash_map_value_impl)
@@ -507,11 +504,6 @@ static ava_map_value ava_hash_map_combine(ava_map_value old,
       ava_value_with_ulong(ava_clone(data, sizeof(ava_hash_map)), length)
     };
   }
-}
-
-static size_t ava_hash_map_value_value_weight(ava_value map) {
-  return ava_value_weight(get_keys(map).v) +
-    ava_value_weight(get_values(map).v);
 }
 
 static size_t ava_hash_map_map_npairs(ava_map_value map) {
@@ -895,12 +887,6 @@ static ava_map_value ava_hash_map_map_add(ava_map_value map,
   return ava_hash_map_combine(map, &this, length);
 }
 
-static size_t bitmap_weight_function(const void*restrict next_attr,
-                                     const void*restrict elements,
-                                     size_t num_elements) {
-  return 0;
-}
-
 static ava_map_value ava_hash_map_map_delete(ava_map_value map,
                                              ava_map_cursor cursor) {
   ava_hash_map this = *(const ava_hash_map*)ava_value_attr(map.v);
@@ -920,7 +906,7 @@ static ava_map_value ava_hash_map_map_delete(ava_map_value map,
   if (0 == this.num_deleted_entries) {
     this.deleted_entries = ava_esba_new(
       sizeof(ava_ulong), required_bitset_elements,
-      bitmap_weight_function, ava_alloc_atomic_precise, NULL);
+      ava_alloc_atomic_precise, NULL);
   }
 
   /* Extend the bitmap to be sufficient to hold this bit */

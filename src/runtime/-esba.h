@@ -75,26 +75,12 @@ typedef struct {
 } ava_esba_tx;
 
 /**
- * Function to "weigh" elements in an ESBA.
- *
- * @param next_attr The value of "next_attr" passed into ava_esba_new().
- * @param elements The elements to weigh.
- * @param num_elements The number of elements pointed to by elements.
- * @return The total weight of the elements.
- */
-typedef size_t (*ava_esba_weight_function)(
-  const void*restrict next_attr,
-  const void*restrict elements,
-  size_t num_elements);
-
-/**
  * Allocates a new, empty ESBA.
  *
  * @param element_size The size of elements, in bytes, that will be stored in
  * the ESBA. Must be a multiple of sizeof(void*).
  * @param initial_capacity The minimum number of elements the ESBA is
  * guaranteed to be able to hold. Actual capacity may be greater.
- * @param weight_function A function to "weigh" elements added to the array.
  * @param allocator Function compatible with ava_alloc() to use to
  * allocate the array and any arrays derived from it. Callers must provide
  * ava_alloc() if their elements may have pointers within. All managed
@@ -106,7 +92,6 @@ typedef size_t (*ava_esba_weight_function)(
  */
 ava_esba ava_esba_new(size_t element_size,
                       size_t initial_capacity,
-                      ava_esba_weight_function weight_function,
                       void* (*allocator)(size_t),
                       const void*restrict next_attr);
 
@@ -246,14 +231,6 @@ ava_esba ava_esba_set(ava_esba esba, size_t index, const void*restrict data);
 static inline size_t ava_esba_length(ava_esba esba) {
   return esba.length;
 }
-
-/**
- * Returns the cumulative weight of the ESBA.
- *
- * This includes elements not visible through this reference, and may change
- * over time.
- */
-size_t ava_esba_weight(ava_esba esba);
 
 /**
  * Returns the next_attr that was associated with the given esba when it was

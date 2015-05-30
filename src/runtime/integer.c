@@ -32,7 +32,6 @@
 #include "-integer-parse.h"
 
 static ava_string ava_integer_to_string(ava_value value) AVA_PURE;
-static size_t ava_integer_value_weight(ava_value value) AVA_CONSTFUN;
 
 const ava_value_trait ava_integer_type = {
   .header = { .tag = &ava_value_trait_tag, .next = NULL },
@@ -40,7 +39,6 @@ const ava_value_trait ava_integer_type = {
   .to_string = ava_integer_to_string,
   .string_chunk_iterator = ava_singleton_string_chunk_iterator,
   .iterate_string_chunk = ava_iterate_singleton_string_chunk,
-  .value_weight = ava_integer_value_weight,
 };
 
 static ava_string ava_integer_to_string(ava_value value) {
@@ -67,10 +65,6 @@ static ava_string ava_integer_to_string(ava_value value) {
     str[--ix] = '-';
 
   return ava_string_of_bytes(str + ix, sizeof(str) - ix);
-}
-
-static size_t ava_integer_value_weight(ava_value value) {
-  return 0;
 }
 
 ava_integer ava_integer_of_noninteger_value(

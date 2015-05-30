@@ -25,13 +25,8 @@
 
 defsuite(esba);
 
-static size_t weight_function(const void*restrict userdata,
-                              const void*restrict data, size_t count) {
-  return sizeof(ava_ulong) * count;
-}
-
 static ava_esba new(void) {
-  return ava_esba_new(sizeof(ava_ulong), 8, weight_function, ava_alloc_atomic,
+  return ava_esba_new(sizeof(ava_ulong), 8, ava_alloc_atomic,
                       NULL);
 }
 
@@ -280,15 +275,6 @@ deftest(check_access_passes_after_concurrent_append) {
   (void)ava_esba_append(old, (ava_ulong[]) { 42 }, 1);
 
   ck_assert(ava_esba_check_access(old, data, tx));
-}
-
-deftest(weight_calculated_correctly) {
-  ava_esba e = new();
-
-  e = ava_esba_append(e, (ava_ulong[]) { 1, 2, 3, 4 }, 4);
-  e = set_at(e, 0, 42);
-
-  ck_assert_int_eq(5 * sizeof(ava_ulong), ava_esba_weight(e));
 }
 
 deftest(two_part_append) {

@@ -58,14 +58,11 @@ static ava_map_value ava_list_map_redelegate(ava_map_value this,
 static ava_map_cursor ava_list_map_search(
   ava_map_value this, ava_value key, ava_map_cursor start);
 
-static size_t ava_list_map_value_value_weight(ava_value value);
-
 static const ava_value_trait ava_list_map_value_impl = {
   .header = { .tag = &ava_value_trait_tag, .next = NULL },
   .to_string = ava_string_of_chunk_iterator,
   .string_chunk_iterator = ava_list_string_chunk_iterator,
   .iterate_string_chunk = ava_list_iterate_string_chunk,
-  .value_weight = ava_list_map_value_value_weight,
 };
 
 AVA_LIST_DEFIMPL(ava_list_map, &ava_list_map_value_impl)
@@ -106,10 +103,6 @@ static inline const ava_list_trait* ava_list_map_v(ava_value map) {
 
 #define DELEGATE(this,method,...)                                       \
   (ava_list_map_v(this.v)->method(ava_list_map_delegate(this.v) __VA_ARGS__))
-
-static size_t ava_list_map_value_value_weight(ava_value map) {
-  return ava_value_weight(ava_list_map_delegate(map).v);
-}
 
 static size_t ava_list_map_map_npairs(ava_map_value this) {
   return DELEGATE(this, length) / 2;

@@ -79,10 +79,7 @@ static ava_esba ava_esba_list_concat_esbas(
   ava_esba dst, ava_esba src, size_t begin, size_t end);
 static ava_esba ava_esba_list_make_compatible(
   ava_esba esba, unsigned new_format);
-static size_t ava_esba_list_weight_function(
-  const void*restrict next_attr, const void*restrict data, size_t nvalues);
 
-static size_t ava_esba_list_value_value_weight(ava_value);
 
 static const ava_value_trait ava_esba_list_generic_impl = {
   .header = { .tag = &ava_value_trait_tag, .next = NULL },
@@ -90,7 +87,6 @@ static const ava_value_trait ava_esba_list_generic_impl = {
   .to_string = ava_string_of_chunk_iterator,
   .string_chunk_iterator = ava_list_string_chunk_iterator,
   .iterate_string_chunk = ava_list_iterate_string_chunk,
-  .value_weight = ava_esba_list_value_value_weight,
 };
 
 AVA_LIST_DEFIMPL(ava_esba_list, &ava_esba_list_generic_impl)
@@ -124,26 +120,6 @@ static const ava_esba_list_header* ava_esba_list_header_of(ava_esba esba) {
   return ava_esba_next_attr(esba);
 }
 
-static size_t ava_esba_list_weight_function(const void*restrict next_attr,
-                                            const void*restrict vvalues,
-                                            size_t nvalues) {
-  const ava_esba_list_header*restrict header = next_attr;
-  const pointer*restrict values = vvalues;
-  ava_value value;
-  size_t sum = 0;
-  unsigned eltsz = ava_esba_list_element_size_pointers[header->format];
-  ava_esba_list_swizzle_up_f swizzle =
-    ava_esba_list_swizzle_up[header->format];
-
-  while (nvalues--) {
-    swizzle(&value, &header->template, values);
-    sum += ava_value_weight(value);
-    values += eltsz;
-  }
-
-  return sum;
-}
-
 static ava_esba ava_esba_list_create_esba(
   unsigned format, ava_value template, size_t capacity
 ) {
@@ -162,7 +138,6 @@ static ava_esba ava_esba_list_create_esba_with_header(
   return ava_esba_new(
     sizeof(pointer) * ava_esba_list_element_size_pointers[header->format],
     capacity,
-    ava_esba_list_weight_function,
     ava_alloc_precise, (void*)header);
 }
 
@@ -305,10 +280,6 @@ ava_list_value ava_esba_list_of_raw_strided(
   ava_esba_finish_append(esba, count);
 
   return to_list_value(esba);
-}
-
-static size_t ava_esba_list_value_value_weight(ava_value list) {
-  return ava_esba_weight(to_esba(list));
 }
 
 static size_t ava_esba_list_list_length(ava_list_value list) {

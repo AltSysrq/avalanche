@@ -67,10 +67,6 @@ deftest(integer_min_to_string) {
                    int_to_str(-0x8000000000000000LL));
 }
 
-deftest(weighs_nothing) {
-  ck_assert_int_eq(0, ava_value_weight(ava_value_of_integer(5)));
-}
-
 deftest(empty_string_to_default_integer) {
   ck_assert_int_eq(42LL, str_to_int("", 42));
 }

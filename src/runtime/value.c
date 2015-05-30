@@ -87,17 +87,12 @@ static ava_string ava_string_value_to_string(ava_value value) {
   return ava_value_str(value);
 }
 
-static size_t ava_string_value_value_weight(ava_value value) {
-  return ava_string_length(ava_value_str(value));
-}
-
 const ava_value_trait ava_string_type = {
   .header = { .tag = &ava_value_trait_tag, .next = NULL },
   .name = "string",
   .to_string = ava_string_value_to_string,
   .string_chunk_iterator = ava_singleton_string_chunk_iterator,
   .iterate_string_chunk = ava_iterate_singleton_string_chunk,
-  .value_weight = ava_string_value_value_weight,
 };
 
 /* The string representation will become a bit more interesting once we have

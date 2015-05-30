@@ -67,13 +67,6 @@ typedef struct {
    * The largest index in values that has actually been populated.
    */
   AO_t used;
-  /**
-   * The sum of weight of the values.
-   *
-   * Readers access this without a memory barrier, and so may see inconsistent
-   * results; since this is only used for performance advising, that's ok.
-   */
-  AO_t weight;
 
   /**
    * The contents of this array list.
@@ -84,14 +77,12 @@ typedef struct {
 static ava_array_list* ava_array_list_of_array(
   const ava_value*restrict, size_t, size_t);
 static size_t ava_array_list_growing_capacity(size_t);
-static size_t ava_array_list_value_value_weight(ava_value);
 
 static const ava_value_trait ava_array_list_generic_impl = {
   .header = { .tag = &ava_value_trait_tag, .next = NULL },
   .to_string = ava_string_of_chunk_iterator,
   .string_chunk_iterator = ava_list_string_chunk_iterator,
   .iterate_string_chunk = ava_list_iterate_string_chunk,
-  .value_weight = ava_array_list_value_value_weight,
 };
 
 AVA_LIST_DEFIMPL(ava_array_list, &ava_array_list_generic_impl)
@@ -106,7 +97,7 @@ ava_list_value ava_array_list_copy_of(
 ) {
   ava_array_list* al = ava_alloc(sizeof(ava_array_list) +
                                  sizeof(ava_value) * (end - begin));
-  size_t weight = 0, i;
+  size_t i;
 
   al->header.tag = &ava_array_list_data_tag;
   al->header.next = (const ava_attribute*)&ava_array_list_list_impl;
@@ -115,10 +106,7 @@ ava_list_value ava_array_list_copy_of(
 
   for (i = begin; i < end; ++i) {
     al->values[i-begin] = ava_list_index(list, i);
-    weight += ava_value_weight(al->values[i-begin]);
   }
-
-  al->weight = weight + sizeof(ava_value) * (end - begin);
 
   return (ava_list_value) { ava_value_with_ulong(al, end - begin) };
 }
@@ -130,19 +118,13 @@ static ava_array_list* ava_array_list_of_array(
 ) {
   ava_array_list* al = ava_alloc(sizeof(ava_array_list) +
                                  sizeof(ava_value) * cap);
-  size_t weight = 0, i;
 
   al->header.tag = &ava_array_list_data_tag;
   al->header.next = (const ava_attribute*)&ava_array_list_list_impl;
   al->capacity = cap;
   al->used = length;
+  memcpy(al->values, array, sizeof(ava_value) * length);
 
-  for (i = 0; i < length; ++i) {
-    al->values[i] = array[i];
-    weight += ava_value_weight(al->values[i]);
-  }
-
-  al->weight = weight + sizeof(ava_value) * cap;
   return al;
 }
 
@@ -153,11 +135,6 @@ ava_list_value ava_array_list_of_raw(
   ava_array_list* al = ava_array_list_of_array(array, length, length);
 
   return (ava_list_value) { ava_value_with_ulong(al, length) };
-}
-
-static size_t ava_array_list_value_value_weight(ava_value list) {
-  const ava_array_list*restrict al = ava_value_attr(list);
-  return al->weight;
 }
 
 static size_t ava_array_list_list_length(ava_list_value list) {
@@ -202,7 +179,6 @@ static ava_list_value ava_array_list_list_append(ava_list_value list,
     if (AO_compare_and_swap(&al->used, length, length + 1)) {
       /* Success */
       al->values[length] = elt;
-      AO_fetch_and_add(&al->weight, ava_value_weight(elt));
 
       return (ava_list_value) { ava_value_with_ulong(al, length + 1) };
     }
@@ -215,7 +191,6 @@ static ava_list_value ava_array_list_list_append(ava_list_value list,
                                    length + 1));
     al->values[length] = elt;
     ++al->used;
-    al->weight += ava_value_weight(elt);
 
     return (ava_list_value) { ava_value_with_ulong(al, length + 1) };
   } else {
@@ -249,14 +224,11 @@ static ava_list_value ava_array_list_list_concat(ava_list_value list,
     al->used += other_length;
 
     mutate_al:;
-    size_t added_weight = 0;
     size_t i;
     for (i = 0; i < other_length; ++i) {
       al->values[this_length + i] = ava_list_index(other, i);
-      added_weight += ava_value_weight(al->values[this_length + i]);
     }
 
-    al->weight += added_weight;
     return (ava_list_value) {
       ava_value_with_ulong(al, this_length + other_length)
     };
@@ -286,11 +258,8 @@ static ava_list_value ava_array_list_list_delete(
 
   ava_array_list*restrict nal = ava_array_list_of_array(
     al->values, begin, length - (end - begin));
-  size_t i;
-  for (i = end; i < length; ++i) {
-    nal->values[i - (end - begin)] = al->values[i];
-    nal->weight += ava_value_weight(al->values[i]);
-  }
+  memcpy(nal->values + begin, al->values + end,
+         sizeof(ava_value) * (length - end));
   nal->used += length - end;
 
   return (ava_list_value) { ava_value_with_ulong(nal, length - (end - begin)) };
@@ -306,8 +275,6 @@ static ava_list_value ava_array_list_list_set(
 
   ava_array_list*restrict mal = ava_array_list_of_array(
     al->values, length, length);
-  mal->weight -= ava_value_weight(mal->values[index]);
-  mal->weight += ava_value_weight(value);
   mal->values[index] = value;
 
   return (ava_list_value) { ava_value_with_ulong(mal, length) };
