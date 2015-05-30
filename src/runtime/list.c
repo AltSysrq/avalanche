@@ -143,46 +143,40 @@ ava_string ava_list_escape(ava_string str) {
   ava_bool contains_special = ava_false;
   ava_bool quote_with_verbatim = ava_false;
 
-  ava_string_iterator it;
   const char*restrict strdat;
-  char tmpbuff[9];
-  size_t strdat_len, i;
+  char tmpbuff[AVA_STR_TMPSZ];
+  size_t strlen, i;
+
+  strlen = ava_string_length(str);
 
   /* Special case: The empty string needs to be quoted, otherwise it will
    * disappear.
    */
-  if (0 == ava_string_length(str))
+  if (0 == strlen)
     return AVA_ASCII9_STRING("\"\"");
 
   /* Check for what needs to be escaped */
-  ava_string_iterator_place(&it, str, 0);
-  while (ava_string_iterator_valid(&it)) {
-    strdat_len = ava_string_iterator_access(
-      &strdat, &it, tmpbuff);
-
-    for (i = 0; i < strdat_len; ++i) {
-      if ((unsigned)strdat[i] < (unsigned)' ') {
+  strdat = ava_string_to_cstring_buff(tmpbuff, str);
+  for (i = 0; i < strlen; ++i) {
+    if ((unsigned)strdat[i] < (unsigned)' ') {
+      contains_special = quote_with_verbatim = ava_true;
+      goto do_escape;
+    } else {
+      switch (strdat[i]) {
+      case '"':
+      case '`':
+      case '\\':
+      case '\x7f':
         contains_special = quote_with_verbatim = ava_true;
         goto do_escape;
-      } else {
-        switch (strdat[i]) {
-        case '"':
-        case '`':
-        case '\\':
-        case '\x7f':
-          contains_special = quote_with_verbatim = ava_true;
-          goto do_escape;
 
-        case ';': case ' ':
-        case '(': case '[': case '{':
-        case '}': case ']': case ')':
-          contains_special = ava_true;
-          break;
-        }
+      case ';': case ' ':
+      case '(': case '[': case '{':
+      case '}': case ']': case ')':
+        contains_special = ava_true;
+        break;
       }
     }
-
-    ava_string_iterator_move(&it, strdat_len);
   }
 
   do_escape:
@@ -202,61 +196,50 @@ ava_string ava_list_escape(ava_string str) {
   size_t clean_start = 0;
   ava_bool preceded_by_bs = ava_false;
 
-  ava_string_iterator_place(&it, str, 0);
-  while (ava_string_iterator_valid(&it)) {
-    strdat_len = ava_string_iterator_access(
-      &strdat, &it, tmpbuff);
-
-    for (i = 0; i < strdat_len; ++i) {
-      if (preceded_by_bs) {
-        switch (strdat[i]) {
-          /* TODO: It'd be best to only escape \{ and \} if they would be
-           * unbalanced otherwise.
-           */
-        case '{':
-        case ';':
-        case '}':
-          /* Need to escape the preceding backslash */
-          escaped = ava_string_concat(
-            escaped, ava_string_slice(
-              str, clean_start,
-              ava_string_iterator_index(&it) + i - 1));
-          escaped = ava_string_concat(
-            escaped, AVA_ASCII9_STRING("\\;\\"));
-          clean_start = ava_string_iterator_index(&it) + i;
-          break;
-        }
-      }
-
-      if ((strdat[i] != '\n' && strdat[i] != '\t' &&
-           (unsigned)strdat[i]  < (unsigned)' ') ||
-          strdat[i] == '\x7f') {
-        /* Illegal character; needs hex escape */
-        char esc[5];
-        unsigned val;
-
-        esc[0] = '\\';
-        esc[1] = ';';
-        esc[2] = 'x';
-
-        val = (strdat[i] >> 4) & 0xF;
-        esc[3] = val + (val < 10? '0' : 'A' - 10);
-        val = strdat[i] & 0xF;
-        esc[4] = val + (val < 10? '0' : 'A' - 10);
-
+  for (i = 0; i < strlen; ++i) {
+    if (preceded_by_bs) {
+      switch (strdat[i]) {
+        /* TODO: It'd be best to only escape \{ and \} if they would be
+         * unbalanced otherwise.
+         */
+      case '{':
+      case ';':
+      case '}':
+        /* Need to escape the preceding backslash */
         escaped = ava_string_concat(
           escaped, ava_string_slice(
-            str, clean_start,
-            ava_string_iterator_index(&it) + i));
+            str, clean_start, i-1));
         escaped = ava_string_concat(
-          escaped, ava_string_of_bytes(esc, sizeof(esc)));
-        clean_start = ava_string_iterator_index(&it) + i + 1;
+          escaped, AVA_ASCII9_STRING("\\;\\"));
+        clean_start = i;
+        break;
       }
-
-      preceded_by_bs = '\\' == strdat[i];
     }
 
-    ava_string_iterator_move(&it, strdat_len);
+    if ((strdat[i] != '\n' && strdat[i] != '\t' &&
+         (unsigned)strdat[i]  < (unsigned)' ') ||
+        strdat[i] == '\x7f') {
+      /* Illegal character; needs hex escape */
+      char esc[5];
+      unsigned val;
+
+      esc[0] = '\\';
+      esc[1] = ';';
+      esc[2] = 'x';
+
+      val = (strdat[i] >> 4) & 0xF;
+      esc[3] = val + (val < 10? '0' : 'A' - 10);
+      val = strdat[i] & 0xF;
+      esc[4] = val + (val < 10? '0' : 'A' - 10);
+
+      escaped = ava_string_concat(
+        escaped, ava_string_slice(str, clean_start, i));
+      escaped = ava_string_concat(
+        escaped, ava_string_of_bytes(esc, sizeof(esc)));
+      clean_start = i + 1;
+    }
+
+    preceded_by_bs = '\\' == strdat[i];
   }
 
   escaped = ava_string_concat(

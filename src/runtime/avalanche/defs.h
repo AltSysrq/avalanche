@@ -39,6 +39,7 @@
 #define AVA_UNUSED __attribute__((__unused__))
 #define AVA_LIKELY(x) __builtin_expect(!!(x), 1)
 #define AVA_UNLIKELY(x) __builtin_expect((x), 0)
+#define AVA_ALIGN(n) __attribute__((__aligned__(n)))
 #else
 #define AVA_MALLOC
 #define AVA_PURE
@@ -47,6 +48,7 @@
 #define AVA_UNUSED
 #define AVA_LIKELY(x) (x)
 #define AVA_UNLIKELY(x) (x)
+#define AVA_ALIGN(n)
 #endif
 
 #ifdef __cplusplus
@@ -101,6 +103,11 @@ typedef int64_t       ava_slong;
 typedef ava_uint64_t  ava_ulong;
 #else
 typedef uint64_t      ava_ulong;
+#endif
+#ifdef ava_intptr_t
+typedef ava_intptr_t  ava_intptr;
+#else
+typedef intptr_t      ava_intptr;
 #endif
 
 #define AVA_GLUE(x,y) AVA__GLUE(x,y)

@@ -51,6 +51,7 @@ AC_TYPE_INT8_T
 AC_TYPE_INT16_T
 AC_TYPE_INT32_T
 AC_TYPE_INT64_T
+AC_TYPE_INTPTR_T
 
 # Checks for library functions.
 AC_CHECK_FUNCS([setrlimit arc4random_buf])

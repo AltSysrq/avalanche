@@ -20,66 +20,142 @@
 #include <assert.h>
 #include <string.h>
 #include <stdlib.h>
+#include <stddef.h>
+
+#include <atomic_ops.h>
 
 #define AVA__INTERNAL_INCLUDE 1
 #include "avalanche/alloc.h"
 #include "avalanche/string.h"
 
-/* Size under which non-flat ropes are not produced */
-#define ROPE_NONFLAT_THRESH (2 * sizeof(ava_rope))
+/*
 
-#define ROPE_FORMAT_LEAFV ((const ava_rope*restrict)0)
-#define ROPE_FORMAT_LEAF9 ((const ava_rope*restrict)1)
+  A Twine is a string data structure somewhat similar to a Rope, in that
+  operations are effected by constructing a tree of nodes on top of the
+  constituent character arrays rather than immediately producing new character
+  arrays. Unlike ropes, readers of twines do not simply traverse the nodes when
+  they want to access the character data; instead, they _force_ the twine into
+  a flat string and memoise the result.
 
-static inline ava_bool ava_rope_is_leafv(const ava_rope*restrict rope) {
-  return ROPE_FORMAT_LEAFV == rope->concat_right;
+  The forcing of twines has several benefits over rope-style node traversal.
+  First, there is no need to keep any kind of balance in the tree; a linear
+  chain of a thousand concats has exactly the same performance as a perfectly
+  balanced tree of same. Secondly, reads have voluminous O(1) complexity
+  instead of average O(log(n)) complexity. Finally, reads can be expressed in
+  terms of array access, which has a much lower constant than rope accesses,
+  and even allows for such things as guaranteeing that the returned string is a
+  C string (though possibly containing NULs).
+
+  The main disadvantage is that certain unusual cases exhibit much worse
+  behaviour. Eg, a sequence of alternating concats and non-voluminous reads
+  results in O(n^2) runtime and memory usage, since each concat gets forced
+  like a traditional immutable string.
+
+  In order to prevent unbounded memory usage by intermediate nodes, a node is
+  forced upon construction if its overhead exceeds the length of the string.
+  The overhead of a node is equal to the size of a node structure times the
+  number of nodes referenced plus the number of characters held by reference
+  but not actually part of the twine (ie, characters discarded by slices).
+
+  Each node is a 5-tuple of (tag,length,overhead,primary,other). Physically,
+  tag and primary are packed into one field. length is always the number of
+  characters logically in the twine and is never mutated. overhead tracks the
+  cumulative overhead of the twine (at time of construction; forcing of
+  referenced nodes reduces the actual overhead, but this is not tracked),
+  except that its value is undefined on forced nodes. other is the "other"
+  piece of data needed by the twine node. tag indicates the particular type of
+  node.
+
+  The possible node types are:
+
+  - Forced. body is a const char* pointing to string data returnable from
+    ava_string_to_cstring(). other is undefined. Forced is the only node type
+    to which nodes can be mutated; in such cases, the other field is explicitly
+    cleared to release whatever memory it may hold. overhead is also undefined
+    for forced nodes, though it is never changed once set.
+
+  - Concat. body is an ava_twine*, other is an ava_string. The forced string is
+    composed of all the characters of body followed by all the characters of
+    other.
+
+  - Tacnoc. Essentially a concat in reverse order, for the case where the left
+    string is an ASCII9 string (which cannot be stored in body due to alignment
+    restrictions). body is an ava_twine*, other is an ASCII9 ava_string. The
+    forced string is composed of all the characters of other followed by all
+    the characters of body.
+
+  - Slice. body is an ava_twine*, other is a size_t offset. The forced string
+    is the first length characters of body, starting from the offsetth
+    character.
+
+ */
+
+typedef enum {
+  ava_tt_forced = 0,
+  ava_tt_concat,
+  ava_tt_tacnoc,
+  ava_tt_slice
+} ava_twine_tag;
+
+static void assert_aligned(const void* ptr) {
+  assert(0 == (size_t)ptr % AVA_STRING_ALIGNMENT);
 }
 
-static inline ava_bool ava_rope_is_leaf9(const ava_rope*restrict rope) {
-  return ROPE_FORMAT_LEAF9 == rope->concat_right;
-}
-
-static inline ava_bool ava_rope_is_concat(const ava_rope*restrict rope) {
-  return rope->concat_right > ROPE_FORMAT_LEAF9;
-}
-
-static ava_rope* ava_rope_new_concat(const ava_rope*restrict,
-                                     const ava_rope*restrict);
-static ava_rope* ava_rope_new_leafv(const char*restrict,
-                                    size_t length, size_t external_size);
-static ava_rope* ava_rope_new_leaf9(ava_ascii9_string);
-
+static ava_bool ava_string_is_ascii9(ava_string);
 static ava_bool ava_string_can_encode_ascii9(const char*, size_t);
 static ava_ascii9_string ava_ascii9_encode(const char*, size_t);
-static void ava_rope_flatten_into(char*restrict dst, const ava_rope*restrict);
 static void ava_ascii9_decode(char*restrict dst, ava_ascii9_string);
-static void ava_ascii9_to_bytes(void*restrict dst, ava_ascii9_string,
-                                size_t, size_t);
-static void ava_rope_to_bytes(void*restrict dst, const ava_rope*restrict,
-                              size_t, size_t);
 static size_t ava_ascii9_length(ava_ascii9_string);
 static char ava_ascii9_index(ava_ascii9_string, size_t);
-static char ava_rope_index(const ava_rope*restrict, size_t);
-static const ava_rope* ava_rope_concat(const ava_rope*restrict,
-                                       const ava_rope*restrict);
-static const ava_rope* ava_rope_concat_of(const ava_rope*restrict,
-                                          const ava_rope*restrict);
 static ava_ascii9_string ava_ascii9_concat(ava_ascii9_string,
                                            ava_ascii9_string);
-static const ava_rope* ava_rope_of(ava_string);
-static const ava_rope* ava_rope_rebalance(const ava_rope*restrict);
-static const ava_rope* ava_rope_force_rebalance(const ava_rope*restrict);
-static void ava_rope_rebalance_iterate(
-  const ava_rope*restrict[AVA_MAX_ROPE_DEPTH],
-  const ava_rope*restrict);
-static const ava_rope* ava_rope_rebalance_flush(
-  const ava_rope*restrict[AVA_MAX_ROPE_DEPTH], unsigned, unsigned);
-static ava_bool ava_rope_is_balanced(const ava_rope*restrict);
-static ava_bool ava_rope_concat_would_be_node_balanced(
-  const ava_rope*restrict, const ava_rope*restrict);
-static unsigned ava_bif(size_t);
 static ava_ascii9_string ava_ascii9_slice(ava_ascii9_string, size_t, size_t);
-static const ava_rope* ava_rope_slice(const ava_rope*restrict, size_t, size_t);
+
+/**
+ * Allocates a flat, forced twine with space for the given number of
+ * characters.
+ *
+ * The character data begins at &twine->tail. Padding is zeroed.
+ */
+static ava_twine* ava_twine_alloc(size_t capacity);
+/**
+ * Forces the given twine, returning a pointer to its character data.
+ */
+static const char* ava_twine_force(const ava_twine*restrict twine);
+/**
+ * Forces the given twine node into the given character array.
+ *
+ * @param dst The destination character array.
+ * @param twine The twine to force into the array. This does not memoise the
+ * forcing of this node.
+ * @param offset The first character in twine to write.
+ * @param count The number of characters in twine to write.
+ */
+static void ava_twine_force_into(char*restrict dst,
+                                 const ava_twine*restrict twine,
+                                 size_t offset, size_t count);
+/**
+ * Examines the given (stack-allocated) twine, and forces it if the overhead
+ * threshold is exceeded. Otherwise, simply copies it to a heap-allocated
+ * twine. In either case, the result is a heap-allocated twine with the same
+ * logical value.
+ */
+static const ava_twine* ava_twine_maybe_force(const ava_twine*restrict);
+/**
+ * Returns the effective overhead of the given twine.
+ *
+ * This may be an overestimate.
+ */
+static size_t ava_twine_get_overhead(const ava_twine*restrict);
+
+static inline ava_twine_tag ava_twine_get_tag(const void* body);
+static inline void* ava_twine_get_body_ptr(const void* body);
+static const void* ava_twine_pack_body(ava_twine_tag tag,
+                                       const void* body_ptr);
+
+static ava_bool ava_string_is_ascii9(ava_string str) {
+  return str.ascii9 & 1;
+}
 
 static ava_bool ava_string_can_encode_ascii9(const char* str,
                                              size_t sz) {
@@ -110,57 +186,6 @@ static ava_ascii9_string ava_ascii9_encode(
   return accum;
 }
 
-static ava_rope* ava_rope_new_concat(const ava_rope*restrict a,
-                                     const ava_rope*restrict b) {
-  ava_rope* concat = AVA_NEW(ava_rope);
-
-  *concat = (ava_rope) {
-    .length = a->length + b->length,
-    .external_size = a->external_size + b->external_size,
-    .depth = 1 + (a->depth > b->depth? a->depth : b->depth),
-    .descendants = 2 + a->descendants + b->descendants,
-    .v = { .concat_left = a },
-    .concat_right = b
-  };
-
-  return concat;
-}
-
-static ava_rope* ava_rope_new_leafv(const char*restrict v,
-                                    size_t length, size_t external_size) {
-  ava_rope* r = AVA_NEW(ava_rope);
-
-  *r = (ava_rope) {
-    .length = length,
-    .external_size = external_size,
-    .depth = 0,
-    .descendants = 0,
-    .v = { .leafv = v },
-    .concat_right = ROPE_FORMAT_LEAFV
-  };
-
-  return r;
-}
-
-static ava_rope* ava_rope_new_leaf9(ava_ascii9_string s) {
-  ava_rope* r = AVA_NEW(ava_rope);
-
-  *r = (ava_rope) {
-    .length = ava_ascii9_length(s),
-    .external_size = 0,
-    .depth = 0,
-    .descendants = 0,
-    .v = { .leaf9 = s },
-    .concat_right = ROPE_FORMAT_LEAF9
-  };
-
-  return r;
-}
-
-ava_string ava_string_of_shared_cstring(const char* str) {
-  return ava_string_of_shared_bytes(str, strlen(str));
-}
-
 ava_string ava_string_of_cstring(const char* str) {
   return ava_string_of_bytes(str, strlen(str));
 }
@@ -169,50 +194,66 @@ ava_string ava_string_of_char(char ch) {
   return ava_string_of_bytes(&ch, 1);
 }
 
-ava_string ava_string_of_shared_bytes(const char* str, size_t sz) {
-  ava_string s;
+static ava_twine* ava_twine_alloc(size_t sz) {
+  ava_twine* twine;
+  char* dst;
+  size_t padded_sz;
 
-  if (ava_string_can_encode_ascii9(str, sz)) {
-    s.ascii9 = ava_ascii9_encode(str, sz);
-  } else {
-    s.ascii9 = 0;
-    s.rope = ava_rope_new_leafv(str, sz, sz);
-  }
+  /* This isn't (+ sizeof(ava_ulong)-1) so that the NUL byte gets added */
+  padded_sz = (sz + sizeof(ava_ulong)) /
+    sizeof(ava_ulong) * sizeof(ava_ulong);
 
-  return s;
+  twine = ava_alloc_atomic(offsetof(ava_twine, tail) + padded_sz);
+  dst = (char*)&twine->tail;
+  assert_aligned(dst);
+
+  twine->body = dst;
+  twine->length = sz;
+
+  memset(dst + sz, 0, padded_sz - sz);
+  return twine;
 }
 
 ava_string ava_string_of_bytes(const char* str, size_t sz) {
-  ava_string s;
+  ava_string ret;
+  ava_twine* twine;
+  char* dst;
 
   if (ava_string_can_encode_ascii9(str, sz)) {
-    s.ascii9 = ava_ascii9_encode(str, sz);
+    ret.ascii9 = ava_ascii9_encode(str, sz);
   } else {
-    s.ascii9 = 0;
-    s.rope = ava_rope_new_leafv(ava_clone_atomic(str, sz),
-                                sz, sz);
+    twine = ava_twine_alloc(sz);
+    dst = (char*)twine->body;
+
+    memcpy(dst, str, sz);
+
+    ret.ascii9 = 0;
+    ret.twine = twine;
   }
 
-  return s;
+  return ret;
 }
 
-char* ava_string_to_cstring(ava_string str) {
-  return ava_string_to_cstring_buff(NULL, 0, str);
+const char* ava_string_to_cstring(ava_string str) {
+  if (ava_string_is_ascii9(str)) {
+    ava_ulong* dst = ava_alloc_atomic(2 * sizeof(ava_ulong));
+    dst[0] = dst[1] = 0;
+    ava_ascii9_decode((char*)dst, str.ascii9);
+    return (char*)dst;
+  } else {
+    return ava_twine_force(str.twine);
+  }
 }
 
-char* ava_string_to_cstring_buff(char* buff, size_t buffsz,
-                                 ava_string str) {
-  size_t required = 1 + ava_string_length(str);
-  char* dst = (required <= buffsz? buff : ava_alloc_atomic(required));
-
-  if (str.ascii9 & 1)
-    ava_ascii9_decode(dst, str.ascii9);
-  else
-    ava_rope_flatten_into(dst, str.rope);
-
-  dst[required-1] = 0;
-
-  return dst;
+const char* ava_string_to_cstring_buff(char buff[AVA_STR_TMPSZ],
+                                       ava_string str) {
+  if (ava_string_is_ascii9(str)) {
+    memset(buff, 0, AVA_STR_TMPSZ);
+    ava_ascii9_decode(buff, str.ascii9);
+    return buff;
+  } else {
+    return ava_twine_force(str.twine);
+  }
 }
 
 static void ava_ascii9_decode(char*restrict dst, ava_ascii9_string s) {
@@ -226,73 +267,19 @@ static void ava_ascii9_decode(char*restrict dst, ava_ascii9_string s) {
   }
 }
 
-static void ava_rope_flatten_into(char*restrict dst, const ava_rope* rope) {
-  tail_call:
-
-  if (ava_rope_is_concat(rope)) {
-    ava_rope_flatten_into(dst, rope->v.concat_left);
-
-    dst += rope->v.concat_left->length;
-    rope = rope->concat_right;
-    goto tail_call;
-  } else if (ava_rope_is_leaf9(rope)) {
-    ava_ascii9_decode(dst, rope->v.leaf9);
-  } else {
-    memcpy(dst, rope->v.leafv, rope->length);
-  }
-}
-
-char* ava_string_to_cstring_tmpbuff(char** buffptr, size_t* szptr,
-                                    ava_string str) {
-  size_t required = ava_string_length(str) + 1;
-
-  if (!*buffptr || required > *szptr) {
-    /* Round up to the next multiple of 16 bytes */
-    *szptr = (required + 15) / 16 * 16;
-    *buffptr = ava_alloc_atomic(*szptr);
-  }
-
-  return ava_string_to_cstring_buff(*buffptr, *szptr, str);
-}
-
 void ava_string_to_bytes(void*restrict dst, ava_string str,
                          size_t start, size_t end) {
-  if (str.ascii9 & 1) {
-    ava_ascii9_to_bytes(dst, str.ascii9, start, end);
+  char a9buf[9];
+  const char*restrict src;
+
+  if (ava_string_is_ascii9(str)) {
+    ava_ascii9_decode(a9buf, str.ascii9);
+    src = a9buf;
   } else {
-    ava_rope_to_bytes(dst, str.rope, start, end);
+    src = ava_twine_force(str.twine);
   }
-}
 
-static void ava_ascii9_to_bytes(void*restrict dst, ava_ascii9_string str,
-                                size_t start, size_t end) {
-  char dat[9];
-
-  ava_ascii9_decode(dat, str);
-  memcpy(dst, dat + start, end - start);
-}
-
-static void ava_rope_to_bytes(void*restrict dst, const ava_rope*restrict rope,
-                              size_t start, size_t end) {
-  if (ava_rope_is_concat(rope)) {
-    if (end <= rope->v.concat_left->length) {
-      ava_rope_to_bytes(dst, rope->v.concat_left, start, end);
-    } else if (start >= rope->v.concat_left->length) {
-      ava_rope_to_bytes(dst, rope->concat_right,
-                        start - rope->v.concat_left->length,
-                        end - rope->v.concat_left->length);
-    } else {
-      ava_rope_to_bytes(dst, rope->v.concat_left,
-                        start, rope->v.concat_left->length);
-      ava_rope_to_bytes(dst + rope->v.concat_left->length - start,
-                        rope->concat_right,
-                        0, end - rope->v.concat_left->length);
-    }
-  } else if (ava_rope_is_leaf9(rope)) {
-    ava_ascii9_to_bytes(dst, rope->v.leaf9, start, end);
-  } else {
-    memcpy(dst, rope->v.leafv + start, end - start);
-  }
+  memcpy(dst, src + start, end - start);
 }
 
 static size_t ava_ascii9_length(ava_ascii9_string s) {
@@ -327,7 +314,7 @@ size_t ava_string_length(ava_string str) {
   if (str.ascii9 & 1) {
     return ava_ascii9_length(str.ascii9);
   } else {
-    return str.rope->length;
+    return str.twine->length;
   }
 }
 
@@ -335,27 +322,12 @@ static char ava_ascii9_index(ava_ascii9_string str, size_t ix) {
   return (str >> (1 + (8 - ix)*7)) & 0x7F;
 }
 
-static char ava_rope_index(const ava_rope*restrict rope, size_t ix) {
-  while (ava_rope_is_concat(rope)) {
-    if (ix >= rope->v.concat_left->length) {
-      ix -= rope->v.concat_left->length;
-      rope = rope->concat_right;
-    } else {
-      rope = rope->v.concat_left;
-    }
-  }
-
-  if (ava_rope_is_leaf9(rope))
-    return ava_ascii9_index(rope->v.leaf9, ix);
-  else
-    return rope->v.leafv[ix];
-}
-
 char ava_string_index(ava_string str, size_t ix) {
-  if (str.ascii9 & 1)
+  if (ava_string_is_ascii9(str)) {
     return ava_ascii9_index(str.ascii9, ix);
-  else
-    return ava_rope_index(str.rope, ix);
+  } else {
+    return ava_twine_force(str.twine)[ix];
+  }
 }
 
 static ava_ascii9_string ava_ascii9_concat(
@@ -364,32 +336,14 @@ static ava_ascii9_string ava_ascii9_concat(
   return a | (b >> 7 * ava_ascii9_length(a));
 }
 
-static const ava_rope* ava_rope_concat_of(const ava_rope*restrict a,
-                                          const ava_rope*restrict b) {
-  /* Coalesce into a single node if proferable */
-  if (a->length + b->length <= 9 &&
-      ava_rope_is_leaf9(a) && ava_rope_is_leaf9(b))
-    return ava_rope_new_leaf9(ava_ascii9_concat(
-                                a->v.leaf9, b->v.leaf9));
-
-  if (a->length + b->length <= ROPE_NONFLAT_THRESH) {
-    char* strdat = ava_alloc_atomic(a->length + b->length);
-    ava_rope_to_bytes(strdat, a, 0, a->length);
-    ava_rope_to_bytes(strdat + a->length, b, 0, b->length);
-    return ava_rope_new_leafv(strdat, a->length + b->length,
-                              a->length + b->length);
-  }
-
-  return ava_rope_new_concat(a, b);
-}
-
 ava_string ava_string_concat(ava_string a, ava_string b) {
   size_t alen, blen;
+  ava_string ret;
 
   /* If both are ASCII9 and are small enough to produce an ASCII9 result,
    * produce a new ASCII9 string.
    */
-  if ((a.ascii9 & 1) && (b.ascii9 & 1) &&
+  if (ava_string_is_ascii9(a) && ava_string_is_ascii9(b) &&
       ava_ascii9_length(a.ascii9) + ava_ascii9_length(b.ascii9) <= 9)
     return (ava_string) { .ascii9 = ava_ascii9_concat(a.ascii9, b.ascii9) };
 
@@ -400,178 +354,36 @@ ava_string ava_string_concat(ava_string a, ava_string b) {
   if (0 == alen) return b;
   if (0 == blen) return a;
 
-  /* If the result will be too small to justify rope overhead, produce a flat
-   * string.
-   */
-  if (alen + blen <= ROPE_NONFLAT_THRESH) {
-    ava_string ret;
-    char* strdat;
-
-    strdat = ava_alloc_atomic(alen + blen);
-    ava_string_to_bytes(strdat, a, 0, alen);
-    ava_string_to_bytes(strdat + alen, b, 0, blen);
-
-    ret.ascii9 = 0;
-    ret.rope = ava_rope_new_leafv(strdat, alen + blen, alen + blen);
-    return ret;
-  }
-
-  /* No special cases occurred, so just do a rope concat */
-  ava_string ret;
   ret.ascii9 = 0;
-  ret.rope = ava_rope_concat(ava_rope_of(a), ava_rope_of(b));
+
+  if (ava_string_is_ascii9(a) && ava_string_is_ascii9(b)) {
+    ava_twine*restrict twine = ava_twine_alloc(alen + blen);
+    char*restrict dst = (char*)&twine->tail;
+
+    ava_ascii9_decode(dst, a.ascii9);
+    ava_ascii9_decode(dst + alen, b.ascii9);
+    ret.twine = twine;
+  } else if (ava_string_is_ascii9(a)) {
+    ava_twine twine;
+
+    twine.body = ava_twine_pack_body(ava_tt_tacnoc, b.twine);
+    twine.length = alen + blen;
+    twine.tail.overhead = sizeof(ava_twine) + ava_twine_get_overhead(b.twine);
+    twine.tail.other.string = a;
+    ret.twine = ava_twine_maybe_force(&twine);
+  } else {
+    ava_twine twine;
+
+    twine.body = ava_twine_pack_body(ava_tt_concat, a.twine);
+    twine.length = alen + blen;
+    twine.tail.overhead = sizeof(ava_twine) + ava_twine_get_overhead(a.twine);
+    if (!ava_string_is_ascii9(b))
+      twine.tail.overhead += ava_twine_get_overhead(b.twine);
+    twine.tail.other.string = b;
+    ret.twine = ava_twine_maybe_force(&twine);
+  }
+
   return ret;
-}
-
-static const ava_rope* ava_rope_of(ava_string str) {
-  if (str.ascii9 & 1) {
-    return ava_rope_new_leaf9(str.ascii9);
-  } else {
-    return str.rope;
-  }
-}
-
-static const ava_rope* ava_rope_concat(const ava_rope*restrict left,
-                                       const ava_rope*restrict right) {
-  const ava_rope*restrict concat;
-
-  /* If a trivial concat is balanced, just do that */
-  if (ava_rope_concat_would_be_node_balanced(left, right))
-    return ava_rope_concat_of(left, right);
-
-  /* Would be unbalanced if done trivially. See if one can be passed down a
-   * branch of the other. (This optimises for linear concatenations of shallow
-   * strings.)
-   */
-  /* a->depth > b->depth guarantees that a is a concat */
-  if (left->depth > right->depth) {
-    concat = ava_rope_concat_of(
-      left->v.concat_left,
-      ava_rope_concat(left->concat_right, right));
-  } else if (right->depth > left->depth) {
-    concat = ava_rope_concat_of(
-      ava_rope_concat(left, right->v.concat_left),
-      right->concat_right);
-  } else {
-    /* Fall back to trivial and let a rebalance do its thing */
-    concat = ava_rope_concat_of(left, right);
-  }
-
-  return ava_rope_rebalance(concat);
-}
-
-/* Inverse offset fibonacci function, where fib(0) == 0 and fib(1) == 1 */
-static unsigned ava_bif(size_t sz) {
-  unsigned iterations = 0;
-  ava_ulong a = 0, b = 1, c;
-
-  while (sz >= a) {
-    ++iterations;
-    c = a + b;
-    a = b;
-    b = c;
-  }
-
-  return iterations;
-}
-
-static ava_bool ava_rope_is_balanced(const ava_rope*restrict rope) {
-  /* The rope is considered balanced if fib(depth+2) <= length. */
-  return rope->depth+2 <= ava_bif(rope->length) + 1;
-}
-
-static ava_bool ava_rope_concat_would_be_node_balanced(
-  const ava_rope*restrict left, const ava_rope*restrict right
-) {
-  unsigned depth = left->depth > right->depth? left->depth : right->depth;
-
-  return (1u << depth) <= (left->descendants + right->descendants)*2;
-}
-
-ava_string ava_string_optimise(ava_string str) {
-  if (str.ascii9 & 1) return str;
-
-  str.rope = ava_rope_force_rebalance(str.rope);
-  return str;
-}
-
-static const ava_rope* ava_rope_rebalance(const ava_rope*restrict root) {
-  if (ava_rope_is_balanced(root)) return root;
-  else return ava_rope_force_rebalance(root);
-}
-
-static const ava_rope* ava_rope_force_rebalance(const ava_rope*restrict root) {
-  const ava_rope*restrict accum[AVA_MAX_ROPE_DEPTH];
-
-  /* Rebalance the whole rope */
-  memset((void*)accum, 0, sizeof(accum));
-  ava_rope_rebalance_iterate(accum, root);
-  return ava_rope_rebalance_flush(accum, 0, AVA_MAX_ROPE_DEPTH);
-}
-
-static void ava_rope_rebalance_iterate(
-  const ava_rope*restrict accum[AVA_MAX_ROPE_DEPTH],
-  const ava_rope*restrict rope
-) {
-  unsigned clear, bif;
-  ava_bool is_slot_free;
-
-  if (ava_rope_is_concat(rope)) {
-    ava_rope_rebalance_iterate(accum, rope->v.concat_left);
-    ava_rope_rebalance_iterate(accum, rope->concat_right);
-    return;
-  }
-
-  /* This is a leaf; insert it into the array */
-  clear = 0;
-  for (;;) {
-    bif = ava_bif(rope->length) - 1; /* -1 since size 0 never occurs */
-
-    /* Ensure all slots below the target are free */
-    is_slot_free = ava_true;
-    for (; clear <= bif; ++clear) {
-      if (accum[clear]) {
-        is_slot_free = ava_false;
-        break;
-      }
-    }
-
-    if (is_slot_free) {
-      /* Free, done with this element */
-      accum[bif] = rope;
-      break;
-    } else {
-      /* Not free. Produce a new rope by flushing the accumulator, create a
-       * Concat between that and this one, then repeat with the new, larger
-       * rope.
-       */
-      rope = ava_rope_concat_of(
-        ava_rope_rebalance_flush(accum, clear, bif+1), rope);
-      clear = bif;
-    }
-  }
-}
-
-static const ava_rope* ava_rope_rebalance_flush(
-  const ava_rope*restrict accum[AVA_MAX_ROPE_DEPTH],
-  unsigned start, unsigned end
-) {
-  const ava_rope*restrict right = NULL;
-  unsigned i;
-
-  for (i = start; i < end; ++i) {
-    if (accum[i]) {
-      if (right) {
-        right = ava_rope_concat_of(accum[i], right);
-      } else {
-        right = accum[i];
-      }
-
-      accum[i] = NULL;
-    }
-  }
-
-  return right;
 }
 
 static ava_ascii9_string ava_ascii9_slice(ava_ascii9_string str,
@@ -582,286 +394,252 @@ static ava_ascii9_string ava_ascii9_slice(ava_ascii9_string str,
   return str;
 }
 
-static const ava_rope* ava_rope_slice(const ava_rope*restrict rope,
-                                      size_t begin, size_t end) {
-  ava_rope* new;
-
-  if (0 == begin && rope->length == end)
-    return rope;
-
-  if (ava_rope_is_concat(rope)) {
-    /* If one side alone can handle the split, simply delegate */
-    if (begin >= rope->v.concat_left->length)
-      return ava_rope_slice(
-        rope->concat_right,
-        begin - rope->v.concat_left->length,
-        end - rope->v.concat_left->length);
-
-    if (end <= rope->v.concat_left->length)
-      return ava_rope_slice(
-        rope->v.concat_left, begin, end);
-
-    /* The string will straddle the two sides. Coalesce eagerly if too small. */
-    if (end - begin < ROPE_NONFLAT_THRESH) {
-      char* strdat = ava_alloc_atomic(end - begin);
-      ava_rope_to_bytes(strdat, rope, begin, end);
-
-      return ava_rope_new_leafv(strdat, end - begin, end - begin);
-    }
-
-    return ava_rope_concat_of(
-      ava_rope_slice(
-        rope->v.concat_left, begin, rope->v.concat_left->length),
-      ava_rope_slice(
-        rope->concat_right, 0, end - rope->v.concat_left->length));
-  } else if (ava_rope_is_leaf9(rope)) {
-    return ava_rope_new_leaf9(ava_ascii9_slice(rope->v.leaf9, begin, end));
-  } else {
-    new = AVA_NEW(ava_rope);
-    *new = *rope;
-    new->length = end - begin;
-    new->v.leafv += begin;
-    /* If we're now using less than half of the original buffer, reallocate. */
-    if (new->length*2 < new->external_size) {
-      new->v.leafv = ava_clone_atomic(new->v.leafv, new->length);
-      new->external_size = new->length;
-    }
-
-    return new;
-  }
-}
-
 ava_string ava_string_slice(ava_string str, size_t begin, size_t end) {
   ava_string ret;
+  ava_twine twine;
 
-  if (str.ascii9 & 1) {
+  if (ava_string_is_ascii9(str)) {
     ret.ascii9 = ava_ascii9_slice(str.ascii9, begin, end);
     return ret;
   }
 
-  ret.ascii9 = 0;
+  if (0 == begin && ava_string_length(str) == end)
+    return str;
 
   /* Convert to an ASCII9 string if possible */
   if (end - begin <= 9) {
-    char c9[9];
-    ava_rope_to_bytes(c9, str.rope, begin, end);
-    if (ava_string_can_encode_ascii9(c9, end - begin)) {
-      ret.ascii9 = ava_ascii9_encode(c9, end - begin);
-      return ret;
-    }
+    return ava_string_of_bytes(ava_twine_force(str.twine) + begin, end - begin);
   }
 
-  ret.rope = ava_rope_rebalance(ava_rope_slice(str.rope, begin, end));
+  twine.body = ava_twine_pack_body(ava_tt_slice, str.twine);
+  twine.length = end - begin;
+  twine.tail.overhead =
+    sizeof(ava_twine) + ava_twine_get_overhead(str.twine) +
+    begin + (str.twine->length - end);
+  twine.tail.other.offset = begin;
 
+  ret.ascii9 = 0;
+  ret.twine = ava_twine_maybe_force(&twine);
   return ret;
 }
 
-void ava_string_iterator_place(ava_string_iterator* it,
-                               ava_string str, size_t index) {
-  assert(index <= ava_string_length(str));
-
-  memset(it, 0, sizeof(ava_string_iterator));
-
-  it->logical_index = index;
-  if (index >= ava_string_length(str))
-    index = ava_string_length(str) > 0? ava_string_length(str)-1 : 0;
-
-  if (str.ascii9 & 1) {
-    it->ascii9 = str.ascii9;
-  } else {
-    size_t off = index;
-    const ava_rope*restrict rope;
-
-    assert(str.rope->depth <= AVA_MAX_ROPE_DEPTH);
-
-    rope = it->stack[0].rope = str.rope;
-    while (ava_rope_is_concat(rope)) {
-      if (off < rope->v.concat_left->length) {
-        it->stack[it->top].offset = 0;
-        ++it->top;
-        rope = it->stack[it->top].rope = rope->v.concat_left;
-      } else {
-        it->stack[it->top].offset =
-          it->stack[it->top].rope->v.concat_left->length;
-        ++it->top;
-        off -= rope->v.concat_left->length;
-        rope = it->stack[it->top].rope = rope->concat_right;
-      }
-    }
-
-    it->stack[it->top].offset = off;
-  }
-
-  it->real_index = index;
-  it->length = ava_string_length(str);
+static inline ava_twine_tag ava_twine_get_tag(const void* body) {
+  return (ava_intptr)body & 0x7;
 }
 
-ava_bool ava_string_iterator_move(ava_string_iterator* it,
-                                  ssize_t logical_distance) {
-  size_t new_real_index;
-  ssize_t real_distance;
+static inline void* ava_twine_get_body_ptr(const void* body) {
+  return (void*)((ava_intptr)body & ~(ava_intptr)0x7);
+}
 
-  it->logical_index += logical_distance;
+static const void* ava_twine_pack_body(ava_twine_tag tag,
+                                       const void* body_ptr) {
+  assert_aligned(body_ptr);
+  return (const void*)(tag + (ava_intptr)body_ptr);
+}
 
-  /* <= so that empty strings will place the real index at 0 rather than ~0u */
-  if (it->logical_index <= 0)
-    new_real_index = 0;
-  else if (it->logical_index >= (ssize_t)it->length)
-    new_real_index = it->length - 1;
-  else
-    new_real_index = it->logical_index;
+static const char* ava_twine_force(const ava_twine*restrict twine) {
+  const void*restrict body =
+    (const void*)AO_load_acquire_read((const AO_t*)&twine->body);
 
-  real_distance = new_real_index - it->real_index;
-  it->real_index = new_real_index;
-
-  if (!it->ascii9) {
-    /* Walk up the tree until we find a rope that contains the index we are
-     * looking for.
+  if (AVA_LIKELY(ava_tt_forced == ava_twine_get_tag(body))) {
+    return ava_twine_get_body_ptr(body);
+  } else {
+    size_t base_sz = twine->length;
+    /* Include space for the terminating NUL plus padding so the size is a
+     * multiple of sizeof(ava_ulong).
      */
-    if (real_distance > 0) {
-      while (real_distance >= ((ssize_t)it->stack[it->top].rope->length -
-                               (ssize_t)it->stack[it->top].offset)) {
-        real_distance += it->stack[it->top].offset;
-        --it->top;
-      }
-    } else {
-      while (real_distance + (ssize_t)it->stack[it->top].offset < 0) {
-        real_distance += it->stack[it->top].offset;
-        --it->top;
-      }
+    size_t full_sz = (base_sz + sizeof(ava_ulong)) /
+      sizeof(ava_ulong) * sizeof(ava_ulong);
+    char*restrict dst = ava_alloc_atomic(full_sz);
 
-      real_distance += it->stack[it->top].offset;
-      it->stack[it->top].offset = 0;
-    }
+    /* Zero the padding, including the terminating NUL */
+    memset(dst + base_sz, 0, full_sz - base_sz);
 
-    assert(real_distance >= 0);
-    size_t dist = real_distance;
+    ava_twine_force_into(dst, twine, 0, twine->length);
 
-    /* Walk down the tree to find the leaf containing the desired index */
-    while (ava_rope_is_concat(it->stack[it->top].rope)) {
-      if (dist + it->stack[it->top].offset <
-          it->stack[it->top].rope->v.concat_left->length) {
-        dist += it->stack[it->top].offset;
-        it->stack[it->top].offset = 0;
-        it->stack[it->top+1].rope = it->stack[it->top].rope->v.concat_left;
-        it->stack[it->top+1].offset = 0;
-        ++it->top;
+    /* Write the new body first, so that any concurrent readers either see the
+     * new body first, or complete reading the node in its original state.
+     * Write-release so that other readers can see the contents of dst.
+     */
+    AO_store_release_write((AO_t*)&twine->body,
+                           (AO_t)(ava_twine_pack_body(ava_tt_forced, dst)));
+    /* Destroy other so that any memory it holds is freed */
+    ((ava_twine*restrict)twine)->tail.other.string.ascii9 = 0;
+
+    return dst;
+  }
+}
+
+typedef struct {
+  char*restrict dst;
+  const ava_twine*restrict twine;
+  size_t offset, count;
+} ava_twine_force_into_return;
+
+static void ava_twine_force_into(char*restrict dst,
+                                 const ava_twine*restrict twine,
+                                 size_t offset, size_t count) {
+  /* In order to run in constant stack space (since the twine tree may be very
+   * deep), we maintain an explicit stack for the rhs of concats that is
+   * allocated on the heap if too large.
+   */
+  ava_twine_force_into_return stack_stack[1024];
+  ava_twine_force_into_return* stack, * stack_base;
+  ava_twine_force_into_return* stack_ceil AVA_UNUSED;
+  ava_twine_tail_other other;
+  ava_twine_tag tag;
+  const void* body;
+  const ava_twine*restrict body_twine;
+  size_t max_stack_required;
+  size_t a9len;
+  char a9tmp[AVA_STR_TMPSZ];
+
+  /* Estimate how much stack space will be required.
+   *
+   * In the worst case (a left-handed linear chain of concats), we'll need one
+   * stack slot for every node. The upper bound on the number of nodes is the
+   * overhead over the node size.
+   *
+   * In the case of substrings, this may substantially overestimate the size
+   * required. However, note that the maximum amount it will allocate is still
+   * proportional to the length of the string.
+   */
+  max_stack_required = ava_twine_get_overhead(twine) / sizeof(ava_twine);
+
+  if (max_stack_required <= sizeof(stack_stack) / sizeof(stack_stack[0])) {
+    /* Small enough to fit on the stack */
+    stack = stack_base = stack_stack;
+  } else {
+    /* Too big to be safely on the stack, use the heap instead */
+    stack = stack_base = ava_alloc_unmanaged(
+      max_stack_required * sizeof(stack[0]));
+  }
+  stack_ceil = stack + max_stack_required;
+
+  tailcall:
+  /* Read the twine into a stable location */
+  other = twine->tail.other;
+  /* Atomically read the tag and body */
+  body = (const void*)AO_load_acquire_read((const AO_t*)&twine->body);
+  tag = ava_twine_get_tag(body);
+  body = ava_twine_get_body_ptr(body);
+
+  switch (tag) {
+  case ava_tt_forced:
+    /* other is indeterminate, but we don't care what it is anyway */
+    memcpy(dst, (const char*restrict)body + offset, count);
+    break;
+
+  case ava_tt_concat:
+    body_twine = body;
+    if (offset + count <= body_twine->length) {
+      /* Only need the left child */
+      twine = body_twine;
+      goto tailcall;
+    } else if (offset >= body_twine->length) {
+      /* Only need the right child */
+      if (ava_string_is_ascii9(other.string)) {
+        ava_ascii9_decode(a9tmp, other.string.ascii9);
+        memcpy(dst, a9tmp + offset - body_twine->length, count);
       } else {
-        dist -= it->stack[it->top].rope->v.concat_left->length -
-          it->stack[it->top].offset;
-        it->stack[it->top].offset =
-          it->stack[it->top].rope->v.concat_left->length;
-        it->stack[it->top+1].rope = it->stack[it->top].rope->concat_right;
-        it->stack[it->top+1].offset = 0;
-        ++it->top;
+        twine = other.string.twine;
+        offset -= body_twine->length;
+        goto tailcall;
       }
-    }
-
-    /* Adjust offset in final leaf */
-    it->stack[it->top].offset += dist;
-  }
-
-  return ava_string_iterator_valid(it);
-}
-
-ava_bool ava_string_iterator_valid(const ava_string_iterator* it) {
-  return it->logical_index >= 0 && it->logical_index < (ssize_t)it->length;
-}
-
-char ava_string_iterator_get(const ava_string_iterator* it) {
-  if (it->ascii9)
-    return ava_ascii9_index(it->ascii9, it->real_index);
-  else if (ava_rope_is_leaf9(it->stack[it->top].rope))
-    return ava_ascii9_index(it->stack[it->top].rope->v.leaf9,
-                            it->stack[it->top].offset);
-  else
-    return it->stack[it->top].rope->v.leafv[
-      it->stack[it->top].offset];
-}
-
-size_t ava_string_iterator_read_hold(char*restrict dst, size_t n,
-                                     const ava_string_iterator* it) {
-  size_t nread;
-
-  if (!ava_string_iterator_valid(it))
-    return 0;
-
-  if (it->ascii9) {
-    char c9[9];
-
-    nread = it->length - it->real_index;
-    if (n < nread) nread = n;
-
-    ava_ascii9_decode(c9, it->ascii9);
-    memcpy(dst, c9 + it->real_index, nread);
-  } else {
-    const ava_rope*restrict rope = it->stack[it->top].rope;
-    size_t offset = it->stack[it->top].offset;
-    nread = rope->length - it->stack[it->top].offset;
-    if (n < nread) nread = n;
-
-    if (ava_rope_is_leaf9(rope)) {
-      char c9[9];
-      ava_ascii9_decode(c9, rope->v.leaf9);
-      memcpy(dst, c9 + offset, nread);
     } else {
-      memcpy(dst, rope->v.leafv + offset, nread);
+      /* Need to inspect both sides.
+       *
+       * If the right side is ASCII9, decode it now so we don't need to suport
+       * returning to an ASCII9 string.
+       */
+      if (ava_string_is_ascii9(other.string)) {
+        ava_ascii9_decode(a9tmp, other.string.ascii9);
+        memcpy(dst + body_twine->length - offset,
+               a9tmp, count - body_twine->length);
+      } else {
+        /* Save the right-hand-side for later */
+        assert(stack < stack_ceil);
+        stack->dst = dst + body_twine->length - offset;
+        stack->twine = other.string.twine;
+        stack->offset = 0;
+        stack->count = count + offset - body_twine->length;
+        ++stack;
+      }
+
+      /* Recurse to the left */
+      twine = body_twine;
+      count = twine->length - offset;
+      goto tailcall;
     }
+    break;
+
+  case ava_tt_tacnoc:
+    assert(ava_string_is_ascii9(other.string));
+    a9len = ava_ascii9_length(other.string.ascii9);
+
+    if (offset < a9len) {
+      ava_ascii9_decode(a9tmp, other.string.ascii9);
+      memcpy(dst, a9tmp + offset,
+             count > a9len - offset? a9len - offset : count);
+    }
+
+    if (offset + count > a9len) {
+      twine = body;
+      dst += offset > a9len? 0 : a9len - offset;
+      count = offset > a9len? count : count - (a9len - offset);
+      offset = offset > a9len? offset - a9len : 0;
+      goto tailcall;
+    }
+    break;
+
+  case ava_tt_slice:
+    offset += other.offset;
+    twine = body;
+    goto tailcall;
+
+  default: abort();
   }
 
-  return nread;
+  /* If there are any remaining return points on the stack, loop back to them
+   * now.
+   */
+  if (stack != stack_base) {
+    assert(stack > stack_base);
+    --stack;
+    dst = stack->dst;
+    twine = stack->twine;
+    offset = stack->offset;
+    count = stack->count;
+    goto tailcall;
+  }
+
+  /* If the stack was heap-allocated, release it */
+  if (stack_stack != stack_base)
+    ava_free_unmanaged(stack_base);
 }
 
-size_t ava_string_iterator_read(char*restrict dst, size_t n,
-                                ava_string_iterator* it) {
-  size_t nread = ava_string_iterator_read_hold(dst, n, it);
-  ava_string_iterator_move(it, nread);
-  return nread;
-}
-
-size_t ava_string_iterator_read_fully(
-  char*restrict dst, size_t n, ava_string_iterator* it
-) {
-  size_t nread= 0;
-
-  while (nread < n && ava_string_iterator_valid(it)) {
-    nread += ava_string_iterator_read(dst + nread, n - nread, it);
-  }
-
-  return nread;
-}
-
-size_t ava_string_iterator_access(const char*restrict* dst,
-                                  const ava_string_iterator* it,
-                                  char*restrict tmpbuff) {
-  if (!ava_string_iterator_valid(it)) {
-    *dst = NULL;
-    return 0;
-  }
-
-  if (it->ascii9) {
-    ava_ascii9_decode(tmpbuff, it->ascii9);
-    *dst = tmpbuff + it->real_index;
-    return it->length - it->real_index;
-  }
-
-  const ava_rope*restrict rope = it->stack[it->top].rope;
-  size_t offset = it->stack[it->top].offset;
-  if (ava_rope_is_leaf9(rope)) {
-    ava_ascii9_decode(tmpbuff, rope->v.leaf9);
-    *dst = tmpbuff + offset;
-  } else {
-    *dst = rope->v.leafv + offset;
-  }
-
-  return rope->length - offset;
-}
-
-size_t ava_string_iterator_index(const ava_string_iterator* it) {
-  if (it->logical_index >= 0 && it->logical_index < (ssize_t)it->length)
-    return it->logical_index;
-  else if (it->logical_index < 0)
+static size_t ava_twine_get_overhead(const ava_twine*restrict twine) {
+  /* It is safe to read the body even non-atomically. Either the twine has
+   * always been forced (so we get a forced tag regardless and always ignore
+   * the undefined overhead field), or it was non-forced at some time and still
+   * retains the same overhead field from that time (so worst-case we still
+   * return a valid overhead, even if the platform can give non-trivial read
+   * results).
+   */
+  if (ava_tt_forced == ava_twine_get_tag(twine->body))
     return 0;
   else
-    return it->length;
+    return twine->tail.overhead;
+}
+
+static const ava_twine* ava_twine_maybe_force(const ava_twine*restrict twine) {
+  ava_twine*restrict heap_twine;
+
+  if (twine->tail.overhead > twine->length) {
+    heap_twine = ava_twine_alloc(twine->length);
+    ava_twine_force_into((char*)&heap_twine->tail, twine, 0, twine->length);
+    return heap_twine;
+  } else {
+    return ava_clone(twine, sizeof(ava_twine));
+  }
 }

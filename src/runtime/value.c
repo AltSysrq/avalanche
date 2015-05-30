@@ -60,44 +60,15 @@ const void* ava_get_attribute(ava_value value,
 }
 
 ava_string ava_string_of_chunk_iterator(ava_value value) {
-  /* Produce a near-optimal string by concatting the chunks in a perfect binary
-   * tree instead of left-to-right.
-   *
-   * (This is only near-optimal since it assumes no coalescing occurs.)
-   */
-  ava_string accum[AVA_MAX_ROPE_DEPTH];
-  unsigned height[AVA_MAX_ROPE_DEPTH];
-  unsigned count = 0;
-  ava_string chunk;
+  ava_string accum = AVA_EMPTY_STRING, chunk;
   ava_datum iterator;
 
   iterator = ava_string_chunk_iterator(value);
-
   while (ava_string_is_present(
-           (chunk = ava_iterate_string_chunk(&iterator, value)))) {
-    accum[count] = chunk;
-    height[count] = 0;
-    ++count;
+           (chunk = ava_iterate_string_chunk(&iterator, value))))
+    accum = ava_string_concat(accum, chunk);
 
-    while (count > 1 && height[count-2] == height[count-1]) {
-      accum[count-2] = ava_string_concat(accum[count-2], accum[count-1]);
-      ++height[count-2];
-      --count;
-    }
-  }
-
-  if (0 == count)
-    return AVA_EMPTY_STRING;
-
-  /* Concat whatever remains right-to-left, since the right-hand-side currently
-   * has smaller trees.
-   */
-  while (count > 1) {
-    accum[count-2] = ava_string_concat(accum[count-2], accum[count-1]);
-    --count;
-  }
-
-  return accum[0];
+  return accum;
 }
 
 ava_datum ava_singleton_string_chunk_iterator(ava_value value) {
@@ -147,9 +118,8 @@ ava_bool ava_value_equal(ava_value a, ava_value b) {
 signed ava_value_strcmp(ava_value a, ava_value b) {
   ava_datum ait, bit;
   ava_string as, bs;
-  ava_string_iterator asit, bsit;
   const char*restrict ac, *restrict bc;
-  char atmp[9], btmp[9];
+  char atmp[AVA_STR_TMPSZ], btmp[AVA_STR_TMPSZ];
   size_t nac, nbc, n;
   ava_bool a_finished = ava_false, b_finished = ava_false;
   signed cmp;
@@ -160,47 +130,51 @@ signed ava_value_strcmp(ava_value a, ava_value b) {
   if (0 == memcmp(&a, &b, sizeof(a)))
     return 0;
 
+
   ait = ava_string_chunk_iterator(a);
   bit = ava_string_chunk_iterator(b);
-  ava_string_iterator_place(&asit, AVA_EMPTY_STRING, 0);
-  ava_string_iterator_place(&bsit, AVA_EMPTY_STRING, 0);
+  nac = nbc = 0;
 
   for (;;) {
-    if (!ava_string_iterator_valid(&asit)) {
+    if (!nac) {
       do {
         as = ava_iterate_string_chunk(&ait, a);
       } while (ava_string_is_present(as) &&
                0 == ava_string_length(as));
 
-      if (!ava_string_is_present(as))
+      if (!ava_string_is_present(as)) {
         a_finished = ava_true;
-      else
-        ava_string_iterator_place(&asit, as, 0);
+      } else {
+        nac = ava_string_length(as);
+        ac = ava_string_to_cstring_buff(atmp, as);
+      }
     }
 
-    if (!ava_string_iterator_valid(&bsit)) {
+    if (!nbc) {
       do {
         bs = ava_iterate_string_chunk(&bit, b);
       } while (ava_string_is_present(bs) &&
                0 == ava_string_length(bs));
 
-      if (!ava_string_is_present(bs))
+      if (!ava_string_is_present(bs)) {
         b_finished = ava_true;
-      else
-        ava_string_iterator_place(&bsit, bs, 0);
+      } else {
+        nbc = ava_string_length(bs);
+        bc = ava_string_to_cstring_buff(btmp, bs);
+      }
     }
 
     if (a_finished || b_finished) break;
 
-    nac = ava_string_iterator_access(&ac, &asit, atmp);
-    nbc = ava_string_iterator_access(&bc, &bsit, btmp);
     n = nac < nbc? nac : nbc;
 
     cmp = memcmp(ac, bc, n);
     if (cmp) return cmp;
 
-    ava_string_iterator_move(&asit, n);
-    ava_string_iterator_move(&bsit, n);
+    ac += n;
+    bc += n;
+    nac -= n;
+    nbc -= n;
   }
 
   /* One is a prefix of the other */
@@ -275,14 +249,15 @@ ava_ulong ava_value_hash(ava_value value) {
    */
 
   ava_string str;
-  ava_string_iterator sit;
   /* Constants and vars, from lines 69--76 */
   ava_ulong
     k0 = ava_siphash_k[0], k1 = ava_siphash_k[1],
     v0 = 0x736f6d6570736575ULL, v1 = 0x646f72616e646f6dULL,
     v2 = 0x6c7967656e657261ULL, v3 = 0x7465646279746573ULL,
     b, m;
-  size_t read;
+  size_t i, n, rem, strlen;
+  char tmpbuf[16] AVA_STR_ALIGN;
+  const ava_ulong*restrict data;
 
   /* Lines 42--48 */
 #define SIPROUND() do {                                         \
@@ -303,7 +278,10 @@ ava_ulong ava_value_hash(ava_value value) {
    * time and not worry about chunk boundaries.
    */
   str = ava_to_string(value);
-  ava_string_iterator_place(&sit, str, 0);
+  strlen = ava_string_length(str);
+  data = (const ava_ulong*)ava_string_to_cstring_buff(tmpbuf, str);
+  n = strlen / sizeof(ava_ulong);
+  rem = strlen % sizeof(ava_ulong);
 
   /* Mix key with initialisation vector, and initialise b.
    *
@@ -313,27 +291,23 @@ ava_ulong ava_value_hash(ava_value value) {
   v2 ^= k0;
   v1 ^= k1;
   v0 ^= k0;
-  b = ((ava_ulong)ava_string_length(str)) << 56;
+  b = (ava_ulong)strlen << 56;
 
   /* Read each full chunk and feed it through the hash algorithm.
    *
-   * This is mainly lines 90--98. We zero m first so that the switch statement
-   * on lines 101--111 can be simplified.
+   * This is mainly lines 90--98.
    */
-  while (m = 0, sizeof(m) == (read = ava_string_iterator_read_fully(
-                                (char*)&m, sizeof(m), &sit))) {
+  for (i = 0; i < n; ++i) {
+    m = data[i];
     v3 ^= m;
     SIPROUNDS(AVA_SIPHASH_C);
     v0 ^= m;
   }
 
   /* Lines 101--111, mix the last few bytes with b if the input size wasn't a
-   * multiple sizeof(ava_ulong). The above loop is structured so that m is
-   * already in the correct state for this. In fact, we can elide even the
-   * branch since it will simply be 0 if the input size was a multiple of
-   * sizeof(ava_ulong).
+   * multiple sizeof(ava_ulong).
    */
-  b |= m;
+  if (rem) b |= data[i];
 
   /* Finishing rounds */
   v3 ^= b;

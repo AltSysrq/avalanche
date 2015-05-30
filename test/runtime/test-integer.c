@@ -36,7 +36,7 @@ static ava_integer str_to_int(const char* s, ava_integer d) {
 }
 
 static ava_integer str_to_dec_fast(const char* s) {
-  ava_string str = ava_string_of_shared_cstring(s);
+  ava_string str = ava_string_of_cstring(s);
   ck_assert(str.ascii9 & 1);
   return ava_integer_parse_dec_fast(str.ascii9, ava_string_length(str));
 }
