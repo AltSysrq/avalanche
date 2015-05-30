@@ -355,8 +355,21 @@ static ava_hash_map_index* ava_hash_map_index_new(size_t capacity);
  */
 static size_t ava_hash_map_put(ava_hash_map*restrict map,
                                size_t expected_length,
-                               ava_value key,
-                               ava_value value);
+                               ava_value key);
+
+/**
+ * Maps the given hash code to the given index.
+ *
+ * This assumes that the caller already has right access to the index table.
+ *
+ * @param map The map to mutate.
+ * @param index The index to map.
+ * @param hash The hash to map to the index.
+ * @return Whether a rehash is suggested.
+ */
+static ava_bool ava_hash_map_put_direct(ava_hash_map*restrict map,
+                                        size_t index,
+                                        ava_ulong hash);
 
 /**
  * Builds a new hash table for the given hash map.
@@ -628,12 +641,9 @@ static ava_map_cursor ava_hash_map_search(ava_map_value map,
 
 static size_t ava_hash_map_put(ava_hash_map*restrict map,
                                size_t expected_length,
-                               ava_value key,
-                               ava_value value) {
+                               ava_value key) {
   ava_bool can_use_ascii9_hash_function;
   ava_ulong hash;
-  unsigned tries = 0;
-  size_t ix;
 
   can_use_ascii9_hash_function =
     expected_length <= ASCII9_SIZE_THRESH &&
@@ -686,6 +696,19 @@ static size_t ava_hash_map_put(ava_hash_map*restrict map,
     abort();
   }
 
+  if (ava_hash_map_put_direct(map, expected_length, hash))
+    return ava_hash_map_rehash(map, expected_length+1, 0);
+  else
+    return expected_length + 1;
+}
+
+static ava_bool ava_hash_map_put_direct(ava_hash_map*restrict map,
+                                        size_t index,
+                                        ava_ulong hash) {
+  unsigned tries = 0;
+  size_t ix;
+  ava_bool suggest_rehash = ava_false;
+
   /* Find the first free slot */
   for (;;) {
     ix = (tries + hash) & map->index->mask;
@@ -700,13 +723,13 @@ static size_t ava_hash_map_put(ava_hash_map*restrict map,
      */
     if (AVA_UNLIKELY(tries > ASCII9_COLLISION_THRESH) &&
         ava_hmhf_ascii9 == map->index->hash_function) {
-      return ava_hash_map_rehash(map, expected_length+1, ava_false);
+      suggest_rehash = 1;
     }
   }
 
   /* Free slot at ix */
-  map->index->indices[ix] = expected_length;
-  return expected_length + 1;
+  map->index->indices[ix] = index;
+  return suggest_rehash;
 }
 
 static ava_hash_map_index* ava_hash_map_fork_index(
@@ -731,16 +754,14 @@ static size_t ava_hash_map_rehash(ava_hash_map*restrict map,
                                   size_t num_elements,
                                   ava_bool permit_ascii9) {
   size_t i;
-  ava_list_value keys, values;
+  size_t new_size AVA_UNUSED;
+  ava_list_value keys;
   ava_hash_map_hash_function preferred_hash_function;
 
   num_elements = ava_hash_map_vacuum(map, num_elements);
 
   keys = (ava_list_value) {
     ava_value_with_ulong(map->keys, num_elements)
-  };
-  values = (ava_list_value) {
-    ava_value_with_ulong(map->values, num_elements)
   };
 
   if (NULL != map->index) {
@@ -763,9 +784,9 @@ static size_t ava_hash_map_rehash(ava_hash_map*restrict map,
          sizeof(map->index->indices[0]) * (map->index->mask+1));
 
   for (i = 0; i < num_elements; ++i) {
-    ava_hash_map_put(map, i,
-                     map->esba_trait->index(keys, i),
-                     map->esba_trait->index(values, i));
+    new_size = ava_hash_map_put(map, i,
+                                map->esba_trait->index(keys, i));
+    assert(i+1 == new_size);
   }
 
   return num_elements;
@@ -882,7 +903,7 @@ static ava_map_value ava_hash_map_map_add(ava_map_value map,
 
   this.keys = ava_value_attr(INVOKE_LIST(map.v, keys, append,, key).v);
   this.values = ava_value_attr(INVOKE_LIST(map.v, values, append,, value).v);
-  length = ava_hash_map_put(&this, length, key, value);
+  length = ava_hash_map_put(&this, length, key);
 
   return ava_hash_map_combine(map, &this, length);
 }
