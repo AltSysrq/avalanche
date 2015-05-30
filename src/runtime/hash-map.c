@@ -43,13 +43,16 @@
 
 /*
 
-  The hash-map is essentially composed of five parts:
+  The hash-map is essentially composed of six parts:
 
   - The keys array, an ESBA list containing every even-indexed list element.
 
   - The values array, an ESBA list containing every odd-indexed list element.
 
   - The index array, which is the hash table proper.
+
+  - The hash cache, which is an array of hash values parallel to the keys
+    array, to speed rehashing and collision handling.
 
   - The deletion bitmap, which tracks soft-deletions of elements.
 
@@ -85,8 +88,8 @@
 
   Cursors are simply indices into each of these ESBAs.
 
-  INDEX ARRAY
-  -----------
+  INDEX ARRAY and HASH CACHE
+  --------------------------
 
   The index array is the hash-table proper, which allows quickly locating
   values corresponding to particular keys.
@@ -135,6 +138,9 @@
   ava_value_hash(), which has none of these limitations.
 
   The index array is doubled in size whenever it reaches 75% capacity.
+
+  The index array shares its structure with the hash cache, so that the two can
+  share the same concurrency control.
 
   DELETION BITMAP
   ---------------
@@ -205,6 +211,15 @@ typedef struct {
    * elements they are going to insert.
    */
   AO_t num_elements;
+  /**
+   * Array of hash values parallel to the keys array.
+   *
+   * Values beyond the visible length of keys have undefined content.
+   *
+   * This is part of the same allocation as the ava_hash_map_index structure,
+   * immediately following indices. Its length is 3/4 the value of (mask+1).
+   */
+  ava_ulong*restrict hash_cache;
   /**
    * Map from reduced hash values to indices in the keys/values arrays.
    *
@@ -337,12 +352,22 @@ static inline size_t desired_capacity(size_t num_elements) {
 static ava_hash_map_index* ava_hash_map_index_new(size_t capacity);
 
 /**
+ * Takes ownership of the given map, changing the index length from
+ * expected_length to expected_length+1.
+ *
+ * The index is forked if necessary.
+ */
+static void ava_hash_map_make_index_writable(ava_hash_map*restrict map,
+                                             size_t expected_length);
+
+/**
  * Puts the given key/value pair into the given hash map, overwriting the map
  * in-place.
  *
  * This does _not_ add the elements to the keys/values lists; it merely
- * manipulates the hash table. The elements must already be present within the
- * lists before this is called.
+ * manipulates the hash table and adds the element to the hash cache. The
+ * elements must already be present within the lists. The caller must have
+ * already called ava_hash_map_make_index_writable() on the map.
  *
  * Rehashes the table if necessary.
  *
@@ -498,7 +523,9 @@ static ava_hash_map_index* ava_hash_map_index_new(size_t base_cap) {
   while (cap < base_cap) cap <<= 1;
 
   index = ava_alloc_atomic_precise(sizeof(ava_hash_map_index) +
-                                   sizeof(index->indices[0]) * cap);
+                                   sizeof(index->indices[0]) * cap +
+                                   sizeof(ava_ulong) * (cap * 3/4));
+  index->hash_cache = (ava_ulong*)(index->indices + cap);
   index->mask = cap-1;
   return index;
 }
@@ -570,7 +597,7 @@ static ava_map_cursor ava_hash_map_search(ava_map_value map,
                                           ava_map_cursor start) {
   const ava_hash_map*restrict this = ava_value_attr(map.v);
 
-  ava_ulong hash, length = ava_value_ulong(map.v);
+  ava_ulong hash, orig_hash, length = ava_value_ulong(map.v);
   unsigned tries = 0;
   size_t ix;
   ava_map_cursor cursor;
@@ -598,6 +625,8 @@ static ava_map_cursor ava_hash_map_search(ava_map_value map,
     abort();
   }
 
+  orig_hash = hash;
+
   for (;;) {
     ix = (tries + hash) & this->index->mask;
     cursor = this->index->indices[ix];
@@ -613,8 +642,12 @@ static ava_map_cursor ava_hash_map_search(ava_map_value map,
      * except that an earlier element may be re-encountered later.
      *
      * Deleted elements must also be excluded.
+     *
+     * There's no point in fetching the key and comparing them if their full
+     * hashes aren't equal.
      */
-    if (cursor >= start && !ava_hash_map_is_deleted(this, cursor)) {
+    if (cursor >= start && !ava_hash_map_is_deleted(this, cursor) &&
+        orig_hash == this->index->hash_cache[cursor]) {
       /* Check whether it actually corresponds to the query key */
       other_key = INVOKE_LIST(map.v, keys, index,, cursor);
       switch (this->index->hash_function) {
@@ -639,6 +672,23 @@ static ava_map_cursor ava_hash_map_search(ava_map_value map,
   }
 }
 
+static void ava_hash_map_make_index_writable(ava_hash_map*restrict map,
+                                             size_t expected_length) {
+  if (!AO_compare_and_swap(&map->index->num_elements, expected_length,
+                           expected_length + 1)) {
+    /* Unable to get write access.
+     *
+     * We don't need a full rehash; simply cloning the hash table will do.
+     *
+     * Note that the number of elements in the clone is expected_length, not
+     * expected_length+1, because anything at the latter index actually belongs
+     * to a different hash table.
+     */
+    map->index = ava_hash_map_fork_index(map->index, expected_length);
+    ++map->index->num_elements;
+  }
+}
+
 static size_t ava_hash_map_put(ava_hash_map*restrict map,
                                size_t expected_length,
                                ava_value key) {
@@ -657,29 +707,13 @@ static size_t ava_hash_map_put(ava_hash_map*restrict map,
 
   if (!can_use_ascii9_hash_function &&
       ava_hmhf_ascii9 == map->index->hash_function) {
-    /* New key isn't compatible with existing table */
-    return ava_hash_map_rehash(map, expected_length+1,
-                               can_use_ascii9_hash_function);
-  }
-
-  if (desired_capacity(expected_length+1) > map->index->mask+1) {
-    /* Load factor exceeded */
-    return ava_hash_map_rehash(map, expected_length+1,
-                               can_use_ascii9_hash_function);
-  }
-
-  if (!AO_compare_and_swap(&map->index->num_elements, expected_length,
-                           expected_length + 1)) {
-    /* Unable to get write access.
+    /* New key isn't compatible with existing table.
      *
-     * We don't need a full rehash; simply cloning the hash table will do.
-     *
-     * Note that the number of elements in the clone is expected_length, not
-     * expected_length+1, because anything at the latter index actually belongs
-     * to a different hash table.
+     * We can't add the element to the hash cache, but that's fine since the
+     * hash cache isn't usable for this rehash.
      */
-    map->index = ava_hash_map_fork_index(map->index, expected_length);
-    ++map->index->num_elements;
+    return ava_hash_map_rehash(map, expected_length+1,
+                               can_use_ascii9_hash_function);
   }
 
   switch (map->index->hash_function) {
@@ -696,6 +730,15 @@ static size_t ava_hash_map_put(ava_hash_map*restrict map,
     abort();
   }
 
+  /* Add to hash cache, needed for any rehashes from hereonout */
+  map->index->hash_cache[expected_length] = hash;
+
+  if (desired_capacity(expected_length+1) > map->index->mask+1) {
+    /* Load factor exceeded */
+    return ava_hash_map_rehash(map, expected_length+1,
+                               can_use_ascii9_hash_function);
+  }
+
   if (ava_hash_map_put_direct(map, expected_length, hash))
     return ava_hash_map_rehash(map, expected_length+1, 0);
   else
@@ -704,7 +747,8 @@ static size_t ava_hash_map_put(ava_hash_map*restrict map,
 
 static ava_bool ava_hash_map_put_direct(ava_hash_map*restrict map,
                                         size_t index,
-                                        ava_ulong hash) {
+                                        ava_ulong orig_hash) {
+  ava_ulong hash = orig_hash;
   unsigned tries = 0;
   size_t ix;
   ava_bool suggest_rehash = ava_false;
@@ -746,6 +790,7 @@ static ava_hash_map_index* ava_hash_map_fork_index(
     if (dst->indices[i] >= limit)
       dst->indices[i] = AVA_MAP_CURSOR_NONE;
   }
+  memcpy(dst->hash_cache, src->hash_cache, sizeof(ava_ulong) * limit);
 
   return dst;
 }
@@ -753,12 +798,16 @@ static ava_hash_map_index* ava_hash_map_fork_index(
 static size_t ava_hash_map_rehash(ava_hash_map*restrict map,
                                   size_t num_elements,
                                   ava_bool permit_ascii9) {
-  size_t i;
+  size_t i, orig_num_elements;
   size_t new_size AVA_UNUSED;
   ava_list_value keys;
   ava_hash_map_hash_function preferred_hash_function;
+  ava_bool vacuumed;
+  const ava_hash_map_index*restrict old_index = map->index;
 
+  orig_num_elements = num_elements;
   num_elements = ava_hash_map_vacuum(map, num_elements);
+  vacuumed = orig_num_elements != num_elements;
 
   keys = (ava_list_value) {
     ava_value_with_ulong(map->keys, num_elements)
@@ -783,10 +832,24 @@ static size_t ava_hash_map_rehash(ava_hash_map*restrict map,
   memset(map->index->indices, -1,
          sizeof(map->index->indices[0]) * (map->index->mask+1));
 
-  for (i = 0; i < num_elements; ++i) {
-    new_size = ava_hash_map_put(map, i,
-                                map->esba_trait->index(keys, i));
-    assert(i+1 == new_size);
+  if (old_index && !vacuumed &&
+      map->index->hash_function == old_index->hash_function) {
+    /* If there is an existing index using the same hash function and having
+     * compatible indices (ie, no vacuuming has occurred to invalidate them),
+     * use the hash cache to quickly rebuild the index instead of needing to
+     * fetch and hash values from the ESBA list.
+     */
+    for (i = 0; i < num_elements; ++i) {
+      map->index->hash_cache[i] = old_index->hash_cache[i];
+      ava_hash_map_put_direct(map, i, old_index->hash_cache[i]);
+    }
+    map->index->num_elements = num_elements;
+  } else {
+    for (i = 0; i < num_elements; ++i) {
+      new_size = ava_hash_map_put(map, i, map->esba_trait->index(keys, i));
+      assert(i+1 == new_size);
+      ++map->index->num_elements;
+    }
   }
 
   return num_elements;
@@ -903,6 +966,7 @@ static ava_map_value ava_hash_map_map_add(ava_map_value map,
 
   this.keys = ava_value_attr(INVOKE_LIST(map.v, keys, append,, key).v);
   this.values = ava_value_attr(INVOKE_LIST(map.v, values, append,, value).v);
+  ava_hash_map_make_index_writable(&this, length);
   length = ava_hash_map_put(&this, length, key);
 
   return ava_hash_map_combine(map, &this, length);
