@@ -251,7 +251,7 @@ ava_ulong ava_value_hash(ava_value value) {
     v2 = 0x6c7967656e657261ULL, v3 = 0x7465646279746573ULL,
     b, m;
   size_t i, n, rem, strlen;
-  char tmpbuf[16] AVA_STR_ALIGN;
+  char tmpbuf[16] AVA_STR_ALIGN = { 0 };
   const ava_ulong*restrict data;
 
   /* Lines 42--48 */
