@@ -329,6 +329,21 @@ typedef struct {
    */
   ava_string (*iterate_string_chunk)(ava_datum*restrict it,
                                      ava_value value);
+  /**
+   * Returns the hash code of this value.
+   *
+   * The vast majority of types should simply use ava_value_default_hash(). The
+   * only reason to use something different is if the type naturally
+   * stringifies to a small number of ava_ulongs that can be passed to
+   * ava_hash_ulongs().
+   *
+   * This MUST be functionally equivalent to ava_value_default_hash().
+   *
+   * @param value The value to hash.
+   * @return The same value ava_value_default_hash() would have returned for
+   * the value.
+   */
+  ava_ulong (*hash)(ava_value value);
 } ava_value_trait;
 
 /**
@@ -377,6 +392,19 @@ static inline ava_string ava_iterate_string_chunk(
 ) {
   return AVA_GET_ATTRIBUTE(value, ava_value_trait)
     ->iterate_string_chunk(it, value);
+}
+
+/**
+ * Returns the hash of the string value of the given value.
+ *
+ * Any two values which are strictly equal (as per ava_value_strcmp()) produce
+ * the same hash code *within the same process*. Values not strictly equal
+ * produce different hash codes with extremely high probability and effectively
+ * randomly distributed through the 64-bit integer space.
+ */
+static inline ava_ulong ava_value_hash(ava_value value) AVA_PURE;
+static inline ava_ulong ava_value_hash(ava_value value) {
+  return AVA_GET_ATTRIBUTE(value, ava_value_trait)->hash(value);
 }
 
 /**
@@ -458,14 +486,9 @@ signed ava_value_strcmp(ava_value a, ava_value b) AVA_PURE;
 ava_bool ava_value_equal(ava_value a, ava_value b) AVA_PURE;
 
 /**
- * Returns the hash of the string value of the given value.
- *
- * Any two values which are strictly equal (as per ava_value_strcmp()) produce
- * the same hash code *within the same process*. Values not strictly equal
- * produce different hash codes with extremely high probability and effectively
- * randomly distributed through the 64-bit integer space.
+ * The standard implementation of ava_value_trait.hash().
  */
-ava_ulong ava_value_hash(ava_value value) AVA_PURE;
+ava_ulong ava_value_default_hash(ava_value value) AVA_PURE;
 
 /**
  * Initialises the process-wide hashing key.

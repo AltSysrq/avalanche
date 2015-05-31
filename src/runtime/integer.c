@@ -62,6 +62,7 @@ const ava_value_trait ava_integer_type = {
   .to_string = ava_integer_to_string,
   .string_chunk_iterator = ava_singleton_string_chunk_iterator,
   .iterate_string_chunk = ava_iterate_singleton_string_chunk,
+  .hash = ava_value_default_hash,
 };
 
 static unsigned ava_integer_to_ulong_string(ava_ulong dst[3], ava_integer i) {

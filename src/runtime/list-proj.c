@@ -62,6 +62,7 @@ static const ava_value_trait ava_list_proj_interleave_generic_impl = {
   .to_string = ava_string_of_chunk_iterator,
   .string_chunk_iterator = ava_list_string_chunk_iterator,
   .iterate_string_chunk = ava_list_iterate_string_chunk,
+  .hash = ava_value_default_hash,
 };
 
 static const ava_list_trait ava_list_proj_interleave_list_impl = {
@@ -84,6 +85,7 @@ static const ava_value_trait ava_list_proj_demux_generic_impl = {
   .to_string = ava_string_of_chunk_iterator,
   .string_chunk_iterator = ava_list_string_chunk_iterator,
   .iterate_string_chunk = ava_list_iterate_string_chunk,
+  .hash = ava_value_default_hash,
 };
 
 static const ava_list_trait ava_list_proj_demux_list_impl = {
@@ -106,6 +108,7 @@ static const ava_value_trait ava_list_proj_group_generic_impl = {
   .to_string = ava_string_of_chunk_iterator,
   .string_chunk_iterator = ava_list_string_chunk_iterator,
   .iterate_string_chunk = ava_list_iterate_string_chunk,
+  .hash = ava_value_default_hash,
 };
 
 static const ava_list_trait ava_list_proj_group_list_impl = {

@@ -93,6 +93,7 @@ const ava_value_trait ava_string_type = {
   .to_string = ava_string_value_to_string,
   .string_chunk_iterator = ava_singleton_string_chunk_iterator,
   .iterate_string_chunk = ava_iterate_singleton_string_chunk,
+  .hash = ava_value_default_hash,
 };
 
 /* The string representation will become a bit more interesting once we have
@@ -231,7 +232,7 @@ static inline ava_ulong rotl(ava_ulong x, ava_ulong b) {
   return (x << b) | (x >> (64 - b));
 }
 
-ava_ulong ava_value_hash(ava_value value) {
+ava_ulong ava_value_default_hash(ava_value value) {
   /* Adapted from https://github.com/veorq/SipHash
    *
    * More specifically,

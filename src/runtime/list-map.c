@@ -63,6 +63,7 @@ static const ava_value_trait ava_list_map_value_impl = {
   .to_string = ava_string_of_chunk_iterator,
   .string_chunk_iterator = ava_list_string_chunk_iterator,
   .iterate_string_chunk = ava_list_iterate_string_chunk,
+  .hash = ava_value_default_hash,
 };
 
 AVA_LIST_DEFIMPL(ava_list_map, &ava_list_map_value_impl)
