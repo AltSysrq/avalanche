@@ -489,6 +489,20 @@ ava_bool ava_value_equal(ava_value a, ava_value b) AVA_PURE;
  * The standard implementation of ava_value_trait.hash().
  */
 ava_ulong ava_value_default_hash(ava_value value) AVA_PURE;
+/**
+ * Computes the hash code of the first strlen bytes in the given ulong array.
+ *
+ * This is the underlying implementation of ava_value_default_hash(), and is
+ * *the* way to implement custom ava_value_trait.hash() implementations.
+ *
+ * @param data The ulongs to hash.
+ * @param strlen The number of bytes to hash. If not a multiple of 8, the final
+ * ulong contains this many bytes in the physically left portion (ie, the value
+ * will differ depending on endianness) and is zero-padded otherwise.
+ * @return The hash of the given data.
+ */
+ava_ulong ava_hash_ulongs(const ava_ulong*restrict data,
+                          size_t strlen);
 
 /**
  * Initialises the process-wide hashing key.

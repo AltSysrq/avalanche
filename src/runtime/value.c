@@ -17,6 +17,7 @@
 #include <config.h>
 #endif
 
+#include <assert.h>
 #include <stdlib.h>
 #include <string.h>
 #include <time.h>
@@ -245,15 +246,34 @@ ava_ulong ava_value_default_hash(ava_value value) {
    */
 
   ava_string str;
+  char tmpbuf[16] AVA_STR_ALIGN = { 0 };
+  size_t strlen;
+  const ava_ulong*restrict data;
+
+  str = ava_to_string(value);
+  strlen = ava_string_length(str);
+  data = (const ava_ulong*)ava_string_to_cstring_buff(tmpbuf, str);
+  return ava_hash_ulongs(data, strlen);
+}
+
+ava_ulong ava_hash_ulongs(const ava_ulong*restrict data, size_t strlen) {
   /* Constants and vars, from lines 69--76 */
   ava_ulong
     k0 = ava_siphash_k[0], k1 = ava_siphash_k[1],
     v0 = 0x736f6d6570736575ULL, v1 = 0x646f72616e646f6dULL,
     v2 = 0x6c7967656e657261ULL, v3 = 0x7465646279746573ULL,
     b, m;
-  size_t i, n, rem, strlen;
-  char tmpbuf[16] AVA_STR_ALIGN;
-  const ava_ulong*restrict data;
+  size_t i, n, rem;
+
+#ifndef NDEBUG
+  /* If not a multiple of sizeof(ava_ulong), ensure that the final value is
+   * formatted correctly.
+   */
+  if (strlen % sizeof(ava_ulong)) {
+    for (i = strlen % 8; i < sizeof(ava_ulong); ++i)
+      assert(0 == ((const char*)(data + strlen/8))[i]);
+  }
+#endif
 
   /* Lines 42--48 */
 #define SIPROUND() do {                                         \
@@ -268,14 +288,6 @@ ava_ulong ava_value_default_hash(ava_value value) {
       SIPROUND();                               \
   } while (0)
 
-  /* Generally, only strings and short data will be hashed. Under this
-   * assumption, err on the side of simplicity and just stringify the whole
-   * value; this way, we can just read from the string iterator 8 bytes at a
-   * time and not worry about chunk boundaries.
-   */
-  str = ava_to_string(value);
-  strlen = ava_string_length(str);
-  data = (const ava_ulong*)ava_string_to_cstring_buff(tmpbuf, str);
   n = strlen / sizeof(ava_ulong);
   rem = strlen % sizeof(ava_ulong);
 

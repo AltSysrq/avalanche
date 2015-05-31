@@ -597,3 +597,20 @@ deftest(dec_fast_rejects_all_nondigits_in_middle) {
 deftest(dec_fast_rejects_repeated_hyphen) {
   ck_assert_int_eq(PARSE_DEC_FAST_ERROR, str_to_dec_fast("--0"));
 }
+
+deftest(hash_value_matches_default) {
+  signed long long i;
+  unsigned digits;
+
+  for (i = 1, digits = 1; digits < 24; i *= 10, ++digits) {
+    printf("i = %lld\n", i);
+    ck_assert_int_eq(ava_value_default_hash(INT(i)),
+                     ava_value_hash(INT(i)));
+    ck_assert_int_eq(ava_value_default_hash(INT(i-1)),
+                     ava_value_hash(INT(i-1)));
+    ck_assert_int_eq(ava_value_default_hash(INT(-i)),
+                     ava_value_hash(INT(-i)));
+    ck_assert_int_eq(ava_value_default_hash(INT(-i+1)),
+                     ava_value_hash(INT(-i+1)));
+  }
+}
