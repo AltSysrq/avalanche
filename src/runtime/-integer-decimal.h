@@ -31,5 +31,12 @@ typedef struct {
   ava_uint digits;
 } ava_integer_decimal_entry;
 extern const ava_integer_decimal_entry ava_integer_decimal_table[10000];
+/**
+ * A table of ASCII9 fragments for every 4-digit integer from 0000 to 9999.
+ *
+ * The upper 28 bits is the actual character data; the lower 4 bits is the
+ * number of digits excluding leading zeroes.
+ */
+extern const ava_uint ava_integer_ascii9_decimal_table[10000];
 
 #endif /* AVA_RUNTIME__INTEGER_DECIMAL_H_ */

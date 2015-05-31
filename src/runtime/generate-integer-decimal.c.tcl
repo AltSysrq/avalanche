@@ -38,3 +38,26 @@ for {set i 0} {$i < 10000} {incr i} {
             $digits $a $b $c $d]
 }
 puts "};"
+
+puts ""
+
+puts "const ava_uint ava_integer_ascii9_decimal_table\[10000\] = {"
+puts -nonewline " "
+for {set i 0} {$i < 10000} {incr i} {
+  scan [format %04d $i] %c%c%c%c a b c d
+  if {$i >= 1000} {
+    set digits 4
+  } elseif {$i >= 100} {
+    set digits 3
+  } elseif {$i >= 10} {
+    set digits 2
+  } else {
+    set digits 1
+  }
+  set value [expr {($a << 25) | ($b << 18)  | ($c << 11) | ($d << 4) | $digits}]
+  puts -nonewline [format " 0x%08X," $value]
+  if {4 == $i % 5} {
+    puts -nonewline "\n "
+  }
+}
+puts "};"
