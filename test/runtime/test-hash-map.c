@@ -406,7 +406,7 @@ deftest(basic_delete) {
   ck_assert_int_ne(AVA_MAP_CURSOR_NONE, cursor);
   assert_values_equal(WORD(plugh), ava_map_get(map, cursor));
 
-  map = ava_map_delete(map, cursor);
+  map = ava_map_remove(map, cursor);
 
   ck_assert_int_eq(8, ava_list_length(orig.v));
   ck_assert_int_eq(4, ava_map_npairs(orig.v));
@@ -465,7 +465,7 @@ deftest(delete_vacuum) {
 
     cursor = ava_map_find(map, INT(i));
     ck_assert_int_ne(AVA_MAP_CURSOR_NONE, cursor);
-    map = ava_map_delete(map, cursor);
+    map = ava_map_remove(map, cursor);
 
     cursor = ava_map_find(map, INT(i));
     ck_assert_int_eq(AVA_MAP_CURSOR_NONE, cursor);
@@ -478,7 +478,7 @@ deftest(delete_vacuum) {
   for (i = 1; i < 64; i += 2) {
     cursor = ava_map_find(map, INT(i));
     ck_assert_int_ne(AVA_MAP_CURSOR_NONE, cursor);
-    map = ava_map_delete(map, cursor);
+    map = ava_map_remove(map, cursor);
 
     cursor = ava_map_find(map, INT(i));
     ck_assert_int_eq(AVA_MAP_CURSOR_NONE, cursor);
@@ -509,11 +509,11 @@ deftest(delete_to_empty) {
 
   cursor = ava_map_find(map, INT(1));
   ck_assert_int_ne(AVA_MAP_CURSOR_NONE, cursor);
-  map = ava_map_delete(map, cursor);
+  map = ava_map_remove(map, cursor);
 
   cursor = ava_map_find(map, INT(0));
   ck_assert_int_ne(AVA_MAP_CURSOR_NONE, cursor);
-  map = ava_map_delete(map, cursor);
+  map = ava_map_remove(map, cursor);
 
   assert_values_same(ava_empty_map().v, map.v);
 }
@@ -529,7 +529,7 @@ deftest(extend_after_delete) {
     map = ava_map_add(map, INT(i), INT(i));
 
   /* Delete an element from the middle */
-  map = ava_map_delete(map, ava_map_find(map, INT(42)));
+  map = ava_map_remove(map, ava_map_find(map, INT(42)));
 
   /* Add another element. This will spill over the end of the existing deletion
    * bitmap without provoking a rehash/vacuum.
@@ -558,7 +558,7 @@ deftest(extend_after_delete) {
 
   /* Ensure that vacuuming correctly handles the undersized bitmap */
   for (i = 0; i < 42; ++i)
-    map = ava_map_delete(map, ava_map_find(map, INT(i)));
+    map = ava_map_remove(map, ava_map_find(map, INT(i)));
 
   ck_assert_int_eq(22, ava_map_npairs(map));
   for (i = 0; i < 65; ++i) {
@@ -629,7 +629,7 @@ deftest(list_delete) {
   ava_value map = ava_hash_map_of_raw(values, 2, values+1, 2, 2).v;
   ava_value result;
 
-  result = ava_list_delete(map, 1, 3);
+  result = ava_list_remove(map, 1, 3);
   assert_value_equals_str("0 3", result);
 }
 

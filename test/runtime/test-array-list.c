@@ -234,14 +234,14 @@ deftest(copying_slice_due_to_size_reduction) {
 
 deftest(noop_delete) {
   ava_list_value orig = ava_array_list_of_raw(values, 8);
-  ava_list_value new = ava_list_delete(orig, 5, 5);
+  ava_list_value new = ava_list_remove(orig, 5, 5);
 
   ck_assert(values_equal(orig.v, new.v));
 }
 
 deftest(prefix_delete) {
   ava_list_value orig = ava_array_list_of_raw(values, 8);
-  ava_list_value new = ava_list_delete(orig, 0, 2);
+  ava_list_value new = ava_list_remove(orig, 0, 2);
   unsigned i;
 
   ck_assert_int_eq(8, ava_list_length(orig));
@@ -255,7 +255,7 @@ deftest(prefix_delete) {
 
 deftest(suffix_delete) {
   ava_list_value orig = ava_array_list_of_raw(values, 8);
-  ava_list_value new = ava_list_delete(orig, 6, 8);
+  ava_list_value new = ava_list_remove(orig, 6, 8);
   unsigned i;
 
   ck_assert_int_eq(8, ava_list_length(orig));
@@ -269,7 +269,7 @@ deftest(suffix_delete) {
 
 deftest(internal_delete) {
   ava_list_value orig = ava_array_list_of_raw(values, 8);
-  ava_list_value new = ava_list_delete(orig, 4, 6);
+  ava_list_value new = ava_list_remove(orig, 4, 6);
   unsigned i;
 
   ck_assert_int_eq(8, ava_list_length(orig));

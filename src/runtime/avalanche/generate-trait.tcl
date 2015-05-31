@@ -224,7 +224,7 @@ foreach meth $methods {
 $mdoc
    */
    [typesub $return_type $valtype]
-   (*$mname)(${valtype} this"
+   (*$mname)(${valtype} _this"
 
     foreach {t n} $args {
       puts "    , [typesub $t $valtype] $n"
@@ -263,8 +263,8 @@ ${prefix}_fat_${name}_value ${prefix}_fat_${name}_value_of(
 
 foreach meth $methods {
   dict with meth {
-    set argnames {this}
-    set arguse {(this)}
+    set argnames {_this}
+    set arguse {(_this)}
     foreach {t n} $args {
       append argnames ",$n"
       append arguse ",($n)"
@@ -274,7 +274,7 @@ foreach meth $methods {
 $mdoc
  */
 #define ${prefix}_${name}_${mname}($argnames) \\
-              _Generic((this), \\
+              _Generic((_this), \\
                        ava_value: ${prefix}_${name}_${mname}_v, \\
                        ${valtype}: ${prefix}_${name}_${mname}_f, \\
                        /* Clang requires const versions to be */ \\
@@ -292,20 +292,20 @@ $mdoc
       puts "/**\n$mdoc\n */"
       puts "static inline [typesub $return_type $self] "
       puts "    ${prefix}_${name}_${mname}_${sfx}"
-      puts "($self this"
+      puts "($self _this"
       foreach {t n} $args {
         puts ", [typesub $t $self] $n"
       }
       puts ") $attributes;"
       puts "static inline [typesub $return_type $self] "
       puts "    ${prefix}_${name}_${mname}_${sfx}"
-      puts "($self this"
+      puts "($self _this"
       foreach {t n} $args {
         puts ", [typesub $t $self] $n"
       }
       puts ") {"
       puts "  ${prefix}_fat_${name}_value fat = "
-      puts "    ${prefix}_fat_${name}_value_of(this$thissfx);"
+      puts "    ${prefix}_fat_${name}_value_of(_this$thissfx);"
       if {"void" ne $return_type} {
         puts "  return"
       }
@@ -331,7 +331,7 @@ puts "#define [string toupper "${prefix}_${name}_defimpl"](name,chain) \\"
 foreach meth $methods {
   dict with meth {
     puts "static [typesub $return_type $valtype] name##_${name}_${mname}(\\"
-    puts "  ${prefix}_${name}_value this \\"
+    puts "  ${prefix}_${name}_value _this \\"
     foreach {t n} $args {
       puts "  , [typesub $t $valtype] $n \\"
     }

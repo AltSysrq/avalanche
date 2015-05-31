@@ -3,6 +3,7 @@ AUTOMAKE_OPTIONS = subdir-objects
 
 TESTS = \
 runtime/test-array-list.t \
+runtime/test-cxx-include.t \
 runtime/test-empty-list.t \
 runtime/test-esba-list.t \
 runtime/test-esba.t \
@@ -21,12 +22,14 @@ BENCHMARKS = benchmarks/list/avalanche.t benchmarks/map/avalanche.t
 
 EXTRA_CFLAGS =
 AM_CFLAGS = $(CHECK_CFLAGS) -I../src $(EXTRA_CFLAGS) -funwind-tables
+AM_CXXFLAGS = $(CHECK_CFLAGS) -I../src $(EXTRA_CFLAGS) -funwind-tables
 AM_LDFLAGS = $(CHECK_LIBS) ../src/libavart.la
 
 check_PROGRAMS = $(TESTS)
 noinst_PROGRAMS =  $(BENCHMARKS)
 
 runtime_test_array_list_t_SOURCES = runtime/test-array-list.c
+runtime_test_cxx_include_t_SOURCES = runtime/test-cxx-include.cxx
 runtime_test_empty_list_t_SOURCES = runtime/test-empty-list.c
 runtime_test_esba_list_t_SOURCES = runtime/test-esba-list.c
 runtime_test_esba_t_SOURCES = runtime/test-esba.c

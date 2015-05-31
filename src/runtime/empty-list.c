@@ -95,7 +95,7 @@ static ava_list_value ava_empty_list_list_concat(
   return other;
 }
 
-static ava_list_value ava_empty_list_list_delete(
+static ava_list_value ava_empty_list_list_remove(
   ava_list_value el, size_t begin, size_t end
 ) {
   if (begin || end) abort();
@@ -138,7 +138,7 @@ static ava_map_value ava_empty_list_map_set(ava_map_value el,
   abort();
 }
 
-static ava_map_value ava_empty_list_map_delete(ava_map_value el,
+static ava_map_value ava_empty_list_map_remove(ava_map_value el,
                                                ava_map_cursor cursor) {
   abort();
 }

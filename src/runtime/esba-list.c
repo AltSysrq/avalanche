@@ -371,7 +371,7 @@ static ava_list_value ava_esba_list_list_concat(ava_list_value list,
   return to_list_value(esba);
 }
 
-static ava_list_value ava_esba_list_list_delete(
+static ava_list_value ava_esba_list_list_remove(
   ava_list_value list, size_t begin, size_t end
 ) {
   ava_esba src_esba = to_esba(list.v);
