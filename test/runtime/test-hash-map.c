@@ -299,13 +299,13 @@ deftest(ascii9_hashing_switches_to_value_hashing_on_too_many_collisions) {
    * help in this case, but testing it like this means we don't need to waste
    * time finding hash collisions / writing code to find hash collisions.
    */
-  for (i = 1; i < 16; ++i)
+  for (i = 1; i < 128; ++i)
     map = ava_map_add(map, WORD(foo), INT(i));
 
   ck_assert_str_eq("value", ava_hash_map_get_hash_function(map));
 
   cursor = ava_map_find(map, WORD(foo));
-  for (i = 0; i < 16; ++i) {
+  for (i = 0; i < 128; ++i) {
     ck_assert_int_ne(AVA_MAP_CURSOR_NONE, cursor);
     assert_values_equal(INT(i), ava_map_get(map, cursor));
     cursor = ava_map_next(map, cursor);

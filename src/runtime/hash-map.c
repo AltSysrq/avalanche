@@ -1,5 +1,5 @@
 /*-
- * Copyright (c) 2015 Jason Lingle
+ * Copyright (c) 2015, Jason Lingle
  *
  * Permission to  use, copy,  modify, and/or distribute  this software  for any
  * purpose  with or  without fee  is hereby  granted, provided  that the  above
@@ -35,11 +35,13 @@
 #include "-esba-list.h"
 #include "-hash-map.h"
 
-#define ASCII9_COLLISION_THRESH 8
+#define ASCII9_COLLISION_THRESH 32
 #define ASCII9_SIZE_THRESH (1<<24)
 #define COLLISION_SHIFT_AMT 4
 #define BME_BITS (sizeof(ava_ulong) * 8)
-#define MIN_CAPACITY 8
+#define LANE_SIZE_BYTES 64
+#define LANE_SIZE (LANE_SIZE_BYTES / sizeof(ava_map_cursor))
+#define MIN_CAPACITY LANE_SIZE
 
 /*
 
@@ -170,6 +172,23 @@
   it creates a brand new one. Similarly, new delete operations result in a
   hash-map with no list-index table at all.
 
+  ADDRESSING
+  ----------
+
+  The hash table uses open addressing to handle collisions, including entries
+  with exactly the same key. The table is divided into lanes, each of which is
+  the size of a cache line on common processors.
+
+  When searching for a slot, the first index that is used is simply the hash
+  code truncated by the table mask. If that slot is taken, each other slot in
+  the same lane is tested circularly.
+
+  If all elements in the lane are used, a hash bias is added and the process
+  repeats. The first hash bias is the original hash code right-shifted by
+  COLLISION_SHIFT_AMT. Each time a lane is exhausted, the bias is right-shifted
+  by that amount. This eventually degenerates to simple linear probing,
+  ensuring the whole table is eventually scanned.
+
  */
 
 /**
@@ -223,6 +242,9 @@ typedef struct {
   /**
    * Map from reduced hash values to indices in the keys/values arrays.
    *
+   * Aligned to LANE_SIZE_BYTES. (Yes, this makes a difference: 200ms in the
+   * map benchmark with 10M elements.)
+   *
    * Readers: Values may be either some value strictly less than their own
    * length (on the ava_value), which is stable, or some indeterminate value
    * greater than or equal to their own length.
@@ -231,7 +253,7 @@ typedef struct {
    * values greater than or equal to the original length of num_elements
    * (before it was CaSed to a greater value).
    */
-  ava_map_cursor indices[];
+  ava_map_cursor* indices;
 } ava_hash_map_index;
 
 /**
@@ -468,6 +490,15 @@ static const ava_hash_map_list_indices* ava_hash_map_build_effective_indices(
 static ava_map_value ava_hash_map_of_esbas(ava_list_value keys_list,
                                            ava_list_value values_list);
 
+static inline ava_ulong ava_hash_map_hash_index(ava_ulong hash,
+                                                ava_ulong bias,
+                                                size_t try,
+                                                size_t mask) {
+  ava_ulong base = hash + bias + try / LANE_SIZE * LANE_SIZE;
+
+  return (base / LANE_SIZE * LANE_SIZE + (base + try) % LANE_SIZE) & mask;
+}
+
 ava_map_value ava_hash_map_of_raw(const ava_value*restrict keys,
                                   size_t key_stride,
                                   const ava_value*restrict values,
@@ -516,6 +547,11 @@ static ava_map_value ava_hash_map_of_esbas(ava_list_value keys_list,
   };
 }
 
+static void* align_to_lane(void* ptr) {
+  return (void*)(((ava_intptr)ptr + LANE_SIZE_BYTES) /
+                 LANE_SIZE_BYTES * LANE_SIZE_BYTES);
+}
+
 static ava_hash_map_index* ava_hash_map_index_new(size_t base_cap) {
   size_t cap = 1;
   ava_hash_map_index*restrict index;
@@ -524,7 +560,9 @@ static ava_hash_map_index* ava_hash_map_index_new(size_t base_cap) {
 
   index = ava_alloc_atomic_precise(sizeof(ava_hash_map_index) +
                                    sizeof(index->indices[0]) * cap +
-                                   sizeof(ava_ulong) * (cap * 3/4));
+                                   sizeof(ava_ulong) * (cap * 3/4) +
+                                   LANE_SIZE_BYTES);
+  index->indices = align_to_lane(index + 1);
   index->hash_cache = (ava_ulong*)(index->indices + cap);
   index->mask = cap-1;
   return index;
@@ -597,7 +635,7 @@ static ava_map_cursor ava_hash_map_search(ava_map_value map,
                                           ava_map_cursor start) {
   const ava_hash_map*restrict this = ava_value_attr(map.v);
 
-  ava_ulong hash, orig_hash, length = ava_value_ulong(map.v);
+  ava_ulong hash, bias = 0, length = ava_value_ulong(map.v);
   unsigned tries = 0;
   size_t ix;
   ava_map_cursor cursor;
@@ -625,10 +663,9 @@ static ava_map_cursor ava_hash_map_search(ava_map_value map,
     abort();
   }
 
-  orig_hash = hash;
-
   for (;;) {
-    ix = (tries + hash) & this->index->mask;
+    ix = ava_hash_map_hash_index(hash, bias, tries, this->index->mask);
+
     cursor = this->index->indices[ix];
 
     if (cursor >= length) {
@@ -647,7 +684,7 @@ static ava_map_cursor ava_hash_map_search(ava_map_value map,
      * hashes aren't equal.
      */
     if (cursor >= start && !ava_hash_map_is_deleted(this, cursor) &&
-        orig_hash == this->index->hash_cache[cursor]) {
+        hash == this->index->hash_cache[cursor]) {
       /* Check whether it actually corresponds to the query key */
       other_key = INVOKE_LIST(map.v, keys, index,, cursor);
       switch (this->index->hash_function) {
@@ -667,8 +704,11 @@ static ava_map_cursor ava_hash_map_search(ava_map_value map,
     /* No matching element found, shift and try again until we do find one or
      * encounter an empty slot.
      */
-    hash >>= COLLISION_SHIFT_AMT;
     ++tries;
+    if (LANE_SIZE == tries)
+      bias = hash >> COLLISION_SHIFT_AMT;
+    else if (0 == tries % LANE_SIZE)
+      bias >>= COLLISION_SHIFT_AMT;
   }
 }
 
@@ -747,20 +787,23 @@ static size_t ava_hash_map_put(ava_hash_map*restrict map,
 
 static ava_bool ava_hash_map_put_direct(ava_hash_map*restrict map,
                                         size_t index,
-                                        ava_ulong orig_hash) {
-  ava_ulong hash = orig_hash;
+                                        ava_ulong hash) {
+  ava_ulong bias = 0;
   unsigned tries = 0;
   size_t ix;
   ava_bool suggest_rehash = ava_false;
 
   /* Find the first free slot */
   for (;;) {
-    ix = (tries + hash) & map->index->mask;
+    ix = ava_hash_map_hash_index(hash, bias, tries, map->index->mask);
     if (AVA_LIKELY(AVA_MAP_CURSOR_NONE == map->index->indices[ix])) break;
 
     /* Not free, move onto the next */
     ++tries;
-    hash >>= COLLISION_SHIFT_AMT;
+    if (LANE_SIZE == tries)
+      bias = hash >> COLLISION_SHIFT_AMT;
+    else if (0 == tries % LANE_SIZE)
+      bias >>= COLLISION_SHIFT_AMT;
 
     /* If using the weaker ASCII9 hash and there've been too many collisions,
      * give up and rehash with the stronger value hash.
