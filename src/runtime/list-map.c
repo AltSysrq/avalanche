@@ -177,13 +177,13 @@ static ava_map_value ava_list_map_map_add(ava_map_value this,
   }
 }
 
-static ava_map_value ava_list_map_map_delete(ava_map_value this,
+static ava_map_value ava_list_map_map_remove(ava_map_value this,
                                              ava_map_cursor cursor) {
   if (1 == ava_list_map_map_npairs(this)) {
     return ava_empty_map();
   } else {
     return ava_list_map_redelegate(
-      this, DELEGATE(this, delete,, cursor*2, cursor*2+2));
+      this, DELEGATE(this, remove,, cursor*2, cursor*2+2));
   }
 }
 
@@ -210,9 +210,9 @@ static ava_list_value ava_list_map_list_concat(ava_list_value this,
   return DELEGATE(this, concat,, that);
 }
 
-static ava_list_value ava_list_map_list_delete(ava_list_value this,
+static ava_list_value ava_list_map_list_remove(ava_list_value this,
                                                size_t begin, size_t end) {
-  return DELEGATE(this, delete,, begin, end);
+  return DELEGATE(this, remove,, begin, end);
 }
 
 static ava_list_value ava_list_map_list_set(ava_list_value this,

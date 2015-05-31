@@ -141,7 +141,7 @@ deftest(delete_pair_from_nonend) {
 
   cursor = ava_map_find(map, values[2]);
   ck_assert_int_ne(AVA_MAP_CURSOR_NONE, cursor);
-  map = ava_map_delete(map, cursor);
+  map = ava_map_remove(map, cursor);
 
   ck_assert_int_eq(2, ava_map_npairs(map));
   ck_assert_int_eq(4, ava_list_length(map.v));
@@ -167,7 +167,7 @@ deftest(delete_pair_from_end) {
   ck_assert_int_ne(AVA_MAP_CURSOR_NONE, cursor);
   cursor = ava_map_next(map, cursor);
   ck_assert_int_ne(AVA_MAP_CURSOR_NONE, cursor);
-  map = ava_map_delete(map, cursor);
+  map = ava_map_remove(map, cursor);
 
   ck_assert_int_eq(2, ava_map_npairs(map));
   ck_assert_int_eq(4, ava_list_length(map.v));
@@ -254,7 +254,7 @@ deftest(list_operations) {
                       ava_list_concat(
                         map, ava_value_of_cstring("xyzzy\nplugh")));
   assert_values_equal(ava_value_of_cstring("foo quux"),
-                      ava_list_delete(map, 1, 3));
+                      ava_list_remove(map, 1, 3));
   assert_values_equal(ava_value_of_cstring("foo bar plugh quux"),
                       ava_list_set(map, 2, ava_value_of_cstring("plugh")));
 }

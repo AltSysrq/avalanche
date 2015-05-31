@@ -91,10 +91,10 @@ ava_list_value ava_list_copy_append(ava_list_value list, ava_value elt);
  */
 ava_list_value ava_list_copy_concat(ava_list_value left, ava_list_value right);
 /**
- * Implementation of ava_list_trait.delete which copies the list into a new
+ * Implementation of ava_list_trait.remove which copies the list into a new
  * list of unspecified type.
  */
-ava_list_value ava_list_copy_delete(ava_list_value list,
+ava_list_value ava_list_copy_remove(ava_list_value list,
                                     size_t begin, size_t end);
 /**
  * Implementation of ava_list_trait.copy which copies the list into a new list

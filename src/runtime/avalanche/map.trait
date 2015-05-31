@@ -148,5 +148,5 @@ trait ava map {
     @return A map containing the same key/value pairs as this one, in the same
     order, except without the pair at the chosen index.
   }
-  method SELF delete {ava_map_cursor cursor} AVA_PURE
+  method SELF remove {ava_map_cursor cursor} AVA_PURE
 }

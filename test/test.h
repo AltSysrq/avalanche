@@ -33,8 +33,10 @@
 
 #define AVA__INTERNAL_INCLUDE 1
 #include "runtime/avalanche/defs.h"
+AVA_BEGIN_DECLS
 #include "runtime/avalanche/value.h"
 #include "runtime/avalanche/context.h"
+AVA_END_DECLS
 
 #define WORD(txt) ava_value_of_cstring(#txt)
 #define INT(n) ava_value_of_integer(n)

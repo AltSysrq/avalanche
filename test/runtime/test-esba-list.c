@@ -288,7 +288,7 @@ deftest(concat_with_incompatible_other_list) {
 deftest(noop_delete) {
   ava_value zero = ava_value_of_integer(0);
   ava_list_value list = ava_esba_list_of_raw(&zero, 1);
-  ava_list_value result = ava_list_delete(list, 1, 1);
+  ava_list_value result = ava_list_remove(list, 1, 1);
 
   ck_assert_int_eq(0, memcmp(&list, &result, sizeof(list)));
 }
@@ -299,7 +299,7 @@ deftest(delete_to_empty_list) {
     ava_value_of_integer(56),
   };
   ava_list_value list = ava_esba_list_of_raw(values, 2);
-  ava_list_value result = ava_list_delete(list, 0, 2);
+  ava_list_value result = ava_list_remove(list, 0, 2);
   ava_list_value empty = ava_empty_list();
 
   ck_assert_int_eq(0, memcmp(&empty, &result, sizeof(result)));
@@ -314,7 +314,7 @@ deftest(delete_from_begin) {
     ava_value_of_integer(4),
   };
   ava_list_value list = ava_esba_list_of_raw(values, 5);
-  ava_list_value result = ava_list_delete(list, 0, 2);
+  ava_list_value result = ava_list_remove(list, 0, 2);
 
   ck_assert_int_eq(3, ava_list_length(result));
   assert_values_equal(values[2], ava_list_index(result, 0));
@@ -331,7 +331,7 @@ deftest(delete_from_middle) {
     ava_value_of_integer(4),
   };
   ava_list_value list = ava_esba_list_of_raw(values, 5);
-  ava_list_value result = ava_list_delete(list, 2, 4);
+  ava_list_value result = ava_list_remove(list, 2, 4);
 
   ck_assert_int_eq(3, ava_list_length(result));
   assert_values_equal(values[0], ava_list_index(result, 0));
@@ -348,7 +348,7 @@ deftest(delete_from_end) {
     ava_value_of_integer(4),
   };
   ava_list_value list = ava_esba_list_of_raw(values, 5);
-  ava_list_value result = ava_list_delete(list, 3, 5);
+  ava_list_value result = ava_list_remove(list, 3, 5);
 
   ck_assert_int_eq(3, ava_list_length(result));
   assert_values_equal(values[0], ava_list_index(result, 0));

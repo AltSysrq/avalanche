@@ -14,33 +14,16 @@
  * CONNECTION WITH THE USE OR PERFORMANCE OF THIS SOFTWARE.
  */
 
+#include "test.c"
 
-#include "test.h"
+#include <runtime/avalanche.h>
 
-AVA_BEGIN_DECLS
-extern void ava_init(void);
-AVA_END_DECLS
+defsuite(cxx_include);
 
-const char* suite_names[1024];
-void (*suite_impls[1024])(Suite*);
-unsigned suite_num;
-
-int main(void) {
-  unsigned failures = 0;
-  Suite* suite;
-  SRunner* sr;
-  unsigned i;
-
-  ava_init();
-
-  for (i = 0; i < suite_num; ++i) {
-    suite = suite_create(suite_names[i]);
-    (*suite_impls[i])(suite);
-    sr = srunner_create(suite);
-    srunner_run_all(sr, CK_VERBOSE);
-    failures += srunner_ntests_failed(sr);
-    srunner_free(sr);
-  }
-
-  return (failures < 255? failures : 255);
+/* Just test that we can (a) include the public header files, and (b) link
+ * against the declared functions.
+ */
+deftest(cxx_link) {
+  void* ret = ava_alloc(5);
+  ck_assert_ptr_ne(NULL, ret);
 }

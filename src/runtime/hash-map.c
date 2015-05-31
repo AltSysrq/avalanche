@@ -1015,7 +1015,7 @@ static ava_map_value ava_hash_map_map_add(ava_map_value map,
   return ava_hash_map_combine(map, &this, length);
 }
 
-static ava_map_value ava_hash_map_map_delete(ava_map_value map,
+static ava_map_value ava_hash_map_map_remove(ava_map_value map,
                                              ava_map_cursor cursor) {
   ava_hash_map this = *(const ava_hash_map*)ava_value_attr(map.v);
   ava_ulong length = ava_value_ulong(map.v);
@@ -1160,9 +1160,9 @@ static ava_list_value ava_hash_map_list_concat(ava_list_value map,
   return ava_list_copy_concat(map, other);
 }
 
-static ava_list_value ava_hash_map_list_delete(ava_list_value map,
+static ava_list_value ava_hash_map_list_remove(ava_list_value map,
                                                size_t begin, size_t end) {
-  return ava_list_copy_delete(map, begin, end);
+  return ava_list_copy_remove(map, begin, end);
 }
 
 static ava_list_value ava_hash_map_list_set(ava_list_value map,

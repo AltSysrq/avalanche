@@ -238,7 +238,7 @@ static ava_list_value ava_array_list_list_concat(ava_list_value list,
   }
 }
 
-static ava_list_value ava_array_list_list_delete(
+static ava_list_value ava_array_list_list_remove(
   ava_list_value list, size_t begin, size_t end
 ) {
   const ava_array_list*restrict al = ava_value_attr(list.v);

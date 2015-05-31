@@ -85,7 +85,7 @@ trait ava list {
 
     Complexity: Amortised O(length)
   }
-  method SELF delete {size_t begin size_t end} AVA_PURE
+  method SELF remove {size_t begin size_t end} AVA_PURE
 
   doc {
     Returns a new list which contains the elements in this, except with the

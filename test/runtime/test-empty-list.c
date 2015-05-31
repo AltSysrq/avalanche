@@ -77,14 +77,14 @@ deftest(concats_to_other_list) {
 }
 
 deftest(permits_zero_to_zero_delete) {
-  ava_value result = ava_list_delete(ava_empty_list().v, 0, 0);
+  ava_value result = ava_list_remove(ava_empty_list().v, 0, 0);
   ava_value empty = ava_empty_list().v;
 
   ck_assert_int_eq(0, memcmp(&result, &empty, sizeof(result)));
 }
 
 deftest_signal(refuses_nonzero_delete, SIGABRT) {
-  force(ava_list_delete(ava_empty_list().v, 1, 1));
+  force(ava_list_remove(ava_empty_list().v, 1, 1));
 }
 
 deftest_signal(refuses_set, SIGABRT) {
@@ -117,7 +117,7 @@ deftest_signal(refuses_map_set, SIGABRT) {
 }
 
 deftest_signal(refuses_map_delete, SIGABRT) {
-  force(ava_map_delete(ava_empty_map(), 0).v);
+  force(ava_map_remove(ava_empty_map(), 0).v);
 }
 
 deftest(produces_singleton_map_on_map_add) {

@@ -74,7 +74,7 @@ static const ava_list_trait ava_list_proj_interleave_list_impl = {
   .slice = ava_list_copy_slice,
   .append = ava_list_copy_append,
   .concat = ava_list_copy_concat,
-  .delete = ava_list_copy_delete,
+  .remove = ava_list_copy_remove,
   .set = ava_list_copy_set,
 };
 
@@ -96,7 +96,7 @@ static const ava_list_trait ava_list_proj_demux_list_impl = {
   .slice = ava_list_copy_slice,
   .append = ava_list_copy_append,
   .concat = ava_list_copy_concat,
-  .delete = ava_list_copy_delete,
+  .remove = ava_list_copy_remove,
   .set = ava_list_copy_set,
 };
 
@@ -118,7 +118,7 @@ static const ava_list_trait ava_list_proj_group_list_impl = {
   .slice = ava_list_copy_slice,
   .append = ava_list_copy_append,
   .concat = ava_list_copy_concat,
-  .delete = ava_list_copy_delete,
+  .remove = ava_list_copy_remove,
   .set = ava_list_copy_set,
 };
 
