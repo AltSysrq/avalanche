@@ -20,6 +20,7 @@ runtime/esba.c \
 runtime/esba-list.c \
 runtime/exception.c \
 runtime/gen-integer.c \
+runtime/gen-integer-decimal.c \
 runtime/gen-lex.c \
 runtime/hash-map.c \
 runtime/hexes.c \
@@ -45,3 +46,7 @@ runtime/gen-integer.c: runtime/integer.c
 	$(AM_V_GEN)$(RE2C) --input custom -r $(RE2C_FLAGS) \
 		-oruntime/gen-integer.c \
 		runtime/integer.c
+
+runtime/gen-integer-decimal.c: runtime/generate-integer-decimal.c.tcl
+	$(AM_V_GEN)$(TCLSH) runtime/generate-integer-decimal.c.tcl \
+		>runtime/gen-integer-decimal.c

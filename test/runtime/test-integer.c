@@ -16,6 +16,7 @@
 #include "test.c"
 
 #include <stdlib.h>
+#include <stdio.h>
 
 #include "runtime/avalanche/exception.h"
 #include "runtime/avalanche/integer.h"
@@ -65,6 +66,23 @@ deftest(integer_max_to_string) {
 deftest(integer_min_to_string) {
   ck_assert_str_eq("-9223372036854775808",
                    int_to_str(-0x8000000000000000LL));
+}
+
+deftest(boundary_integers_to_string) {
+  signed long long i;
+  unsigned digits;
+  char buf[25];
+
+  for (i = 1, digits = 1; digits < 24; i *= 10, ++digits) {
+    snprintf(buf, sizeof(buf), "%lld", i-1);
+    ck_assert_str_eq(buf, int_to_str(i-1));
+    snprintf(buf, sizeof(buf), "%lld", i);
+    ck_assert_str_eq(buf, int_to_str(i));
+    snprintf(buf, sizeof(buf), "%lld", -i);
+    ck_assert_str_eq(buf, int_to_str(-i));
+    snprintf(buf, sizeof(buf), "%lld", -i+1);
+    ck_assert_str_eq(buf, int_to_str(-i+1));
+  }
 }
 
 deftest(empty_string_to_default_integer) {
