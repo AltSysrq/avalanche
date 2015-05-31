@@ -52,12 +52,6 @@ deftest(stringification_produces_normal_form) {
                    ava_string_to_cstring(ava_to_string(list.v)));
 }
 
-deftest(value_weight_nonzero) {
-  ava_list_value list = ava_array_list_of_raw(values, 4);
-
-  ck_assert_int_lt(0, ava_value_weight(list.v));
-}
-
 deftest(simple_indexing) {
   ava_list_value list = ava_array_list_of_raw(values, 4);
   unsigned i;

@@ -87,17 +87,12 @@ static ava_string ava_string_value_to_string(ava_value value) {
   return ava_value_str(value);
 }
 
-static size_t ava_string_value_value_weight(ava_value value) {
-  return ava_string_length(ava_value_str(value));
-}
-
 const ava_value_trait ava_string_type = {
   .header = { .tag = &ava_value_trait_tag, .next = NULL },
   .name = "string",
   .to_string = ava_string_value_to_string,
   .string_chunk_iterator = ava_singleton_string_chunk_iterator,
   .iterate_string_chunk = ava_iterate_singleton_string_chunk,
-  .value_weight = ava_string_value_value_weight,
 };
 
 /* The string representation will become a bit more interesting once we have
@@ -256,7 +251,7 @@ ava_ulong ava_value_hash(ava_value value) {
     v2 = 0x6c7967656e657261ULL, v3 = 0x7465646279746573ULL,
     b, m;
   size_t i, n, rem, strlen;
-  char tmpbuf[16] AVA_STR_ALIGN;
+  char tmpbuf[16] AVA_STR_ALIGN = { 0 };
   const ava_ulong*restrict data;
 
   /* Lines 42--48 */

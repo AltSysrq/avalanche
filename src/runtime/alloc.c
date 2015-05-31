@@ -62,7 +62,6 @@ static inline void* ava_oom_if_null(void* ptr) {
 void ava_heap_init(void) {
 #ifndef AVA_NOGC
   GC_INIT();
-  GC_enable_incremental();
 #endif
 }
 

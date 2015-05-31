@@ -31,7 +31,6 @@ static ava_string ava_empty_list_value_to_string(ava_value);
 static ava_datum ava_empty_list_value_string_chunk_iterator(ava_value);
 static ava_string ava_empty_list_value_iterate_string_chunk(
   ava_datum*restrict, ava_value);
-static size_t ava_empty_list_value_value_weight(ava_value);
 
 static const ava_value_trait ava_empty_list_generic_impl = {
   .header = { .tag = &ava_value_trait_tag, .next = NULL },
@@ -39,7 +38,6 @@ static const ava_value_trait ava_empty_list_generic_impl = {
   .to_string = ava_empty_list_value_to_string,
   .string_chunk_iterator = ava_empty_list_value_string_chunk_iterator,
   .iterate_string_chunk = ava_empty_list_value_iterate_string_chunk,
-  .value_weight = ava_empty_list_value_value_weight,
 };
 
 AVA_MAP_DEFIMPL(ava_empty_list, &ava_empty_list_generic_impl)
@@ -69,10 +67,6 @@ static ava_string ava_empty_list_value_iterate_string_chunk(
   ava_datum*restrict it, ava_value el
 ) {
   return AVA_ABSENT_STRING;
-}
-
-static size_t ava_empty_list_value_value_weight(ava_value el) {
-  return 0;
 }
 
 static size_t ava_empty_list_list_length(ava_list_value el) {

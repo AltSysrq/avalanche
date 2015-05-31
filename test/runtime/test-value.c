@@ -111,12 +111,6 @@ deftest(singleton_chunk_iterator) {
   ck_assert_str_eq("avalanches", ava_string_to_cstring(accum));
 }
 
-deftest(weight_of_string_is_its_length) {
-  ava_value value = ava_value_of_string(AVA_ASCII9_STRING("avalanche"));
-
-  ck_assert_int_eq(9, ava_value_weight(value));
-}
-
 deftest(identical_string_values_equal) {
   AVA_STATIC_STRING(sfoo, "foo");
   ck_assert(ava_value_equal(ava_value_of_string(AVA_ASCII9_STRING("foo")),

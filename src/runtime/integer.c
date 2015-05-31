@@ -29,10 +29,9 @@
 #include "avalanche/integer.h"
 #include "-hexes.h"
 #include "-integer-fast-dec.h"
+#include "-integer-decimal.h"
 #include "-integer-parse.h"
-
-static ava_string ava_integer_to_string(ava_value value) AVA_PURE;
-static size_t ava_integer_value_weight(ava_value value) AVA_CONSTFUN;
+#include "-integer-tostring.h"
 
 const ava_value_trait ava_integer_type = {
   .header = { .tag = &ava_value_trait_tag, .next = NULL },
@@ -40,38 +39,7 @@ const ava_value_trait ava_integer_type = {
   .to_string = ava_integer_to_string,
   .string_chunk_iterator = ava_singleton_string_chunk_iterator,
   .iterate_string_chunk = ava_iterate_singleton_string_chunk,
-  .value_weight = ava_integer_value_weight,
 };
-
-static ava_string ava_integer_to_string(ava_value value) {
-  char str[20];
-  ava_bool negative = (ava_value_slong(value) < 0);
-  ava_ulong i = negative? -ava_value_slong(value) : ava_value_slong(value);
-  unsigned ix = sizeof(str);
-
-  /* Need a special case for 0 anyway, so handle all single-digit integers the
-   * same way.
-   */
-  if (ava_value_slong(value) >= 0 && ava_value_slong(value) < 10) {
-    return (ava_string) {
-      .ascii9 = 1ULL | ((ava_value_slong(value) + '0') << 57)
-    };
-  }
-
-  while (i) {
-    str[--ix] = '0' + (i % 10);
-    i /= 10;
-  }
-
-  if (negative)
-    str[--ix] = '-';
-
-  return ava_string_of_bytes(str + ix, sizeof(str) - ix);
-}
-
-static size_t ava_integer_value_weight(ava_value value) {
-  return 0;
-}
 
 ava_integer ava_integer_of_noninteger_value(
   ava_value value, ava_integer dfault

@@ -45,10 +45,6 @@ deftest(string_chunk_iterator_is_empty) {
                                      &it, ava_empty_list().v)));
 }
 
-deftest(is_weightless) {
-  ck_assert_int_eq(0, ava_value_weight(ava_empty_list().v));
-}
-
 deftest(has_length_zero) {
   ck_assert_int_eq(0, ava_list_length(ava_empty_list().v));
 }

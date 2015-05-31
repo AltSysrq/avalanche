@@ -329,25 +329,6 @@ typedef struct {
    */
   ava_string (*iterate_string_chunk)(ava_datum*restrict it,
                                      ava_value value);
-
-  /**
-   * Queries the "cost" of maintaining a reference to the given value.
-   *
-   * Do not call this function directly; use ava_value_weight() instead.
-   *
-   * The weight of a value approximates the cost of incorrectly maintaining a
-   * reference to the value; this is considered to be in "bytes" for the
-   * purposes of callibration.
-   *
-   * Value weights are generally used to evaluate between the options of
-   * copying a larger data structure (so that any logically dead references can
-   * be garbage collected) or marking a value as deleted without removing it
-   * (which could cause a logically unreachable reference to remain).
-   *
-   * Weights are not necessarily constant for a value; internal operations may
-   * make the value become lighter or heavier dynamically.
-   */
-  size_t (*value_weight)(ava_value);
 } ava_value_trait;
 
 /**
@@ -396,16 +377,6 @@ static inline ava_string ava_iterate_string_chunk(
 ) {
   return AVA_GET_ATTRIBUTE(value, ava_value_trait)
     ->iterate_string_chunk(it, value);
-}
-
-/**
- * Returns the approximate "weight" of the given value.
- *
- * @see ava_value_trait.value_weight()
- */
-static inline size_t ava_value_weight(ava_value value) {
-  return AVA_GET_ATTRIBUTE(value, ava_value_trait)
-    ->value_weight(value);
 }
 
 /**
