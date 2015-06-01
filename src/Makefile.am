@@ -23,6 +23,9 @@ runtime/gen-integer.c \
 runtime/gen-integer-decimal.c \
 runtime/gen-lex.c \
 runtime/hash-map.c \
+runtime/hash-map-16.c \
+runtime/hash-map-32.c \
+runtime/hash-map-64.c \
 runtime/hexes.c \
 runtime/init.c \
 runtime/integer-fast-dec.c \
