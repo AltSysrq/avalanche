@@ -112,6 +112,8 @@ typedef intptr_t      ava_intptr;
 
 #define AVA_GLUE(x,y) AVA__GLUE(x,y)
 #define AVA__GLUE(x,y) x##y
+#define AVA_STRINGIFY(x) AVA__STRINGIFY(x)
+#define AVA__STRINGIFY(x) #x
 
 typedef int ava_bool;
 #define ava_true 1

@@ -68,7 +68,7 @@ deftest(hash_map_from_many_values) {
   ava_map_value map = ava_map_of_values(&value, 0, &value, 0, 32);
 
   ck_assert_int_eq(32, ava_map_npairs(map));
-  ck_assert_str_eq("hash-map", map_type(map));
+  ck_assert_str_eq("hash-map-ava_ushort", map_type(map));
 }
 
 deftest(string_to_empty_map) {
@@ -94,6 +94,6 @@ deftest(string_to_hash_map) {
     ava_value_of_cstring(
       "0 0 1 1 2 2 3 3 4 4 5 5 6 6 7 7 8 8"));
 
-  ck_assert_str_eq("hash-map", map_type(map));
+  ck_assert_str_eq("hash-map-ava_ushort", map_type(map));
   ck_assert_int_eq(9, ava_map_npairs(map));
 }

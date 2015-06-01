@@ -57,4 +57,32 @@ ava_map_value ava_hash_map_of_list(ava_list_value list) AVA_PURE;
  */
 const char* ava_hash_map_get_hash_function(ava_map_value map);
 
+/* Specialised versions of the below. Generally they should not be used
+ * directly.
+ */
+ava_map_value ava_hash_map_of_raw_ava_ushort(
+  const ava_value*restrict keys,
+  size_t key_stride,
+  const ava_value*restrict values,
+  size_t value_stride,
+  size_t count);
+ava_map_value ava_hash_map_of_list_ava_ushort(ava_list_value list) AVA_PURE;
+const char* ava_hash_map_get_hash_function_ava_ushort(ava_map_value map);
+ava_map_value ava_hash_map_of_raw_ava_uint(
+  const ava_value*restrict keys,
+  size_t key_stride,
+  const ava_value*restrict values,
+  size_t value_stride,
+  size_t count);
+ava_map_value ava_hash_map_of_list_ava_uint(ava_list_value list) AVA_PURE;
+const char* ava_hash_map_get_hash_function_ava_uint(ava_map_value map);
+ava_map_value ava_hash_map_of_raw_ava_ulong(
+  const ava_value*restrict keys,
+  size_t key_stride,
+  const ava_value*restrict values,
+  size_t value_stride,
+  size_t count);
+ava_map_value ava_hash_map_of_list_ava_ulong(ava_list_value list) AVA_PURE;
+const char* ava_hash_map_get_hash_function_ava_ulong(ava_map_value map);
+
 #endif /* AVA_RUNTIME__HASH_MAP_H_ */
