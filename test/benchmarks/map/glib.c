@@ -6,6 +6,30 @@
 #include <stdlib.h>
 #include <glib.h>
 
+/* Not using g_int64_hash because it's implementation is
+ *   *(const g_int64*)v
+ * which makes the hash table degenerate into a dynamic array.
+ *
+ * As this defeats the purpose of the benchmark, use a somewhat more complex
+ * (but still cheap) hash function.
+ */
+static guint hash_ulong(gconstpointer vp) {
+  unsigned long long v = *(const unsigned long long*)vp;
+  unsigned h;
+  v ^= v >> 32;
+  h = v;
+  /* Thomas Wang's algorithm from
+   * http://burtleburtle.net/bob/hash/integer.html
+   */
+  h += ~(h << 15);
+  h ^=  (h >> 10);
+  h +=  (h << 3);
+  h ^=  (h >> 6);
+  h += ~(h << 11);
+  h ^=  (h >> 16);
+  return h;
+}
+
 static unsigned long long* onto_heap(unsigned long long i) {
   /* This maybe makes the comparison less fair */
   unsigned long long* dst = malloc(sizeof(unsigned long long));
