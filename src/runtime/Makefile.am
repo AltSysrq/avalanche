@@ -14,6 +14,8 @@ avalanche/list-proj.h \
 avalanche/list-trait.h \
 avalanche/map.h \
 avalanche/map-trait.h \
+avalanche/pointer.h \
+avalanche/pointer-trait.h \
 avalanche/string.h \
 avalanche/value.h
 
@@ -28,3 +30,7 @@ avalanche/list-trait.h: avalanche/generate-trait.tcl avalanche/list.trait
 avalanche/map-trait.h: avalanche/generate-trait.tcl avalanche/map.trait
 	$(AM_V_GEN)$(TCLSH) avalanche/generate-trait.tcl avalanche/map.trait \
 		>avalanche/map-trait.h
+
+avalanche/pointer-trait.h: avalanche/generate-trait.tcl avalanche/pointer.trait
+	$(AM_V_GEN)$(TCLSH) avalanche/generate-trait.tcl avalanche/pointer.trait \
+		>avalanche/pointer-trait.h

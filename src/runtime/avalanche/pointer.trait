@@ -1,0 +1,81 @@
+#-
+# Copyright (c) 2015, Jason Lingle
+#
+# Permission to  use, copy,  modify, and/or distribute  this software  for any
+# purpose  with or  without fee  is hereby  granted, provided  that the  above
+# copyright notice and this permission notice appear in all copies.
+#
+# THE SOFTWARE  IS PROVIDED "AS  IS" AND  THE AUTHOR DISCLAIMS  ALL WARRANTIES
+# WITH  REGARD   TO  THIS  SOFTWARE   INCLUDING  ALL  IMPLIED   WARRANTIES  OF
+# MERCHANTABILITY AND FITNESS. IN NO EVENT  SHALL THE AUTHOR BE LIABLE FOR ANY
+# SPECIAL,  DIRECT,   INDIRECT,  OR  CONSEQUENTIAL  DAMAGES   OR  ANY  DAMAGES
+# WHATSOEVER RESULTING FROM LOSS OF USE, DATA OR PROFITS, WHETHER IN AN ACTION
+# OF  CONTRACT, NEGLIGENCE  OR OTHER  TORTIOUS ACTION,  ARISING OUT  OF OR  IN
+# CONNECTION WITH THE USE OR PERFORMANCE OF THIS SOFTWARE.
+
+doc {
+  A pointer value is a weakly-typed native pointer exposed to Avalanche.
+
+  A pointer may either be tagged (corresponding to a non-void pointer) or
+  untagged (a void pointer). Pointers also track whether or not they are const.
+
+  A pointer is comprised of a two-element list. The first element contains the
+  tag and the constness; the second element is an integer indicating the
+  address of the pointer.
+
+  Constness is indicated by the final character on the first element; if it is
+  "*", the pointer is mutable; if it is "&", the pointer is const. Other
+  characters in this position are illegal. If other characters precede the
+  constness marker, that string is the tag; otherwise, the pointer is untagged.
+
+  Note that these pointers are invisible to the GC; they will not prevent the
+  pointee from being garbage-collected, and thus cannot safely be used with
+  GC-allocated values.
+
+  Normal form of a pointer is normal form of the two-element list, where the
+  second element is "null" if equal to zero, and an "x"-prefixed uppercase
+  hexadecimal left-padded with zeroes such that all pointers are the same
+  width.
+}
+trait ava pointer {
+  doc {
+    Returns whether this pointer is const.
+  }
+  method ava_bool is_const {} AVA_PURE
+  doc {
+    Returns the tag on this pointer.
+
+    If the pointer has no tag, returns AVA_EMPTY_STRING.
+  }
+  method ava_string get_tag {} AVA_PURE
+  doc {
+    Returns a pointer identical to this pointer, but with the specified
+    constness.
+
+    @param is_const The new constness of the pointer.
+  }
+  method SELF const_cast_to {ava_bool is_const} AVA_PURE
+  doc {
+    Returns a pointer identical to this pointer, but with the specified tag.
+
+    @param tag The new tag for the pointer.
+  }
+  method SELF reinterpret_cast_to {ava_string tag} AVA_PURE
+  doc {
+    Returns a mutable C pointer to this pointer's pointee.
+
+    @throw ava_error_exception (const-pointer) if this pointer is const.
+    @throw ava_error_exception (incompatible-pointer) if require_tag is not the
+    empty string and the pointer tag is a non-empty string not equal to
+    require_tag.
+  }
+  method void* get_mutable {ava_string require_tag} AVA_PURE
+  doc {
+    Returns a const C pointer to this pontier's pointee.
+
+    @throw ava_error_exception (incompatible-pointer) if require_tag is not the
+    empty string and the pointer tag is a non-empty string not equal to
+    require_tag.
+  }
+  method {const void*} get_const {ava_string require_tag} AVA_PURE
+}

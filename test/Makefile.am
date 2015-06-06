@@ -15,6 +15,7 @@ runtime/test-list-map.t \
 runtime/test-list-proj.t \
 runtime/test-list.t \
 runtime/test-map.t \
+runtime/test-pointer.t \
 runtime/test-string.t \
 runtime/test-value.t
 
@@ -40,6 +41,7 @@ runtime_test_lex_t_SOURCES = runtime/test-lex.c
 runtime_test_list_map_t_SOURCES = runtime/test-list-map.c
 runtime_test_list_proj_t_SOURCES = runtime/test-list-proj.c
 runtime_test_list_t_SOURCES = runtime/test-list.c
+runtime_test_pointer_t_SOURCES = runtime/test-pointer.c
 runtime_test_string_t_SOURCES = runtime/test-string.c
 runtime_test_value_t_SOURCES = runtime/test-value.c
 

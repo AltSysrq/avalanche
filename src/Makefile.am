@@ -33,6 +33,7 @@ runtime/list.c \
 runtime/list-map.c \
 runtime/list-proj.c \
 runtime/map.c \
+runtime/pointer.c \
 runtime/string.c \
 runtime/value.c
 libavart_la_LIBADD = $(LIBUNWIND_LIBS)
