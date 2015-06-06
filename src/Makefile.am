@@ -15,6 +15,7 @@ libavart_la_SOURCES = \
 runtime/alloc.c \
 runtime/array-list.c \
 runtime/context.c \
+runtime/dtoa.c \
 runtime/empty-list.c \
 runtime/esba.c \
 runtime/esba-list.c \

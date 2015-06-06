@@ -54,6 +54,8 @@ AC_TYPE_INT16_T
 AC_TYPE_INT32_T
 AC_TYPE_INT64_T
 AC_TYPE_INTPTR_T
+AC_CHECK_SIZEOF([int])
+AC_CHECK_SIZEOF([long])
 
 # Checks for library functions.
 AC_CHECK_FUNCS([setrlimit arc4random_buf])
