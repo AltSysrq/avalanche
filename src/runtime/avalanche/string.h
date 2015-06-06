@@ -197,6 +197,15 @@ static inline ava_bool ava_string_is_present(ava_string str) {
 }
 
 /**
+ * Returns whether the given string is empty.
+ */
+static inline ava_bool ava_string_is_empty(ava_string str) AVA_PURE;
+static inline ava_bool ava_string_is_empty(ava_string str) {
+  return 1 == str.ascii9 ||
+    (0 == (str.ascii9 & 1) && 0 == str.twine->length);
+}
+
+/**
  * Returns an ava_string whose contents are that of the given NUL-terminated
  * string. The ava_string will hold no references to the original string, so it
  * need not be managed by the GC or be immutable.
@@ -309,5 +318,21 @@ ava_string ava_string_concat(ava_string, ava_string) AVA_PURE;
  * ava_value_hash().
  */
 ava_uint ava_ascii9_hash(ava_ascii9_string str) AVA_CONSTFUN;
+
+/**
+ * Compares two strings, like strcmp().
+ *
+ * This function operates on unsigned bytes in the string regardless of the
+ * signedness of the platform's char type, such that 'a\x80' is always ordered
+ * after 'ab'.
+ *
+ * If one string is a prefix of the other, the shorter one is considered
+ * lexicographically first.
+ *
+ * @return Zero if the two strings are exactly equal; a negative integer if a
+ * is lexicographically before b; a positive integer if a is lexicographically
+ * before a.
+ */
+signed ava_strcmp(ava_string a, ava_string b) AVA_PURE;
 
 #endif /* AVA_RUNTIME_STRING_H_ */

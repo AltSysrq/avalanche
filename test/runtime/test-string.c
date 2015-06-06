@@ -577,3 +577,70 @@ deftest(ascii9_hash) {
   ck_assert_int_ne(ava_ascii9_hash(AVA_ASCII9_STRING("foo").ascii9),
                    ava_ascii9_hash(AVA_ASCII9_STRING("bar").ascii9));
 }
+
+deftest(ascii9_strcmp_equal) {
+  ava_string str = AVA_ASCII9_STRING("foo");
+
+  ck_assert_int_eq(0, ava_strcmp(str, str));
+}
+
+deftest(ascii9_strcmp_different) {
+  ava_string a = AVA_ASCII9_STRING("foo"), b = AVA_ASCII9_STRING("bar");
+
+  ck_assert_int_lt(0, ava_strcmp(a, b));
+  ck_assert_int_gt(0, ava_strcmp(b, a));
+}
+
+deftest(ascii9_strcmp_prefix) {
+  ava_string a = AVA_ASCII9_STRING("foo"), b = AVA_ASCII9_STRING("food");
+
+  ck_assert_int_gt(0, ava_strcmp(a, b));
+  ck_assert_int_lt(0, ava_strcmp(b, a));
+}
+
+deftest(twine_strcmp_equal) {
+  AVA_STATIC_STRING(str, "avalanches");
+
+  ck_assert_int_eq(0, ava_strcmp(str, str));
+}
+
+deftest(twine_strcmp_different) {
+  AVA_STATIC_STRING(a, "avalanches");
+  AVA_STATIC_STRING(b, "landslides");
+
+  ck_assert_int_gt(0, ava_strcmp(a, b));
+  ck_assert_int_lt(0, ava_strcmp(b, a));
+}
+
+deftest(twine_strcmp_prex) {
+  AVA_STATIC_STRING(a, "avalanches");
+  AVA_STATIC_STRING(b, "avalanches'");
+
+  ck_assert_int_gt(0, ava_strcmp(a, b));
+  ck_assert_int_lt(0, ava_strcmp(b, a));
+}
+
+deftest(mixed_strcmp) {
+  AVA_STATIC_STRING(a, "avalanche");
+  ava_string b = AVA_ASCII9_STRING("avalanche");
+
+  ck_assert_int_eq(0, ava_strcmp(a, b));
+}
+
+deftest(is_empty_ascii9_empty) {
+  ck_assert(ava_string_is_empty(AVA_EMPTY_STRING));
+}
+
+deftest(is_empty_ascii9_nonempty) {
+  ck_assert(!ava_string_is_empty(AVA_ASCII9_STRING("foo")));
+}
+
+deftest(is_empty_twine_empty) {
+  AVA_STATIC_STRING(str, "");
+  ck_assert(ava_string_is_empty(str));
+}
+
+deftest(is_empty_twine_nonempty) {
+  AVA_STATIC_STRING(str, "avalanches");
+  ck_assert(!ava_string_is_empty(str));
+}

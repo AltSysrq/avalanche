@@ -423,6 +423,27 @@ ava_string ava_string_slice(ava_string str, size_t begin, size_t end) {
   return ret;
 }
 
+signed ava_strcmp(ava_string a, ava_string b) {
+  char atmp[AVA_STR_TMPSZ], btmp[AVA_STR_TMPSZ];
+  const char*restrict ac, *restrict bc;
+  size_t n, alen, blen;
+  signed cmp;
+
+  if (ava_string_is_ascii9(a) && ava_string_is_ascii9(b))
+    return (a.ascii9 > b.ascii9) - (a.ascii9 < b.ascii9);
+
+  ac = ava_string_to_cstring_buff(atmp, a);
+  bc = ava_string_to_cstring_buff(btmp, b);
+  alen = ava_string_length(a);
+  blen = ava_string_length(b);
+  n = alen < blen? alen : blen;
+  cmp = memcmp(ac, bc, n);
+
+  if (cmp) return cmp;
+
+  return (alen > blen) - (alen < blen);
+}
+
 static inline ava_twine_tag ava_twine_get_tag(const void* body) {
   return (ava_intptr)body & 0x7;
 }
