@@ -1825,7 +1825,7 @@ gethex( CONST char **sp, U *rvp, int rounding, int sign)
 			}
 		decpt = s += i;
 #else
-		if (*s != '.')
+		if (*s != '.' && *s != ',')
 			goto pcheck;
 		decpt = ++s;
 #endif
@@ -1848,7 +1848,7 @@ gethex( CONST char **sp, U *rvp, int rounding, int sign)
 			}
 		decpt = s += i;
 #else
-	if (*s == '.' && !decpt) {
+	if ((*s == '.' || *s == ',') && !decpt) {
 		decpt = ++s;
 #endif
 		while(hexdig[*s])
@@ -1949,7 +1949,7 @@ gethex( CONST char **sp, U *rvp, int rounding, int sign)
 			continue;
 			}
 #else
-		if (*--s1 == '.')
+		if (*--s1 == '.' || *--s1 == ',')
 			continue;
 #endif
 		if (n == ULbits) {
@@ -2598,7 +2598,7 @@ strtod
 			}
 		}
 #endif
-	if (c == '.') {
+	if (c == '.' || c == ',') {
 		c = *++s;
 		bc.dp1 = s - s0;
 		bc.dplen = bc.dp1 - bc.dp0;

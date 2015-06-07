@@ -93,6 +93,22 @@ deftest(accepts_neg_infinity) {
   ck_assert(r < 0.0);
 }
 
+deftest(accepts_comma_as_decimal_at_start) {
+  assert_real_eq(0.1, of_cstring(",1", 0));
+}
+
+deftest(accepts_comma_as_decimal_at_end) {
+  assert_real_eq(1.0, of_cstring("1,", 0));
+}
+
+deftest(accepts_comma_as_decimal_in_middle) {
+  assert_real_eq(3.14, of_cstring("3,14", 0));
+}
+
+deftest(accepts_comma_as_decimal_with_exponentiation) {
+  assert_real_eq(314.0, of_cstring("3,14e2", 0));
+}
+
 deftest(real_of_real) {
   assert_real_eq(3.14, ava_real_of_value(ava_value_of_real(3.14), 0));
 }
