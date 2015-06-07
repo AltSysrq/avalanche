@@ -218,6 +218,17 @@ static inline ava_value ava_value_with_ulong(
 }
 
 /**
+ * Constructs a value using the given real as its value.
+ */
+static inline ava_value ava_value_with_real(
+  const void* attr, ava_real r
+) {
+  union { ava_ulong l; ava_real r; } u;
+  u.r = r;
+  return ava_value_with_ulong(attr, u.l);
+}
+
+/**
  * Returns the root attribute on the given ava_value.
  */
 static inline const void* ava_value_attr(ava_value v) {
@@ -253,6 +264,15 @@ static inline ava_slong ava_value_slong(ava_value v) {
  */
 static inline ava_ulong ava_value_ulong(ava_value v) {
   return AVA_VALUE_SUB(v, 1);
+}
+
+/**
+ * Returns the datum of the given ava_value interpreted as a real.
+ */
+static inline ava_real ava_value_real(ava_value v) {
+  union { ava_ulong l; ava_real r; } u;
+  u.l = ava_value_ulong(v);
+  return u.r;
 }
 
 /**

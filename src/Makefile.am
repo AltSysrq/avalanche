@@ -15,6 +15,7 @@ libavart_la_SOURCES = \
 runtime/alloc.c \
 runtime/array-list.c \
 runtime/context.c \
+runtime/dtoa.c \
 runtime/empty-list.c \
 runtime/esba.c \
 runtime/esba-list.c \
@@ -34,6 +35,7 @@ runtime/list-map.c \
 runtime/list-proj.c \
 runtime/map.c \
 runtime/pointer.c \
+runtime/real.c \
 runtime/string.c \
 runtime/value.c
 libavart_la_LIBADD = $(LIBUNWIND_LIBS)

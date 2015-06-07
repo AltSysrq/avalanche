@@ -13,37 +13,16 @@
  * OF  CONTRACT, NEGLIGENCE  OR OTHER  TORTIOUS ACTION,  ARISING OUT  OF OR  IN
  * CONNECTION WITH THE USE OR PERFORMANCE OF THIS SOFTWARE.
  */
-#ifndef AVA_AVALANCHE_H_
-#define AVA_AVALANCHE_H_
+#ifndef AVA_RUNTIME__INTERNAL_DEFS_H_
+#define AVA_RUNTIME__INTERNAL_DEFS_H_
 
-#define AVA__INTERNAL_INCLUDE 1
+#if defined(__GNUC__) && defined(__SSE2__) && !defined(__clang__)
+#define AVA_SPINLOOP __builtin_ia32_pause()
+#elif defined(__SSE2__) && defined(__clang__)
+/* Strangely, clang lacks the above builtin */
+#define AVA_SPINLOOP asm volatile ("pause" : )
+#else
+#define AVA_SPINLOOP
+#endif
 
-#include "avalanche/defs.h"
-
-AVA_BEGIN_DECLS
-
-#include "avalanche/alloc.h"
-#include "avalanche/string.h"
-#include "avalanche/lex.h"
-#include "avalanche/value.h"
-#include "avalanche/integer.h"
-#include "avalanche/real.h"
-#include "avalanche/exception.h"
-#include "avalanche/context.h"
-#include "avalanche/list.h"
-#include "avalanche/list-proj.h"
-#include "avalanche/map.h"
-#include "avalanche/pointer.h"
-
-/**
- * Initialises the avalanche runtime.
- *
- * This should be called exactly once at process startup.
- */
-void ava_init(void);
-
-AVA_END_DECLS
-
-#undef AVA__INTERNAL_INCLUDE
-
-#endif /* AVA_AVALANCHE_H_ */
+#endif /* AVA_RUNTIME__INTERNAL_DEFS_H_ */
