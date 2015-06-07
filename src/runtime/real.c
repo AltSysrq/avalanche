@@ -37,9 +37,12 @@ const ava_value_trait ava_real_type = {
 };
 
 ava_real ava_real_of_nonnumeric_value(ava_value value, ava_real dfault) {
-  const char* str = ava_string_to_cstring(ava_to_string(value));
+  char tmp[AVA_STR_TMPSZ];
+  const char* str;
   char* end;
   ava_real ret;
+
+  str = ava_string_to_cstring_buff(tmp, ava_to_string(value));
 
   /* Skip past any whitespace */
   while (*str &&
