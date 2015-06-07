@@ -104,19 +104,27 @@ ava_pointer_value ava_pointer_of_proto(
 ava_pointer_value ava_pointer_of_list(ava_list_value list) {
   AVA_STATIC_STRING(incorrect_length,
                     "List of non-2 length cannot be interpreted as pointer.");
-  AVA_STATIC_STRING(bad_proto,
-                    "Pointer prototype must end with '*' or '&'.");
-  ava_pointer_prototype*restrict prototype;
-  ava_string protostr, tag;
-  char constness;
-  ava_bool is_const;
   ava_intptr ptr;
 
   if (2 != ava_list_length(list))
     ava_throw(&ava_format_exception, ava_value_of_string(incorrect_length),
               NULL);
+  ptr = (ava_intptr)ava_integer_of_value(ava_list_index(list, 1), 0);
 
-  protostr = ava_to_string(ava_list_index(list, 0));
+  return ava_pointer_of_proto(
+    ava_pointer_prototype_parse(
+      ava_to_string(ava_list_index(list, 0))),
+    (void*)ptr);
+}
+
+const ava_pointer_prototype* ava_pointer_prototype_parse(ava_string protostr) {
+  ava_pointer_prototype*restrict prototype;
+  ava_string tag;
+  char constness;
+  ava_bool is_const;
+
+  AVA_STATIC_STRING(bad_proto,
+                    "Pointer prototype must end with '*' or '&'.");
 
   if (ava_string_is_empty(protostr))
     ava_throw(&ava_format_exception, ava_value_of_string(bad_proto), NULL);
@@ -131,18 +139,17 @@ ava_pointer_value ava_pointer_of_list(ava_list_value list) {
   }
 
   tag = ava_string_slice(protostr, 0, ava_string_length(protostr) - 1);
-  ptr = (ava_intptr)ava_integer_of_value(ava_list_index(list, 1), 0);
 
   if (ava_string_is_empty(tag))
-    return ava_pointer_of_proto(is_const? &ava_pointer_proto_const_void :
-                                &ava_pointer_proto_mut_void, (void*)ptr);
+    return is_const?
+      &ava_pointer_proto_const_void : &ava_pointer_proto_mut_void;
 
   prototype = AVA_NEW(ava_pointer_prototype);
   prototype->header.tag = &ava_pointer_prototype_tag;
   prototype->header.next = (const ava_attribute*)&ava_pointer_pointer_impl;
   prototype->tag = tag;
   prototype->is_const = is_const;
-  return ava_pointer_of_proto(prototype, (void*)ptr);
+  return prototype;
 }
 
 #define PROTO(this) ((const ava_pointer_prototype*restrict)ava_value_attr(this))
@@ -262,9 +269,7 @@ static ava_value ava_pointer_list_index(ava_list_value this,
 
   if (0 == index) {
     return ava_value_of_string(
-      ava_string_concat(PROTO(this.v)->tag,
-                        PROTO(this.v)->is_const?
-                        AVA_ASCII9_STRING("&") : AVA_ASCII9_STRING("*")));
+      ava_pointer_prototype_to_string(PROTO(this.v)));
   } else {
     v = (ava_intptr)deobfuscate(ava_value_ulong(this.v));
 
@@ -279,6 +284,14 @@ static ava_value ava_pointer_list_index(ava_list_value this,
 
     return ava_value_of_string(ava_string_of_bytes(buf, sizeof(buf)));
   }
+}
+
+ava_string ava_pointer_prototype_to_string(
+  const ava_pointer_prototype* prototype
+) {
+  return ava_string_concat(prototype->tag,
+                           prototype->is_const?
+                           AVA_ASCII9_STRING("&") : AVA_ASCII9_STRING("*"));
 }
 
 static ava_list_value ava_pointer_list_slice(ava_list_value this,

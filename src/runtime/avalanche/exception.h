@@ -144,6 +144,10 @@ ava_bool ava_pop_handler(ava_bool do_pop);
 void ava_throw(const ava_exception_type* type, ava_value value,
                ava_stack_trace* trace) AVA_NORETURN;
 /**
+ * Convenience for ava_throw(type, ava_value_of_string(str), NULL).
+ */
+void ava_throw_str(const ava_exception_type* type, ava_string str) AVA_NORETURN;
+/**
  * Convenience for ava_throw(handler->exception_type, handler->value,
  *                           handler->next, handler->stack_trace);
  */

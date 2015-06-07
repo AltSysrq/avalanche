@@ -104,6 +104,10 @@ void ava_throw(const ava_exception_type* type, ava_value value,
   abort();
 }
 
+void ava_throw_str(const ava_exception_type* type, ava_string str) {
+  ava_throw(type, ava_value_of_string(str), NULL);
+}
+
 void ava_rethrow(ava_exception_handler*restrict handler) {
   ava_throw(handler->exception_type, handler->value, handler->stack_trace);
 }

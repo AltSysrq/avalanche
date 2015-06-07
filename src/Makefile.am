@@ -3,7 +3,7 @@ AUTOMAKE_OPTIONS = subdir-objects
 SUBDIRS = runtime .
 
 EXTRA_CFLAGS =
-AM_CFLAGS = $(LIBUNWIND_CFLAGS) \
+AM_CFLAGS = $(LIBUNWIND_CFLAGS) $(LIBFFI_CFLAGS) \
             $(EXTRA_CFLAGS) -funwind-tables
 
 # Use -b instead of -g if $(CC) doesn't support label pointers
@@ -20,6 +20,7 @@ runtime/empty-list.c \
 runtime/esba.c \
 runtime/esba-list.c \
 runtime/exception.c \
+runtime/function.c \
 runtime/gen-integer.c \
 runtime/gen-integer-decimal.c \
 runtime/gen-lex.c \
@@ -38,7 +39,7 @@ runtime/pointer.c \
 runtime/real.c \
 runtime/string.c \
 runtime/value.c
-libavart_la_LIBADD = $(LIBUNWIND_LIBS)
+libavart_la_LIBADD = $(LIBUNWIND_LIBS) $(LIBFFI_LIBS)
 bootstrap_avac_SOURCES = bootstrap/main.c
 bootstrap_avac_LDADD = libavart.la
 
