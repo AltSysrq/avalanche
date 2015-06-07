@@ -46,8 +46,6 @@ ava_integer ava_integer_of_noninteger_value(
 ) {
   AVA_STATIC_STRING(not_an_integer, "not an integer: ");
   AVA_STATIC_STRING(
-    too_long, "string too long to be interpreted as integer: ");
-  AVA_STATIC_STRING(
     trailing_garbage, "trailing garbage at end of integer: ");
 
   ava_string str = ava_to_string(value);
@@ -68,11 +66,6 @@ ava_integer ava_integer_of_noninteger_value(
       ava_integer_parse_dec_fast(str.ascii9, strlen);
     if (fast_result != PARSE_DEC_FAST_ERROR)
       return fast_result;
-  }
-
-  if (strlen > MAX_INTEGER_LENGTH) {
-    error_message = too_long;
-    goto error;
   }
 
   strdata = ava_string_to_cstring_buff(tmpbuff, str);
@@ -154,9 +147,6 @@ ava_bool ava_string_is_integer(ava_string str) {
   size_t strlen;
 
   strlen = ava_string_length(str);
-
-  if (strlen > MAX_INTEGER_LENGTH)
-    return 0;
 
   if (str.ascii9 & 1 &&
       PARSE_DEC_FAST_ERROR != ava_integer_parse_dec_fast(str.ascii9, strlen))

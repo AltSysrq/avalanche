@@ -24,14 +24,6 @@
 #include "value.h"
 
 /**
- * The maximum length, in characters, of an integer value.
- *
- * No attempt is made to parse strings longer than this value; they are
- * rejected outright.
- */
-#define MAX_INTEGER_LENGTH 65
-
-/**
  * Integer type used in user integer arithmetic calculations.
  */
 typedef ava_slong ava_integer;
@@ -73,9 +65,6 @@ typedef ava_slong ava_integer;
  *
  * Whitespace in the above comprises space, table, line feed, and carraige
  * return.
- *
- * Including surrounding whitespace, an integer may not be more than 65 bytes
- * long.
  *
  * Normal form of an integer is its value in base-10, preceded with a negative
  * sign if negative.

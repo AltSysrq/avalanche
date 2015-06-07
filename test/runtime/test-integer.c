@@ -386,19 +386,6 @@ deftest(isolated_radix_mark) {
   }
 }
 
-deftest(oversized_string_to_integer) {
-  ava_exception_handler handler;
-  ava_try (handler) {
-    str_to_int(
-      "000000000000000000000000000000000000000000000000000000000000000000", 42);
-    ck_abort_msg("no exception thrown");
-  } ava_catch (handler, ava_format_exception) {
-    /* ok */
-  } ava_catch_all {
-    ava_rethrow(&handler);
-  }
-}
-
 deftest(truthy_to_integer_one) {
   ck_assert_int_eq(1LL, str_to_int("true", 42));
   ck_assert_int_eq(1LL, str_to_int("tRuE", 42));
@@ -452,12 +439,6 @@ deftest(invalid_literal_is_not_integer) {
 
 deftest(literal_surrounded_by_whitespace_is_integer) {
   ck_assert(str_is_int(" \r\t\n123\n\t\r "));
-}
-
-deftest(oversized_string_is_not_integer) {
-  ck_assert(
-    !str_is_int(
-      "000000000000000000000000000000000000000000000000000000000000000000"));
 }
 
 deftest(dec_fast_zero) {
