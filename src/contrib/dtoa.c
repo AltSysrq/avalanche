@@ -566,7 +566,7 @@ Balloc
 #else
 		len = (sizeof(Bigint) + (x-1)*sizeof(ULong) + sizeof(double) - 1)
 			/sizeof(double);
-		if (k <= Kmax && pmem_next - private_mem + len <= PRIVATE_mem) {
+		if (k <= Kmax && pmem_next - private_mem + len <= (ssize_t)PRIVATE_mem) {
 			rv = (Bigint*)pmem_next;
 			pmem_next += len;
 			}
@@ -3572,7 +3572,7 @@ rv_alloc(int i)
 
 	j = sizeof(ULong);
 	for(k = 0;
-		sizeof(Bigint) - sizeof(ULong) - sizeof(int) + j <= i;
+                ((ssize_t)(sizeof(Bigint) - sizeof(ULong) - sizeof(int) + j)) <= i;
 		j <<= 1)
 			k++;
 	r = (int*)Balloc(k);
@@ -3732,6 +3732,8 @@ dtoa
 	  }
 #endif /*}}*/
 #endif /*}*/
+	/* Suppress spurious warning from GCC 5 */
+	j1 = 0;
 
 #ifndef MULTIPLE_THREADS
 	if (dtoa_result) {
