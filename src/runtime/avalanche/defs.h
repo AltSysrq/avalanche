@@ -119,4 +119,9 @@ typedef int ava_bool;
 #define ava_true 1
 #define ava_false 0
 
+/**
+ * Floating-point type used in real arithmetic calculations.
+ */
+typedef double ava_real;
+
 #endif /* AVA_RUNTIME_DEFS_H_ */

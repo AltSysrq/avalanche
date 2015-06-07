@@ -16,6 +16,7 @@ avalanche/map.h \
 avalanche/map-trait.h \
 avalanche/pointer.h \
 avalanche/pointer-trait.h \
+avalanche/real.h \
 avalanche/string.h \
 avalanche/value.h
 

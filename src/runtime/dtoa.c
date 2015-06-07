@@ -67,5 +67,7 @@ static inline void FREE_DTOA_LOCK(unsigned ix) {
 #define strtod ava_strtod
 #define freedtoa ava_dtoa_free
 #define dtoa ava_dtoa
+#define g_fmt ava_dtoa_fmt
 
 #include "../contrib/dtoa.c"
+#include "../contrib/g_fmt.c"
