@@ -23,6 +23,7 @@
 #include "defs.h"
 #include "string.h"
 #include "value.h"
+#include "pointer.h"
 
 /**
  * @file
@@ -244,9 +245,9 @@
  * Examples:
  *
  * - fopen: `[c FILE* [string pos]]`
- * - fclose: `[c signed [FILE* pos]]`
+ * - fclose: `[c int [FILE* pos]]`
  * - qsort: `[c void [* pos] [size pos] [size pos] [& pos]]`
- * - rand: `[c unsigned [void pos]]`
+ * - rand: `[c uint [void pos]]`
  *
  * The "this" and "msstd" calling conventions are syntactically equivalent to
  * the "c" calling convention. They correspond to the "thiscall" and "stdcall"
@@ -349,7 +350,12 @@ typedef enum {
   ava_cmpt_ava_real,
   /** C type: const char*, interpreted as NTBS */
   ava_cmpt_string,
-  /** C type: void* */
+  /**
+   * C type: void*
+   *
+   * Note that this type requires the pointer_proto on the
+   * ava_c_marshalling_type to be set appropriately.
+   */
   ava_cmpt_pointer
 } ava_c_marshalling_primitive_type;
 

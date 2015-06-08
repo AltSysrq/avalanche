@@ -353,7 +353,7 @@ static ava_c_marshalling_type ava_function_parse_marshal_type(ava_value val) {
   ava_string str = ava_to_string(val);
   ava_c_marshalling_type ret;
 
-#define PRIM(t) ret.primitive_type = t; return ret;
+#define PRIM(t) do { ret.primitive_type = t; return ret; } while (0)
 #define AVA 'a','v','a','_'
   switch (ava_string_to_ascii9(str)) {
   case AVA_ASCII9('v','o','i','d'):             PRIM(ava_cmpt_void);
