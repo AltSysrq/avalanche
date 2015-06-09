@@ -316,3 +316,816 @@ deftest(rejects_varshape_after_varargs) {
   assert_rejects("42 ava varargs \\{named foo\\}");
   assert_rejects("42 ava varargs pos varargs");
 }
+
+deftest(rejects_null_function) {
+  assert_rejects("\"\" ava pos");
+  assert_rejects("0 ava pos");
+  assert_rejects("null ava pos");
+}
+
+#define BIND_BOILERPLATE                        \
+  ava_function_bind_status status;              \
+  size_t variadic_collection[32];               \
+  ava_function_bound_argument bound_args[32];   \
+  ava_string message;                           \
+  ava_function_parameter parms[]
+
+#define BIND(str) ava_function_bind(                    \
+    of_cstring(str), sizeof(parms) / sizeof(parms[0]),  \
+    parms, bound_args, variadic_collection, &message)
+
+deftest(simple_bind) {
+  BIND_BOILERPLATE = {
+    { .type = ava_fpt_static, .value = WORD(foo) }
+  };
+  status = BIND("42 ava pos");
+
+  ck_assert_int_eq(ava_fbs_bound, status);
+  ck_assert_int_eq(ava_fbat_parameter, bound_args[0].type);
+  ck_assert_int_eq(0, bound_args[0].v.parameter_index);
+}
+
+deftest(multi_pos_bind) {
+  BIND_BOILERPLATE = {
+    { .type = ava_fpt_static, .value = WORD(foo) },
+    { .type = ava_fpt_static, .value = WORD(bar) },
+  };
+  status = BIND("42 ava pos pos");
+
+  ck_assert_int_eq(ava_fbs_bound, status);
+  ck_assert_int_eq(ava_fbat_parameter, bound_args[0].type);
+  ck_assert_int_eq(0, bound_args[0].v.parameter_index);
+  ck_assert_int_eq(ava_fbat_parameter, bound_args[1].type);
+  ck_assert_int_eq(1, bound_args[1].v.parameter_index);
+}
+
+deftest(simple_pos_accepts_dynamic) {
+  BIND_BOILERPLATE = {
+    { .type = ava_fpt_dynamic }
+  };
+  status = BIND("42 ava pos");
+
+  ck_assert_int_eq(ava_fbs_bound, status);
+  ck_assert_int_eq(ava_fbat_parameter, bound_args[0].type);
+  ck_assert_int_eq(0, bound_args[0].v.parameter_index);
+}
+
+deftest(implicit_bind) {
+  BIND_BOILERPLATE = {
+    { .type = ava_fpt_dynamic }
+  };
+  status = BIND("42 ava \\{implicit foo\\} pos \\{implicit bar\\}");
+
+  ck_assert_int_eq(ava_fbs_bound, status);
+  ck_assert_int_eq(ava_fbat_implicit, bound_args[0].type);
+  assert_value_equals_str("foo", bound_args[0].v.value);
+  ck_assert_int_eq(ava_fbat_parameter, bound_args[1].type);
+  ck_assert_int_eq(0, bound_args[1].v.parameter_index);
+  ck_assert_int_eq(ava_fbat_implicit, bound_args[2].type);
+  assert_value_equals_str("bar", bound_args[2].v.value);
+}
+
+deftest(pos_default_bind_omitted) {
+  BIND_BOILERPLATE = {
+    { .type = ava_fpt_dynamic },
+    { .type = ava_fpt_dynamic },
+  };
+  status = BIND("42 ava pos \\{pos optional\\} pos");
+
+  ck_assert_int_eq(ava_fbs_bound, status);
+  ck_assert_int_eq(ava_fbat_parameter, bound_args[0].type);
+  ck_assert_int_eq(0, bound_args[0].v.parameter_index);
+  ck_assert_int_eq(ava_fbat_implicit, bound_args[1].type);
+  assert_value_equals_str("optional", bound_args[1].v.value);
+  ck_assert_int_eq(ava_fbat_parameter, bound_args[2].type);
+  ck_assert_int_eq(1, bound_args[2].v.parameter_index);
+}
+
+deftest(pos_default_bind_given) {
+  BIND_BOILERPLATE = {
+    { .type = ava_fpt_dynamic },
+    { .type = ava_fpt_dynamic },
+    { .type = ava_fpt_dynamic },
+  };
+  status = BIND("42 ava pos \\{pos optional\\} pos");
+
+  ck_assert_int_eq(ava_fbs_bound, status);
+  ck_assert_int_eq(ava_fbat_parameter, bound_args[0].type);
+  ck_assert_int_eq(0, bound_args[0].v.parameter_index);
+  ck_assert_int_eq(ava_fbat_parameter, bound_args[1].type);
+  ck_assert_int_eq(1, bound_args[1].v.parameter_index);
+  ck_assert_int_eq(ava_fbat_parameter, bound_args[2].type);
+  ck_assert_int_eq(2, bound_args[2].v.parameter_index);
+}
+
+deftest(pos_default_bind_two_absent) {
+  BIND_BOILERPLATE = {
+    { .type = ava_fpt_dynamic },
+    { .type = ava_fpt_dynamic },
+  };
+  status = BIND("42 ava pos \\{pos foo\\} \\{pos bar\\} pos");
+
+  ck_assert_int_eq(ava_fbs_bound, status);
+  ck_assert_int_eq(ava_fbat_parameter, bound_args[0].type);
+  ck_assert_int_eq(0, bound_args[0].v.parameter_index);
+  ck_assert_int_eq(ava_fbat_implicit, bound_args[1].type);
+  assert_value_equals_str("foo", bound_args[1].v.value);
+  ck_assert_int_eq(ava_fbat_implicit, bound_args[2].type);
+  assert_value_equals_str("bar", bound_args[2].v.value);
+  ck_assert_int_eq(ava_fbat_parameter, bound_args[3].type);
+  ck_assert_int_eq(1, bound_args[3].v.parameter_index);
+}
+
+deftest(pos_default_bind_two_mixed) {
+  BIND_BOILERPLATE = {
+    { .type = ava_fpt_dynamic },
+    { .type = ava_fpt_dynamic },
+    { .type = ava_fpt_dynamic },
+  };
+  status = BIND("42 ava pos \\{pos foo\\} \\{pos bar\\} pos");
+
+  ck_assert_int_eq(ava_fbs_bound, status);
+  ck_assert_int_eq(ava_fbat_parameter, bound_args[0].type);
+  ck_assert_int_eq(0, bound_args[0].v.parameter_index);
+  ck_assert_int_eq(ava_fbat_parameter, bound_args[1].type);
+  ck_assert_int_eq(1, bound_args[1].v.parameter_index);
+  ck_assert_int_eq(ava_fbat_implicit, bound_args[2].type);
+  assert_value_equals_str("bar", bound_args[2].v.value);
+  ck_assert_int_eq(ava_fbat_parameter, bound_args[3].type);
+  ck_assert_int_eq(2, bound_args[3].v.parameter_index);
+}
+
+deftest(pos_default_bind_two_present) {
+  BIND_BOILERPLATE = {
+    { .type = ava_fpt_dynamic },
+    { .type = ava_fpt_dynamic },
+    { .type = ava_fpt_dynamic },
+    { .type = ava_fpt_dynamic },
+  };
+  status = BIND("42 ava pos \\{pos foo\\} \\{pos bar\\} pos");
+
+  ck_assert_int_eq(ava_fbs_bound, status);
+  ck_assert_int_eq(ava_fbat_parameter, bound_args[0].type);
+  ck_assert_int_eq(0, bound_args[0].v.parameter_index);
+  ck_assert_int_eq(ava_fbat_parameter, bound_args[1].type);
+  ck_assert_int_eq(1, bound_args[1].v.parameter_index);
+  ck_assert_int_eq(ava_fbat_parameter, bound_args[2].type);
+  ck_assert_int_eq(2, bound_args[2].v.parameter_index);
+  ck_assert_int_eq(ava_fbat_parameter, bound_args[3].type);
+  ck_assert_int_eq(3, bound_args[3].v.parameter_index);
+}
+
+deftest(pos_default_bind_begin_absent) {
+  BIND_BOILERPLATE = {
+    { .type = ava_fpt_dynamic },
+  };
+  status = BIND("42 ava \\{pos foo\\} pos");
+
+  ck_assert_int_eq(ava_fbs_bound, status);
+  ck_assert_int_eq(ava_fbat_implicit, bound_args[0].type);
+  assert_value_equals_str("foo", bound_args[0].v.value);
+  ck_assert_int_eq(ava_fbat_parameter, bound_args[1].type);
+  ck_assert_int_eq(0, bound_args[1].v.parameter_index);
+}
+
+deftest(pos_default_bind_begin_present) {
+  BIND_BOILERPLATE = {
+    { .type = ava_fpt_dynamic },
+    { .type = ava_fpt_dynamic },
+  };
+  status = BIND("42 ava \\{pos foo\\} pos");
+
+  ck_assert_int_eq(ava_fbs_bound, status);
+  ck_assert_int_eq(ava_fbat_parameter, bound_args[0].type);
+  ck_assert_int_eq(0, bound_args[0].v.parameter_index);
+  ck_assert_int_eq(ava_fbat_parameter, bound_args[1].type);
+  ck_assert_int_eq(1, bound_args[1].v.parameter_index);
+}
+
+deftest(pos_default_bind_end_absent) {
+  BIND_BOILERPLATE = {
+    { .type = ava_fpt_dynamic },
+  };
+  status = BIND("42 ava pos \\{pos foo\\}");
+
+  ck_assert_int_eq(ava_fbs_bound, status);
+  ck_assert_int_eq(ava_fbat_parameter, bound_args[0].type);
+  ck_assert_int_eq(0, bound_args[0].v.parameter_index);
+  ck_assert_int_eq(ava_fbat_implicit, bound_args[1].type);
+  assert_value_equals_str("foo", bound_args[1].v.value);
+}
+
+deftest(pos_default_bind_end_present) {
+  BIND_BOILERPLATE = {
+    { .type = ava_fpt_dynamic },
+    { .type = ava_fpt_dynamic },
+  };
+  status = BIND("42 ava pos \\{pos foo\\}");
+
+  ck_assert_int_eq(ava_fbs_bound, status);
+  ck_assert_int_eq(ava_fbat_parameter, bound_args[0].type);
+  ck_assert_int_eq(0, bound_args[0].v.parameter_index);
+  ck_assert_int_eq(ava_fbat_parameter, bound_args[1].type);
+  ck_assert_int_eq(1, bound_args[1].v.parameter_index);
+}
+
+deftest(varargs_bind_empty) {
+  BIND_BOILERPLATE = {
+    { .type = ava_fpt_dynamic },
+    { .type = ava_fpt_dynamic },
+  };
+  status = BIND("42 ava pos varargs pos");
+
+  ck_assert_int_eq(ava_fbs_bound, status);
+  ck_assert_int_eq(ava_fbat_parameter, bound_args[0].type);
+  ck_assert_int_eq(0, bound_args[0].v.parameter_index);
+  ck_assert_int_eq(ava_fbat_implicit, bound_args[1].type);
+  assert_value_equals_str("", bound_args[1].v.value);
+  ck_assert_int_eq(ava_fbat_parameter, bound_args[2].type);
+  ck_assert_int_eq(1, bound_args[2].v.parameter_index);
+}
+
+deftest(varargs_bind_one) {
+  BIND_BOILERPLATE = {
+    { .type = ava_fpt_dynamic },
+    { .type = ava_fpt_dynamic },
+    { .type = ava_fpt_dynamic },
+  };
+  status = BIND("42 ava pos varargs pos");
+
+  ck_assert_int_eq(ava_fbs_bound, status);
+  ck_assert_int_eq(ava_fbat_parameter, bound_args[0].type);
+  ck_assert_int_eq(0, bound_args[0].v.parameter_index);
+  ck_assert_int_eq(ava_fbat_collect, bound_args[1].type);
+  ck_assert_int_eq(1, bound_args[1].v.collection_size);
+  ck_assert_int_eq(1, variadic_collection[0]);
+  ck_assert_int_eq(ava_fbat_parameter, bound_args[2].type);
+  ck_assert_int_eq(2, bound_args[2].v.parameter_index);
+}
+
+deftest(varargs_bind_multiple) {
+  BIND_BOILERPLATE = {
+    { .type = ava_fpt_dynamic },
+    { .type = ava_fpt_dynamic },
+    { .type = ava_fpt_dynamic },
+    { .type = ava_fpt_dynamic },
+    { .type = ava_fpt_dynamic },
+  };
+  status = BIND("42 ava pos varargs pos");
+
+  ck_assert_int_eq(ava_fbs_bound, status);
+  ck_assert_int_eq(ava_fbat_parameter, bound_args[0].type);
+  ck_assert_int_eq(0, bound_args[0].v.parameter_index);
+  ck_assert_int_eq(ava_fbat_collect, bound_args[1].type);
+  ck_assert_int_eq(3, bound_args[1].v.collection_size);
+  ck_assert_int_eq(1, variadic_collection[0]);
+  ck_assert_int_eq(2, variadic_collection[1]);
+  ck_assert_int_eq(3, variadic_collection[2]);
+  ck_assert_int_eq(ava_fbat_parameter, bound_args[2].type);
+  ck_assert_int_eq(4, bound_args[2].v.parameter_index);
+}
+
+deftest(varargs_bind_begin_zero) {
+  BIND_BOILERPLATE = {
+    { .type = ava_fpt_dynamic },
+  };
+  status = BIND("42 ava varargs pos");
+
+  ck_assert_int_eq(ava_fbs_bound, status);
+  ck_assert_int_eq(ava_fbat_implicit, bound_args[0].type);
+  assert_value_equals_str("", bound_args[0].v.value);
+  ck_assert_int_eq(ava_fbat_parameter, bound_args[1].type);
+  ck_assert_int_eq(0, bound_args[1].v.parameter_index);
+}
+
+deftest(varargs_bind_begin_one) {
+  BIND_BOILERPLATE = {
+    { .type = ava_fpt_dynamic },
+    { .type = ava_fpt_dynamic },
+  };
+  status = BIND("42 ava varargs pos");
+
+  ck_assert_int_eq(ava_fbs_bound, status);
+  ck_assert_int_eq(ava_fbat_collect, bound_args[0].type);
+  ck_assert_int_eq(1, bound_args[0].v.collection_size);
+  ck_assert_int_eq(0, variadic_collection[0]);
+  ck_assert_int_eq(ava_fbat_parameter, bound_args[1].type);
+  ck_assert_int_eq(1, bound_args[1].v.parameter_index);
+}
+
+deftest(varargs_bind_end_zero) {
+  BIND_BOILERPLATE = {
+    { .type = ava_fpt_dynamic },
+  };
+  status = BIND("42 ava pos varargs");
+
+  ck_assert_int_eq(ava_fbs_bound, status);
+  ck_assert_int_eq(ava_fbat_parameter, bound_args[0].type);
+  ck_assert_int_eq(0, bound_args[0].v.parameter_index);
+  ck_assert_int_eq(ava_fbat_implicit, bound_args[1].type);
+  assert_value_equals_str("", bound_args[1].v.value);
+}
+
+deftest(varargs_bind_end_one) {
+  BIND_BOILERPLATE = {
+    { .type = ava_fpt_dynamic },
+    { .type = ava_fpt_dynamic },
+  };
+  status = BIND("42 ava pos varargs");
+
+  ck_assert_int_eq(ava_fbs_bound, status);
+  ck_assert_int_eq(ava_fbat_parameter, bound_args[0].type);
+  ck_assert_int_eq(0, bound_args[0].v.parameter_index);
+  ck_assert_int_eq(ava_fbat_collect, bound_args[1].type);
+  ck_assert_int_eq(1, bound_args[1].v.collection_size);
+  ck_assert_int_eq(1, variadic_collection[0]);
+}
+
+deftest(named_mandatory_bind_one) {
+  BIND_BOILERPLATE = {
+    { .type = ava_fpt_dynamic },
+    { .type = ava_fpt_static, .value = WORD(-foo) },
+    { .type = ava_fpt_dynamic },
+    { .type = ava_fpt_dynamic },
+  };
+  status = BIND("42 ava pos \\{named -foo\\} pos");
+
+  ck_assert_int_eq(ava_fbs_bound, status);
+  ck_assert_int_eq(ava_fbat_parameter, bound_args[0].type);
+  ck_assert_int_eq(0, bound_args[0].v.parameter_index);
+  ck_assert_int_eq(ava_fbat_parameter, bound_args[1].type);
+  ck_assert_int_eq(2, bound_args[1].v.parameter_index);
+  ck_assert_int_eq(ava_fbat_parameter, bound_args[2].type);
+  ck_assert_int_eq(3, bound_args[2].v.parameter_index);
+}
+
+deftest(named_mandatory_bind_two_in_order) {
+  BIND_BOILERPLATE = {
+    { .type = ava_fpt_dynamic },
+    { .type = ava_fpt_static, .value = WORD(-foo) },
+    { .type = ava_fpt_dynamic },
+    { .type = ava_fpt_static, .value = WORD(-bar) },
+    { .type = ava_fpt_dynamic },
+    { .type = ava_fpt_dynamic },
+  };
+  status = BIND("42 ava pos \\{named -foo\\} \\{named -bar\\} pos");
+
+  ck_assert_int_eq(ava_fbs_bound, status);
+  ck_assert_int_eq(ava_fbat_parameter, bound_args[0].type);
+  ck_assert_int_eq(0, bound_args[0].v.parameter_index);
+  ck_assert_int_eq(ava_fbat_parameter, bound_args[1].type);
+  ck_assert_int_eq(2, bound_args[1].v.parameter_index);
+  ck_assert_int_eq(ava_fbat_parameter, bound_args[2].type);
+  ck_assert_int_eq(4, bound_args[2].v.parameter_index);
+  ck_assert_int_eq(ava_fbat_parameter, bound_args[3].type);
+  ck_assert_int_eq(5, bound_args[3].v.parameter_index);
+}
+
+deftest(named_mandatory_bind_two_out_of_order) {
+  BIND_BOILERPLATE = {
+    { .type = ava_fpt_dynamic },
+    { .type = ava_fpt_static, .value = WORD(-bar) },
+    { .type = ava_fpt_dynamic },
+    { .type = ava_fpt_static, .value = WORD(-foo) },
+    { .type = ava_fpt_dynamic },
+    { .type = ava_fpt_dynamic },
+  };
+  status = BIND("42 ava pos \\{named -foo\\} \\{named -bar\\} pos");
+
+  ck_assert_int_eq(ava_fbs_bound, status);
+  ck_assert_int_eq(ava_fbat_parameter, bound_args[0].type);
+  ck_assert_int_eq(0, bound_args[0].v.parameter_index);
+  ck_assert_int_eq(ava_fbat_parameter, bound_args[1].type);
+  ck_assert_int_eq(4, bound_args[1].v.parameter_index);
+  ck_assert_int_eq(ava_fbat_parameter, bound_args[2].type);
+  ck_assert_int_eq(2, bound_args[2].v.parameter_index);
+  ck_assert_int_eq(ava_fbat_parameter, bound_args[3].type);
+  ck_assert_int_eq(5, bound_args[3].v.parameter_index);
+}
+
+deftest(named_mandatory_bind_begin) {
+  BIND_BOILERPLATE = {
+    { .type = ava_fpt_static, .value = WORD(-foo) },
+    { .type = ava_fpt_dynamic },
+    { .type = ava_fpt_dynamic },
+  };
+  status = BIND("42 ava \\{named -foo\\} pos");
+
+  ck_assert_int_eq(ava_fbs_bound, status);
+  ck_assert_int_eq(ava_fbat_parameter, bound_args[0].type);
+  ck_assert_int_eq(1, bound_args[0].v.parameter_index);
+  ck_assert_int_eq(ava_fbat_parameter, bound_args[1].type);
+  ck_assert_int_eq(2, bound_args[1].v.parameter_index);
+}
+
+deftest(named_mandatory_bind_end) {
+  BIND_BOILERPLATE = {
+    { .type = ava_fpt_dynamic },
+    { .type = ava_fpt_static, .value = WORD(-foo) },
+    { .type = ava_fpt_dynamic },
+  };
+  status = BIND("42 ava pos \\{named -foo\\}");
+
+  ck_assert_int_eq(ava_fbs_bound, status);
+  ck_assert_int_eq(ava_fbat_parameter, bound_args[0].type);
+  ck_assert_int_eq(0, bound_args[0].v.parameter_index);
+  ck_assert_int_eq(ava_fbat_parameter, bound_args[1].type);
+  ck_assert_int_eq(2, bound_args[1].v.parameter_index);
+}
+
+deftest(named_default_bind_one_present) {
+  BIND_BOILERPLATE = {
+    { .type = ava_fpt_dynamic },
+    { .type = ava_fpt_static, .value = WORD(-foo) },
+    { .type = ava_fpt_dynamic },
+    { .type = ava_fpt_dynamic },
+  };
+  status = BIND("42 ava pos \\{named -foo bar\\} pos");
+
+  ck_assert_int_eq(ava_fbs_bound, status);
+  ck_assert_int_eq(ava_fbat_parameter, bound_args[0].type);
+  ck_assert_int_eq(0, bound_args[0].v.parameter_index);
+  ck_assert_int_eq(ava_fbat_parameter, bound_args[1].type);
+  ck_assert_int_eq(2, bound_args[1].v.parameter_index);
+  ck_assert_int_eq(ava_fbat_parameter, bound_args[2].type);
+  ck_assert_int_eq(3, bound_args[2].v.parameter_index);
+}
+
+deftest(named_default_bind_one_absent) {
+  BIND_BOILERPLATE = {
+    { .type = ava_fpt_dynamic },
+    { .type = ava_fpt_dynamic },
+  };
+  status = BIND("42 ava pos \\{named -foo bar\\} pos");
+
+  ck_assert_int_eq(ava_fbs_bound, status);
+  ck_assert_int_eq(ava_fbat_parameter, bound_args[0].type);
+  ck_assert_int_eq(0, bound_args[0].v.parameter_index);
+  ck_assert_int_eq(ava_fbat_implicit, bound_args[1].type);
+  assert_value_equals_str("bar", bound_args[1].v.value);
+  ck_assert_int_eq(ava_fbat_parameter, bound_args[2].type);
+  ck_assert_int_eq(1, bound_args[2].v.parameter_index);
+}
+
+deftest(named_default_bind_two_in_order) {
+  BIND_BOILERPLATE = {
+    { .type = ava_fpt_dynamic },
+    { .type = ava_fpt_static, .value = WORD(-foo) },
+    { .type = ava_fpt_dynamic },
+    { .type = ava_fpt_static, .value = WORD(-bar) },
+    { .type = ava_fpt_dynamic },
+    { .type = ava_fpt_dynamic },
+  };
+  status = BIND("42 ava pos \\{named -foo xyzzy\\} \\{named -bar plugh\\} pos");
+
+  ck_assert_int_eq(ava_fbs_bound, status);
+  ck_assert_int_eq(ava_fbat_parameter, bound_args[0].type);
+  ck_assert_int_eq(0, bound_args[0].v.parameter_index);
+  ck_assert_int_eq(ava_fbat_parameter, bound_args[1].type);
+  ck_assert_int_eq(2, bound_args[1].v.parameter_index);
+  ck_assert_int_eq(ava_fbat_parameter, bound_args[2].type);
+  ck_assert_int_eq(4, bound_args[2].v.parameter_index);
+  ck_assert_int_eq(ava_fbat_parameter, bound_args[3].type);
+  ck_assert_int_eq(5, bound_args[3].v.parameter_index);
+}
+
+deftest(named_default_bind_two_out_of_order) {
+  BIND_BOILERPLATE = {
+    { .type = ava_fpt_dynamic },
+    { .type = ava_fpt_static, .value = WORD(-bar) },
+    { .type = ava_fpt_dynamic },
+    { .type = ava_fpt_static, .value = WORD(-foo) },
+    { .type = ava_fpt_dynamic },
+    { .type = ava_fpt_dynamic },
+  };
+  status = BIND("42 ava pos \\{named -foo xyzzy\\} \\{named -bar plugh\\} pos");
+
+  ck_assert_int_eq(ava_fbs_bound, status);
+  ck_assert_int_eq(ava_fbat_parameter, bound_args[0].type);
+  ck_assert_int_eq(0, bound_args[0].v.parameter_index);
+  ck_assert_int_eq(ava_fbat_parameter, bound_args[1].type);
+  ck_assert_int_eq(4, bound_args[1].v.parameter_index);
+  ck_assert_int_eq(ava_fbat_parameter, bound_args[2].type);
+  ck_assert_int_eq(2, bound_args[2].v.parameter_index);
+  ck_assert_int_eq(ava_fbat_parameter, bound_args[3].type);
+  ck_assert_int_eq(5, bound_args[3].v.parameter_index);
+}
+
+deftest(named_default_bind_first) {
+  BIND_BOILERPLATE = {
+    { .type = ava_fpt_dynamic },
+    { .type = ava_fpt_static, .value = WORD(-foo) },
+    { .type = ava_fpt_dynamic },
+    { .type = ava_fpt_dynamic },
+  };
+  status = BIND("42 ava pos \\{named -foo xyzzy\\} \\{named -bar plugh\\} pos");
+
+  ck_assert_int_eq(ava_fbs_bound, status);
+  ck_assert_int_eq(ava_fbat_parameter, bound_args[0].type);
+  ck_assert_int_eq(0, bound_args[0].v.parameter_index);
+  ck_assert_int_eq(ava_fbat_parameter, bound_args[1].type);
+  ck_assert_int_eq(2, bound_args[1].v.parameter_index);
+  ck_assert_int_eq(ava_fbat_implicit, bound_args[2].type);
+  assert_value_equals_str("plugh", bound_args[2].v.value);
+  ck_assert_int_eq(ava_fbat_parameter, bound_args[3].type);
+  ck_assert_int_eq(3, bound_args[3].v.parameter_index);
+}
+
+deftest(named_default_bind_second) {
+  BIND_BOILERPLATE = {
+    { .type = ava_fpt_dynamic },
+    { .type = ava_fpt_static, .value = WORD(-bar) },
+    { .type = ava_fpt_dynamic },
+    { .type = ava_fpt_dynamic },
+  };
+  status = BIND("42 ava pos \\{named -foo xyzzy\\} \\{named -bar plugh\\} pos");
+
+  ck_assert_int_eq(ava_fbs_bound, status);
+  ck_assert_int_eq(ava_fbat_parameter, bound_args[0].type);
+  ck_assert_int_eq(0, bound_args[0].v.parameter_index);
+  ck_assert_int_eq(ava_fbat_implicit, bound_args[1].type);
+  assert_value_equals_str("xyzzy", bound_args[1].v.value);
+  ck_assert_int_eq(ava_fbat_parameter, bound_args[2].type);
+  ck_assert_int_eq(2, bound_args[2].v.parameter_index);
+  ck_assert_int_eq(ava_fbat_parameter, bound_args[3].type);
+  ck_assert_int_eq(3, bound_args[3].v.parameter_index);
+}
+
+deftest(named_default_bind_begin_present) {
+  BIND_BOILERPLATE = {
+    { .type = ava_fpt_static, .value = WORD(-foo) },
+    { .type = ava_fpt_dynamic },
+    { .type = ava_fpt_dynamic },
+  };
+  status = BIND("42 ava \\{named -foo bar\\} pos");
+
+  ck_assert_int_eq(ava_fbs_bound, status);
+  ck_assert_int_eq(ava_fbat_parameter, bound_args[0].type);
+  ck_assert_int_eq(1, bound_args[0].v.parameter_index);
+  ck_assert_int_eq(ava_fbat_parameter, bound_args[1].type);
+  ck_assert_int_eq(2, bound_args[1].v.parameter_index);
+}
+
+deftest(named_default_bind_end_present) {
+  BIND_BOILERPLATE = {
+    { .type = ava_fpt_dynamic },
+    { .type = ava_fpt_static, .value = WORD(-foo) },
+    { .type = ava_fpt_dynamic },
+  };
+  status = BIND("42 ava pos \\{named -foo bar\\}");
+
+  ck_assert_int_eq(ava_fbs_bound, status);
+  ck_assert_int_eq(ava_fbat_parameter, bound_args[0].type);
+  ck_assert_int_eq(0, bound_args[0].v.parameter_index);
+  ck_assert_int_eq(ava_fbat_parameter, bound_args[1].type);
+  ck_assert_int_eq(2, bound_args[1].v.parameter_index);
+}
+
+deftest(named_default_bind_begin_absent) {
+  BIND_BOILERPLATE = {
+    { .type = ava_fpt_dynamic },
+  };
+  status = BIND("42 ava \\{named -foo bar\\} pos");
+
+  ck_assert_int_eq(ava_fbs_bound, status);
+  ck_assert_int_eq(ava_fbat_implicit, bound_args[0].type);
+  assert_value_equals_str("bar", bound_args[0].v.value);
+  ck_assert_int_eq(ava_fbat_parameter, bound_args[1].type);
+  ck_assert_int_eq(0, bound_args[1].v.parameter_index);
+}
+
+deftest(named_default_bind_end_absent) {
+  BIND_BOILERPLATE = {
+    { .type = ava_fpt_dynamic },
+  };
+  status = BIND("42 ava pos \\{named -foo bar\\}");
+
+  ck_assert_int_eq(ava_fbs_bound, status);
+  ck_assert_int_eq(ava_fbat_parameter, bound_args[0].type);
+  ck_assert_int_eq(0, bound_args[0].v.parameter_index);
+  ck_assert_int_eq(ava_fbat_implicit, bound_args[1].type);
+  assert_value_equals_str("bar", bound_args[1].v.value);
+}
+
+deftest(bool_bind_absent) {
+  BIND_BOILERPLATE = {
+    { .type = ava_fpt_dynamic },
+    { .type = ava_fpt_dynamic },
+  };
+  status = BIND("42 ava pos \\{bool -flag\\} pos");
+
+  ck_assert_int_eq(ava_fbs_bound, status);
+  ck_assert_int_eq(ava_fbat_parameter, bound_args[0].type);
+  ck_assert_int_eq(0, bound_args[0].v.parameter_index);
+  ck_assert_int_eq(ava_fbat_implicit, bound_args[1].type);
+  assert_value_equals_str("false", bound_args[1].v.value);
+  ck_assert_int_eq(ava_fbat_parameter, bound_args[2].type);
+  ck_assert_int_eq(1, bound_args[2].v.parameter_index);
+}
+
+deftest(bool_bind_present) {
+  BIND_BOILERPLATE = {
+    { .type = ava_fpt_dynamic },
+    { .type = ava_fpt_static, .value = WORD(-flag) },
+    { .type = ava_fpt_dynamic },
+  };
+  status = BIND("42 ava pos \\{bool -flag\\} pos");
+
+  ck_assert_int_eq(ava_fbs_bound, status);
+  ck_assert_int_eq(ava_fbat_parameter, bound_args[0].type);
+  ck_assert_int_eq(0, bound_args[0].v.parameter_index);
+  ck_assert_int_eq(ava_fbat_implicit, bound_args[1].type);
+  assert_value_equals_str("true", bound_args[1].v.value);
+  ck_assert_int_eq(ava_fbat_parameter, bound_args[2].type);
+  ck_assert_int_eq(2, bound_args[2].v.parameter_index);
+}
+
+deftest(bool_bind_begin_absent) {
+  BIND_BOILERPLATE = {
+    { .type = ava_fpt_dynamic },
+  };
+  status = BIND("42 ava \\{bool -flag\\} pos");
+
+  ck_assert_int_eq(ava_fbs_bound, status);
+  ck_assert_int_eq(ava_fbat_implicit, bound_args[0].type);
+  assert_value_equals_str("false", bound_args[0].v.value);
+  ck_assert_int_eq(ava_fbat_parameter, bound_args[1].type);
+  ck_assert_int_eq(0, bound_args[1].v.parameter_index);
+}
+
+deftest(bool_bind_begin_present) {
+  BIND_BOILERPLATE = {
+    { .type = ava_fpt_static, .value = WORD(-flag) },
+    { .type = ava_fpt_dynamic },
+  };
+  status = BIND("42 ava \\{bool -flag\\} pos");
+
+  ck_assert_int_eq(ava_fbs_bound, status);
+  ck_assert_int_eq(ava_fbat_implicit, bound_args[0].type);
+  assert_value_equals_str("true", bound_args[0].v.value);
+  ck_assert_int_eq(ava_fbat_parameter, bound_args[1].type);
+  ck_assert_int_eq(1, bound_args[1].v.parameter_index);
+}
+
+deftest(bool_bind_end_absent) {
+  BIND_BOILERPLATE = {
+    { .type = ava_fpt_dynamic },
+  };
+  status = BIND("42 ava pos \\{bool -flag\\}");
+
+  ck_assert_int_eq(ava_fbs_bound, status);
+  ck_assert_int_eq(ava_fbat_parameter, bound_args[0].type);
+  ck_assert_int_eq(0, bound_args[0].v.parameter_index);
+  ck_assert_int_eq(ava_fbat_implicit, bound_args[1].type);
+  assert_value_equals_str("false", bound_args[1].v.value);
+}
+
+deftest(bool_bind_end_present) {
+  BIND_BOILERPLATE = {
+    { .type = ava_fpt_dynamic },
+    { .type = ava_fpt_static, .value = WORD(-flag) },
+  };
+  status = BIND("42 ava pos \\{bool -flag\\}");
+
+  ck_assert_int_eq(ava_fbs_bound, status);
+  ck_assert_int_eq(ava_fbat_parameter, bound_args[0].type);
+  ck_assert_int_eq(0, bound_args[0].v.parameter_index);
+  ck_assert_int_eq(ava_fbat_implicit, bound_args[1].type);
+  assert_value_equals_str("true", bound_args[1].v.value);
+}
+
+deftest(bind_impossible_if_insufficient_parms) {
+  BIND_BOILERPLATE = {
+    { .type = ava_fpt_dynamic },
+  };
+  status = BIND("42 ava pos pos");
+
+  ck_assert_int_eq(ava_fbs_impossible, status);
+}
+
+deftest(bind_impossible_if_too_many_parms) {
+  BIND_BOILERPLATE = {
+    { .type = ava_fpt_dynamic },
+    { .type = ava_fpt_dynamic },
+    { .type = ava_fpt_dynamic },
+  };
+  status = BIND("42 ava pos pos");
+
+  ck_assert_int_eq(ava_fbs_impossible, status);
+}
+
+deftest(bind_impossible_if_incorrect_named_arg) {
+  BIND_BOILERPLATE = {
+    { .type = ava_fpt_static, .value = WORD(-foo) },
+    { .type = ava_fpt_dynamic },
+  };
+  status = BIND("42 ava \\{named -bar\\}");
+
+  ck_assert_int_eq(ava_fbs_impossible, status);
+}
+
+deftest(bind_impossible_if_named_arg_missing_value) {
+  BIND_BOILERPLATE = {
+    { .type = ava_fpt_static, .value = WORD(-foo) },
+  };
+  status = BIND("42 ava \\{named -foo\\}");
+
+  ck_assert_int_eq(ava_fbs_impossible, status);
+}
+
+deftest(bind_impossible_if_named_arg_bound_more_than_once) {
+  BIND_BOILERPLATE = {
+    { .type = ava_fpt_static, .value = WORD(-bar) },
+    { .type = ava_fpt_static, .value = WORD(-bar) },
+  };
+  status = BIND("42 ava \\{bool -foo\\} \\{bool -bar\\}");
+
+  ck_assert_int_eq(ava_fbs_impossible, status);
+}
+
+deftest(bind_impossible_if_mandatory_named_arg_omitted) {
+  BIND_BOILERPLATE = {
+    { .type = ava_fpt_dynamic },
+  };
+  status = BIND("42 ava pos \\{named -foo\\}");
+
+  ck_assert_int_eq(ava_fbs_impossible, status);
+}
+
+deftest(bind_unknown_if_named_arg_name_dynamic) {
+  BIND_BOILERPLATE = {
+    { .type = ava_fpt_dynamic },
+    { .type = ava_fpt_dynamic },
+  };
+  status = BIND("42 ava \\{named -foo\\}");
+
+  ck_assert_int_eq(ava_fbs_unknown, status);
+}
+
+deftest(bind_needs_unpack_if_spread_spans_pos) {
+  BIND_BOILERPLATE = {
+    { .type = ava_fpt_spread },
+  };
+  status = BIND("42 ava pos pos");
+
+  ck_assert_int_eq(ava_fbs_unpack, status);
+}
+
+deftest(bind_needs_unpack_if_spread_spans_named) {
+  BIND_BOILERPLATE = {
+    { .type = ava_fpt_spread },
+  };
+  status = BIND("42 ava \\{named -foo\\}");
+
+  ck_assert_int_eq(ava_fbs_unpack, status);
+}
+
+deftest(bind_needs_unpack_if_spread_starts_on_named_value) {
+  BIND_BOILERPLATE = {
+    { .type = ava_fpt_static, .value = WORD(-foo) },
+    { .type = ava_fpt_spread },
+  };
+  status = BIND("42 ava \\{named -foo\\}");
+
+  ck_assert_int_eq(ava_fbs_unpack, status);
+}
+
+deftest(bind_needs_unpack_if_spread_terminates_parms) {
+  BIND_BOILERPLATE = {
+    { .type = ava_fpt_dynamic },
+    { .type = ava_fpt_spread },
+  };
+  status = BIND("42 ava pos");
+
+  ck_assert_int_eq(ava_fbs_unpack, status);
+}
+
+deftest(bind_needs_unpack_if_spread_right_of_varshape) {
+  BIND_BOILERPLATE = {
+    { .type = ava_fpt_dynamic },
+    { .type = ava_fpt_spread },
+  };
+  status = BIND("42 ava pos \\{pos foo\\} pos");
+
+  ck_assert_int_eq(ava_fbs_unpack, status);
+}
+
+deftest(bind_doesnt_need_unpack_for_spreads_spanning_varargs_only) {
+  BIND_BOILERPLATE = {
+    { .type = ava_fpt_dynamic },
+    { .type = ava_fpt_spread },
+    { .type = ava_fpt_spread },
+    { .type = ava_fpt_dynamic },
+  };
+  status = BIND("42 ava pos varargs pos");
+
+  ck_assert_int_eq(ava_fbs_bound, status);
+  ck_assert_int_eq(ava_fbat_parameter, bound_args[0].type);
+  ck_assert_int_eq(0, bound_args[0].v.parameter_index);
+  ck_assert_int_eq(ava_fbat_collect, bound_args[1].type);
+  ck_assert_int_eq(2, bound_args[1].v.collection_size);
+  ck_assert_int_eq(1, variadic_collection[0]);
+  ck_assert_int_eq(2, variadic_collection[1]);
+  ck_assert_int_eq(ava_fbat_parameter, bound_args[2].type);
+  ck_assert_int_eq(3, bound_args[2].v.parameter_index);
+}

@@ -857,6 +857,15 @@ ava_function_bind_status ava_function_bind(
 
   /* Make sure that everything found a home */
   if (parm < parm_limit) {
+    /* There is at least one unbound parm. However, if all the remaining parms
+     * are spread, there's still a possibility that the result is valid, if
+     * they are all empty at runtime.
+     */
+    for (other = parm; other < parm_limit; ++other) {
+      if (ava_fpt_spread == parms[other].type)
+        return ava_fbs_unpack;
+    }
+
     *message = ava_string_concat(
       too_many_parms_message,
       ava_string_concat(
