@@ -17,6 +17,8 @@
 
 #include <stdlib.h>
 #include <string.h>
+#include <stdio.h>
+#include <stdarg.h>
 
 #include "runtime/avalanche/defs.h"
 #include "runtime/avalanche/string.h"
@@ -1136,3 +1138,101 @@ deftest(bind_doesnt_need_unpack_for_spreads_spanning_varargs_only) {
   ck_assert_int_eq(ava_fbat_parameter, bound_args[2].type);
   ck_assert_int_eq(3, bound_args[2].v.parameter_index);
 }
+
+#define TEST_INVOKE(test_name, expected_result_str,     \
+                    function_suffix,                    \
+                    return_type, args_decls, impl, ...) \
+  static return_type test_name##_f args_decls {         \
+    return impl;                                        \
+  }                                                     \
+  deftest(test_name) {                                  \
+    char funspec[256];                                  \
+    ava_value result;                                   \
+    ava_function_parameter parms[] = { __VA_ARGS__ };   \
+    snprintf(funspec, sizeof(funspec), "%lld %s",       \
+             (long long)(test_name##_f),                \
+             function_suffix);                          \
+    result = ava_function_bind_invoke(                  \
+      of_cstring(funspec),                              \
+      sizeof(parms) / sizeof(parms[0]),                 \
+      parms);                                           \
+    assert_value_equals_str(expected_result_str,        \
+                            result);                    \
+  }
+
+#define STATWORD(word) { .type = ava_fpt_static, .value = WORD(word) }
+
+TEST_INVOKE(invoke_ava_identity, "42", "ava pos",
+            ava_value, (ava_value v), v,
+            { .type = ava_fpt_static, .value = INT(42) })
+
+static ava_value cat(size_t count, ...) {
+  ava_string accum = AVA_EMPTY_STRING;
+  size_t i;
+  va_list args;
+
+  va_start(args, count);
+  for (i = 0; i < count; ++i)
+    accum = ava_string_concat(accum, ava_to_string(va_arg(args, ava_value)));
+
+  va_end(args);
+
+  return ava_value_of_string(accum);
+}
+
+TEST_INVOKE(invoke_ava_2_arg, "ab", "ava pos pos",
+            ava_value, (ava_value a, ava_value b),
+            cat(2, a, b), STATWORD(a), STATWORD(b))
+
+TEST_INVOKE(invoke_ava_3_arg, "abc",
+            "ava pos pos pos",
+            ava_value, (ava_value a, ava_value b, ava_value c),
+            cat(3, a, b, c),
+            STATWORD(a), STATWORD(b), STATWORD(c))
+
+TEST_INVOKE(invoke_ava_4_arg, "abcd",
+            "ava pos pos pos pos",
+            ava_value, (ava_value a, ava_value b, ava_value c, ava_value d),
+            cat(4, a, b, c, d),
+            STATWORD(a), STATWORD(b), STATWORD(c), STATWORD(d))
+
+TEST_INVOKE(invoke_ava_5_arg, "abcde",
+            "ava pos pos pos pos pos",
+            ava_value, (ava_value a, ava_value b, ava_value c, ava_value d,
+                        ava_value e),
+            cat(5, a, b, c, d, e),
+            STATWORD(a), STATWORD(b), STATWORD(c), STATWORD(d),
+            STATWORD(e))
+
+TEST_INVOKE(invoke_ava_6_arg, "abcdef",
+            "ava pos pos pos pos pos pos",
+            ava_value, (ava_value a, ava_value b, ava_value c, ava_value d,
+                        ava_value e, ava_value f),
+            cat(6, a, b, c, d, e, f),
+            STATWORD(a), STATWORD(b), STATWORD(c), STATWORD(d),
+            STATWORD(e), STATWORD(f))
+
+TEST_INVOKE(invoke_ava_7_arg, "abcdefg",
+            "ava pos pos pos pos pos pos pos",
+            ava_value, (ava_value a, ava_value b, ava_value c, ava_value d,
+                        ava_value e, ava_value f, ava_value g),
+            cat(7, a, b, c, d, e, f, g),
+            STATWORD(a), STATWORD(b), STATWORD(c), STATWORD(d),
+            STATWORD(e), STATWORD(f), STATWORD(g))
+
+TEST_INVOKE(invoke_ava_8_arg, "abcdefgh",
+            "ava pos pos pos pos pos pos pos pos",
+            ava_value, (ava_value a, ava_value b, ava_value c, ava_value d,
+                        ava_value e, ava_value f, ava_value g, ava_value h),
+            cat(8, a, b, c, d, e, f, g, h),
+            STATWORD(a), STATWORD(b), STATWORD(c), STATWORD(d),
+            STATWORD(e), STATWORD(f), STATWORD(g), STATWORD(h))
+
+TEST_INVOKE(invoke_ava_9_arg, "abcdefghi",
+            "ava pos pos pos pos pos pos pos pos pos",
+            ava_value, (ava_value*restrict a),
+            cat(9, a[0], a[1], a[2], a[3],
+                a[4], a[5], a[6], a[7], a[8]),
+            STATWORD(a), STATWORD(b), STATWORD(c), STATWORD(d),
+            STATWORD(e), STATWORD(f), STATWORD(g), STATWORD(h),
+            STATWORD(i))
