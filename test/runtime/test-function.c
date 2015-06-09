@@ -24,12 +24,19 @@
 #include "runtime/avalanche/exception.h"
 #include "runtime/avalanche/integer.h"
 #include "runtime/avalanche/real.h"
+#include "runtime/avalanche/list.h"
 #include "runtime/avalanche/function.h"
 
 defsuite(function);
 
 static const ava_function* of_cstring(const char* str) {
-  return ava_function_of_value(ava_value_of_cstring(str));
+  ava_value val = ava_value_of_cstring(str);
+  const ava_function* fun = ava_function_of_value(val);
+
+  /* Test the list access / stringification while we're here */
+  assert_values_equal(ava_value_of_function(fun), ava_list_value_of(val).v);
+
+  return fun;
 }
 
 static void assert_rejects(const char* str) {
