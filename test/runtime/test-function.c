@@ -1347,3 +1347,15 @@ TEST_INVOKE(invoke_explosively, "abcd e fg",
             STATWORD(a),
             { .type = ava_fpt_spread,
                 .value = ava_value_of_cstring("-c c -b b d e f g") })
+
+deftest(list_miscellanea_work) {
+  ava_value base = ava_value_of_function(of_cstring("42 ava pos"));
+
+  assert_value_equals_str("ava", ava_list_slice(base, 1, 2));
+  assert_value_equals_str("42 ava pos pos", ava_list_append(base, WORD(pos)));
+  assert_value_equals_str("42 ava pos 42 ava pos",
+                          ava_list_concat(base, base));
+  assert_value_equals_str("42 pos", ava_list_remove(base, 1, 2));
+  assert_value_equals_str("42 fortran pos",
+                          ava_list_set(base, 1, WORD(fortran)));
+}
