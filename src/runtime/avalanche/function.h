@@ -42,12 +42,14 @@
  * The address is simply the numeric value of the address of the native (C)
  * function to invoke.
  *
- * The marshalling-specification is described detail further down; for now it
- * is sufficient to note that the marshalling specification indicates a
- * constant number of arguments passed to the function.
+ * The marshalling-specification is described detail further down.
  *
  * The binding specification indicates how any given list of parameters is
  * translated to function-level arguments.
+ *
+ * The number of arguments taken by a function is derived from the length of
+ * this list; it is equal to the length of the list minus two or three,
+ * depending on whether the marshalling specification specifies a return type.
  *
  * Terminology note: "Argument" refers to a value passed into a function as the
  * function receives it; "parameter" refers to a single value at the call site.
