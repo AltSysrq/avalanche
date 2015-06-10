@@ -89,4 +89,19 @@ ava_pointer_value ava_pointer_of_proto(
   const ava_pointer_prototype*restrict prototype,
   const void*restrict ptr);
 
+/**
+ * Parses the given string into a pointer prototype.
+ *
+ * @param protostr The string to parse.
+ * @return A prototype parsed from the string.
+ * @throw ava_format_exception if protostr is not a valid prototype.
+ */
+const ava_pointer_prototype* ava_pointer_prototype_parse(ava_string protostr);
+
+/**
+ * Converts the given pointer prototype to a string.
+ */
+ava_string ava_pointer_prototype_to_string(
+  const ava_pointer_prototype* prototype);
+
 #endif /* AVA_RUNTIME_POINTER_H_ */

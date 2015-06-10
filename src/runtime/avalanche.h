@@ -34,6 +34,7 @@ AVA_BEGIN_DECLS
 #include "avalanche/list-proj.h"
 #include "avalanche/map.h"
 #include "avalanche/pointer.h"
+#include "avalanche/function.h"
 
 /**
  * Initialises the avalanche runtime.

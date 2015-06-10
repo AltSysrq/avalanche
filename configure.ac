@@ -22,6 +22,8 @@ AC_PROG_SED
 PKG_CHECK_MODULES([CHECK], [check], [], [:])
 PKG_CHECK_MODULES([LIBUNWIND], [libunwind], [], [AC_MSG_ERROR(
 [libunwind could not be found. Make sure libunwind[-dev] is installed.])])
+PKG_CHECK_MODULES([LIBFFI], [libffi], [], [AC_MSG_ERROR(
+[libffi could not be found. Make sure libffi[-dev] is installed.])])
 # While faster setjmp() would be nice, the way this library attempts to operate
 # by redifining setjmp() and longjmp() is a bit problematic.
 # PKG_CHECK_MODULES([LIBUNWIND_SETJMP], [libunwind-setjmp], [], [:])
@@ -54,11 +56,23 @@ AC_TYPE_INT16_T
 AC_TYPE_INT32_T
 AC_TYPE_INT64_T
 AC_TYPE_INTPTR_T
+AC_CHECK_SIZEOF([short])
 AC_CHECK_SIZEOF([int])
 AC_CHECK_SIZEOF([long])
+AC_CHECK_SIZEOF([long long])
+AC_CHECK_SIZEOF([size_t])
+AC_CHECK_SIZEOF([ffi_cif], [], [
+#include <ffi.h>
+])
+AC_CHECK_SIZEOF([ffi_arg], [], [
+#include <ffi.h>
+])
 
 # Checks for library functions.
 AC_CHECK_FUNCS([setrlimit arc4random_buf])
+AC_CHECK_DECLS([FFI_THISCALL, FFI_STDCALL], [], [], [
+#include <ffi.h>
+])
 
 AC_CONFIG_FILES([Makefile src/Makefile src/runtime/Makefile test/Makefile])
 AC_OUTPUT

@@ -444,6 +444,24 @@ signed ava_strcmp(ava_string a, ava_string b) {
   return (alen > blen) - (alen < blen);
 }
 
+ava_ascii9_string ava_string_to_ascii9(ava_string str) {
+  const char* dat;
+  size_t len;
+
+  if (ava_string_is_ascii9(str))
+    return str.ascii9;
+
+  len = ava_string_length(str);
+  if (len > 9)
+    return 0;
+
+  dat = ava_twine_force(str.twine);
+  if (ava_string_can_encode_ascii9(dat, len))
+    return ava_ascii9_encode(dat, len);
+  else
+    return 0;
+}
+
 static inline ava_twine_tag ava_twine_get_tag(const void* body) {
   return (ava_intptr)body & 0x7;
 }

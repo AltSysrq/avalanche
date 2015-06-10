@@ -90,6 +90,28 @@ typedef union {
     | _AVA_ASCII9_ENCODE_STRCHR((str), 7)       \
     | _AVA_ASCII9_ENCODE_STRCHR((str), 8)       \
     )
+/**
+ * Reduces to an integer constant representing the given character sequence as
+ * an ASCII9 string.
+ *
+ * Note that you need to pass each character in individually, since indexing a
+ * string literal doesn't count as a constant expression in ISO C.
+ *
+ * The result is undefined if the string implied is not a legal ASCII9 string.
+ */
+#define AVA_ASCII9(...) _AVA_ASCII9(__VA_ARGS__, 0, 0, 0, 0, 0, 0, 0, 0, 0)
+#define _AVA_ASCII9(a,b,c,d,e,f,g,h,i,...) (    \
+    1                                           \
+    | _AVA_ASCII9_ENCODE_CHAR((a),0)            \
+    | _AVA_ASCII9_ENCODE_CHAR((b),1)            \
+    | _AVA_ASCII9_ENCODE_CHAR((c),2)            \
+    | _AVA_ASCII9_ENCODE_CHAR((d),3)            \
+    | _AVA_ASCII9_ENCODE_CHAR((e),4)            \
+    | _AVA_ASCII9_ENCODE_CHAR((f),5)            \
+    | _AVA_ASCII9_ENCODE_CHAR((g),6)            \
+    | _AVA_ASCII9_ENCODE_CHAR((h),7)            \
+    | _AVA_ASCII9_ENCODE_CHAR((i),8)            \
+    )
 
 /**
  * This is an internal structure.
@@ -334,5 +356,13 @@ ava_uint ava_ascii9_hash(ava_ascii9_string str) AVA_CONSTFUN;
  * before a.
  */
 signed ava_strcmp(ava_string a, ava_string b) AVA_PURE;
+
+/**
+ * Returns an ava_ascii9_string representing the given string if it is possible
+ * to represent the string in that format; otherwise, returns 0.
+ *
+ * This makes it possible to switch over small ASCII strings with AVA_ASCII9().
+ */
+ava_ascii9_string ava_string_to_ascii9(ava_string str) AVA_PURE;
 
 #endif /* AVA_RUNTIME_STRING_H_ */

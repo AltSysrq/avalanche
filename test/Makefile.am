@@ -8,6 +8,7 @@ runtime/test-empty-list.t \
 runtime/test-esba-list.t \
 runtime/test-esba.t \
 runtime/test-exception.t \
+runtime/test-function.t \
 runtime/test-hash-map.t \
 runtime/test-integer.t \
 runtime/test-lex.t \
@@ -36,6 +37,7 @@ runtime_test_empty_list_t_SOURCES = runtime/test-empty-list.c
 runtime_test_esba_list_t_SOURCES = runtime/test-esba-list.c
 runtime_test_esba_t_SOURCES = runtime/test-esba.c
 runtime_test_exception_t_SOURCES = runtime/test-exception.c
+runtime_test_function_t_SOURCES = runtime/test-function.c
 runtime_test_hash_map_t_SOURCES = runtime/test-hash-map.c
 runtime_test_integer_t_SOURCES = runtime/test-integer.c
 runtime_test_lex_t_SOURCES = runtime/test-lex.c
