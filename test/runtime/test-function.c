@@ -1236,3 +1236,87 @@ TEST_INVOKE(invoke_ava_9_arg, "abcdefghi",
             STATWORD(a), STATWORD(b), STATWORD(c), STATWORD(d),
             STATWORD(e), STATWORD(f), STATWORD(g), STATWORD(h),
             STATWORD(i))
+
+TEST_INVOKE(invoke_c_void, "",
+            "c void \"void pos\"",
+            void, (void), ,
+            { .type = ava_fpt_static, .value = ava_value_of_string(
+                AVA_EMPTY_STRING) })
+
+#define TEST_INVOKE_SUM(name, ctype, result, aparm, bparm)      \
+  TEST_INVOKE(invoke_c_sum_##name, #result,                     \
+              "c " #name " \"" #name " pos\" \"" #name " pos\"",     \
+              ctype, (ctype a, ctype b), a + b,                 \
+              { .type = ava_fpt_static,                         \
+                  .value = ava_value_of_cstring(#aparm) },      \
+              { .type = ava_fpt_static,                         \
+                  .value = ava_value_of_cstring(#bparm) })
+
+TEST_INVOKE_SUM(byte, signed char, -3, -1, -2)
+TEST_INVOKE_SUM(short, signed short, -3, -1, -2)
+TEST_INVOKE_SUM(int, signed int, -3, -1, -2)
+TEST_INVOKE_SUM(long, signed long, -3, -1, -2)
+TEST_INVOKE_SUM(llong, signed long long, -3, -1, -2)
+TEST_INVOKE_SUM(ubyte, unsigned char, 254, 1, 253)
+TEST_INVOKE_SUM(ushort, unsigned short, 65501, 1, 65500)
+TEST_INVOKE_SUM(uint, unsigned int, 3000000001, 1, 3000000000)
+TEST_INVOKE_SUM(ulong, unsigned long, 3000000001, 1, 3000000000)
+/* This becomes signed anyway since ava_integer is signed */
+TEST_INVOKE_SUM(ullong, unsigned long long,
+                -9223372036854775807, 1, 9223372036854775808)
+TEST_INVOKE_SUM(ava_sbyte, ava_sbyte, -3, -1, -2)
+TEST_INVOKE_SUM(ava_ubyte, ava_ubyte, 254, 1, 253)
+TEST_INVOKE_SUM(ava_sshort, ava_sshort, -3, -1, -2)
+TEST_INVOKE_SUM(ava_ushort, ava_ushort, 65501, 1, 65500)
+TEST_INVOKE_SUM(ava_sint, ava_sint, -3, -1, -2)
+TEST_INVOKE_SUM(ava_uint, ava_uint, 3000000001, 1, 3000000000)
+TEST_INVOKE_SUM(ava_slong, ava_slong, -3, -1, -2)
+TEST_INVOKE_SUM(ava_ulong, ava_ulong, -9223372036854775807, 1, 9223372036854775808)
+TEST_INVOKE_SUM(ava_integer, ava_integer, -3, -1, -2)
+TEST_INVOKE_SUM(size, size_t, 65536, 32768, 32768)
+TEST_INVOKE_SUM(float, float, 2.5, 0.5, 2.0)
+TEST_INVOKE_SUM(double, double, 2.5, 0.5, 2.0)
+TEST_INVOKE_SUM(ldouble, long double, 2.5, 0.5, 2.0)
+TEST_INVOKE_SUM(ava_real, ava_real, 2.5, 0.5, 2.0)
+
+TEST_INVOKE(invoke_string, "foobar",
+            "c string \"string pos\" \"string pos\"",
+            const char*, (const char* a, const char* b),
+            ava_string_to_cstring(
+              ava_string_concat(ava_string_of_cstring(a),
+                                ava_string_of_cstring(b))),
+            STATWORD(foo), STATWORD(bar))
+
+TEST_INVOKE(invoke_mut_pointer, "foo* null",
+            "c foo* \"bar* pos\"",
+            void*, (void* a), (void*)(ava_intptr)(0xBEEF != (ava_intptr)a),
+            { .type = ava_fpt_static,
+                .value = ava_value_of_cstring("bar* xBEEF") })
+
+TEST_INVOKE(invoke_const_pointer, "foo& null",
+            "c foo& \"bar& pos\"",
+            void*, (void* a), (void*)(ava_intptr)(0xBEEF != (ava_intptr)a),
+            { .type = ava_fpt_static,
+                .value = ava_value_of_cstring("bar& xBEEF") })
+
+deftest(c_void_argument_required_to_be_empty) {
+  ava_exception_handler h;
+  char funspec[256];
+  const ava_function* fun;
+  ava_function_parameter parms[1] = {
+    { .type = ava_fpt_static, .value = WORD(foo) }
+  };
+
+  snprintf(funspec, sizeof(funspec), "%lld c int \"void pos\"",
+           (long long)rand);
+  fun = of_cstring(funspec);
+
+  ava_try (h) {
+    ava_function_bind_invoke(fun, 1, parms);
+    ck_abort_msg("no exception thrown");
+  } ava_catch(h, ava_format_exception) {
+    /* OK */
+  } ava_catch_all {
+    ava_rethrow(&h);
+  }
+}

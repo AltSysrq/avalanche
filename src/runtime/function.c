@@ -1087,25 +1087,33 @@ ava_value ava_function_invoke(const ava_function* fun,
 #endif
     return ava_value_of_integer(return_value.returned_sint);
 
-  case ava_cmpt_ubyte:
-  case ava_cmpt_ushort:
-  case ava_cmpt_uint:
+  /* The returned value may be sign-extended _anyway_, despite telling libffi
+   * that the return value is unsigned, so each case needs to manually cast to
+   * the correct type first.
+   *
+   * (Curiously, uint8 seems to be immune to this effect.)
+   */
+#define INT(itype) ava_value_of_integer(                \
+      (ava_ulong)(itype)return_value.returned_uint)
+  case ava_cmpt_ubyte:  return INT(unsigned char);
+  case ava_cmpt_ushort: return INT(unsigned short);
+  case ava_cmpt_uint:   return INT(unsigned int);
 #if SIZEOF_FFI_ARG >= SIZEOF_LONG
-  case ava_cmpt_ulong:
+  case ava_cmpt_ulong:  return INT(unsigned long);
 #endif
 #if SIZEOF_FFI_ARG >= SIZEOF_LONG_LONG
-  case ava_cmpt_ullong:
+  case ava_cmpt_ullong: return INT(unsigned long long);
 #endif
-  case ava_cmpt_ava_ubyte:
-  case ava_cmpt_ava_ushort:
-  case ava_cmpt_ava_uint:
+  case ava_cmpt_ava_ubyte:      return INT(ava_ubyte);
+  case ava_cmpt_ava_ushort:     return INT(ava_ushort);
+  case ava_cmpt_ava_uint:       return INT(ava_uint);
 #if SIZEOF_FFI_ARG >= 8
-  case ava_cmpt_ava_ulong:
+  case ava_cmpt_ava_ulong:      return INT(ava_ulong);
 #endif
 #if SIZEOF_FFI_ARG >= SIZEOF_SIZE_T
-  case ava_cmpt_size:
+  case ava_cmpt_size:           return INT(size_t);
 #endif
-    return ava_value_of_integer(return_value.returned_uint);
+#undef INT
 
 #if SIZEOF_FFI_ARG < SIZEOF_LONG
   case ava_cmpt_long:
