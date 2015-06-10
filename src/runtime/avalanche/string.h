@@ -173,9 +173,27 @@ struct ava_twine_s {
 #define AVA_EMPTY_STRING ((ava_string) { .ascii9 = 1 })
 
 /**
+ * Equivalent to AVA_EMPTY_STRING, but is guaranteed to be considered a
+ * constant initialiser.
+ *
+ * (Some gcc versions, like 4.9.2, don't think the
+ * compound-literal-in-parentheses is a constant expression.)
+ */
+#define AVA_EMPTY_STRING_INIT { .ascii9 = 1 }
+
+/**
  * The absent string.
  */
 #define AVA_ABSENT_STRING ((ava_string) { .ascii9 = 0 })
+
+/**
+ * Equivalent to AVA_ABSENT_STRING, but is guaranteed to be considered a
+ * constant initialiser.
+ *
+ * (Some gcc versions, like 4.9.2, don't think the
+ * compound-literal-in-parentheses is a constant expression.)
+ */
+#define AVA_ABSENT_STRING_INIT { .ascii9 = 0 }
 
 /**
  * Expands to a static initialiser for an ava_string containing the given

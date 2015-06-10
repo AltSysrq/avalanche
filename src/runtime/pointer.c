@@ -70,9 +70,9 @@ AVA_LIST_DEFIMPL(ava_pointer, &ava_pointer_generic_impl)
 AVA_POINTER_DEFIMPL(ava_pointer, &ava_pointer_list_impl)
 
 const ava_pointer_prototype ava_pointer_proto_mut_void =
-  AVA_INIT_POINTER_PROTOTYPE(AVA_EMPTY_STRING, ava_false);
+    AVA_INIT_POINTER_PROTOTYPE(AVA_EMPTY_STRING_INIT, ava_false);
 const ava_pointer_prototype ava_pointer_proto_const_void =
-  AVA_INIT_POINTER_PROTOTYPE(AVA_EMPTY_STRING, ava_true);
+  AVA_INIT_POINTER_PROTOTYPE(AVA_EMPTY_STRING_INIT, ava_true);
 
 ava_pointer_value ava_pointer_value_of(ava_value value) {
   if (!ava_get_attribute(value, &ava_pointer_trait_tag))
