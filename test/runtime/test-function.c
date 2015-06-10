@@ -1320,3 +1320,30 @@ deftest(c_void_argument_required_to_be_empty) {
     ava_rethrow(&h);
   }
 }
+
+TEST_INVOKE(invoke_with_binding_rearrangement, "impfoobarplughfalsequux",
+            "ava \"implicit imp\" pos \"named -bar\" \"named -plugh\" "
+            "\"bool -flag\" pos",
+            ava_value, (ava_value a, ava_value b, ava_value c, ava_value d,
+                        ava_value e, ava_value f),
+            cat(6, a, b, c, d, e, f),
+            STATWORD(foo), STATWORD(-plugh), STATWORD(plugh),
+            STATWORD(-bar), STATWORD(bar), STATWORD(quux))
+
+TEST_INVOKE(invoke_varargs, "a b c d e f g",
+            "ava varargs",
+            ava_value, (ava_value v), v,
+            STATWORD(a), STATWORD(b),
+            { .type = ava_fpt_spread, .value = WORD(c d) },
+            STATWORD(e),
+            { .type = ava_fpt_spread, .value = WORD(f g) },
+            { .type = ava_fpt_spread, .value = ava_empty_list().v })
+
+TEST_INVOKE(invoke_explosively, "abcd e fg",
+            "ava pos \"named -b b\" \"named -c\" varargs pos",
+            ava_value, (ava_value a, ava_value b, ava_value c, ava_value va,
+                        ava_value e),
+            cat(5, a, b, c, va, e),
+            STATWORD(a),
+            { .type = ava_fpt_spread,
+                .value = ava_value_of_cstring("-c c -b b d e f g") })
