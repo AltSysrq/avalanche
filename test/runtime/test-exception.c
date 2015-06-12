@@ -29,6 +29,7 @@ defsuite(exception);
 static void throw0(ava_value value) NOINLINE;
 static void throw1(ava_value value) NOINLINE;
 static void rethrow0(ava_value value) NOINLINE;
+static void a$avast__ava_lang__org___prelude__$2B(ava_value value) NOINLINE;
 
 static void throw0(ava_value value) {
   ava_throw(&ava_user_exception, value, NULL);
@@ -36,6 +37,10 @@ static void throw0(ava_value value) {
 
 static void throw1(ava_value value) {
   throw0(value);
+}
+
+static void a$avast__ava_lang__org___prelude__$2B(ava_value value) {
+  throw1(value);
 }
 
 static void rethrow0(ava_value value) {
@@ -53,7 +58,7 @@ static void rethrow0(ava_value value) {
 deftest_signal(uncaught_exception, SIGABRT) {
   ava_value value = ava_value_of_string(ava_string_of_cstring("hello world"));
 
-  throw1(value);
+  a$avast__ava_lang__org___prelude__$2B(value);
 }
 
 deftest(caught_exception) {

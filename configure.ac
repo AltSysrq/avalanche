@@ -28,6 +28,7 @@ PKG_CHECK_MODULES([LIBFFI], [libffi], [], [AC_MSG_ERROR(
 # by redifining setjmp() and longjmp() is a bit problematic.
 # PKG_CHECK_MODULES([LIBUNWIND_SETJMP], [libunwind-setjmp], [], [:])
 AC_SEARCH_LIBS([sin], [c m])
+AC_SEARCH_LIBS([strlcpy], [c bsd])
 AC_SEARCH_LIBS([GC_init], [gc], [],
                [AC_MSG_ERROR(
 [The gc library could not be found. Make sure libgc[-dev] is installed.])])

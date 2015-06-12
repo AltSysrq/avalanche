@@ -23,10 +23,15 @@
 #include <setjmp.h>
 #include <string.h>
 
+#ifdef HAVE_BSD_STRING_H
+#include <bsd/string.h>
+#endif
+
 #include <libunwind.h>
 
 #define AVA__INTERNAL_INCLUDE 1
 #include "avalanche/alloc.h"
+#include "avalanche/name-mangle.h"
 #include "avalanche/exception.h"
 #include "-context.h"
 #include "bsd.h"
@@ -35,6 +40,8 @@ ava_stack_trace* ava_generate_stack_trace(void) {
   unw_context_t uc;
   unw_cursor_t cursor;
   unw_word_t ip, ip_off;
+  ava_demangled_name demangled;
+  char strtmp[AVA_STR_TMPSZ];
 
   ava_stack_trace* trace = NULL, * new;
 
@@ -52,7 +59,21 @@ ava_stack_trace* ava_generate_stack_trace(void) {
       memcpy(new->in_function, "<unknown>", sizeof("<unknown>"));
       new->function_type = "???";
     } else {
-      new->function_type = "C";
+      demangled = ava_name_demangle(ava_string_of_cstring(new->in_function));
+
+      (void)strlcpy(new->in_function,
+                    ava_string_to_cstring_buff(strtmp, demangled.name),
+                    sizeof(new->in_function));
+      switch (demangled.scheme) {
+      case ava_nms_none:
+        new->function_type = "C";
+        break;
+
+      case ava_nms_ava:
+        new->function_type = "AVA";
+        break;
+      }
+
       new->ip_offset = ip_off;
     }
 
