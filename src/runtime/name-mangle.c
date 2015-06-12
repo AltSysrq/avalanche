@@ -113,7 +113,7 @@ ava_string ava_name_mangle(ava_demangled_name name) {
       } else if (src[in] == '.' && '_' != dst[out-1]) {
         dst[out++] = '_';
         dst[out++] = '_';
-      } else if (src[in] == ':') {
+      } else if (src[in] == ':' && '_' != dst[out-1]) {
         dst[out++] = '_';
         dst[out++] = '_';
         dst[out++] = '_';

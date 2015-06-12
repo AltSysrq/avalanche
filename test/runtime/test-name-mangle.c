@@ -62,8 +62,9 @@ deftest(doc_example_mangling) {
 }
 
 deftest(ava_mangling_consecutive_specials) {
-  assert_mangles_to("a$_$2D_x__$2E__x_________",
+  assert_mangles_to("a$_$2D_x__$2E__x___$3A___",
                     ava_nms_ava, "---x...x:::");
+  assert_mangles_to("a$_$3A", ava_nms_ava, "-:");
 }
 
 deftest(demangle_ava_like_zero_length) {
