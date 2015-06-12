@@ -35,6 +35,7 @@ runtime/list.c \
 runtime/list-map.c \
 runtime/list-proj.c \
 runtime/map.c \
+runtime/name-mangle.c \
 runtime/pointer.c \
 runtime/real.c \
 runtime/string.c \
