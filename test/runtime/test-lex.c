@@ -186,7 +186,7 @@ deftest(escape_newline_before_comment) {
 }
 
 deftest(parentheses) {
-  start(" ()() [][] {}");
+  start(" ()() [][] {}{}");
   lex(ava_ltt_begin_substitution, "(");
   lex(ava_ltt_close_paren, ")");
   lex(ava_ltt_begin_name_subscript, "(");
@@ -197,6 +197,25 @@ deftest(parentheses) {
   lex(ava_ltt_close_bracket, "]");
   lex(ava_ltt_begin_block, "{");
   lex(ava_ltt_close_brace, "}");
+  lex(ava_ltt_begin_string_subscript, "{");
+  lex(ava_ltt_close_brace, "}");
+  end();
+}
+
+deftest(close_parens_followed_by_word) {
+  start("()a()b []c[]d {}e{}f");
+  lex(ava_ltt_begin_substitution, "(");
+  lex(ava_ltt_close_paren, ")a");
+  lex(ava_ltt_begin_name_subscript, "(");
+  lex(ava_ltt_close_paren, ")b");
+  lex(ava_ltt_begin_semiliteral, "[");
+  lex(ava_ltt_close_bracket, "]c");
+  lex(ava_ltt_begin_numeric_subscript, "[");
+  lex(ava_ltt_close_bracket, "]d");
+  lex(ava_ltt_begin_block, "{");
+  lex(ava_ltt_close_brace, "}e");
+  lex(ava_ltt_begin_string_subscript, "{");
+  lex(ava_ltt_close_brace, "}f");
   end();
 }
 
@@ -485,15 +504,6 @@ deftest(error_on_backslash_at_eof_in_string) {
 deftest(error_on_backslash_at_eof_in_verbatim) {
   start("\\{\\;");
   error();
-  end();
-}
-
-deftest(error_on_brace_not_preceded_by_whitespace) {
-  start("foo{bar}");
-  lex(ava_ltt_bareword, "foo");
-  error();
-  lex(ava_ltt_bareword, "bar");
-  lex(ava_ltt_close_brace, "}");
   end();
 }
 

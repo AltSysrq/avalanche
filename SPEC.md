@@ -167,26 +167,35 @@ like this"
 
 A Left-Parenthesis `(` is interpreted as a Begin-Substitution Token if it is
 Independent, and as a Begin-Name-Subscript Token otherwise. A Right-Parenthesis
-`)` is a Close-Paren Token.
+`)` is a Close-Paren Token. The Right-Paren may be immediately followed by any
+number of Word characters, which are considered to be part of the same token.
 
 ```
   $dict($key)           ; Name-Subscript
+  $dict($key)i          ; Custom Name-Subscript
   foo (bar baz)         ; Substitution
 ```
 
 A Left-Bracket `[` is interpreted as a Begin-Semiliteral Token if it is
 Independent, and as a Begin-Numeric-Subscript Token otherwise. A Right-Bracket
-`]` is a Close-Bracket Token.
+`]` is a Close-Bracket Token. The Right-Bracket may be immediateyl followed by
+any number of Word characters, which are considered to be part of the same
+token.
 
 ```
   $list[$offset]        ; Numeric-Subscript
+  $list[$offset]i       ; Custom Name-Subscript
   [foo bar baz]         ; Semiliteral
 ```
 
 A Left-Brace `{` is interpreted as a Begin-Block Token if it is Independent,
-and is an error otherwise. A Right-Brace '}' is a Close-Brace Token.
+and a Begin-String-Subscript Token otherwise. A Right-Brace '}' is a
+Close-Brace Token. The Right-Brace may be immediately followed by any number of
+Word characters, which are considered to be part of the same token.
 
 ```
+  $str{$index}          ; String-Subscript
+  $str{$index}j         ; Custom String-Subscript
   map { foo bar }       ; Block
 ```
 

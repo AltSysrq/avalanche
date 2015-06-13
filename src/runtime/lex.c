@@ -439,11 +439,11 @@ ava_lex_status ava_lex_lex(ava_lex_result* dst, ava_lex_context* lex) {
       <Ground> BS WS+           { IND();  ACCEPT(ava_lex_newline); }
       <Ground> COM              {         IGNORE(); }
       <Ground> "("              {         ACCEPT(ava_lex_left_paren); }
-      <Ground> ")"              {         ACCEPT(ava_lex_right_paren); }
+      <Ground> ")" NS*          {         ACCEPT(ava_lex_right_paren); }
       <Ground> "["              {         ACCEPT(ava_lex_left_bracket); }
-      <Ground> "]"              {         ACCEPT(ava_lex_right_bracket); }
-      <Ground> "{"              { IND();  ACCEPT(ava_lex_left_brace); }
-      <Ground> "}"              {         ACCEPT(ava_lex_right_brace); }
+      <Ground> "]" NS*          {         ACCEPT(ava_lex_right_bracket); }
+      <Ground> "{"              {         ACCEPT(ava_lex_left_brace); }
+      <Ground> "}" NS*          {         ACCEPT(ava_lex_right_brace); }
 
       <Ground> '"' => String    { DIND(); ACCUM(ava_lex_string_init); }
       <Ground> '`' => String    {         ACCUM(ava_lex_string_init); }
@@ -574,8 +574,12 @@ static ava_lex_status ava_lex_left_brace(
   const ava_lex_pos* frag_start,
   ava_lex_context* lex
 ) {
+  ava_bool ws = lex->is_independent;
+
   return ava_lex_put_token(
-    dst, ava_ltt_begin_block, start, &lex->p, lex);
+    dst,
+    ws? ava_ltt_begin_block : ava_ltt_begin_string_subscript,
+    start, &lex->p, lex);
 }
 
 static ava_lex_status ava_lex_right_brace(

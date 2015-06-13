@@ -89,6 +89,10 @@ typedef enum {
    */
   ava_ltt_begin_block,
   /**
+   * The token is a left-brace starting a string subscript.
+   */
+  ava_ltt_begin_string_subscript,
+  /**
    * The token is a right-brace.
    */
   ava_ltt_close_brace,
