@@ -15,46 +15,6 @@ blocks are compiled, and string references thereto are passed around.
 Also unlike Tcl, Avalance strings are byte strings rather than character
 strings.
 
-The compiler does need to about some of the composite pseudo-types, which are
-documented below. Pseudo-types commonly present within source code are also
-described.
-
-### Booleans
-
-The canonical boolean values are `true` and `false`. `yes` and `on` are also
-understood to mean `true`; `no` and `off` are also understood to mean `false`.
-None of these are case-sensitive. All strings interpretable as non-zero,
-non-NaN numbers are considered true; strings interpretable as zero or NaN are
-false. The empty string is false. Other strings are not interpretable as
-booleans.
-
-### Integers
-
-Integers are numeric strings not containing a decimal point. By default, they
-are in base-10; the prefices `0b`, `0o`, and `0x` can be used to select binary,
-octal, and hexadecimal, respectively, case-insensitive. Non-numeric boolean
-strings can also be considered integers, with values 1 for `true` and 0 for
-`false`. In most contexts, the empty string is considered a zero integer.
-
-### Floats
-
-Floats are numeric strings containing a decimal point. They use the same syntax
-as accepted by `strtod(3)`.
-
-### Lists
-
-A list is any string which can be parsed with Avalanche's Command tokenisation
-rules without invoking any command, variable substitution, etc. (Ie, only
-literal tokens are permitted.) The list is said to contain one element for each
-token parsed. Canonical lists have each item bare if possible, and otherwise
-nested within verbatim quote blocks.
-
-### Dicts
-
-A dict(ionary) is any list with an even number of elements. Each even element
-(counting from zero) is a key, matched to the value following it. If the same
-key occurs more than once, only the last occurrance is meaningful.
-
 Syntax I --- Tokenisation / Lexing
 ----------------------------------
 
