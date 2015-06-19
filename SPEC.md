@@ -300,9 +300,32 @@ follows:
 All Newline tokens directly within a Substitution, Name-Subscript, Semiliteral,
 Numeric-Subscript, or String-Subscript syntax are deleted.
 
-After grouping, the parser recursively walks the structure to perform variable
-symplification. For each Bareword syntax unit which contains at least one
-dollar sign, the following transformation is applied:
+The next step is subscript simplification. Recursively, from left to right,
+evry Name-Subscript, Numeric-Subscript, and String-Subscript unit and the unit
+immediately preceding it (which is guaranteed to exist by the lexical rules) is
+transformed into a single Substitution containing the following elements:
+
+- The Bareword `#name-subscript#`, `#numeric-subscript#`, or
+  `#string-subscript#` based on whether the second unit is a Name-Subscript,
+  Numeric-Subscript, or String-Subscript unit, respectively.
+
+- A Bareword consisting of the ending tag on the Subscript unit surrounded by
+  hashes.
+
+- The unit preceding the Subscript, unmodified.
+
+- The Subscript unit itself, but changed into a Substitution with an empty
+  string tag.
+
+For example, the expression `foo[a + b]tag` is transformed into
+```
+  (#numeric-subscript# #tag# foo (a + b))
+```
+
+After grouping and subscript simplification, the parser recursively walks the
+structure to perform variable symplification. For each Bareword syntax unit
+which contains at least one dollar sign, the following transformation is
+applied:
 
 - The Bareword is split into alternating string and variable parts, delimited
   by dollar signs, with any leading empty string part dropped. For example, the
@@ -330,44 +353,21 @@ The bareword `$1` is equivalent to the input string
 ```
 
 Next, the parser performs string regrouping on the direct contents of each
-Semiliteral. This process is as follows:
+Semiliteral. Units are first grouped into sequences of contiguous units where
+each unit meets at least one of the following:
 
-- If an L-String unit is encountered, the unit preceding it and the L-String
-  itself are wrapped in a Substitution unit, which replaces both units. An
-  error occurs if the L-String was not preceded by a syntax unit.
+- It immediately precedes an L-Sring or LR-String.
+- It immediately follows an R-String or LR-String.
+- It is an L-String, LR-String, or R-String.
 
-- If an R-String unit is encountered, it and the unit following it are wrapped
-  in a Substitution unit, which replaces both units. An error occurs if the
-  R-String was not followed by a syntax unit.
+Such sequences are wrapped in a single Substitution unit, which replaces that
+sequence as a whole within the Semiliteral. Any Bareword units are replaced
+with Verbatim units with the same content (to prevent macro processing to occur
+on them).
 
-- If an LR-String unit is encountered, the unit preceding it, the LR-String
-  itself, and the unit following it are wrapped in a Substitution unit, which
-  replaces all three units. An error occurs if the LR-String was was not
-  preceded or followed by a unit.
-
-- All other units are untouched.
-
-The next step is subscript simplification. Recursively, from left to right,
-evry Name-Subscript, Numeric-Subscript, and String-Subscript unit and the unit
-immediately preceding it (which is guaranteed to exist by the lexical rules) is
-transformed into a single Substitution containing the following elements:
-
-- The Bareword `#name-subscript#`, `#numeric-subscript#`, or
-  `#string-subscript#` based on whether the second unit is a Name-Subscript,
-  Numeric-Subscript, or String-Subscript unit, respectively.
-
-- A Bareword consisting of the ending tag on the Subscript unit surrounded by
-  hashes.
-
-- The unit preceding the Subscript, unmodified.
-
-- The Subscript unit itself, but changed into a Substitution with an empty
-  string tag.
-
-For example, the expression `foo[a + b]tag` is transformed into
-```
-  (#numeric-subscript# #tag# foo (a + b))
-```
+An error occurs if the first unit of a Semiliteral is an L-String or an
+LR-String, or if the final unit of a Semiliteral is an R-String or an
+LR-String.
 
 Finally, group-tag simplification is performed. Any Substitution, Semiliteral,
 or Block with a non-empty closing tag is replaced by a single Substitution
@@ -550,7 +550,7 @@ reference](src/runtime/avalanche/function.h). The rest of the syntax units'
 evaluation results are each passed to the function as a single parameter, or
 possibly spread if this state is set by a builtin macro.
 
-Barewords and A-Strings evaluate to their string value.
+Barewords, A-Strings, and Verbatims evaluate to their string value.
 
 Substitutions evaluate to the result of executing their contents.
 

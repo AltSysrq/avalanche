@@ -16,6 +16,7 @@ avalanche/list-trait.h \
 avalanche/map.h \
 avalanche/map-trait.h \
 avalanche/name-mangle.h \
+avalanche/parser.h \
 avalanche/pointer.h \
 avalanche/pointer-trait.h \
 avalanche/real.h \

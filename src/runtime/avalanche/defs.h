@@ -31,6 +31,14 @@
 #include <inttypes.h>
 #endif
 
+#if defined(AVA_HAVE_SYS_QUEUE_H)
+#include <sys/queue.h>
+#elif defined(AVA_HAVE_BSD_SYS_QUEUE_H)
+#include <bsd/sys/queue.h>
+#else
+#error "No BSD sys/queue.h found. You may need to install libbsd-dev."
+#endif
+
 #if defined(__GNUC__) || defined(__clang__)
 #define AVA_MALLOC __attribute__((__malloc__))
 #define AVA_PURE __attribute__((__pure__))
