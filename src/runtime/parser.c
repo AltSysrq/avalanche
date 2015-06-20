@@ -292,24 +292,32 @@ static ava_parse_unit_read_result ava_parse_block_content(
     case ava_purr_nonunit:
       if (ava_ltt_newline == token.type) {
         beginning_of_statement = ava_true;
-      } else if (!is_top_level || ava_ltt_close_brace != token.type) {
+      } else if (is_top_level || ava_ltt_close_brace != token.type) {
         ava_parse_unexpected_token(errors, context, &token);
         return ava_purr_fatal_error;
       } else {
         ava_parse_simplify_group_tag(dst, context, &token);
-        return ava_purr_ok;
+        goto done;
       }
       break;
 
     case ava_purr_eof:
       if (is_top_level) {
-        return ava_purr_ok;
+        goto done;
       } else {
         ava_parse_unexpected_eof(errors, context, &token);
         return ava_purr_fatal_error;
       }
     }
   }
+
+  done:
+
+  /* If the final statement is empty, remove it */
+  if (TAILQ_EMPTY(&statement->units))
+    TAILQ_REMOVE(&dst->v.statements, statement, next);
+
+  return ava_purr_ok;
 }
 
 static void ava_parse_unexpected_token(
@@ -404,6 +412,7 @@ static void ava_parse_simplify_group_tag(
   AVA_STATIC_STRING(block_base, "#block#");
   ava_string base;
   ava_parse_unit* orig, * bareword;
+  ava_parse_statement* statement;
 
   if (1 == ava_string_length(closing_token->str))
     /* No tag */
@@ -438,9 +447,13 @@ static void ava_parse_simplify_group_tag(
                            ava_string_length(closing_token->str)));
 
   unit->type = ava_put_substitution;
-  TAILQ_INIT(&unit->v.units);
-  TAILQ_INSERT_TAIL(&unit->v.units, bareword, next);
-  TAILQ_INSERT_TAIL(&unit->v.units, orig, next);
+  TAILQ_INIT(&unit->v.statements);
+
+  statement = AVA_NEW(ava_parse_statement);
+  TAILQ_INIT(&statement->units);
+  TAILQ_INSERT_TAIL(&unit->v.statements, statement, next);
+  TAILQ_INSERT_TAIL(&statement->units, bareword, next);
+  TAILQ_INSERT_TAIL(&statement->units, orig, next);
 }
 
 static ava_parse_unit_read_result ava_parse_bareword(
@@ -456,6 +469,7 @@ static ava_parse_unit_read_result ava_parse_bareword(
   const char* content;
   size_t strlen, begin, end, i;
   ava_parse_unit* unit, * subunit, * varword;
+  ava_parse_statement* statement, * substatement;
   ava_bool has_dollar;
   ava_bool in_var;
 
@@ -479,7 +493,11 @@ static ava_parse_unit_read_result ava_parse_bareword(
   unit = AVA_NEW(ava_parse_unit);
   unit->type = ava_put_substitution;
   ava_parse_location_from_lex(&unit->location, context, token);
-  TAILQ_INIT(&unit->v.units);
+  TAILQ_INIT(&unit->v.statements);
+
+  statement = AVA_NEW(ava_parse_statement);
+  TAILQ_INIT(&statement->units);
+  TAILQ_INSERT_TAIL(&unit->v.statements, statement, next);
 
   in_var = ava_false;
   for (end = begin = 0; end <= strlen; ++end) {
@@ -488,7 +506,7 @@ static ava_parse_unit_read_result ava_parse_bareword(
       if (end == begin && in_var) {
         ava_parse_error_on_lex_off(errors, context, token,
                                    empty_varname_message,
-                                   begin, end);
+                                   begin-1, end);
       }
 
       /* If in a variable, always produce a substitution expression for that
@@ -499,23 +517,27 @@ static ava_parse_unit_read_result ava_parse_bareword(
         subunit->type = ava_put_substitution;
         ava_parse_location_from_lex_off(
           &subunit->location, context, token, begin, end);
-        TAILQ_INIT(&subunit->v.units);
+        TAILQ_INIT(&subunit->v.statements);
+
+        substatement = AVA_NEW(ava_parse_statement);
+        TAILQ_INIT(&substatement->units);
+        TAILQ_INSERT_TAIL(&subunit->v.statements, substatement, next);
 
         varword = AVA_NEW(ava_parse_unit);
         varword->type = ava_put_bareword;
         ava_parse_location_from_lex_off(
           &varword->location, context, token, begin, end);
         varword->v.string = AVA_ASCII9_STRING("#var#");
-        TAILQ_INSERT_TAIL(&subunit->v.units, varword, next);
+        TAILQ_INSERT_TAIL(&substatement->units, varword, next);
 
         varword = AVA_NEW(ava_parse_unit);
         varword->type = ava_put_bareword;
         ava_parse_location_from_lex_off(
           &varword->location, context, token, begin, end);
         varword->v.string = ava_string_slice(token->str, begin, end);
-        TAILQ_INSERT_TAIL(&subunit->v.units, varword, next);
+        TAILQ_INSERT_TAIL(&substatement->units, varword, next);
 
-        TAILQ_INSERT_TAIL(&unit->v.units, subunit, next);
+        TAILQ_INSERT_TAIL(&statement->units, subunit, next);
 
       /* Otherwise produce a string. Omit empty strings at the beginning or
        * end of the bareword.
@@ -538,7 +560,7 @@ static ava_parse_unit_read_result ava_parse_bareword(
         ava_parse_location_from_lex_off(
           &subunit->location, context, token, begin, end);
         subunit->v.string = ava_string_slice(token->str, begin, end);
-        TAILQ_INSERT_TAIL(&unit->v.units, subunit, next);
+        TAILQ_INSERT_TAIL(&statement->units, subunit, next);
       }
 
       in_var = !in_var;
@@ -765,7 +787,7 @@ static ava_parse_unit_read_result ava_parse_regroup_semiliteral_strings(
 
         /* If an unsubstituted bareword, change to a verbatim */
         if (ava_put_bareword == m->type)
-          m->type = ava_put_bareword;
+          m->type = ava_put_verbatim;
 
         TAILQ_REMOVE(&unit->v.units, m, next);
         TAILQ_INSERT_TAIL(&statement->units, m, next);

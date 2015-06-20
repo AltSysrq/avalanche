@@ -63,7 +63,7 @@ typedef struct {
    */
   unsigned end_line;
   /**
-   * The 0-based indices of the start and end columns of the unit within the
+   * The 1-based indices of the start and end columns of the unit within the
    * first source line.
    */
   unsigned start_column, end_column;

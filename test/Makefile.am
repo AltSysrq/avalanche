@@ -17,6 +17,7 @@ runtime/test-list-proj.t \
 runtime/test-list.t \
 runtime/test-map.t \
 runtime/test-name-mangle.t \
+runtime/test-parser.t \
 runtime/test-pointer.t \
 runtime/test-real.t \
 runtime/test-string.t \
@@ -46,6 +47,7 @@ runtime_test_list_map_t_SOURCES = runtime/test-list-map.c
 runtime_test_list_proj_t_SOURCES = runtime/test-list-proj.c
 runtime_test_list_t_SOURCES = runtime/test-list.c
 runtime_test_name_mangle_t_SOURCES = runtime/test-name-mangle.c
+runtime_test_parser_t_SOURCES = runtime/test-parser.c
 runtime_test_pointer_t_SOURCES = runtime/test-pointer.c
 runtime_test_real_t_SOURCES = runtime/test-real.c
 runtime_test_string_t_SOURCES = runtime/test-string.c
