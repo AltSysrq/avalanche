@@ -21,6 +21,11 @@
 #include <string.h>
 #include <time.h>
 
+#ifdef HAVE_BSD_STDLIB_H
+/* for arc4random on GNU systems */
+#include <bsd/stdlib.h>
+#endif
+
 #ifdef HAVE_NMMINTRIN_H
 #include <nmmintrin.h>
 #endif
