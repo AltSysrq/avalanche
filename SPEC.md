@@ -471,27 +471,25 @@ Aside from certain built-in macros that produce non-denotable results (eg,
 `fun` or `ret`) or perform more complex transformations (eg, `=`), macro
 substitution is performed by substituting the surrounding tokens into a syntax
 template. A syntax template is essentially a sequence of normal syntax units,
-except that Barewords are restricted/transformed as follows:
+except that Barewords are restricted/transformed as described below. Note that
+all of this occurs after things like variable simplification, so rules for
+barewords apply equally to variable names.
 
-- A Bareword whose text begins with `!` and does not contain `$` is substituted
-  into the result verbatim, except with the leading `!` removed.
+- A Bareword whose text begins with `!` is substituted into the result
+  verbatim, except with the leading `!` removed.
 
-- A Bareword whose text begins with `%` and does not contain `$` is replaced at
-  macro-definition time with the fully-qualified name of the symbol the
-  remainder of the name references; at substitution time, a Bareword containing
-  solely that fully-qualified name is substituted.
+- A Bareword whose text begins with `#` is substituted into the result
+  verbatim, including the leading `#`.
 
-- A Bareword whose text begins with `#` and does not contain `$` is replaced at
-  macro-substitution time with a Bareword containing a name guaranteed be
-  unique throughout the entire compilation unit. All occurrences of the same
-  `#`-prefixed Bareword within the same substitution of the macro result in the
-  same substitution.
+- A Bareword whose text begins with `%` is replaced at macro-definition time
+  with the fully-qualified name of the symbol the remainder of the name
+  references; at substitution time, a Bareword containing solely that
+  fully-qualified name is substituted.
 
-- A Bareword containing one or more `$` is substituted as a Bareword with
-  similar structure, except with certain substitutions on the variable names.
-  Each variable name must begin with `!`, `%`, or `#`, and is subject to the
-  Bareword expansions described above. Usage of `#` after `$` yields the same
-  name as a Bareword containing just `#` and the same suffix.
+- A Bareword whose text begins with `?` is replaced at macro-substitution time
+  with a Bareword containing a name guaranteed be unique throughout the entire
+  compilation unit. All occurrences of the same `#`-prefixed Bareword within
+  the same substitution of the macro result in the same substitution.
 
 - A Bareword beginning with `>` refers to the syntax units following the macro
   invoker. It must match the pattern `>[0-9]*(-[0-9]+)[*+]?`. The first of the
