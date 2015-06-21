@@ -21,6 +21,7 @@ avalanche/pointer.h \
 avalanche/pointer-trait.h \
 avalanche/real.h \
 avalanche/string.h \
+avalanche/symbol-table.h \
 avalanche/value.h
 
 avalanche/ava-config.h: $(top_srcdir)/config.h

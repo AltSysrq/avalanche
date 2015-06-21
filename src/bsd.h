@@ -19,12 +19,6 @@
 #ifndef AVALANCHE_BSD_H_
 #define AVALANCHE_BSD_H_
 
-/* Since the "libbsd" package for some reason puts the headers in a different
- * location, despite its sole purpose being to provide compatibility with
- * applications using the BSD extensions, we need this bit of logic to figure
- * out where the includes are.
- */
-
 #if HAVE_BSD_ERR_H
 #include <bsd/err.h>
 #elif HAVE_ERR_H
@@ -39,6 +33,32 @@
 #include <sysexits.h>
 #else
 #error "No BSD sysexits.h could be found on your system. (See libbsd-dev on GNU.)"
+#endif
+
+/* In an older libbsd on Debian, we have the following comment in cdefs.h:
+ *
+ * * Linux headers define a struct with a member names __unused.
+ * * Debian bugs: #522773 (linux), #522774 (libc).
+ * * Disable for now.
+ *
+ * Following this is an #if 0 surrounding the definition of __unused, which
+ * breaks RB_*.
+ */
+#ifndef __unused
+# if LIBBSD_GCC_VERSION >= 0x0300
+#  define __unused __attribute__((unused))
+# else
+#  define __unused
+# endif
+#endif
+
+/* This can't be in defs.h because of the issues surrounding __unused. */
+#if HAVE_BSD_SYS_TREE_H
+#include <bsd/sys/tree.h>
+#elif HAVE_SYS_TREE_H
+#include <sys/tree.h>
+#else
+#error "No BSD tree.h could be found on your system. (See libbsd-dev on GNU.)"
 #endif
 
 #endif /* AVALANCHE_BSD_H_ */

@@ -40,6 +40,7 @@ runtime/parser.c \
 runtime/pointer.c \
 runtime/real.c \
 runtime/string.c \
+runtime/symbol-table.c \
 runtime/value.c
 libavart_la_LIBADD = $(LIBUNWIND_LIBS) $(LIBFFI_LIBS)
 bootstrap_avac_SOURCES = bootstrap/main.c
