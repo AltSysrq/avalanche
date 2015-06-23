@@ -27,7 +27,7 @@
 #include "avalanche/string.h"
 #include "avalanche/symbol-table.h"
 
-typedef struct ava_import_list_enrty_s {
+typedef struct ava_import_list_entry_s {
   ava_string old_prefix, new_prefix;
   ava_bool is_strong, is_auto;
 
@@ -235,10 +235,17 @@ static ava_symbol_table_import_status ava_symbol_table_apply_import_to_entry(
       new_name, entry->symbol, import->is_strong, ava_false);
     new->fresh_import = mark_fresh;
 
-    if (ava_symbol_table_put_local(this, new, mark_fresh))
+    switch (ava_symbol_table_put_local(this, new, mark_fresh)) {
+    case ava_stps_ok:
       return ava_stis_ok;
-    else
+
+    case ava_stps_redefined_strong_local:
+    case ava_stps_redefined_strong_local_by_auto_import:
       return ava_stis_redefined_strong_local;
+    }
+
+    /* Unreachable */
+    abort();
   } else {
     return ava_stis_no_symbols_imported;
   }

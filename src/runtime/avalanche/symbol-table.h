@@ -178,6 +178,10 @@ ava_symbol_table_get_result ava_symbol_table_get(
  * This import is not applied to later symbols added with
  * ava_symbol_table_put() unless is_auto is true.
  *
+ * Note that automatic imports cascade with each other and themselves. Thus,
+ * automatic imports should generally have
+ * length(new_prefix)<length(old_prefix) to guarantee termination.
+ *
  * @param table The table to mutate.
  * @param old_prefix The prefix to match against and strip from visible names.
  * @param new_prefix The new prefix to prepend to reinserted names.

@@ -21,6 +21,7 @@ runtime/test-parser.t \
 runtime/test-pointer.t \
 runtime/test-real.t \
 runtime/test-string.t \
+runtime/test-symbol-table.t \
 runtime/test-value.t
 
 BENCHMARKS = benchmarks/list/avalanche.t benchmarks/map/avalanche.t
@@ -51,6 +52,7 @@ runtime_test_parser_t_SOURCES = runtime/test-parser.c
 runtime_test_pointer_t_SOURCES = runtime/test-pointer.c
 runtime_test_real_t_SOURCES = runtime/test-real.c
 runtime_test_string_t_SOURCES = runtime/test-string.c
+runtime_test_symbol_table_t_SOURCES = runtime/test-symbol-table.c
 runtime_test_value_t_SOURCES = runtime/test-value.c
 
 benchmarks_list_avalanche_t_SOURCES = benchmarks/list/avalanche.c
