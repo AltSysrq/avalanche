@@ -302,7 +302,7 @@ deftest(put_to_transparent_child_propagates_to_parent) {
 }
 
 deftest(save_and_apply_imports) {
-  ava_import_list* imports;
+  const ava_import_list* imports;
   DECL;
   NEW(0);
   IMPORT(ava_stis_no_symbols_imported, foo., bar., 0, 0);
@@ -321,7 +321,7 @@ deftest(save_and_apply_imports) {
 }
 
 deftest(apply_imports_returns_failure_on_strong_conflict) {
-  ava_import_list* imports;
+  const ava_import_list* imports;
   DECL;
   NEW(0);
   IMPORT(ava_stis_no_symbols_imported, foo., , 1, 0);
@@ -335,7 +335,7 @@ deftest(apply_imports_returns_failure_on_strong_conflict) {
 }
 
 deftest(apply_imports_doesnt_return_empty_import) {
-  ava_import_list* imports;
+  const ava_import_list* imports;
   DECL;
   NEW(0);
   IMPORT(ava_stis_no_symbols_imported, foo., , 0, 0);
@@ -348,7 +348,7 @@ deftest(apply_imports_doesnt_return_empty_import) {
 
 deftest(apply_imports_preserves_parent_relationship) {
   ava_symbol_table* parent;
-  ava_import_list imports;
+  const ava_import_list* imports;
   DECL;
   NEW(0);
   PUT(foo, 0);
