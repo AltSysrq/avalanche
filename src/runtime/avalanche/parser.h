@@ -208,4 +208,11 @@ ava_bool ava_parse(ava_parse_unit* dst,
                    ava_compile_error_list* errors,
                    ava_string source, ava_string filename);
 
+/**
+ * Constructs a parse unit which is a substitution containing only the given
+ * statement, which must not be empty.
+ */
+ava_parse_unit* ava_parse_subst_of_nonempty_statement(
+  ava_parse_statement* statement);
+
 #endif /* AVA_RUNTIME_PARSER_H_ */

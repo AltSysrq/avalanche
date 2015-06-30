@@ -940,3 +940,19 @@ static ava_parse_unit_read_result ava_parse_subscript(
   TAILQ_INSERT_TAIL(dst, unit, next);
   return result;
 }
+
+ava_parse_unit* ava_parse_subst_of_nonempty_statement(
+  ava_parse_statement* statement
+) {
+  ava_parse_unit* unit;
+
+  assert(!TAILQ_EMPTY(&statement->units));
+
+  unit = AVA_NEW(ava_parse_unit);
+  unit->type = ava_put_substitution;
+  unit->location = TAILQ_FIRST(&statement->units)->location;
+  TAILQ_INIT(&unit->v.statements);
+  TAILQ_INSERT_TAIL(&unit->v.statements, statement, next);
+
+  return unit;
+}

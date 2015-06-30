@@ -409,3 +409,13 @@ ava_symbol_table_import_status ava_symbol_table_apply_imports(
 
   return ret;
 }
+
+size_t ava_symbol_table_count_imports(const ava_symbol_table* this) {
+  const ava_import_list_entry* import;
+  size_t count;
+
+  count = 0;
+  TAILQ_FOREACH(import, &this->imports, next) ++count;
+
+  return count;
+}
