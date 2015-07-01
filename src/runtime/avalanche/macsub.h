@@ -277,34 +277,37 @@ struct ava_ast_node_s {
   ava_macsub_context* context;
 };
 
+/**
+ * Converts the AST node to a string for diagnostic purposes.
+ *
+ * This is not reversible; the result need not be (and usually is not) valid
+ * Avalanche syntax.
+ */
+typedef ava_string (*ava_ast_node_to_string_f)(const ava_ast_node*);
+/**
+ * Converts this AST node into an equivalent lvalue AST node.
+ *
+ * If this node cannot be used as an lvalue, the node must record an error and
+ * return a valid lvalue AST node.
+ */
+typedef ava_ast_node* (*ava_ast_node_to_lvalue_f)(const ava_ast_node*);
+/**
+ * Performs post-processing on the given node.
+ *
+ * This is primarily used for second-pass name resolution and function binding.
+ *
+ * Nodes which have sub-nodes must delegate to their children.
+ *
+ * Any context needed by the node must have been saved at construction.
+ *
+ * Calling this function more than once has no observable effect.
+ */
+typedef void (*ava_ast_node_postprocess_f)(ava_ast_node*);
+
 struct ava_ast_node_vtable_s {
-  /**
-   * Converts the AST node to a string for diagnostic purposes.
-   *
-   * This is not reversible; the result need  not be (and usually is not) valid
-   * Avalanche syntax.
-   */
-  ava_string (*to_string)(const ava_ast_node*);
-  /**
-   * Converts this AST node into an equivalent lvalue AST node.
-   *
-   * If this node  cannot be used as  an lvalue, the node must  record an error
-   * and return a valid lvalue AST node.
-   */
-  ava_ast_node* (*to_lvalue)(const ava_ast_node*);
-  /**
-   * Performs post-processing on the given node.
-   *
-   * This  is  primarily used  for  second-pass  name resolution  and  function
-   * binding.
-   *
-   * Nodes which have sub-nodes must delegate to their children.
-   *
-   * Any context needed by the node must have been saved at construction.
-   *
-   * Calling this function more than once has no observable effect.
-   */
-  void (*postprocess)(ava_ast_node*);
+  ava_ast_node_to_string_f to_string;
+  ava_ast_node_to_lvalue_f to_lvalue;
+  ava_ast_node_postprocess_f postprocess;
 };
 
 /**

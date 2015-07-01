@@ -43,7 +43,9 @@ runtime/real.c \
 runtime/string.c \
 runtime/symbol-table.c \
 runtime/value.c \
-runtime/-intrinsics/fundamental.c
+runtime/-intrinsics/funcall.c \
+runtime/-intrinsics/fundamental.c \
+runtime/-intrinsics/variable.c
 
 libavart_la_LIBADD = $(LIBUNWIND_LIBS) $(LIBFFI_LIBS)
 bootstrap_avac_SOURCES = bootstrap/main.c

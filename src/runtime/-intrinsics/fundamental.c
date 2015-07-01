@@ -27,6 +27,8 @@
 #include "../avalanche/parser.h"
 #include "../avalanche/macsub.h"
 #include "fundamental.h"
+#include "funcall.h"
+#include "variable.h"
 #include "../../bsd.h"
 
 typedef struct ava_intr_seq_entry_s {
@@ -47,9 +49,9 @@ static ava_ast_node* ava_intr_seq_to_lvalue(const ava_intr_seq* node);
 static void ava_intr_seq_postprocess(const ava_intr_seq* node);
 
 static const ava_ast_node_vtable ava_intr_seq_vtable = {
-  .to_string = (ava_string (*)(const ava_ast_node*))ava_intr_seq_to_string,
-  .to_lvalue = (ava_ast_node* (*)(const ava_ast_node*))ava_intr_seq_to_lvalue,
-  .postprocess = (void (*)(ava_ast_node*))ava_intr_seq_postprocess,
+  .to_string = (ava_ast_node_to_string_f)ava_intr_seq_to_string,
+  .to_lvalue = (ava_ast_node_to_lvalue_f)ava_intr_seq_to_lvalue,
+  .postprocess = (ava_ast_node_postprocess_f)ava_intr_seq_postprocess,
 };
 
 ava_intr_seq* ava_intr_seq_new(
@@ -312,10 +314,116 @@ static ava_ast_node* ava_intr_empty_expr_to_lvalue(const ava_ast_node* node) {
 
 static void ava_intr_empty_expr_postprocess(ava_ast_node* node) { }
 
+typedef struct {
+  ava_ast_node header;
+
+  ava_string value;
+  ava_bool is_bareword;
+} ava_intr_string_expr;
+
+static ava_string ava_intr_string_expr_to_string(
+  const ava_intr_string_expr* node);
+static ava_ast_node* ava_intr_string_expr_to_lvalue(
+  const ava_intr_string_expr* node);
+static void ava_intr_string_expr_postprocess(
+  ava_intr_string_expr* node);
+
+static const ava_ast_node_vtable ava_intr_string_expr_vtable = {
+  .to_string = (ava_ast_node_to_string_f)ava_intr_string_expr_to_string,
+  .to_lvalue = (ava_ast_node_to_lvalue_f)ava_intr_string_expr_to_lvalue,
+  .postprocess = (ava_ast_node_postprocess_f)ava_intr_string_expr_postprocess,
+};
+
+static ava_string ava_intr_string_expr_to_string(
+  const ava_intr_string_expr* node
+) {
+  ava_string str;
+
+  if (node->is_bareword)
+    str = AVA_ASCII9_STRING("bareword:");
+  else
+    str = AVA_ASCII9_STRING("string:");
+
+  return ava_string_concat(str, node->value);
+}
+
+static ava_ast_node* ava_intr_string_expr_to_lvalue(
+  const ava_intr_string_expr* node
+) {
+  AVA_STATIC_STRING(not_a_bareword_message,
+                    "Cannot use string as lvalue");
+
+  if (!node->is_bareword)
+    return ava_macsub_error(
+      node->header.context, not_a_bareword_message, &node->header.location);
+
+  return ava_intr_variable_lvalue(
+    node->header.context, node->value, &node->header.location);
+}
+
+static void ava_intr_string_expr_postprocess(
+  ava_intr_string_expr* node
+) { }
+
+ava_ast_node* ava_intr_unit(ava_macsub_context* context,
+                            const ava_parse_unit* unit) {
+  ava_intr_string_expr* str;
+
+  switch (unit->type) {
+  case ava_put_bareword:
+  case ava_put_astring:
+  case ava_put_verbatim:
+    str = AVA_NEW(ava_intr_string_expr);
+    str->header.v = &ava_intr_string_expr_vtable;
+    str->header.context = context;
+    str->header.location = unit->location;
+    str->value = unit->v.string;
+    str->is_bareword = ava_put_bareword == unit->type;
+    return (ava_ast_node*)str;
+
+  case ava_put_lstring:
+  case ava_put_rstring:
+  case ava_put_lrstring:
+    /* These cases should never happen */
+    abort();
+
+  case ava_put_substitution:
+    return ava_macsub_run(
+      context, &unit->location,
+      &unit->v.statements,
+      ava_isrp_last);
+
+  case ava_put_semiliteral:
+    /* TODO */
+    abort();
+
+  case ava_put_block:
+    /* TODO */
+    abort();
+  }
+
+  /* unreachable */
+  abort();
+}
+
 ava_ast_node* ava_intr_statement(ava_macsub_context* context,
                                  const ava_parse_statement* statement,
                                  const ava_compile_location* location) {
-  /* TODO */
-  abort();
-  return NULL;
+  ava_parse_unit* first;
+  ava_ast_node* empty;
+
+  if (TAILQ_EMPTY(&statement->units)) {
+    empty = AVA_NEW(ava_ast_node);
+    empty->v = &ava_intr_empty_expr_vtable;
+    empty->context = context;
+    empty->location = *location;
+    return empty;
+  }
+
+  first = TAILQ_FIRST(&statement->units);
+
+  if (TAILQ_NEXT(first, next))
+    return ava_intr_funcall_of(context, statement);
+  else
+    return ava_intr_unit(context, first);
 }
