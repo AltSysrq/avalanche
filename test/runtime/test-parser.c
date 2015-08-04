@@ -23,12 +23,10 @@
 #include "runtime/avalanche/parser.h"
 #include "bsd.h"
 
+#include "parser-utils.h"
+
 defsuite(parser);
 
-static void dump_errors(const ava_compile_error_list* errors);
-static void position_caret(char* dst, size_t limit,
-                           unsigned start, unsigned end);
-static const char* extract_source_line(const ava_compile_location* location);
 static ava_string stringify_unit(const ava_parse_unit* unit);
 static ava_string stringify_statement(const ava_parse_statement* statement);
 static void assert_looks_like(const char* expected, const ava_parse_unit* unit);
@@ -70,60 +68,6 @@ static ava_parse_unit* parse_one_unit(const char* source) {
   ck_assert_ptr_eq(NULL, TAILQ_NEXT(unit, next));
 
   return unit;
-}
-
-static void dump_errors(const ava_compile_error_list* errors) {
-  ava_compile_error* error;
-  char caret_string[256];
-
-  TAILQ_FOREACH(error, errors, next) {
-    position_caret(caret_string, sizeof(caret_string),
-                   error->location.start_column, error->location.end_column);
-    warnx("%s: %d:%d -- %d:%d: error: %s\n%s\n%s",
-          ava_string_to_cstring(error->location.filename),
-          error->location.start_line, error->location.start_column,
-          error->location.end_line, error->location.end_column,
-          ava_string_to_cstring(error->message),
-          extract_source_line(&error->location),
-          caret_string);
-  }
-}
-
-static void position_caret(char* dst, size_t limit,
-                           unsigned begin, unsigned end) {
-  unsigned i;
-
-  if (begin > 0) --begin;
-  if (end > 0) --end;
-
-  if (begin >= limit-2) {
-    dst[0] = 0;
-    return;
-  }
-
-  if (end > limit-1)
-    end = limit-1;
-
-  i = 0;
-  while (i < begin) dst[i++] = ' ';
-  dst[i++] = '^';
-  while (i < end) dst[i++] = '~';
-  dst[i] = 0;
-
-  ck_assert_int_lt(i, limit);
-}
-
-static const char* extract_source_line(const ava_compile_location* loc) {
-  const char* str = ava_string_to_cstring(loc->source);
-  char* result;
-  size_t begin = loc->line_offset, strlen = ava_string_length(loc->source), end;
-
-  for (end = begin; end < strlen && '\n' != str[end]; ++end);
-
-  result = ava_alloc_atomic(1 + end - begin);
-  memcpy(result, str + begin, end - begin);
-  result[end - begin] = 0;
-  return result;
 }
 
 static void parse_failure(const char* source, const char* expected_error) {

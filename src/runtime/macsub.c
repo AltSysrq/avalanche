@@ -244,7 +244,7 @@ ava_ast_node* ava_macsub_run_units(ava_macsub_context* context,
   ava_parse_statement statement;
   const ava_parse_unit* src;
   ava_parse_unit* unit;
-  ava_bool keep_going;
+  ava_bool keep_going, consumed_rest;
 
   TAILQ_INIT(&statement_list);
   TAILQ_INIT(&statement.units);
@@ -256,8 +256,8 @@ ava_ast_node* ava_macsub_run_units(ava_macsub_context* context,
     TAILQ_INSERT_TAIL(&statement.units, unit, next);
   }
 
-  return ava_macsub_run(context, &first->location,
-                        &statement_list, ava_isrp_last);
+  return ava_macsub_run_one_nonempty_statement(
+    context, &statement, &consumed_rest);
 }
 
 ava_ast_node* ava_macsub_run_single(ava_macsub_context* context,
@@ -304,13 +304,23 @@ static ava_ast_node* ava_macsub_run_one_nonempty_statement(
   const ava_parse_unit* unit;
   ava_macro_subst_result subst_result;
   unsigned precedence;
-  ava_bool ltr;
+  ava_bool rtl;
 
   tail_call:
 
   assert(!TAILQ_EMPTY(&statement->units));
 
   unit = TAILQ_FIRST(&statement->units);
+
+  /* If there is only one unit, no macro substitution is performed, even if
+   * that unit would reference a macro.
+   */
+  /* TODO: It may be desirable to permit isolated control macros to be invoked
+   * in certain contexts, such as statement top-level. This would, for example,
+   * permit a lone `ret` bareword return from a function, instead of needing to
+   * write `ret ()`.
+   */
+  if (!TAILQ_NEXT(unit, next)) goto no_macsub;
 
   switch (ava_macsub_resolve_macro(&symbol, context, unit,
                                    ava_st_control_macro, 0)) {
@@ -321,12 +331,12 @@ static ava_ast_node* ava_macsub_run_one_nonempty_statement(
 
   for (precedence = 0; precedence <= AVA_MAX_OPERATOR_MACRO_PRECEDENCE;
        ++precedence) {
-    ltr = !(precedence & 1);
+    rtl = (precedence & 1);
 
-    for (unit = ltr? TAILQ_FIRST(&statement->units) :
+    for (unit = rtl? TAILQ_FIRST(&statement->units) :
                      TAILQ_LAST(&statement->units, ava_parse_unit_list_s);
          unit;
-         unit = ltr? TAILQ_NEXT(unit, next) :
+         unit = rtl? TAILQ_NEXT(unit, next) :
                      TAILQ_PREV(unit, ava_parse_unit_list_s, next)) {
       switch (ava_macsub_resolve_macro(&symbol, context, unit,
                                        ava_st_operator_macro, precedence)) {
@@ -347,6 +357,7 @@ static ava_ast_node* ava_macsub_run_one_nonempty_statement(
   }
 
   /* No more macro substitution possible */
+  no_macsub:
   return ava_intr_statement(context, statement, &unit->location);
 
   ambiguous:
@@ -425,6 +436,11 @@ static ava_macsub_resolve_macro_result ava_macsub_resolve_macro(
     return ava_mrmr_not_macro;
 
   case ava_stgs_ambiguous_weak:
+    /* TODO This should probably only be an error if at least one of the
+     * symbols was a macro, since otherwise there is no ambiguity and the unit
+     * would be treated as a bareword string either way (at least as far as we
+     * care here).
+     */
     return ava_mrmr_ambiguous;
   }
 

@@ -106,9 +106,11 @@ static ava_string ava_intr_seq_to_string(const ava_intr_seq* seq) {
       accum, (*entry->node->v->to_string)(entry->node));
     if (STAILQ_NEXT(entry, next))
       accum = ava_string_concat(accum, AVA_ASCII9_STRING("; "));
+    else
+      accum = ava_string_concat(accum, AVA_ASCII9_STRING(" "));
   }
 
-  accum = ava_string_concat(accum, AVA_ASCII9_STRING(" }"));
+  accum = ava_string_concat(accum, AVA_ASCII9_STRING("}"));
   return accum;
 }
 
