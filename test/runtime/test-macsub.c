@@ -317,6 +317,17 @@ deftest(ambiguous_possible_macro_results_in_error) {
                    "a foo bar");
 }
 
+deftest(macro_consuming_rest_of_scope) {
+  defmacro("macro", ava_st_control_macro, 0, ava_false);
+  defmacro("defer", ava_st_control_macro, 0, ava_true);
+
+  test_macsub("seq(void) { defer { "
+              "right = string:; "
+              "next = seq(void) { "
+              "macro { right = bareword:foo; } }; } }",
+              "defer \"\"\nmacro foo");
+}
+
 deftest(push_major_scope) {
   ava_macsub_context* inner;
   ava_symbol_table* inner_scope;
