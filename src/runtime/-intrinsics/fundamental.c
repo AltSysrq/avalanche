@@ -47,12 +47,15 @@ struct ava_intr_seq_s {
 static ava_string ava_intr_seq_to_string(const ava_intr_seq* node);
 static ava_ast_node* ava_intr_seq_to_lvalue(const ava_intr_seq* node);
 static void ava_intr_seq_postprocess(const ava_intr_seq* node);
+static ava_bool ava_intr_seq_get_constexpr(const ava_intr_seq* node,
+                                           ava_value* dst);
 
 static const ava_ast_node_vtable ava_intr_seq_vtable = {
   .name = "statement sequence",
   .to_string = (ava_ast_node_to_string_f)ava_intr_seq_to_string,
   .to_lvalue = (ava_ast_node_to_lvalue_f)ava_intr_seq_to_lvalue,
   .postprocess = (ava_ast_node_postprocess_f)ava_intr_seq_postprocess,
+  .get_constexpr = (ava_ast_node_get_constexpr_f)ava_intr_seq_get_constexpr,
 };
 
 ava_intr_seq* ava_intr_seq_new(
@@ -137,7 +140,42 @@ static void ava_intr_seq_postprocess(const ava_intr_seq* seq) {
   ava_intr_seq_entry* e;
 
   STAILQ_FOREACH(e, &seq->children, next)
-    ava_ast_node_postprocess(e);
+    ava_ast_node_postprocess(e->node);
+}
+
+static ava_bool ava_intr_seq_get_constexpr(const ava_intr_seq* seq,
+                                           ava_value* dst) {
+  ava_value empty = ava_value_of_string(AVA_EMPTY_STRING);
+  ava_intr_seq_entry* e;
+  unsigned count = 0;
+
+  *dst = empty;
+
+  /* All constituent parts must be a constexpr */
+  STAILQ_FOREACH(e, &seq->children, next) {
+    if (!ava_ast_node_get_constexpr(e->node, dst))
+      return ava_false;
+    ++count;
+  }
+
+  /* This is a constexpr. See if the return policy has us return the last value
+   * evaluated.
+   */
+  switch (seq->return_policy) {
+  case ava_isrp_void:
+    *dst = empty;
+    break;
+
+  case ava_isrp_only:
+    if (count > 1)
+      *dst = empty;
+    break;
+
+  case ava_isrp_last:
+    break;
+  }
+
+  return ava_true;
 }
 
 AVA_STATIC_STRING(lstring_missing_left_expression,
@@ -317,11 +355,15 @@ static ava_string ava_intr_string_expr_to_string(
   const ava_intr_string_expr* node);
 static ava_ast_node* ava_intr_string_expr_to_lvalue(
   const ava_intr_string_expr* node);
+static ava_bool ava_intr_string_expr_get_constexpr(
+  const ava_intr_string_expr* node, ava_value* dst);
 
 static const ava_ast_node_vtable ava_intr_string_expr_vtable = {
   .name = "bareword or string",
   .to_string = (ava_ast_node_to_string_f)ava_intr_string_expr_to_string,
   .to_lvalue = (ava_ast_node_to_lvalue_f)ava_intr_string_expr_to_lvalue,
+  .get_constexpr = (ava_ast_node_get_constexpr_f)
+    ava_intr_string_expr_get_constexpr,
 };
 
 static ava_string ava_intr_string_expr_to_string(
@@ -349,6 +391,13 @@ static ava_ast_node* ava_intr_string_expr_to_lvalue(
 
   return ava_intr_variable_lvalue(
     node->header.context, node->value, &node->header.location);
+}
+
+static ava_bool ava_intr_string_expr_get_constexpr(
+  const ava_intr_string_expr* node, ava_value* dst
+) {
+  *dst = ava_value_of_string(node->value);
+  return ava_true;
 }
 
 ava_ast_node* ava_intr_unit(ava_macsub_context* context,
