@@ -139,6 +139,10 @@ static void ava_intr_seq_postprocess(const ava_intr_seq* seq) {
     (*e->node->v->postprocess)(e->node);
 }
 
+AVA_STATIC_STRING(lstring_missing_left_expression,
+                  "Expected expression before L- or LR-String.");
+AVA_STATIC_STRING(rstring_missing_right_expression,
+                  "Expected expression after R- or LR-String.");
 ava_macro_subst_result ava_intr_string_pseudomacro(
   const ava_symbol* ignored,
   ava_macsub_context* context,
@@ -148,10 +152,6 @@ ava_macro_subst_result ava_intr_string_pseudomacro(
 ) {
   AVA_STATIC_STRING(concat_function,
                     "org.ava-lang.avast:string-concat");
-  AVA_STATIC_STRING(missing_left_expression,
-                    "Expected expression before L- or LR-String.");
-  AVA_STATIC_STRING(missing_right_expression,
-                    "Expected expression after R- or LR-String.");
 
   ava_macro_subst_result result;
   const ava_parse_unit* src_unit;
@@ -199,7 +199,7 @@ ava_macro_subst_result ava_intr_string_pseudomacro(
     }
 
     if (TAILQ_EMPTY(&ss->units))
-      return ava_macsub_error_result(context, missing_left_expression,
+      return ava_macsub_error_result(context, lstring_missing_left_expression,
                                      &provoker->location);
 
     left_subexpr = ava_parse_subst_of_nonempty_statement(ss);
@@ -216,7 +216,7 @@ ava_macro_subst_result ava_intr_string_pseudomacro(
     }
 
     if (TAILQ_EMPTY(&ss->units))
-      return ava_macsub_error_result(context, missing_right_expression,
+      return ava_macsub_error_result(context, rstring_missing_right_expression,
                                      &provoker->location);
 
     right_subexpr = ava_parse_subst_of_nonempty_statement(ss);
@@ -384,10 +384,15 @@ ava_ast_node* ava_intr_unit(ava_macsub_context* context,
     return (ava_ast_node*)str;
 
   case ava_put_lstring:
-  case ava_put_rstring:
   case ava_put_lrstring:
-    /* These cases should never happen */
-    abort();
+    /* These happens if someone puts a non-atomic string alone in an expression
+     * (which is therefore not eligble for macro substitution).
+     */
+    return ava_macsub_error(context, lstring_missing_left_expression,
+                            &unit->location);
+  case ava_put_rstring:
+    return ava_macsub_error(context, rstring_missing_right_expression,
+                            &unit->location);
 
   case ava_put_substitution:
     return ava_macsub_run(
