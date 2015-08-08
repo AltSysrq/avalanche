@@ -49,6 +49,7 @@ static ava_ast_node* ava_intr_seq_to_lvalue(const ava_intr_seq* node);
 static void ava_intr_seq_postprocess(const ava_intr_seq* node);
 
 static const ava_ast_node_vtable ava_intr_seq_vtable = {
+  .name = "statement sequence",
   .to_string = (ava_ast_node_to_string_f)ava_intr_seq_to_string,
   .to_lvalue = (ava_ast_node_to_lvalue_f)ava_intr_seq_to_lvalue,
   .postprocess = (ava_ast_node_postprocess_f)ava_intr_seq_postprocess,
@@ -129,14 +130,14 @@ static ava_ast_node* ava_intr_seq_to_lvalue(const ava_intr_seq* seq) {
     return ava_macsub_error(
       seq->header.context, multi_message, &seq->header.location);
 
-  return (*first->node->v->to_lvalue)(first->node);
+  return ava_ast_node_to_lvalue(first->node);
 }
 
 static void ava_intr_seq_postprocess(const ava_intr_seq* seq) {
   ava_intr_seq_entry* e;
 
   STAILQ_FOREACH(e, &seq->children, next)
-    (*e->node->v->postprocess)(e->node);
+    ava_ast_node_postprocess(e);
 }
 
 AVA_STATIC_STRING(lstring_missing_left_expression,
@@ -295,26 +296,15 @@ ava_macro_subst_result ava_intr_string_pseudomacro(
 }
 
 static ava_string ava_intr_empty_expr_to_string(const ava_ast_node* node);
-static ava_ast_node* ava_intr_empty_expr_to_lvalue(const ava_ast_node* node);
-static void ava_intr_empty_expr_postprocess(ava_ast_node* node);
 
 static const ava_ast_node_vtable ava_intr_empty_expr_vtable = {
+  .name = "empty expression",
   .to_string = ava_intr_empty_expr_to_string,
-  .to_lvalue = ava_intr_empty_expr_to_lvalue,
-  .postprocess = ava_intr_empty_expr_postprocess,
 };
 
 static ava_string ava_intr_empty_expr_to_string(const ava_ast_node* node) {
   return AVA_ASCII9_STRING("<empty>");
 }
-
-static ava_ast_node* ava_intr_empty_expr_to_lvalue(const ava_ast_node* node) {
-  AVA_STATIC_STRING(message, "Empty expression cannot be used as lvalue.");
-
-  return ava_macsub_error(node->context, message, &node->location);
-}
-
-static void ava_intr_empty_expr_postprocess(ava_ast_node* node) { }
 
 typedef struct {
   ava_ast_node header;
@@ -327,13 +317,11 @@ static ava_string ava_intr_string_expr_to_string(
   const ava_intr_string_expr* node);
 static ava_ast_node* ava_intr_string_expr_to_lvalue(
   const ava_intr_string_expr* node);
-static void ava_intr_string_expr_postprocess(
-  ava_intr_string_expr* node);
 
 static const ava_ast_node_vtable ava_intr_string_expr_vtable = {
+  .name = "bareword or string",
   .to_string = (ava_ast_node_to_string_f)ava_intr_string_expr_to_string,
   .to_lvalue = (ava_ast_node_to_lvalue_f)ava_intr_string_expr_to_lvalue,
-  .postprocess = (ava_ast_node_postprocess_f)ava_intr_string_expr_postprocess,
 };
 
 static ava_string ava_intr_string_expr_to_string(
@@ -353,7 +341,7 @@ static ava_ast_node* ava_intr_string_expr_to_lvalue(
   const ava_intr_string_expr* node
 ) {
   AVA_STATIC_STRING(not_a_bareword_message,
-                    "Cannot use string as lvalue");
+                    "string cannot be used as lvalue");
 
   if (!node->is_bareword)
     return ava_macsub_error(
@@ -362,10 +350,6 @@ static ava_ast_node* ava_intr_string_expr_to_lvalue(
   return ava_intr_variable_lvalue(
     node->header.context, node->value, &node->header.location);
 }
-
-static void ava_intr_string_expr_postprocess(
-  ava_intr_string_expr* node
-) { }
 
 ava_ast_node* ava_intr_unit(ava_macsub_context* context,
                             const ava_parse_unit* unit) {

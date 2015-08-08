@@ -257,6 +257,9 @@ struct ava_symbol_s {
 
 /**
  * Defines the high-level operations AST nodes must support.
+ *
+ * Only the name field and the to_string method must be set; defaults are used
+ * for other fields.
  */
 typedef struct ava_ast_node_vtable_s ava_ast_node_vtable;
 
@@ -303,12 +306,57 @@ typedef ava_ast_node* (*ava_ast_node_to_lvalue_f)(const ava_ast_node*);
  * Calling this function more than once has no observable effect.
  */
 typedef void (*ava_ast_node_postprocess_f)(ava_ast_node*);
+/**
+ * Extracts the compile-time constant value of this AST node, if there is one.
+ *
+ * @param dst If this AST node has a compile-time constant value, set to that
+ * value.
+ * @return Whether this AST node has a compile-time constant value.
+ */
+typedef ava_bool (*ava_ast_node_get_constexpr_f)(
+  const ava_ast_node*, ava_value* dst);
 
 struct ava_ast_node_vtable_s {
+  /**
+   * A human-readable name for this AST node, used in diagnostics.
+   *
+   * This field is mandatory.
+   */
+  const char* name;
+
+  /**
+   * The to_string method. This is mandatory.
+   */
   ava_ast_node_to_string_f to_string;
   ava_ast_node_to_lvalue_f to_lvalue;
   ava_ast_node_postprocess_f postprocess;
+  ava_ast_node_get_constexpr_f get_constexpr;
+  /**
+   * Indicates whether the AST node should be spread when passed as a function
+   * argument.
+   */
+  ava_bool is_spread;
 };
+
+/**
+ * Convenience for (*node->v->to_string)(node).
+ */
+ava_string ava_ast_node_to_string(const ava_ast_node* node);
+/**
+ * Calls the given node's to_lvalue method if there is one; otherwise, executes
+ * a default implementation.
+ */
+ava_ast_node* ava_ast_node_to_lvalue(const ava_ast_node* node);
+/**
+ * Calls the given node's postprocess method if there is one.
+ */
+void ava_ast_node_postprocess(ava_ast_node* node);
+/**
+ * Calls the given node's get_constexpr method if there is one; otherwise,
+ * executes a default implementation.
+ */
+ava_bool ava_ast_node_get_constexpr(const ava_ast_node* node,
+                                    ava_value* dst);
 
 /**
  * Struct for use with ava_macsub_save_symbol_table() and

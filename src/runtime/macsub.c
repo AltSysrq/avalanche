@@ -85,7 +85,6 @@ static ava_macsub_resolve_macro_result ava_macsub_resolve_macro(
 
 static ava_string ava_macsub_error_to_string(const ava_ast_node* this);
 static ava_ast_node* ava_macsub_error_to_lvalue(const ava_ast_node* this);
-static void ava_macsub_error_postprocess(ava_ast_node* this);
 
 static signed ava_compare_macsub_saved_symbol_table(
   const ava_macsub_saved_symbol_table* a,
@@ -449,9 +448,9 @@ static ava_macsub_resolve_macro_result ava_macsub_resolve_macro(
 }
 
 static const ava_ast_node_vtable ava_macsub_error_vtable = {
+  .name = "<error>",
   .to_string = ava_macsub_error_to_string,
   .to_lvalue = ava_macsub_error_to_lvalue,
-  .postprocess = ava_macsub_error_postprocess
 };
 
 ava_ast_node* ava_macsub_error(ava_macsub_context* context,
@@ -492,4 +491,32 @@ static ava_ast_node* ava_macsub_error_to_lvalue(const ava_ast_node* this) {
   return (ava_ast_node*)this;
 }
 
-static void ava_macsub_error_postprocess(ava_ast_node* this) { }
+ava_string ava_ast_node_to_string(const ava_ast_node* node) {
+  return (*node->v->to_string)(node);
+}
+
+ava_ast_node* ava_ast_node_to_lvalue(const ava_ast_node* node) {
+  AVA_STATIC_STRING(error_suffix, " cannot be used as lvalue");
+
+  if (node->v->to_lvalue) {
+    return (*node->v->to_lvalue)(node);
+  } else {
+    return ava_macsub_error(
+      node->context, ava_string_concat(
+        ava_string_of_cstring(node->v->name), error_suffix),
+      &node->location);
+  }
+}
+
+void ava_ast_node_postprocess(ava_ast_node* node) {
+  if (node->v->postprocess)
+    (*node->v->postprocess)(node);
+}
+
+ava_bool ava_ast_node_get_constexpr(const ava_ast_node* node,
+                                    ava_value* dst) {
+  if (node->v->get_constexpr)
+    return (*node->v->get_constexpr)(node, dst);
+  else
+    return ava_false;
+}
