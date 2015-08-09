@@ -956,3 +956,15 @@ ava_parse_unit* ava_parse_subst_of_nonempty_statement(
 
   return unit;
 }
+
+ava_compile_location ava_compile_location_span(
+  const ava_compile_location* begin,
+  const ava_compile_location* end
+) {
+  ava_compile_location ret;
+
+  ret = *begin;
+  ret.end_line = end->end_line;
+  ret.end_column = end->end_column;
+  return ret;
+}

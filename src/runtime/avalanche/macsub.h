@@ -315,6 +315,13 @@ typedef void (*ava_ast_node_postprocess_f)(ava_ast_node*);
  */
 typedef ava_bool (*ava_ast_node_get_constexpr_f)(
   const ava_ast_node*, ava_value* dst);
+/**
+ * If this AST node may act like a function name, extracts its text.
+ *
+ * @return The function name represented by this AST node, or the absent string
+ * if it does not represent a function name.
+ */
+typedef ava_string (*ava_ast_node_get_funname_f)(const ava_ast_node*);
 
 struct ava_ast_node_vtable_s {
   /**
@@ -331,6 +338,7 @@ struct ava_ast_node_vtable_s {
   ava_ast_node_to_lvalue_f to_lvalue;
   ava_ast_node_postprocess_f postprocess;
   ava_ast_node_get_constexpr_f get_constexpr;
+  ava_ast_node_get_funname_f get_funname;
   /**
    * Indicates whether the AST node should be spread when passed as a function
    * argument.
@@ -357,6 +365,11 @@ void ava_ast_node_postprocess(ava_ast_node* node);
  */
 ava_bool ava_ast_node_get_constexpr(const ava_ast_node* node,
                                     ava_value* dst);
+/**
+ * Calls the given node's get_funname method if there is one; otherwise,
+ * executes a default implementation.
+ */
+ava_string ava_ast_node_get_funname(const ava_ast_node* node);
 
 /**
  * Struct for use with ava_macsub_save_symbol_table() and
@@ -555,6 +568,17 @@ ava_ast_node* ava_macsub_run_single(ava_macsub_context* context,
 ava_ast_node* ava_macsub_run_units(ava_macsub_context* context,
                                    const ava_parse_unit* first,
                                    const ava_parse_unit* last);
+
+/**
+ * Records an error with the given message and location.
+ *
+ * @prama context The current macro substitution context.
+ * @param message The error message (ava_compile_error.message)
+ * @param location The error location (ava_compile_error.location)
+ */
+void ava_macsub_record_error(ava_macsub_context* context,
+                             ava_string message,
+                             const ava_compile_location* location);
 
 /**
  * Records an error with the given message and location, providing an AST node

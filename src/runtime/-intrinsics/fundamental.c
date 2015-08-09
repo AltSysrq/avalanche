@@ -357,6 +357,8 @@ static ava_ast_node* ava_intr_string_expr_to_lvalue(
   const ava_intr_string_expr* node);
 static ava_bool ava_intr_string_expr_get_constexpr(
   const ava_intr_string_expr* node, ava_value* dst);
+static ava_string ava_intr_string_expr_get_funname(
+  const ava_intr_string_expr* node);
 
 static const ava_ast_node_vtable ava_intr_string_expr_vtable = {
   .name = "bareword or string",
@@ -364,6 +366,7 @@ static const ava_ast_node_vtable ava_intr_string_expr_vtable = {
   .to_lvalue = (ava_ast_node_to_lvalue_f)ava_intr_string_expr_to_lvalue,
   .get_constexpr = (ava_ast_node_get_constexpr_f)
     ava_intr_string_expr_get_constexpr,
+  .get_funname = (ava_ast_node_get_funname_f)ava_intr_string_expr_get_funname,
 };
 
 static ava_string ava_intr_string_expr_to_string(
@@ -398,6 +401,15 @@ static ava_bool ava_intr_string_expr_get_constexpr(
 ) {
   *dst = ava_value_of_string(node->value);
   return ava_true;
+}
+
+static ava_string ava_intr_string_expr_get_funname(
+  const ava_intr_string_expr* node
+) {
+  if (node->is_bareword)
+    return node->value;
+  else
+    return AVA_ABSENT_STRING;
 }
 
 ava_ast_node* ava_intr_unit(ava_macsub_context* context,

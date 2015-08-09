@@ -453,16 +453,23 @@ static const ava_ast_node_vtable ava_macsub_error_vtable = {
   .to_lvalue = ava_macsub_error_to_lvalue,
 };
 
-ava_ast_node* ava_macsub_error(ava_macsub_context* context,
-                               ava_string message,
-                               const ava_compile_location* location) {
+void ava_macsub_record_error(ava_macsub_context* context,
+                             ava_string message,
+                             const ava_compile_location* location) {
   ava_compile_error* error;
-  ava_ast_node* node;
 
   error = AVA_NEW(ava_compile_error);
   error->message = message;
   error->location = *location;
   TAILQ_INSERT_TAIL(context->errors, error, next);
+}
+
+ava_ast_node* ava_macsub_error(ava_macsub_context* context,
+                               ava_string message,
+                               const ava_compile_location* location) {
+  ava_ast_node* node;
+
+  ava_macsub_record_error(context, message, location);
 
   node = AVA_NEW(ava_ast_node);
   node->v = &ava_macsub_error_vtable;
@@ -519,4 +526,11 @@ ava_bool ava_ast_node_get_constexpr(const ava_ast_node* node,
     return (*node->v->get_constexpr)(node, dst);
   else
     return ava_false;
+}
+
+ava_string ava_ast_node_get_funname(const ava_ast_node* node) {
+  if (node->v->get_funname)
+    return (*node->v->get_funname)(node);
+  else
+    return AVA_ABSENT_STRING;
 }
