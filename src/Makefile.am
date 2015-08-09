@@ -34,6 +34,7 @@ runtime/integer-fast-dec.c \
 runtime/list.c \
 runtime/list-map.c \
 runtime/list-proj.c \
+runtime/macsub.c \
 runtime/map.c \
 runtime/name-mangle.c \
 runtime/parser.c \
@@ -41,7 +42,11 @@ runtime/pointer.c \
 runtime/real.c \
 runtime/string.c \
 runtime/symbol-table.c \
-runtime/value.c
+runtime/value.c \
+runtime/-intrinsics/funcall.c \
+runtime/-intrinsics/fundamental.c \
+runtime/-intrinsics/variable.c
+
 libavart_la_LIBADD = $(LIBUNWIND_LIBS) $(LIBFFI_LIBS)
 bootstrap_avac_SOURCES = bootstrap/main.c
 bootstrap_avac_LDADD = libavart.la

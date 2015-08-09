@@ -224,4 +224,10 @@ ava_symbol_table_import_status ava_symbol_table_apply_imports(
   ava_symbol_table** dst,
   const ava_symbol_table* input, const ava_import_list* imports);
 
+/**
+ * Returns the number of imports that have been applied to the given symbol
+ * table.
+ */
+size_t ava_symbol_table_count_imports(const ava_symbol_table* table);
+
 #endif /* AVA_RUNTIME_SYMBOL_TABLE_H_ */

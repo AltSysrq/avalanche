@@ -13,6 +13,7 @@ avalanche/lex.h \
 avalanche/list.h \
 avalanche/list-proj.h \
 avalanche/list-trait.h \
+avalanche/macsub.h \
 avalanche/map.h \
 avalanche/map-trait.h \
 avalanche/name-mangle.h \
