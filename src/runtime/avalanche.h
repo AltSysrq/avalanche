@@ -39,6 +39,7 @@ AVA_BEGIN_DECLS
 #include "avalanche/parser.h"
 #include "avalanche/symbol-table.h"
 #include "avalanche/macsub.h"
+#include "avalanche/pcode.h"
 
 /**
  * Initialises the avalanche runtime.

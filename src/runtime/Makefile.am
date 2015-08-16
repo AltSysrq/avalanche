@@ -18,6 +18,8 @@ avalanche/map.h \
 avalanche/map-trait.h \
 avalanche/name-mangle.h \
 avalanche/parser.h \
+avalanche/pcode.h \
+avalanche/gen-pcode.h \
 avalanche/pointer.h \
 avalanche/pointer-trait.h \
 avalanche/real.h \
@@ -40,3 +42,7 @@ avalanche/map-trait.h: avalanche/generate-trait.tcl avalanche/map.trait
 avalanche/pointer-trait.h: avalanche/generate-trait.tcl avalanche/pointer.trait
 	$(AM_V_GEN)$(TCLSH) avalanche/generate-trait.tcl avalanche/pointer.trait \
 		>avalanche/pointer-trait.h
+
+avalanche/gen-pcode.h: pcode-defs.tcl generate-pcode.tcl
+	$(AM_V_GEN)$(TCLSH) generate-pcode.tcl header \
+		<pcode-defs.tcl >avalanche/gen-pcode.h

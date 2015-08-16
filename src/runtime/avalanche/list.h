@@ -44,7 +44,8 @@
  * The only real use for this is for pseudo-list implementations that cannot
  * actually implement list mutation operations themselves.
  */
-ava_fat_list_value ava_list_copy_of(ava_fat_list_value list, size_t begin, size_t end);
+ava_fat_list_value ava_list_copy_of(ava_fat_list_value list,
+                                    size_t begin, size_t end);
 
 /**
  * Returns a list containing the given sequence of values.

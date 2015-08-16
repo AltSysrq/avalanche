@@ -24,6 +24,7 @@ runtime/function.c \
 runtime/gen-integer.c \
 runtime/gen-integer-decimal.c \
 runtime/gen-lex.c \
+runtime/gen-pcode.c \
 runtime/hash-map.c \
 runtime/hash-map-16.c \
 runtime/hash-map-32.c \
@@ -65,3 +66,7 @@ runtime/gen-integer.c: runtime/integer.c
 runtime/gen-integer-decimal.c: runtime/generate-integer-decimal.c.tcl
 	$(AM_V_GEN)$(TCLSH) runtime/generate-integer-decimal.c.tcl \
 		>runtime/gen-integer-decimal.c
+
+runtime/gen-pcode.c: runtime/generate-pcode.tcl runtime/pcode-defs.tcl
+	$(AM_V_GEN)$(TCLSH) runtime/generate-pcode.tcl impl \
+		<runtime/pcode-defs.tcl >runtime/gen-pcode.c
