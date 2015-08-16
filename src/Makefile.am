@@ -32,6 +32,7 @@ runtime/hash-map-64.c \
 runtime/hexes.c \
 runtime/init.c \
 runtime/integer-fast-dec.c \
+runtime/interp.c \
 runtime/list.c \
 runtime/list-map.c \
 runtime/list-proj.c \
