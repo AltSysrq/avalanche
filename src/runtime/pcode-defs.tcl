@@ -130,7 +130,8 @@ struct global g {
     # The body of this function; a list of executable statements.
     #
     # When the function is called, control begins at the head of the zeroth
-    # statement.
+    # statement. If control transfers past the final statement in the function,
+    # it implicitly returns the empty string.
     struct exe x body
 
     constraint {
@@ -199,6 +200,7 @@ struct exe x {
   prop str jump-target
   prop int global-ref
   prop int global-fun-ref
+  attr conditional-jump
   attr unconditional-jump
 
   # Records the source filename in effect until the next declaration indicating
@@ -441,6 +443,7 @@ struct exe x {
   # Semantics: If the value in `condition` is non-zero, this statement behaves
   # like `goto`. Otherwise, it does nothing.
   elt goto-c {
+    attr conditional-jump
     register i condition
     str target {
       prop jump-target

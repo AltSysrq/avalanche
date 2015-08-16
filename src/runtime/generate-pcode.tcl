@@ -545,7 +545,7 @@ proc gen-impl {} {
         case ava_pcMNEt_ELT: \{
           const ava_pcMNE_ELT* elt AVA_UNUSED;
           elt = (const ava_pcMNE_ELT*)velt;
-          elt_string = apply_indent(AVA_ASCII9_STRING("%ELT"), indent);
+          elt_string = AVA_ASCII9_STRING("%ELT");
       } MNE $smne ELT $ename
       foreach field [dict get $elt fields] {
         set ftype [dict get $field type]
@@ -579,7 +579,8 @@ proc gen-impl {} {
           default: /* unreachable */ abort();
           \} /* switch (velt->type) */
           accum = ava_string_concat\(
-            accum, ava_pcode_elt_escape(elt_string)\);
+            accum, apply_indent\(
+              ava_pcode_elt_escape(elt_string), indent\)\);
           accum = ava_string_concat(accum, AVA_ASCII9_STRING("\n"));
         \} /* end foreach */
         return accum;

@@ -20,6 +20,7 @@ runtime/test-macsub.t \
 runtime/test-map.t \
 runtime/test-name-mangle.t \
 runtime/test-parser.t \
+runtime/test-pcode.t \
 runtime/test-pointer.t \
 runtime/test-real.t \
 runtime/test-string.t \
