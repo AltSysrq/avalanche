@@ -221,23 +221,19 @@ struct exe x {
 
   # Creates one or more registers of the chosen type at the top of the stack.
   #
-  # Semantics: `count` registers of type `type` come into existence. If `n`
-  # registers of that type existed before this instruction, the first is
+  # Semantics: `count` registers of type `register-type` come into existence.
+  # If `n` registers of that type existed before this instruction, the first is
   # allocated at index `n`, and the last at `n+count-1`. The new registers are
   # uninitialised, and must be initialised (provably by static analysis) before
   # they are read.
   #
-  # The new registers continue to exist until the balancing `pop` instruction,
-  # which is lexical rather than execution-driven. It is an error for there to
-  # be no matching `pop` instruction.
+  # The new registers continue to exist until a `pop` instruction destroys
+  # them.
   #
   # There is a limit on the maximum number of registers of any given kind that
   # can be allocated in this manner.
   #
   # This instruction is not legal for V-pseudo-registers.
-  #
-  # It is an error if a `push` has not been balanced by a `pop` by the end of
-  # the containing function.
   elt push {
     register-type dilpf register-type
     int count
@@ -247,9 +243,19 @@ struct exe x {
 
   # Pops the registers allocated by the corresponding `push`.
   #
-  # This instruction is simply a marker of where a `push` ends. It is an error
-  # if there is no matching `push`.
+  # Semantics: `count` registers of type `register-type` cease to exist. If
+  # there were `n` registers before this instruction, the registers from
+  # (n-count), inclusive, to (n), exclusive, are destroyed.
+  #
+  # It is an error if `count` is greater than the number of registers that
+  # currently exist.
+  #
+  # This instruction is not legal for V-pseudo-registers.
   elt pop {
+    register-type dilpf register-type
+    int count
+    constraint {@.count > 0}
+    constraint {@.count < 32767}
   }
 
   # Loads an immediate string into a V- or D-register.

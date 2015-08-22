@@ -45,7 +45,7 @@ deftest(interpreter_basically_works) {
       "         \\{ld-imm-vd d1 56\\}\n"
       "         \\{invoke-ss d0 0 0 2\\}\n"
       "         \\{ret d0\\}\n"
-      "         \\{pop\\}\n"
+      "         \\{pop d 2\\}\n"
       "\\}\\}\n"
       "\\{init 1\\}\n"));
   ava_interp_exec(pcode);
