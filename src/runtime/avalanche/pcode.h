@@ -131,7 +131,7 @@ typedef enum {
    *
    * Global variables are not variables in this sense.
    */
-  ava_prt_var,
+  ava_prt_var = 0,
   /**
    * A register holding an ava_value.
    *
@@ -180,7 +180,7 @@ typedef ava_ushort ava_pcode_register_index;
 /**
  * Fully identifies a P-Code register.
  */
-typedef struct {
+typedef struct ava_pcode_register_s {
   /**
    * The type of this register.
    */

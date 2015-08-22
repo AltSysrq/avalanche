@@ -270,7 +270,7 @@ proc gen-header {} {
       } ava_pcode_NAME;
       typedef TAILQ_HEAD(ava_pcode_NAME_list_s,ava_pcode_NAME_s)
         ava_pcode_NAME_list;
-      const ava_pcode_NAME_list* ava_pcMNE_builder_get\(
+      ava_pcode_NAME_list* ava_pcMNE_builder_get\(
         const ava_pcMNE_builder* builder\);
       ava_string ava_pcode_NAME_list_to_string\(
         const ava_pcode_NAME_list* list,
@@ -381,7 +381,7 @@ proc gen-impl {} {
         ava_pcode_NAME_list* list;
         ava_uint index;
       };
-      const ava_pcode_NAME_list* ava_pcMNE_builder_get\(
+      ava_pcode_NAME_list* ava_pcMNE_builder_get\(
         const ava_pcMNE_builder* builder
       \) {
         return builder->list;

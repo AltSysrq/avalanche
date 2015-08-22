@@ -14,6 +14,7 @@ bin_PROGRAMS = bootstrap-avac
 libavart_la_SOURCES = \
 runtime/alloc.c \
 runtime/array-list.c \
+runtime/code-gen.c \
 runtime/context.c \
 runtime/dtoa.c \
 runtime/empty-list.c \
