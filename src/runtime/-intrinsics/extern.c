@@ -62,7 +62,7 @@ ava_macro_subst_result ava_intr_extern_subst(
   ava_bool* consumed_other_statements
 ) {
   ava_exception_handler handler;
-  const ava_parse_unit* ava_name_unit, * prototype_first_unit;
+  const ava_parse_unit* ava_name_unit, * prototype_first_unit = NULL;
   ava_string ava_name, native_name;
   ava_value prototype_list = ava_value_of_string(AVA_ASCII9_STRING("1"));
   const ava_function* prototype;

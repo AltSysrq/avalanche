@@ -212,7 +212,7 @@ static void ava_intr_seq_cg_evaluate(
   ava_intr_seq* seq, const ava_pcode_register* dst,
   ava_codegen_context* context
 ) {
-  const ava_pcode_register* child_dst;
+  const ava_pcode_register* child_dst = NULL;
 
   switch (seq->return_policy) {
   case ava_isrp_void:
