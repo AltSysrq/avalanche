@@ -273,6 +273,8 @@ static void ava_intr_funcall_cg_evaluate(
       ava_ast_node_cg_evaluate(funcall->parms[i+1], &parm_reg, context);
     }
 
+    ava_codegen_set_location(context, &funcall->header.location);
+
     /* Map parms to args */
     for (i = 0; i < funcall->static_function->v.var.fun.num_args; ++i) {
       arg_reg.index = arg_base + i;

@@ -499,6 +499,7 @@ static void ava_intr_string_expr_cg_evaluate(
   const ava_pcode_register* dst,
   ava_codegen_context* context
 ) {
+  ava_codegen_set_location(context, &node->header.location);
   AVA_PCXB(ld_imm_vd, *dst, node->value);
 }
 
