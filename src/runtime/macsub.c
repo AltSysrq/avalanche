@@ -171,6 +171,41 @@ ava_macsub_context* ava_macsub_context_push_minor(
   return this;
 }
 
+void ava_macsub_put_symbol(
+  ava_macsub_context* context,
+  ava_symbol* symbol,
+  const ava_compile_location* location
+) {
+  AVA_STATIC_STRING(visibility_message,
+                    "Non-private definitions may occur only at "
+                    "global scope.");
+  AVA_STATIC_STRING(redefined_message,
+                    "Redefinition of symbol: ");
+  AVA_STATIC_STRING(redefined_import_message,
+                    "Redefinition of symbol's simple name: ");
+
+  if (context->level > 0 && ava_v_private != symbol->visibility) {
+    ava_macsub_record_error(context, visibility_message, location);
+  }
+
+  switch (ava_symbol_table_put(context->symbol_table,
+                               symbol->full_name, symbol)) {
+  case ava_stps_ok: break;
+  case ava_stps_redefined_strong_local:
+    ava_macsub_record_error(
+      context, ava_string_concat(redefined_message, symbol->full_name),
+      location);
+    break;
+  case ava_stps_redefined_strong_local_by_auto_import:
+    /* TODO: Return the short name instead */
+    ava_macsub_record_error(
+      context,
+      ava_string_concat(redefined_import_message, symbol->full_name),
+      location);
+    break;
+  }
+}
+
 ava_macsub_saved_symbol_table* ava_macsub_save_symbol_table(
   ava_macsub_context* context,
   const ava_compile_location* location

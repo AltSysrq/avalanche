@@ -117,11 +117,28 @@ void ava_codegen_set_location(
 }
 
 void ava_codegen_set_global_location(
-  ava_pcg_builder* builder,
+  ava_codegen_context* context,
   const ava_compile_location* location
 ) {
+  ava_pcg_builder* builder = ava_pcx_builder_get_parent(context->builder);
+
   ava_pcgb_src_file(builder, location->filename);
   ava_pcgb_src_line(builder, location->start_line);
+}
+
+void ava_codegen_export(
+  ava_codegen_context* context, const ava_symbol* symbol
+) {
+  switch (symbol->visibility) {
+  case ava_v_private: break;
+  case ava_v_internal:
+    AVA_PCGB(export, symbol->pcode_index, ava_false, symbol->full_name);
+    break;
+
+  case ava_v_public:
+    AVA_PCGB(export, symbol->pcode_index, ava_true, symbol->full_name);
+    break;
+  }
 }
 
 ava_pcode_global_list* ava_codegen_run(
@@ -143,7 +160,8 @@ ava_pcode_global_list* ava_codegen_run(
   init_vars = ava_list_of_values(
     (ava_value[]) { ava_empty_list().v }, 1);
 
-  ava_codegen_set_global_location(global_builder, &root->location);
+  ava_pcgb_src_file(global_builder, root->location.filename);
+  ava_pcgb_src_line(global_builder, root->location.start_line);
   init_function = ava_pcgb_fun(
     global_builder,
     ava_false, init_name, init_prototype, init_vars,

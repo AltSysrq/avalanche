@@ -121,8 +121,15 @@ void ava_codegen_set_location(
  * builder.
  */
 void ava_codegen_set_global_location(
-  ava_pcg_builder* builder,
+  ava_codegen_context* context,
   const ava_compile_location* location);
+
+/**
+ * Creates any global export statement necessary to export the given symbol
+ * with its visibility and pcode_index.
+ */
+void ava_codegen_export(
+  ava_codegen_context* context, const ava_symbol* symbol);
 
 /**
  * Performs code-generation on the given AST node.
@@ -152,5 +159,13 @@ ava_pcx_builder* ava_codegen_get_builder(
  */
 #define AVA_PCXB(op, ...)                                               \
   (ava_pcxb_##op(ava_codegen_get_builder(context), __VA_ARGS__))
+/**
+ * Convenience for writing
+ *   ava_pcgb_OP(ava_pcx_builder_get_parent(
+ *                 ava_codegen_get_builder(context)), ...)
+ */
+#define AVA_PCGB(op, ...)                                               \
+  (ava_pcgb_##op(ava_pcx_builder_get_parent(                            \
+                   ava_codegen_get_builder(context)), __VA_ARGS__))
 
 #endif /* AVA_RUNTIME_CODE_GEN_H_ */

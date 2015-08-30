@@ -225,6 +225,11 @@ struct ava_symbol_s {
    */
   ava_ast_node* definer;
 
+  /**
+   * The original fully-qualified name of this symbol, used in diagnostics.
+   */
+  ava_string full_name;
+
   union {
     /**
      * Information about local and global variable and function symbols.
@@ -533,6 +538,21 @@ ava_macsub_context* ava_macsub_context_push_major(
  */
 ava_macsub_context* ava_macsub_context_push_minor(
   const ava_macsub_context* parent, ava_string interfix);
+
+/**
+ * Adds the given symbol to the context's symbol table.
+ *
+ * If an error occurs, either due to an issue with the symbol table or an
+ * illegal visibility given the context, it is added to the error list.
+ *
+ * @param contet The macro substitution context.
+ * @param symbol The symbol to add. It is added using its full_name.
+ * @param location If an error occurs, the location at which to report the
+ * error.
+ */
+void ava_macsub_put_symbol(
+  ava_macsub_context* context, ava_symbol* symbol,
+  const ava_compile_location* location);
 
 /**
  * Captures the current symbol table and import list so that it can be

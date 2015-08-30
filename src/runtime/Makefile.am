@@ -10,10 +10,12 @@ avalanche/exception.h \
 avalanche/function.h \
 avalanche/integer.h \
 avalanche/interp.h \
+avalanche/intrinsics.h \
 avalanche/lex.h \
 avalanche/list.h \
 avalanche/list-proj.h \
 avalanche/list-trait.h \
+avalanche/macro-arg.h \
 avalanche/macsub.h \
 avalanche/map.h \
 avalanche/map-trait.h \

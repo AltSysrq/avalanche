@@ -34,9 +34,11 @@ runtime/hexes.c \
 runtime/init.c \
 runtime/integer-fast-dec.c \
 runtime/interp.c \
+runtime/intrinsics.c \
 runtime/list.c \
 runtime/list-map.c \
 runtime/list-proj.c \
+runtime/macro-arg.c \
 runtime/macsub.c \
 runtime/map.c \
 runtime/name-mangle.c \
@@ -46,6 +48,7 @@ runtime/real.c \
 runtime/string.c \
 runtime/symbol-table.c \
 runtime/value.c \
+runtime/-intrinsics/extern.c \
 runtime/-intrinsics/funcall.c \
 runtime/-intrinsics/fundamental.c \
 runtime/-intrinsics/variable.c
