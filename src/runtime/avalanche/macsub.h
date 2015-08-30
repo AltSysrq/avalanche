@@ -386,13 +386,6 @@ struct ava_ast_node_vtable_s {
    * argument.
    */
   ava_bool is_spread;
-
-  /**
-   * The vtable for code-generation for this node.
-   *
-   * This is mandatory, though most of its methods are not.
-   */
-  const struct ava_codegen_vtable_s* codegen;
 };
 
 /**
