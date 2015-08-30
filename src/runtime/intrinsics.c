@@ -56,6 +56,8 @@ void ava_register_intrinsics(ava_macsub_context* context) {
   AVA_STATIC_STRING(avast_prefix, AVA_AVAST_PACKAGE ":");
 
   ava_symbol_table* symtab = ava_macsub_get_current_symbol_table(context);
+  ava_symbol_table_import_status status;
+
   DEFINE("extern", CTL, PRIVATE, extern);
   DEFINE("Extern", CTL, INTERNAL, extern);
   DEFINE("EXTERN", CTL, PUBLIC, extern);
@@ -63,9 +65,11 @@ void ava_register_intrinsics(ava_macsub_context* context) {
             symtab, intrinsic_prefix, AVA_EMPTY_STRING, ava_false, ava_false));
   SUCCEED(ava_stis_ok, ava_symbol_table_import(
             symtab, avast_prefix, AVA_EMPTY_STRING, ava_false, ava_true));
-  SUCCEED(ava_stis_ok, ava_symbol_table_import(
-            symtab, ava_macsub_apply_prefix(context, AVA_EMPTY_STRING),
-            AVA_EMPTY_STRING, ava_true, ava_true));
+  status = ava_symbol_table_import(
+    symtab, ava_macsub_apply_prefix(context, AVA_EMPTY_STRING),
+    AVA_EMPTY_STRING, ava_true, ava_true);
+  if (status != ava_stis_ok && status != ava_stis_no_symbols_imported)
+    abort();
 }
 
 static void ava_register_intrinsic(

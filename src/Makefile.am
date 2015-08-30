@@ -10,7 +10,7 @@ AM_CFLAGS = $(LIBUNWIND_CFLAGS) $(LIBFFI_CFLAGS) \
 RE2C_FLAGS = -g
 
 lib_LTLIBRARIES = libavart.la
-bin_PROGRAMS = bootstrap-avac
+noinst_PROGRAMS = simple-interp
 libavart_la_SOURCES = \
 runtime/alloc.c \
 runtime/array-list.c \
@@ -54,8 +54,8 @@ runtime/-intrinsics/fundamental.c \
 runtime/-intrinsics/variable.c
 
 libavart_la_LIBADD = $(LIBUNWIND_LIBS) $(LIBFFI_LIBS)
-bootstrap_avac_SOURCES = bootstrap/main.c
-bootstrap_avac_LDADD = libavart.la
+simple_interp_SOURCES = interp/main.c
+simple_interp_LDADD = libavart.la
 
 runtime/gen-lex.c: runtime/lex.c
 	$(AM_V_GEN)$(RE2C) --input custom -c $(RE2C_FLAGS) \

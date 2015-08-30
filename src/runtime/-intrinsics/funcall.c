@@ -114,7 +114,7 @@ ava_ast_node* ava_intr_funcall_of(
   this->parms = ava_alloc(num_parms * sizeof(ava_ast_node*));
   i = 0;
   TAILQ_FOREACH(parm, &statement->units, next)
-    this->parms[i] = ava_macsub_run_units(context, parm, parm);
+    this->parms[i++] = ava_macsub_run_units(context, parm, parm);
 
   return (ava_ast_node*)this;
 }

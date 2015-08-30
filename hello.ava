@@ -1,0 +1,5 @@
+extern puts puts c void "string pos"
+extern get-prog-name getprogname c string "void pos"
+puts "hello from"
+puts (get-prog-name ())
+
