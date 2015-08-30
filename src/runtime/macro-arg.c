@@ -13,47 +13,45 @@
  * OF  CONTRACT, NEGLIGENCE  OR OTHER  TORTIOUS ACTION,  ARISING OUT  OF OR  IN
  * CONNECTION WITH THE USE OR PERFORMANCE OF THIS SOFTWARE.
  */
-#ifndef AVA_AVALANCHE_H_
-#define AVA_AVALANCHE_H_
+#ifdef HAVE_CONFIG_H
+#include <config.h>
+#endif
 
 #define AVA__INTERNAL_INCLUDE 1
-
 #include "avalanche/defs.h"
-
-AVA_BEGIN_DECLS
-
-#include "avalanche/alloc.h"
-#include "avalanche/string.h"
-#include "avalanche/lex.h"
 #include "avalanche/value.h"
-#include "avalanche/integer.h"
-#include "avalanche/real.h"
-#include "avalanche/exception.h"
-#include "avalanche/context.h"
 #include "avalanche/list.h"
-#include "avalanche/list-proj.h"
-#include "avalanche/map.h"
-#include "avalanche/pointer.h"
-#include "avalanche/function.h"
-#include "avalanche/name-mangle.h"
 #include "avalanche/parser.h"
-#include "avalanche/symbol-table.h"
-#include "avalanche/macsub.h"
-#include "avalanche/intrinsics.h"
 #include "avalanche/macro-arg.h"
-#include "avalanche/pcode.h"
-#include "avalanche/code-gen.h"
-#include "avalanche/interp.h"
 
-/**
- * Initialises the avalanche runtime.
- *
- * This should be called exactly once at process startup.
- */
-void ava_init(void);
+ava_bool ava_macro_arg_literal(
+  ava_value* dst,
+  const ava_parse_unit** error_unit,
+  const ava_parse_unit* unit
+) {
+  const ava_parse_unit* elt;
+  ava_list_value accum;
+  ava_value child;
 
-AVA_END_DECLS
+  switch (unit->type) {
+  case ava_put_bareword:
+  case ava_put_astring:
+  case ava_put_verbatim:
+    *dst = ava_value_of_string(unit->v.string);
+    return ava_true;
 
-#undef AVA__INTERNAL_INCLUDE
+  case ava_put_semiliteral:
+    accum = ava_empty_list();
+    TAILQ_FOREACH(elt, &unit->v.units, next) {
+      if (!ava_macro_arg_literal(&child, error_unit, elt))
+        return ava_false;
+      accum = ava_list_append(accum, child);
+    }
+    *dst = accum.v;
+    return ava_true;
 
-#endif /* AVA_AVALANCHE_H_ */
+  default:
+    *error_unit = unit;
+    return ava_false;
+  }
+}

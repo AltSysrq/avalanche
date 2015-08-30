@@ -11,6 +11,7 @@ runtime/test-exception.t \
 runtime/test-function.t \
 runtime/test-hash-map.t \
 runtime/test-integer.t \
+runtime/test-interp.t \
 runtime/test-intrinsics-fundamental.t \
 runtime/test-lex.t \
 runtime/test-list-map.t \
@@ -20,6 +21,7 @@ runtime/test-macsub.t \
 runtime/test-map.t \
 runtime/test-name-mangle.t \
 runtime/test-parser.t \
+runtime/test-pcode.t \
 runtime/test-pointer.t \
 runtime/test-real.t \
 runtime/test-string.t \
@@ -31,7 +33,7 @@ BENCHMARKS = benchmarks/list/avalanche.t benchmarks/map/avalanche.t
 EXTRA_CFLAGS =
 AM_CFLAGS = $(CHECK_CFLAGS) -I../src $(EXTRA_CFLAGS) -funwind-tables
 AM_CXXFLAGS = $(CHECK_CFLAGS) -I../src $(EXTRA_CFLAGS) -funwind-tables
-AM_LDFLAGS = $(CHECK_LIBS) ../src/libavart.la
+AM_LDFLAGS = -export-dynamic $(CHECK_LIBS) ../src/libavart.la
 
 check_PROGRAMS = $(TESTS)
 noinst_PROGRAMS =  $(BENCHMARKS)

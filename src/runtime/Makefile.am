@@ -9,15 +9,20 @@ avalanche/defs.h \
 avalanche/exception.h \
 avalanche/function.h \
 avalanche/integer.h \
+avalanche/interp.h \
+avalanche/intrinsics.h \
 avalanche/lex.h \
 avalanche/list.h \
 avalanche/list-proj.h \
 avalanche/list-trait.h \
+avalanche/macro-arg.h \
 avalanche/macsub.h \
 avalanche/map.h \
 avalanche/map-trait.h \
 avalanche/name-mangle.h \
 avalanche/parser.h \
+avalanche/pcode.h \
+avalanche/gen-pcode.h \
 avalanche/pointer.h \
 avalanche/pointer-trait.h \
 avalanche/real.h \
@@ -40,3 +45,7 @@ avalanche/map-trait.h: avalanche/generate-trait.tcl avalanche/map.trait
 avalanche/pointer-trait.h: avalanche/generate-trait.tcl avalanche/pointer.trait
 	$(AM_V_GEN)$(TCLSH) avalanche/generate-trait.tcl avalanche/pointer.trait \
 		>avalanche/pointer-trait.h
+
+avalanche/gen-pcode.h: pcode-defs.tcl generate-pcode.tcl
+	$(AM_V_GEN)$(TCLSH) generate-pcode.tcl header \
+		<pcode-defs.tcl >avalanche/gen-pcode.h

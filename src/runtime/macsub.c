@@ -25,6 +25,7 @@
 #include "avalanche/alloc.h"
 #include "avalanche/string.h"
 #include "avalanche/parser.h"
+#include "avalanche/code-gen.h"
 #include "avalanche/macsub.h"
 #include "-intrinsics/fundamental.h"
 #include "../bsd.h"
@@ -168,6 +169,41 @@ ava_macsub_context* ava_macsub_context_push_minor(
   SPLAY_INIT(&this->saved_tables);
 
   return this;
+}
+
+void ava_macsub_put_symbol(
+  ava_macsub_context* context,
+  ava_symbol* symbol,
+  const ava_compile_location* location
+) {
+  AVA_STATIC_STRING(visibility_message,
+                    "Non-private definitions may occur only at "
+                    "global scope.");
+  AVA_STATIC_STRING(redefined_message,
+                    "Redefinition of symbol: ");
+  AVA_STATIC_STRING(redefined_import_message,
+                    "Redefinition of symbol's simple name: ");
+
+  if (context->level > 0 && ava_v_private != symbol->visibility) {
+    ava_macsub_record_error(context, visibility_message, location);
+  }
+
+  switch (ava_symbol_table_put(context->symbol_table,
+                               symbol->full_name, symbol)) {
+  case ava_stps_ok: break;
+  case ava_stps_redefined_strong_local:
+    ava_macsub_record_error(
+      context, ava_string_concat(redefined_message, symbol->full_name),
+      location);
+    break;
+  case ava_stps_redefined_strong_local_by_auto_import:
+    /* TODO: Return the short name instead */
+    ava_macsub_record_error(
+      context,
+      ava_string_concat(redefined_import_message, symbol->full_name),
+      location);
+    break;
+  }
 }
 
 ava_macsub_saved_symbol_table* ava_macsub_save_symbol_table(
@@ -533,4 +569,38 @@ ava_string ava_ast_node_get_funname(const ava_ast_node* node) {
     return (*node->v->get_funname)(node);
   else
     return AVA_ABSENT_STRING;
+}
+
+void ava_ast_node_cg_evaluate(ava_ast_node* node,
+                              const struct ava_pcode_register_s* dst,
+                              ava_codegen_context* context) {
+  AVA_STATIC_STRING(does_not_produce_value,
+                    " does not produce a value.");
+
+  if (node->v->cg_evaluate)
+    (*node->v->cg_evaluate)(node, dst, context);
+  else
+    ava_codegen_error(context, node,
+                      ava_string_concat(
+                        ava_string_of_cstring(node->v->name),
+                        does_not_produce_value));
+}
+
+void ava_ast_node_cg_discard(ava_ast_node* node,
+                             ava_codegen_context* context) {
+  AVA_STATIC_STRING(is_pure, " is pure, but value would be discarded.");
+
+  if (node->v->cg_discard)
+    (*node->v->cg_discard)(node, context);
+  else
+    ava_codegen_error(context, node,
+                      ava_string_concat(
+                        ava_string_of_cstring(node->v->name),
+                        is_pure));
+}
+
+void ava_ast_node_cg_define(ava_ast_node* node,
+                            ava_codegen_context* context) {
+  assert(node->v->cg_define);
+  (*node->v->cg_define)(node, context);
 }

@@ -26,6 +26,8 @@
 #include "../avalanche/string.h"
 #include "../avalanche/parser.h"
 #include "../avalanche/macsub.h"
+#include "../avalanche/pcode.h"
+#include "../avalanche/code-gen.h"
 #include "fundamental.h"
 #include "funcall.h"
 #include "variable.h"
@@ -49,6 +51,14 @@ static ava_ast_node* ava_intr_seq_to_lvalue(const ava_intr_seq* node);
 static void ava_intr_seq_postprocess(const ava_intr_seq* node);
 static ava_bool ava_intr_seq_get_constexpr(const ava_intr_seq* node,
                                            ava_value* dst);
+static void ava_intr_seq_cg_common(
+  ava_intr_seq* node, const ava_pcode_register* dst,
+  ava_codegen_context* context);
+static void ava_intr_seq_cg_evaluate(
+  ava_intr_seq* node, const ava_pcode_register* dst,
+  ava_codegen_context* context);
+static void ava_intr_seq_cg_discard(
+  ava_intr_seq* node, ava_codegen_context* context);
 
 static const ava_ast_node_vtable ava_intr_seq_vtable = {
   .name = "statement sequence",
@@ -56,6 +66,8 @@ static const ava_ast_node_vtable ava_intr_seq_vtable = {
   .to_lvalue = (ava_ast_node_to_lvalue_f)ava_intr_seq_to_lvalue,
   .postprocess = (ava_ast_node_postprocess_f)ava_intr_seq_postprocess,
   .get_constexpr = (ava_ast_node_get_constexpr_f)ava_intr_seq_get_constexpr,
+  .cg_evaluate = (ava_ast_node_cg_evaluate_f)ava_intr_seq_cg_evaluate,
+  .cg_discard = (ava_ast_node_cg_discard_f)ava_intr_seq_cg_discard,
 };
 
 ava_intr_seq* ava_intr_seq_new(
@@ -176,6 +188,60 @@ static ava_bool ava_intr_seq_get_constexpr(const ava_intr_seq* seq,
   }
 
   return ava_true;
+}
+
+static void ava_intr_seq_cg_common(
+  ava_intr_seq* seq, const ava_pcode_register* dst,
+  ava_codegen_context* context
+) {
+  ava_intr_seq_entry* e;
+
+  STAILQ_FOREACH(e, &seq->children, next) {
+    if (dst && !STAILQ_NEXT(e, next))
+      ava_ast_node_cg_evaluate(e->node, dst, context);
+    else
+      ava_ast_node_cg_discard(e->node, context);
+  }
+
+  if (STAILQ_EMPTY(&seq->children) && dst) {
+    AVA_PCXB(ld_imm_vd, *dst, AVA_EMPTY_STRING);
+  }
+}
+
+static void ava_intr_seq_cg_evaluate(
+  ava_intr_seq* seq, const ava_pcode_register* dst,
+  ava_codegen_context* context
+) {
+  const ava_pcode_register* child_dst;
+
+  switch (seq->return_policy) {
+  case ava_isrp_void:
+    child_dst = NULL;
+    break;
+
+  case ava_isrp_last:
+    child_dst = dst;
+    break;
+
+  case ava_isrp_only:
+    if (!STAILQ_FIRST(&seq->children) ||
+        STAILQ_NEXT(STAILQ_FIRST(&seq->children), next))
+      dst = NULL;
+    else
+      child_dst = dst;
+    break;
+  }
+
+  ava_intr_seq_cg_common(seq, dst, context);
+
+  if (dst != child_dst)
+    AVA_PCXB(ld_imm_vd, *dst, AVA_EMPTY_STRING);
+}
+
+static void ava_intr_seq_cg_discard(
+  ava_intr_seq* seq, ava_codegen_context* context
+) {
+  ava_intr_seq_cg_common(seq, NULL, context);
 }
 
 AVA_STATIC_STRING(lstring_missing_left_expression,
@@ -334,14 +400,25 @@ ava_macro_subst_result ava_intr_string_pseudomacro(
 }
 
 static ava_string ava_intr_empty_expr_to_string(const ava_ast_node* node);
+static void ava_intr_empty_expr_cg_evaluate(
+  ava_ast_node* node, const ava_pcode_register* dst,
+  ava_codegen_context* context);
 
 static const ava_ast_node_vtable ava_intr_empty_expr_vtable = {
   .name = "empty expression",
   .to_string = ava_intr_empty_expr_to_string,
+  .cg_evaluate = ava_intr_empty_expr_cg_evaluate
 };
 
 static ava_string ava_intr_empty_expr_to_string(const ava_ast_node* node) {
   return AVA_ASCII9_STRING("<empty>");
+}
+
+static void ava_intr_empty_expr_cg_evaluate(
+  ava_ast_node* node, const ava_pcode_register* dst,
+  ava_codegen_context* context
+) {
+  AVA_PCXB(ld_imm_vd, *dst, AVA_EMPTY_STRING);
 }
 
 typedef struct {
@@ -359,6 +436,10 @@ static ava_bool ava_intr_string_expr_get_constexpr(
   const ava_intr_string_expr* node, ava_value* dst);
 static ava_string ava_intr_string_expr_get_funname(
   const ava_intr_string_expr* node);
+static void ava_intr_string_expr_cg_evaluate(
+  const ava_intr_string_expr* node,
+  const ava_pcode_register* dst,
+  ava_codegen_context* context);
 
 static const ava_ast_node_vtable ava_intr_string_expr_vtable = {
   .name = "bareword or string",
@@ -367,6 +448,7 @@ static const ava_ast_node_vtable ava_intr_string_expr_vtable = {
   .get_constexpr = (ava_ast_node_get_constexpr_f)
     ava_intr_string_expr_get_constexpr,
   .get_funname = (ava_ast_node_get_funname_f)ava_intr_string_expr_get_funname,
+  .cg_evaluate = (ava_ast_node_cg_evaluate_f)ava_intr_string_expr_cg_evaluate,
 };
 
 static ava_string ava_intr_string_expr_to_string(
@@ -410,6 +492,15 @@ static ava_string ava_intr_string_expr_get_funname(
     return node->value;
   else
     return AVA_ABSENT_STRING;
+}
+
+static void ava_intr_string_expr_cg_evaluate(
+  const ava_intr_string_expr* node,
+  const ava_pcode_register* dst,
+  ava_codegen_context* context
+) {
+  ava_codegen_set_location(context, &node->header.location);
+  AVA_PCXB(ld_imm_vd, *dst, node->value);
 }
 
 ava_ast_node* ava_intr_unit(ava_macsub_context* context,

@@ -33,6 +33,9 @@
  * Interface for the macro processor (ie, the Syntax III handler).
  */
 
+struct ava_codegen_context_s;
+struct ava_pcode_register_s;
+
 /**
  * The maximum precedence, inclusive, of an operator macro.
  */
@@ -208,6 +211,25 @@ struct ava_symbol_s {
    */
   ava_visibility visibility;
 
+  /**
+   * If this symbol defines a global element in P-Code, the index of its
+   * element.
+   *
+   * Initialised by invoking cg_define() on the associated AST node.
+   */
+  ava_uint pcode_index;
+
+  /**
+   * If this symbol defines a global element in P-Code, the AST node which is
+   * responsible for it.
+   */
+  ava_ast_node* definer;
+
+  /**
+   * The original fully-qualified name of this symbol, used in diagnostics.
+   */
+  ava_string full_name;
+
   union {
     /**
      * Information about local and global variable and function symbols.
@@ -322,6 +344,28 @@ typedef ava_bool (*ava_ast_node_get_constexpr_f)(
  * if it does not represent a function name.
  */
 typedef ava_string (*ava_ast_node_get_funname_f)(const ava_ast_node*);
+/**
+ * If this AST node can be evaluated to produce a value, generates the
+ * necessary code to save the value in the given register.
+ */
+typedef void (*ava_ast_node_cg_evaluate_f)(
+  ava_ast_node* node, const struct ava_pcode_register_s* dst,
+  struct ava_codegen_context_s* context);
+/**
+ * If this AST node has side-effects or produces definitions, generates the
+ * necessary code to produce those and discard any results.
+ *
+ * Nodes which do not implement this are assumed pure; ie, it is an error to
+ * discard the result.
+ */
+typedef void (*ava_ast_node_cg_discard_f)(
+  ava_ast_node* node, struct ava_codegen_context_s* context);
+/**
+ * If this AST node may insert itself into the symbol table, creates any
+ * definitions required for references to the node to be generated.
+ */
+typedef void (*ava_ast_node_cg_define_f)(
+  ava_ast_node* node, struct ava_codegen_context_s* context);
 
 struct ava_ast_node_vtable_s {
   /**
@@ -339,6 +383,9 @@ struct ava_ast_node_vtable_s {
   ava_ast_node_postprocess_f postprocess;
   ava_ast_node_get_constexpr_f get_constexpr;
   ava_ast_node_get_funname_f get_funname;
+  ava_ast_node_cg_evaluate_f cg_evaluate;
+  ava_ast_node_cg_discard_f cg_discard;
+  ava_ast_node_cg_define_f cg_define;
   /**
    * Indicates whether the AST node should be spread when passed as a function
    * argument.
@@ -370,6 +417,26 @@ ava_bool ava_ast_node_get_constexpr(const ava_ast_node* node,
  * executes a default implementation.
  */
 ava_string ava_ast_node_get_funname(const ava_ast_node* node);
+/**
+ * Calls the given node's cg_evaluate method if there is one; otherwise,
+ * records an error that the node does not produce a value.
+ */
+void ava_ast_node_cg_evaluate(ava_ast_node* node,
+                              const struct ava_pcode_register_s* dst,
+                              struct ava_codegen_context_s* context);
+/**
+ * Calls the given node's cg_discard method if there is one; otherwise, records
+ * an error that the node is pure.
+ */
+void ava_ast_node_cg_discard(ava_ast_node* node,
+                             struct ava_codegen_context_s* context);
+/**
+ * Calls the given node's cg_define method.
+ *
+ * The process aborts if this method is not defined on the node.
+ */
+void ava_ast_node_cg_define(ava_ast_node* node,
+                            struct ava_codegen_context_s* context);
 
 /**
  * Struct for use with ava_macsub_save_symbol_table() and
@@ -471,6 +538,21 @@ ava_macsub_context* ava_macsub_context_push_major(
  */
 ava_macsub_context* ava_macsub_context_push_minor(
   const ava_macsub_context* parent, ava_string interfix);
+
+/**
+ * Adds the given symbol to the context's symbol table.
+ *
+ * If an error occurs, either due to an issue with the symbol table or an
+ * illegal visibility given the context, it is added to the error list.
+ *
+ * @param contet The macro substitution context.
+ * @param symbol The symbol to add. It is added using its full_name.
+ * @param location If an error occurs, the location at which to report the
+ * error.
+ */
+void ava_macsub_put_symbol(
+  ava_macsub_context* context, ava_symbol* symbol,
+  const ava_compile_location* location);
 
 /**
  * Captures the current symbol table and import list so that it can be

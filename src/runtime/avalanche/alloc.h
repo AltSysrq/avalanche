@@ -116,6 +116,13 @@ void* ava_clone_atomic(const void*restrict, size_t) AVA_MALLOC;
  * casting it to a pointer to that type.
  */
 #define AVA_NEW(type) ((type*)ava_alloc(sizeof(type)))
+/**
+ * Syntax sugar for calling ava_clone() with the size of the given value and a
+ * pointer to that value.
+ *
+ * The result is not implicitly cast back to the same type.
+ */
+#define AVA_CLONE(val) (ava_clone(&(val), sizeof(val)))
 
 #endif /* AVA_RUNTIME_ALLOC_H_ */
 
