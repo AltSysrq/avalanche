@@ -17,6 +17,9 @@
 #include <config.h>
 #endif
 
+/* GNU requires _GNU_SOURCE for RTLD_DEFAULT */
+#define _GNU_SOURCE 1
+
 #include <stdlib.h>
 #include <string.h>
 
@@ -357,8 +360,13 @@ static void ava_interp_get_global_function(
   case ava_pcgt_ext_fun: {
     const ava_pcg_ext_fun* f = (const ava_pcg_ext_fun*)global;
     *dst = *f->prototype;
+#ifdef HAVE_DLFUNC
     dst->address = dlfunc(RTLD_DEFAULT, ava_string_to_cstring(
                             ava_name_mangle(f->name)));
+#else
+    dst->address = (void(*)())dlsym(RTLD_DEFAULT, ava_string_to_cstring(
+                                        ava_name_mangle(f->name)));
+#endif
   } break;
   case ava_pcgt_fun: {
     /* TODO */

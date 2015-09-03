@@ -29,6 +29,7 @@ PKG_CHECK_MODULES([LIBFFI], [libffi], [], [AC_MSG_ERROR(
 # PKG_CHECK_MODULES([LIBUNWIND_SETJMP], [libunwind-setjmp], [], [:])
 AC_SEARCH_LIBS([sin], [c m])
 AC_SEARCH_LIBS([strlcpy], [c bsd])
+AC_SEARCH_LIBS([dlopen], [c dl])
 AC_SEARCH_LIBS([GC_init], [gc], [],
                [AC_MSG_ERROR(
 [The gc library could not be found. Make sure libgc[-dev] is installed.])])
@@ -72,7 +73,7 @@ AC_CHECK_SIZEOF([ffi_arg], [], [
 ])
 
 # Checks for library functions.
-AC_CHECK_FUNCS([setrlimit arc4random_buf])
+AC_CHECK_FUNCS([setrlimit arc4random_buf dlfunc dlsym])
 AC_CHECK_DECLS([FFI_THISCALL, FFI_STDCALL], [], [], [
 #include <ffi.h>
 ])
