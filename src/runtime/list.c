@@ -17,11 +17,10 @@
 #include <config.h>
 #endif
 
+#include <assert.h>
 #include <stdlib.h>
 #include <string.h>
 #include <stdio.h>
-
-#include <atomic_ops.h>
 
 #define AVA__INTERNAL_INCLUDE 1
 #include "avalanche/defs.h"
