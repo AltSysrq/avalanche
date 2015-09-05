@@ -48,7 +48,8 @@ struct ava_intr_seq_s {
 };
 
 static ava_string ava_intr_seq_to_string(const ava_intr_seq* node);
-static ava_ast_node* ava_intr_seq_to_lvalue(const ava_intr_seq* node);
+static ava_ast_node* ava_intr_seq_to_lvalue(
+  const ava_intr_seq* node, ava_ast_node* producer, ava_ast_node** reader);
 static void ava_intr_seq_postprocess(const ava_intr_seq* node);
 static ava_bool ava_intr_seq_get_constexpr(const ava_intr_seq* node,
                                            ava_value* dst);
@@ -131,7 +132,9 @@ static ava_string ava_intr_seq_to_string(const ava_intr_seq* seq) {
   return accum;
 }
 
-static ava_ast_node* ava_intr_seq_to_lvalue(const ava_intr_seq* seq) {
+static ava_ast_node* ava_intr_seq_to_lvalue(
+  const ava_intr_seq* seq, ava_ast_node* producer, ava_ast_node** reader
+) {
   ava_intr_seq_entry* first;
 
   if (STAILQ_EMPTY(&seq->children))
@@ -145,7 +148,7 @@ static ava_ast_node* ava_intr_seq_to_lvalue(const ava_intr_seq* seq) {
       seq->header.context, ava_error_multi_sequence_as_lvalue(
         &seq->header.location));
 
-  return ava_ast_node_to_lvalue(first->node);
+  return ava_ast_node_to_lvalue(first->node, producer, reader);
 }
 
 static void ava_intr_seq_postprocess(const ava_intr_seq* seq) {
@@ -429,7 +432,8 @@ typedef struct {
 static ava_string ava_intr_string_expr_to_string(
   const ava_intr_string_expr* node);
 static ava_ast_node* ava_intr_string_expr_to_lvalue(
-  const ava_intr_string_expr* node);
+  const ava_intr_string_expr* node,
+  ava_ast_node* producer, ava_ast_node** reader);
 static ava_bool ava_intr_string_expr_get_constexpr(
   const ava_intr_string_expr* node, ava_value* dst);
 static ava_string ava_intr_string_expr_get_funname(
@@ -463,7 +467,8 @@ static ava_string ava_intr_string_expr_to_string(
 }
 
 static ava_ast_node* ava_intr_string_expr_to_lvalue(
-  const ava_intr_string_expr* node
+  const ava_intr_string_expr* node,
+  ava_ast_node* producer, ava_ast_node** reader
 ) {
   if (!node->is_bareword)
     return ava_macsub_error(
@@ -471,7 +476,8 @@ static ava_ast_node* ava_intr_string_expr_to_lvalue(
         &node->header.location));
 
   return ava_intr_variable_lvalue(
-    node->header.context, node->value, &node->header.location);
+    node->header.context, node->value, &node->header.location,
+    producer, reader);
 }
 
 static ava_bool ava_intr_string_expr_get_constexpr(

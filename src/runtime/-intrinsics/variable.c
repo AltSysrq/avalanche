@@ -29,7 +29,9 @@
 ava_ast_node* ava_intr_variable_lvalue(
   ava_macsub_context* context,
   ava_string name,
-  const ava_compile_location* location
+  const ava_compile_location* location,
+  ava_ast_node* producer,
+  ava_ast_node** reader
 ) {
   /* TODO */
   abort();

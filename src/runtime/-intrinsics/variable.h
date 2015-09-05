@@ -21,7 +21,7 @@
 #include "../avalanche/macsub.h"
 
 /**
- * The org.ava-lang.intrinsic:#var# macro.
+ * The intrinsic #var# macro.
  */
 ava_macro_subst_result ava_intr_variable_read(
   const ava_symbol* self,
@@ -38,11 +38,17 @@ ava_macro_subst_result ava_intr_variable_read(
  * @param context The macro substitution context.
  * @param name The name of the variable.
  * @param location The location where the name occurs.
+ * @param producer The AST node which produces a value to assign to the
+ * variable.
+ * @param reader Outvar for an AST node that will read the old value of the
+ * variable.
  * @return An AST node representing the variable as an lvalue.
  */
 ava_ast_node* ava_intr_variable_lvalue(
   ava_macsub_context* context,
   ava_string name,
-  const ava_compile_location* location);
+  const ava_compile_location* location,
+  ava_ast_node* producer,
+  ava_ast_node** reader);
 
 #endif /* AVA_RUNTIME__INTRINSICS_VARIABLE_H_ */

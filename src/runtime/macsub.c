@@ -85,7 +85,8 @@ static ava_macsub_resolve_macro_result ava_macsub_resolve_macro(
   unsigned target_precedence);
 
 static ava_string ava_macsub_error_to_string(const ava_ast_node* this);
-static ava_ast_node* ava_macsub_error_to_lvalue(const ava_ast_node* this);
+static ava_ast_node* ava_macsub_error_to_lvalue(
+  const ava_ast_node* this, ava_ast_node* producer, ava_ast_node** reader);
 
 static signed ava_compare_macsub_saved_symbol_table(
   const ava_macsub_saved_symbol_table* a,
@@ -510,7 +511,10 @@ static ava_string ava_macsub_error_to_string(const ava_ast_node* this) {
   return AVA_ASCII9_STRING("<error>");
 }
 
-static ava_ast_node* ava_macsub_error_to_lvalue(const ava_ast_node* this) {
+static ava_ast_node* ava_macsub_error_to_lvalue(
+  const ava_ast_node* this, ava_ast_node* producer, ava_ast_node** reader
+) {
+  *reader = (ava_ast_node*)this;
   return (ava_ast_node*)this;
 }
 
@@ -518,13 +522,19 @@ ava_string ava_ast_node_to_string(const ava_ast_node* node) {
   return (*node->v->to_string)(node);
 }
 
-ava_ast_node* ava_ast_node_to_lvalue(const ava_ast_node* node) {
+ava_ast_node* ava_ast_node_to_lvalue(
+  const ava_ast_node* node, ava_ast_node* producer, ava_ast_node** reader
+) {
+  ava_ast_node* error;
+
   if (node->v->to_lvalue) {
-    return (*node->v->to_lvalue)(node);
+    return (*node->v->to_lvalue)(node, producer, reader);
   } else {
-    return ava_macsub_error(
+    error = ava_macsub_error(
       node->context, ava_error_not_an_lvalue(
         &node->location, ava_string_of_cstring(node->v->name)));
+    *reader = error;
+    return error;
   }
 }
 
