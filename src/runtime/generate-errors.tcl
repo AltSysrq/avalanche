@@ -344,6 +344,28 @@ set defs {
     }
   }
 
+  serror R0033 unexpected_token_parsing_list {
+    {ava_integer index} {ava_string token}
+  } {
+    msg "Unexpected token parsing list at index %index%: %token%"
+    explanation {
+      An illegal token was encountered while parsing a list.
+
+      While lists follow the same lexical rules as Avalanche in general, only a
+      subset of token types are actually meaningful within a list.
+    }
+  }
+
+  serror R0034 invalid_list_syntax {
+    {ava_integer index} {ava_string message}
+  } {
+    msg "Illegal list syntax at index %index%: %message%"
+    explanation {
+      An attempt to interpret a value as a list failed because the value
+      contains lexical errors.
+    }
+  }
+
   serror L4001 unclosed_string_literal {} {
     msg "Unclosed string literal."
     explanation {
