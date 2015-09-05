@@ -24,6 +24,7 @@
 #include "../avalanche/defs.h"
 #include "../avalanche/alloc.h"
 #include "../avalanche/string.h"
+#include "../avalanche/errors.h"
 #include "../avalanche/parser.h"
 #include "../avalanche/macsub.h"
 #include "../avalanche/pcode.h"
@@ -131,19 +132,18 @@ static ava_string ava_intr_seq_to_string(const ava_intr_seq* seq) {
 }
 
 static ava_ast_node* ava_intr_seq_to_lvalue(const ava_intr_seq* seq) {
-  AVA_STATIC_STRING(empty_message, "Empty sequence cannot be used as lvalue.");
-  AVA_STATIC_STRING(multi_message, "Sequence with more than one statement "
-                    "cannot be used as lvalue.");
   ava_intr_seq_entry* first;
 
   if (STAILQ_EMPTY(&seq->children))
     return ava_macsub_error(
-      seq->header.context, empty_message, &seq->header.location);
+      seq->header.context, ava_error_empty_sequence_as_lvalue(
+        &seq->header.location));
 
   first = STAILQ_FIRST(&seq->children);
   if (STAILQ_NEXT(first, next))
     return ava_macsub_error(
-      seq->header.context, multi_message, &seq->header.location);
+      seq->header.context, ava_error_multi_sequence_as_lvalue(
+        &seq->header.location));
 
   return ava_ast_node_to_lvalue(first->node);
 }
@@ -244,10 +244,6 @@ static void ava_intr_seq_cg_discard(
   ava_intr_seq_cg_common(seq, NULL, context);
 }
 
-AVA_STATIC_STRING(lstring_missing_left_expression,
-                  "Expected expression before L- or LR-String.");
-AVA_STATIC_STRING(rstring_missing_right_expression,
-                  "Expected expression after R- or LR-String.");
 ava_macro_subst_result ava_intr_string_pseudomacro(
   const ava_symbol* ignored,
   ava_macsub_context* context,
@@ -304,8 +300,9 @@ ava_macro_subst_result ava_intr_string_pseudomacro(
     }
 
     if (TAILQ_EMPTY(&ss->units))
-      return ava_macsub_error_result(context, lstring_missing_left_expression,
-                                     &provoker->location);
+      return ava_macsub_error_result(
+        context, ava_error_lstring_missing_left_expr(
+          &provoker->location));
 
     left_subexpr = ava_parse_subst_of_nonempty_statement(ss);
   }
@@ -321,8 +318,9 @@ ava_macro_subst_result ava_intr_string_pseudomacro(
     }
 
     if (TAILQ_EMPTY(&ss->units))
-      return ava_macsub_error_result(context, rstring_missing_right_expression,
-                                     &provoker->location);
+      return ava_macsub_error_result(
+        context, ava_error_rstring_missing_right_expr(
+          &provoker->location));
 
     right_subexpr = ava_parse_subst_of_nonempty_statement(ss);
   }
@@ -467,12 +465,10 @@ static ava_string ava_intr_string_expr_to_string(
 static ava_ast_node* ava_intr_string_expr_to_lvalue(
   const ava_intr_string_expr* node
 ) {
-  AVA_STATIC_STRING(not_a_bareword_message,
-                    "string cannot be used as lvalue");
-
   if (!node->is_bareword)
     return ava_macsub_error(
-      node->header.context, not_a_bareword_message, &node->header.location);
+      node->header.context, ava_error_string_as_lvalue(
+        &node->header.location));
 
   return ava_intr_variable_lvalue(
     node->header.context, node->value, &node->header.location);
@@ -524,11 +520,11 @@ ava_ast_node* ava_intr_unit(ava_macsub_context* context,
     /* These happens if someone puts a non-atomic string alone in an expression
      * (which is therefore not eligble for macro substitution).
      */
-    return ava_macsub_error(context, lstring_missing_left_expression,
-                            &unit->location);
+    return ava_macsub_error(context, ava_error_lstring_missing_left_expr(
+                              &unit->location));
   case ava_put_rstring:
-    return ava_macsub_error(context, rstring_missing_right_expression,
-                            &unit->location);
+    return ava_macsub_error(context, ava_error_rstring_missing_right_expr(
+                              &unit->location));
 
   case ava_put_substitution:
     return ava_macsub_run(

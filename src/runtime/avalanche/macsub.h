@@ -25,6 +25,7 @@
 #include "symbol-table.h"
 #include "function.h"
 #include "parser.h"
+#include "errors.h"
 #include "name-mangle.h"
 
 /**
@@ -655,34 +656,29 @@ ava_ast_node* ava_macsub_run_units(ava_macsub_context* context,
  * Records an error with the given message and location.
  *
  * @prama context The current macro substitution context.
- * @param message The error message (ava_compile_error.message)
- * @param location The error location (ava_compile_error.location)
+ * @param error The error to record.
  */
 void ava_macsub_record_error(ava_macsub_context* context,
-                             ava_string message,
-                             const ava_compile_location* location);
+                             ava_compile_error* error);
 
 /**
  * Records an error with the given message and location, providing an AST node
  * as a placeholder for the error.
  *
  * @param context The current macro substitution context.
- * @param message The error message (ava_compile_error.message)
- * @param location The error location (ava_compile_error.location)
+ * @param error The error to log.
  * @return An AST node that stands in as a placeholder for the node that failed
  * substitution. The node pretends to implement everything that can be called
  * in the macro substitution stage; for example, it can be used as an lvalue.
  */
 ava_ast_node* ava_macsub_error(ava_macsub_context* context,
-                               ava_string message,
-                               const ava_compile_location* location);
+                               ava_compile_error* error);
 
 /**
  * Convenience for calling ava_macsub_error() and wrapping it in an
  * ava_macro_subst_result.
  */
 ava_macro_subst_result ava_macsub_error_result(
-  ava_macsub_context* context, ava_string message,
-  const ava_compile_location* location);
+  ava_macsub_context* context, ava_compile_error* error);
 
 #endif /* AVA_RUNTIME_MACSUB_H_ */

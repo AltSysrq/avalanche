@@ -325,10 +325,8 @@ static void ava_parse_unexpected_token(
   const ava_parse_context* context,
   const ava_lex_result* token
 ) {
-  AVA_STATIC_STRING(message, "Unexpected token: ");
-
   ava_parse_error_on_lex(errors, context, token,
-                         ava_string_concat(message, token->str));
+                         ava_error_parse_unexpected_token(token->str));
 }
 
 static void ava_parse_unexpected_eof(
@@ -336,9 +334,8 @@ static void ava_parse_unexpected_eof(
   const ava_parse_context* context,
   const ava_lex_result* eof
 ) {
-  AVA_STATIC_STRING(message, "Unexpected end-of-input");
-
-  ava_parse_error_on_lex(errors, context, eof, message);
+  ava_parse_error_on_lex(errors, context, eof,
+                         ava_error_parse_unexpected_eof());
 }
 
 static void ava_parse_error_on_lex(
@@ -462,9 +459,6 @@ static ava_parse_unit_read_result ava_parse_bareword(
   const ava_parse_context* context,
   const ava_lex_result* token
 ) {
-  AVA_STATIC_STRING(empty_varname_message,
-                    "Empty variable name");
-
   char strtmp[AVA_STR_TMPSZ];
   const char* content;
   size_t strlen, begin, end, i;
@@ -505,7 +499,7 @@ static ava_parse_unit_read_result ava_parse_bareword(
       /* Variable names cannot be empty */
       if (end == begin && in_var) {
         ava_parse_error_on_lex_off(errors, context, token,
-                                   empty_varname_message,
+                                   ava_error_empty_variable_name(),
                                    begin-1, end);
       }
 
@@ -713,11 +707,6 @@ static ava_parse_unit_read_result ava_parse_regroup_semiliteral_strings(
   ava_compile_error_list* errors,
   const ava_parse_context* context
 ) {
-  AVA_STATIC_STRING(lstring_at_start_message,
-                    "L-String or LR-String at beginning of semiliteral");
-  AVA_STATIC_STRING(rstring_at_end_message,
-                    "R-String or LR-String at end of semiliteral");
-
   ava_parse_unit * it, * begin, * end, * after_end, * m, * next;
   ava_parse_unit* wrapper;
   ava_parse_statement* statement;
@@ -730,7 +719,8 @@ static ava_parse_unit_read_result ava_parse_regroup_semiliteral_strings(
         begin = TAILQ_PREV(it, ava_parse_unit_list_s, next);
         if (!begin) {
           ava_parse_error_on_unit(errors, context, it,
-                                  lstring_at_start_message);
+                                  ava_error_lstring_missing_left_expr(
+                                    &unit->location)->message);
           goto next_it;
         }
       } else {
@@ -750,7 +740,8 @@ static ava_parse_unit_read_result ava_parse_regroup_semiliteral_strings(
         if (ava_put_rstring == end->type || ava_put_lrstring == end->type)  {
           if (!after_end) {
             ava_parse_error_on_unit(errors, context, it,
-                                    rstring_at_end_message);
+                                    ava_error_rstring_missing_right_expr(
+                                      &unit->location)->message);
             goto next_it;
           }
 

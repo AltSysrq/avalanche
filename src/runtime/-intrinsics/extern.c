@@ -33,6 +33,7 @@
 #include "../avalanche/pcode.h"
 #include "../avalanche/code-gen.h"
 #include "../avalanche/exception.h"
+#include "../avalanche/errors.h"
 #include "extern.h"
 
 typedef struct {
@@ -86,11 +87,9 @@ ava_macro_subst_result ava_intr_extern_subst(
   ava_try(handler) {
     prototype = ava_function_of_value(prototype_list);
   } ava_catch (handler, ava_format_exception) {
-    AVA_STATIC_STRING(message, "Invalid function prototype: ");
     return ava_macsub_error_result(
-      context, ava_string_concat(
-        message, ava_to_string(handler.value)),
-      &prototype_first_unit->location);
+      context, ava_error_invalid_function_prototype(
+        &prototype_first_unit->location, handler.value));
   } ava_catch_all {
     ava_rethrow(&handler);
   }

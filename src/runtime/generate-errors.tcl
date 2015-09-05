@@ -344,7 +344,7 @@ set defs {
     }
   }
 
-  cerror C5001 invalid_function_prototype {{ava_string reason}} {
+  cerror C5001 invalid_function_prototype {{ava_value reason}} {
     msg "Invalid funciton prototype: %reason%"
     explanation {
       An invalid function prototype was passed to an intrinsic macro.
@@ -515,7 +515,7 @@ set defs {
     }
   }
 
-  cerror C5017 symbol_refefined {{ava_string symbol}} {
+  cerror C5017 symbol_redefined {{ava_string symbol}} {
     msg "Redefinition of symbol: %symbol%"
     explanation {
       An attempt was made to define the given symbol, but another definition of
@@ -590,7 +590,7 @@ set defs {
     }
   }
 
-  cerror C5024 parse_unexpected_token {{ava_string token}} {
+  serror C5024 parse_unexpected_token {{ava_string token}} {
     msg "Unexpected token: %token%"
     explanation {
       The indicated token was encountered in a context where it was not
@@ -598,7 +598,7 @@ set defs {
     }
   }
 
-  cerror C5025 parse_unexpected_eof {} {
+  serror C5025 parse_unexpected_eof {} {
     msg "Unexpected end-of-input."
     explanation {
       The parser encountered the end of the input file while there were still
@@ -606,7 +606,7 @@ set defs {
     }
   }
 
-  cerror C5026 empty_variable_name {} {
+  serror C5026 empty_variable_name {} {
     msg "Empty variable name."
     explanation {
       The containing token appears to involve reading from a variable whose

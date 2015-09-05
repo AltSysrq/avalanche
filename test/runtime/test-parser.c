@@ -370,7 +370,7 @@ deftest(group_tag_simplification_on_semiliteral) {
 }
 
 deftest(string_regrouping_leading_lstring) {
-  parse_failure("[`foo\"]", "L-String");
+  parse_failure("[`foo\"]", "before L-");
 }
 
 deftest(string_regrouping_leading_lrstring) {
@@ -378,7 +378,7 @@ deftest(string_regrouping_leading_lrstring) {
 }
 
 deftest(string_regrouping_trailing_rstring) {
-  parse_failure("[\"foo`]", "R-String");
+  parse_failure("[\"foo`]", "after R-");
 }
 
 deftest(string_regrouping_trailing_lrstring) {

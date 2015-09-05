@@ -47,12 +47,7 @@ static ava_codegen_context* ava_codegen_context_alloc(
 
 void ava_codegen_error(ava_codegen_context* context,
                        const ava_ast_node* node,
-                       ava_string message) {
-  ava_compile_error* error;
-
-  error = AVA_NEW(ava_compile_error);
-  error->message = message;
-  error->location = node->location;
+                       ava_compile_error* error) {
   TAILQ_INSERT_TAIL(context->errors, error, next);
 }
 

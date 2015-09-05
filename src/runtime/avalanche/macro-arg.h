@@ -68,17 +68,15 @@
                      !AVA_MACRO_ARG_RIGHT_CONSUMED()? 2 : 3)           \
   if (3 == _ama_status) break;                                         \
   else if (1 == _ama_status) {                                         \
-    AVA_STATIC_STRING(_ama_message, "Extra arguments to left of ");    \
     return ava_macsub_error_result(                                    \
       context,                                                         \
-      ava_string_concat(_ama_message, self->full_name),                \
-      &_ama_left_begin->location);                                     \
+      ava_error_extra_macro_args_left(                                 \
+        &_ama_left_begin->location, self->full_name));                 \
   } else if (2 == _ama_status) {                                       \
-    AVA_STATIC_STRING(_ama_message, "Extra arguments to right of ");   \
     return ava_macsub_error_result(                                    \
       context,                                                         \
-      ava_string_concat(_ama_message, self->full_name),                \
-      &_ama_right_begin->location);                                    \
+      ava_error_extra_macro_args_right(                                \
+        &_ama_right_begin->location, self->full_name));                \
   } else /* user body */
 
 #define AVA__MACRO_ARG_FROM_DIR(cursor, end, dir)       \
@@ -131,13 +129,12 @@
  */
 #define AVA_MACRO_ARG_REQUIRE(name) do {                                \
     if (!AVA_MACRO_ARG_HAS_ARG()) {                                     \
-      AVA_STATIC_STRING(_ama_message, "Missing argument for macro ");   \
-      AVA_STATIC_STRING(_ama_msg_name, ": " name);                      \
+      AVA_STATIC_STRING(_ama_msg_name, name);                           \
       return ava_macsub_error_result(                                   \
-        context, ava_string_concat(                                     \
-          _ama_message, ava_string_concat(                              \
-            self->full_name, _ama_msg_name)),                           \
-        &(_ama_cursor_end? _ama_cursor_end : provoker)->location);      \
+        context,                                                        \
+        ava_error_macro_arg_missing(                                    \
+          &(_ama_cursor_end? _ama_cursor_end : provoker)->location,     \
+          self->full_name, _ama_msg_name));                             \
     }                                                                   \
   } while (0)
 
@@ -176,8 +173,7 @@
  * bareword, an error is emitted and the function returns.
  */
 #define AVA_MACRO_ARG_BAREWORD(dst, name) do {          \
-    AVA_STATIC_STRING(_ama_must_be_bareword,            \
-                      name " must be a bareword");      \
+    AVA_STATIC_STRING(_arg_name, name);                 \
     AVA_MACRO_ARG_REQUIRE(name);                        \
     switch ((*_ama_cursor)->type) {                     \
     case ava_put_bareword:                              \
@@ -185,8 +181,9 @@
       break;                                            \
     default:                                            \
       return ava_macsub_error_result(                   \
-        context, _ama_must_be_bareword,                 \
-        &(*_ama_cursor)->location);                     \
+        context,                                        \
+        ava_error_macro_arg_must_be_bareword(           \
+          &(*_ama_cursor)->location, _arg_name));       \
     }                                                   \
     AVA_MACRO_ARG_CONSUME();                            \
   } while (0)
@@ -200,9 +197,7 @@
  * returns.
  */
 #define AVA_MACRO_ARG_STRINGOID(dst, name) do {         \
-    AVA_STATIC_STRING(_ama_must_be_stringoid,           \
-                      name " must be a bareword, "      \
-                      "A-string, or verbatim");         \
+    AVA_STATIC_STRING(_arg_name, name);                 \
     AVA_MACRO_ARG_REQUIRE(name);                        \
     switch ((*_ama_cursor)->type) {                     \
     case ava_put_bareword:                              \
@@ -212,8 +207,9 @@
       break;                                            \
     default:                                            \
       return ava_macsub_error_result(                   \
-        context, _ama_must_be_stringoid,                \
-        &(*_ama_cursor)->location);                     \
+        context,                                        \
+        ava_error_macro_arg_must_be_stringoid(          \
+          &(*_ama_cursor)->location, _arg_name));       \
     }                                                   \
     AVA_MACRO_ARG_CONSUME();                            \
   } while (0)
@@ -240,15 +236,15 @@ ava_bool ava_macro_arg_literal(
  * - A semiliteral containing only literals
  */
 #define AVA_MACRO_ARG_LITERAL(dst, name) do {           \
-    AVA_STATIC_STRING(_ama_must_be_literal,             \
-                      name " must be a literal.");      \
+    AVA_STATIC_STRING(_arg_name, name);                 \
     const ava_parse_unit* _ama_error_unit;              \
     AVA_MACRO_ARG_REQUIRE(name);                        \
     if (!ava_macro_arg_literal(                         \
           &(dst), &_ama_error_unit, *_ama_cursor)) {    \
       return ava_macsub_error_result(                   \
-        context, _ama_must_be_literal,                  \
-        &_ama_error_unit->location);                    \
+        context,                                        \
+        ava_error_macro_arg_must_be_literal(            \
+          &_ama_error_unit->location, _arg_name));      \
     }                                                   \
     AVA_MACRO_ARG_CONSUME();                            \
   } while (0)

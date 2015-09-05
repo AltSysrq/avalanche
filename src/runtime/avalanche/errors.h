@@ -101,4 +101,10 @@ typedef TAILQ_HEAD(, ava_compile_error_s) ava_compile_error_list;
 
 #include "gen-errors.h"
 
+/**
+ * Wraps the given string and location into an ava_compile_error.
+ */
+ava_compile_error* ava_compile_error_new(
+  ava_string message, const ava_compile_location* location);
+
 #endif /* AVA_RUNTIME_ERRORS_H_ */

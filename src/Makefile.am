@@ -18,6 +18,7 @@ runtime/code-gen.c \
 runtime/context.c \
 runtime/dtoa.c \
 runtime/empty-list.c \
+runtime/errors.c \
 runtime/esba.c \
 runtime/esba-list.c \
 runtime/exception.c \
