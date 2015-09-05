@@ -32,6 +32,7 @@
 #define AVA__INTERNAL_INCLUDE 1
 #include "avalanche/alloc.h"
 #include "avalanche/name-mangle.h"
+#include "avalanche/list.h"
 #include "avalanche/exception.h"
 #include "-context.h"
 #include "bsd.h"
@@ -127,6 +128,23 @@ void ava_throw(const ava_exception_type* type, ava_value value,
 
 void ava_throw_str(const ava_exception_type* type, ava_string str) {
   ava_throw(type, ava_value_of_string(str), NULL);
+}
+
+void ava_throw_uex(const ava_exception_type* type, ava_string user_type,
+                   ava_string message) {
+  ava_list_value inner, outer;
+  ava_value outer_values[2];
+  ava_value inner_values[2] = {
+    ava_value_of_string(AVA_ASCII9_STRING("message")),
+    ava_value_of_string(message),
+  };
+
+  outer_values[0] = ava_value_of_string(user_type);
+  inner = ava_list_of_values(inner_values, 2);
+  outer_values[1] = inner.v;
+  outer = ava_list_of_values(outer_values, 2);
+
+  ava_throw_str(type, ava_to_string(outer.v));
 }
 
 void ava_rethrow(ava_exception_handler*restrict handler) {

@@ -22,6 +22,7 @@
 
 #include "defs.h"
 #include "string.h"
+#include "errors.h"
 
 /**
  * @file
@@ -32,60 +33,6 @@
  * The parser does not perform macro substitution, but does perform all steps
  * directly described in Syntax II in the spec.
  */
-
-/**
- * Describes the location of an entity in source code.
- */
-typedef struct {
-  /**
-   * The source filename.
-   */
-  ava_string filename;
-  /**
-   * The full source of the file containing this entity.
-   */
-  ava_string source;
-  /**
-   * The byte offset of the line containing the start of this entity.
-   */
-  size_t line_offset;
-  /**
-   * The 1-based index of the first line of code on which the unit was
-   * encountered.
-   */
-  unsigned start_line;
-  /**
-   * The 1-based index of the last line of code on which the unit was
-   * encountered.
-   *
-   * This is equal to start_line for units that are localised to one line of
-   * code.
-   */
-  unsigned end_line;
-  /**
-   * The 1-based indices of the start and end columns of the unit within the
-   * first source line.
-   */
-  unsigned start_column, end_column;
-} ava_compile_location;
-
-/**
- * Error type used by various parts of the compilation process.
- */
-typedef struct ava_compile_error_s {
-  /**
-   * The error message.
-   */
-  ava_string message;
-  /**
-   * The location of the error.
-   */
-  ava_compile_location location;
-
-  TAILQ_ENTRY(ava_compile_error_s) next;
-} ava_compile_error;
-
-typedef TAILQ_HEAD(, ava_compile_error_s) ava_compile_error_list;
 
 /**
  * The possible simplified AST unit types.

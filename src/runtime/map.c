@@ -24,6 +24,7 @@
 #include "avalanche/defs.h"
 #include "avalanche/string.h"
 #include "avalanche/value.h"
+#include "avalanche/errors.h"
 #include "avalanche/exception.h"
 #include "avalanche/list.h"
 #include "avalanche/map.h"
@@ -57,15 +58,11 @@ ava_fat_map_value ava_fat_map_value_of(ava_value value) {
 }
 
 static ava_map_value ava_map_value_of_list(ava_list_value list) {
-  AVA_STATIC_STRING(odd_length_message,
-                    "list of odd length cannot be interpreted as map");
   size_t length;
 
   length = ava_list_length(list);
   if (length % 2) {
-    ava_throw(&ava_format_exception,
-              ava_value_of_string(odd_length_message),
-              NULL);
+    ava_throw_str(&ava_format_exception, ava_error_odd_length_list_to_map());
   }
 
   if (0 == length)

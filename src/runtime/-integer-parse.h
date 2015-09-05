@@ -55,12 +55,10 @@ static const char* consume_sign_and_radix(
 
 static void throw_overflow(const char*restrict begin,
                            const char*restrict end) {
-  AVA_STATIC_STRING(message, "integer flows over: ");
-
   ava_throw(&ava_format_exception,
             ava_value_of_string(
-              ava_string_concat(
-                message, ava_string_of_bytes(begin, end - begin))),
+              ava_error_integer_overflow(
+                ava_string_of_bytes(begin, end - begin))),
             NULL);
 }
 

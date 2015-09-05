@@ -26,6 +26,7 @@
 #include "avalanche/string.h"
 #include "avalanche/value.h"
 #include "avalanche/exception.h"
+#include "avalanche/errors.h"
 #include "avalanche/integer.h"
 #include "-hexes.h"
 #include "-integer-fast-dec.h"
@@ -44,10 +45,6 @@ const ava_value_trait ava_integer_type = {
 ava_integer ava_integer_of_noninteger_value(
   ava_value value, ava_integer dfault
 ) {
-  AVA_STATIC_STRING(not_an_integer, "not an integer: ");
-  AVA_STATIC_STRING(
-    trailing_garbage, "trailing garbage at end of integer: ");
-
   ava_string str = ava_to_string(value);
   ava_string error_message;
   const char*restrict strdata, *restrict cursor, *restrict marker = NULL;
@@ -81,7 +78,7 @@ ava_integer ava_integer_of_noninteger_value(
 #define YYFILL(n) do {} while (0)
 #define END() do {                                                  \
     if (cursor != strdata + strlen) {                               \
-      error_message = trailing_garbage;                             \
+      error_message = ava_error_integer_trailing_garbage(str);      \
       goto error;                                                   \
     }                                                               \
   } while (0)
@@ -117,7 +114,7 @@ ava_integer ava_integer_of_noninteger_value(
       OCT_LITERAL WS*           { END(); return ava_integer_parse_oct(tok, cursor); }
       HEX_LITERAL WS*           { END(); return ava_integer_parse_hex(tok, cursor); }
       DEC_LITERAL WS*           { END(); return ava_integer_parse_dec(tok, cursor); }
-      *                         { error_message = not_an_integer;
+      *                         { error_message = ava_error_not_an_integer(str);
                                   goto error; }
      */
   }
@@ -134,10 +131,7 @@ ava_integer ava_integer_of_noninteger_value(
   return dfault;
 
   error:
-  ava_throw(&ava_format_exception,
-            ava_value_of_string(
-              ava_string_concat(error_message, str)),
-            NULL);
+  ava_throw_str(&ava_format_exception, error_message);
   /* unreachable */
 }
 

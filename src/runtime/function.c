@@ -29,6 +29,7 @@
 #include "avalanche/string.h"
 #include "avalanche/value.h"
 #include "avalanche/integer.h"
+#include "avalanche/errors.h"
 #include "avalanche/real.h"
 #include "avalanche/pointer.h"
 #include "avalanche/exception.h"
@@ -148,16 +149,19 @@ void ava_function_init_ffi(ava_function* fun) {
     break;
 
   case FFI_BAD_TYPEDEF:
-    ava_throw(&ava_internal_exception, ava_value_of_string(bad_typedef_message),
+    ava_throw(&ava_internal_exception,
+              ava_value_of_string(ava_error_bad_ffi(bad_typedef_message)),
               NULL);
 
   case FFI_BAD_ABI:
-    ava_throw(&ava_internal_exception, ava_value_of_string(bad_abi_message),
+    ava_throw(&ava_internal_exception,
+              ava_value_of_string(ava_error_bad_ffi(bad_abi_message)),
               NULL);
 
   default:
     ava_throw(&ava_internal_exception,
-              ava_value_of_string(unknown_error_message), NULL);
+              ava_value_of_string(
+                ava_error_bad_ffi(unknown_error_message)), NULL);
   }
 }
 
@@ -246,16 +250,6 @@ ava_value ava_value_of_function(const ava_function* fun) {
 }
 
 const ava_function* ava_function_of_value(ava_value val) {
-  AVA_STATIC_STRING(too_few_element_message,
-                    "List has too few elements to be a function.");
-  AVA_STATIC_STRING(unknown_cc_message, "Unknown calling convention: ");
-  AVA_STATIC_STRING(function_must_have_arguments_message,
-                    "Function specification must have at least one argument.");
-  AVA_STATIC_STRING(argspec_too_short_message,
-                    "Argument specification too short: [");
-  AVA_STATIC_STRING(invalid_function_message_prefix,
-                    "Function not valid: ");
-  AVA_STATIC_STRING(null_function_pointer, "Null function pointer.");
   ava_list_value list, argspec;
   ava_function* fun;
   ava_argument_spec* args;
@@ -268,12 +262,13 @@ const ava_function* ava_function_of_value(ava_value val) {
 
   list = ava_list_value_of(val);
   if (ava_list_length(list) < 2)
-    ava_throw_str(&ava_format_exception, too_few_element_message);
+    ava_throw_str(&ava_format_exception,
+                  ava_error_too_few_elements_to_be_a_function());
 
   fun = AVA_NEW(ava_function);
   fun->address = (void(*)())ava_integer_of_value(ava_list_index(list, 0), 0);
   if (!fun->address)
-    ava_throw_str(&ava_format_exception, null_function_pointer);
+    ava_throw_str(&ava_format_exception, ava_error_function_null_pointer());
 
   calling_convention = ava_to_string(ava_list_index(list, 1));
   switch (ava_string_to_ascii9(calling_convention)) {
@@ -299,7 +294,7 @@ const ava_function* ava_function_of_value(ava_value val) {
 
   default:
     ava_throw_str(&ava_format_exception,
-                  ava_string_concat(unknown_cc_message, calling_convention));
+                  ava_error_unknown_calling_convention(calling_convention));
   }
 
   if (use_marshal) {
@@ -312,7 +307,7 @@ const ava_function* ava_function_of_value(ava_value val) {
 
   fun->num_args = ava_list_length(list) - first_arg;
   if (0 == fun->num_args)
-    ava_throw_str(&ava_format_exception, function_must_have_arguments_message);
+    ava_throw_str(&ava_format_exception, ava_error_function_has_no_args());
 
   fun->args = args = ava_alloc(sizeof(ava_argument_spec) * fun->num_args);
 
@@ -321,10 +316,7 @@ const ava_function* ava_function_of_value(ava_value val) {
 
     if (ava_list_length(argspec) < (unsigned)(1 + use_marshal))
       ava_throw_str(&ava_format_exception,
-                    ava_string_concat(
-                      argspec_too_short_message,
-                      ava_string_concat(
-                        ava_to_string(argspec.v), AVA_ASCII9_STRING("]"))));
+                    ava_error_function_argspec_too_short(argspec.v));
 
     if (use_marshal)
       args[arg].marshal = ava_function_parse_marshal_type(
@@ -334,9 +326,7 @@ const ava_function* ava_function_of_value(ava_value val) {
   }
 
   if (!ava_function_is_valid(&invalid_message, fun))
-    ava_throw_str(&ava_format_exception,
-                  ava_string_concat(invalid_function_message_prefix,
-                                    invalid_message));
+    ava_throw_str(&ava_format_exception, invalid_message);
 
   ava_function_init_ffi(fun);
   return fun;
@@ -347,8 +337,6 @@ AVA_STATIC_STRING(ava_ushort_text, "ava_ushort");
 AVA_STATIC_STRING(ava_integer_text, "ava_integer");
 
 static ava_c_marshalling_type ava_function_parse_marshal_type(ava_value val) {
-  AVA_STATIC_STRING(unknown_marshalling_type_message,
-                    "Unknown marshalling type: ");
   ava_exception_handler h;
   ava_string str = ava_to_string(val);
   ava_c_marshalling_type ret;
@@ -401,26 +389,11 @@ static ava_c_marshalling_type ava_function_parse_marshal_type(ava_value val) {
     ava_rethrow(&h);
   }
 
-  ava_throw_str(&ava_format_exception,
-                ava_string_concat(unknown_marshalling_type_message, str));
+  ava_throw_str(&ava_format_exception, ava_error_unknown_marshalling_type(str));
 }
 
 static ava_argument_binding ava_function_parse_binding(ava_list_value argspec,
                                                        size_t start_ix) {
-  AVA_STATIC_STRING(missing_binding_message,
-                    "Missing binding in argument specification.");
-  AVA_STATIC_STRING(implicit_length_message,
-                    "implicit binding must be followed by exactly one value.");
-  AVA_STATIC_STRING(pos_length_message,
-                    "pos binding must be followed by at most one value.");
-  AVA_STATIC_STRING(varargs_length_message,
-                    "varargs binding must not be followed by any values.");
-  AVA_STATIC_STRING(named_length_message,
-                    "named binding must be followed by one or two values.");
-  AVA_STATIC_STRING(bool_length_message,
-                    "bool binding must be followed by exactly one value.");
-  AVA_STATIC_STRING(unknown_binding_message,
-                    "Unknown argument binding type: ");
   size_t length = ava_list_length(argspec);
   ava_string type;
   ava_argument_binding ret;
@@ -428,13 +401,15 @@ static ava_argument_binding ava_function_parse_binding(ava_list_value argspec,
   memset(&ret, 0, sizeof(ret));
 
   if (start_ix >= length)
-    ava_throw_str(&ava_format_exception, missing_binding_message);
+    ava_throw_str(&ava_format_exception,
+                  ava_error_function_argspec_missing_binding());
 
   type = ava_to_string(ava_list_index(argspec, start_ix));
   switch (ava_string_to_ascii9(type)) {
   case AVA_ASCII9('i','m','p','l','i','c','i','t'):
     if (length != start_ix + 2)
-      ava_throw_str(&ava_format_exception, implicit_length_message);
+      ava_throw_str(&ava_format_exception,
+                    ava_error_function_argspec_implicit_length());
 
     ret.type = ava_abt_implicit;
     ret.value = ava_list_index(argspec, start_ix + 1);
@@ -447,13 +422,15 @@ static ava_argument_binding ava_function_parse_binding(ava_list_value argspec,
       ret.type = ava_abt_pos_default;
       ret.value = ava_list_index(argspec, start_ix + 1);
     } else {
-      ava_throw_str(&ava_format_exception, pos_length_message);
+      ava_throw_str(&ava_format_exception,
+                    ava_error_function_argspec_pos_length());
     }
     break;
 
   case AVA_ASCII9('v','a','r','a','r','g','s'):
     if (length != start_ix + 1)
-      ava_throw_str(&ava_format_exception, varargs_length_message);
+      ava_throw_str(&ava_format_exception,
+                    ava_error_function_argspec_varargs_length());
 
     ret.type = ava_abt_varargs;
     break;
@@ -467,13 +444,15 @@ static ava_argument_binding ava_function_parse_binding(ava_list_value argspec,
       ret.name = ava_to_string(ava_list_index(argspec, start_ix + 1));
       ret.value = ava_list_index(argspec, start_ix + 2);
     } else {
-      ava_throw_str(&ava_format_exception, named_length_message);
+      ava_throw_str(&ava_format_exception,
+                    ava_error_function_argspec_named_length());
     }
     break;
 
   case AVA_ASCII9('b','o','o','l'):
     if (length != start_ix + 2)
-      ava_throw_str(&ava_format_exception, bool_length_message);
+      ava_throw_str(&ava_format_exception,
+                    ava_error_function_argspec_bool_length());
 
     ret.type = ava_abt_bool;
     ret.name = ava_to_string(ava_list_index(argspec, start_ix + 1));
@@ -481,7 +460,7 @@ static ava_argument_binding ava_function_parse_binding(ava_list_value argspec,
 
   default:
     ava_throw_str(&ava_format_exception,
-                  ava_string_concat(unknown_binding_message, type));
+                  ava_error_function_argspec_unknown_binding(type));
   }
 
   return ret;
@@ -640,19 +619,6 @@ static ava_bool is_named(ava_argument_binding_type type) {
 }
 
 ava_bool ava_function_is_valid(ava_string* message, const ava_function* fun) {
-  AVA_STATIC_STRING(
-    var_shape_cannot_follow_varargs,
-    "Variably-shaped argument found after variadic argument.");
-  AVA_STATIC_STRING(
-    all_var_shaped_must_be_contiguous,
-    "Variably-shaped arguments are not contiguous.");
-  AVA_STATIC_STRING(
-    no_explicit_arguments,
-    "Function has no explicit arguments.");
-  AVA_STATIC_STRING(
-    duplicated_name,
-    "Named argument declared more than once: ");
-
   ava_bool has_seen_varargs = ava_false;
   ava_bool has_seen_var_shape = ava_false;
   ava_bool has_seen_fixed_shape_after_var_shape = ava_false;
@@ -682,12 +648,12 @@ ava_bool ava_function_is_valid(ava_string* message, const ava_function* fun) {
     ok:
 
     if (has_seen_varargs && is_var_shape) {
-      *message = var_shape_cannot_follow_varargs;
+      *message = ava_error_function_var_shape_following_varargs();
       return ava_false;
     }
 
     if (has_seen_fixed_shape_after_var_shape && is_var_shape) {
-      *message = all_var_shaped_must_be_contiguous;
+      *message = ava_error_function_var_shaped_must_be_contiguous();
       return ava_false;
     }
 
@@ -696,8 +662,8 @@ ava_bool ava_function_is_valid(ava_string* message, const ava_function* fun) {
         if (is_named(fun->args[j].binding.type)) {
           if (0 == ava_strcmp(fun->args[i].binding.name,
                               fun->args[j].binding.name)) {
-            *message = ava_string_concat(
-              duplicated_name, fun->args[i].binding.name);
+            *message =  ava_error_function_named_arg_declared_more_than_once(
+              fun->args[i].binding.name);
             return ava_false;
           }
         }
@@ -711,7 +677,7 @@ ava_bool ava_function_is_valid(ava_string* message, const ava_function* fun) {
   }
 
   if (only_implicits) {
-    *message = no_explicit_arguments;
+    *message = ava_error_function_has_no_explicit_parms();
     return ava_false;
   }
 
@@ -726,19 +692,6 @@ ava_function_bind_status ava_function_bind(
   size_t variadic_collection[],
   ava_string* message
 ) {
-  AVA_STATIC_STRING(
-    missing_value_for_named_parameter,
-    "Missing value for named parameter: ");
-  AVA_STATIC_STRING(
-    unknown_named_parameter,
-    "No match for named parameter: ");
-  AVA_STATIC_STRING(
-    too_many_parms_message,
-    "Too many parameters to function; the following could not be bound: ");
-  AVA_STATIC_STRING(
-    unbound_argument_message,
-    "No parameter bound to mandatory argument: ");
-
   char consumed_args[fun->num_args];
   size_t arg, i, other, parm = 0, parm_limit = num_parms;
   ava_string target_name;
@@ -807,8 +760,8 @@ ava_function_bind_status ava_function_bind(
             ++parm;
           } else {
             if (parm + 1 >= parm_limit) {
-              *message = ava_string_concat(
-                missing_value_for_named_parameter, target_name);
+              *message = ava_error_function_missing_value_for_named_argument(
+                target_name);
               return ava_fbs_impossible;
             }
 
@@ -830,8 +783,7 @@ ava_function_bind_status ava_function_bind(
       } /* end for (searching for name match) */
 
       /* Nothing matched */
-      *message = ava_string_concat(
-        unknown_named_parameter, target_name);
+      *message = ava_error_function_unknown_named_argument(target_name);
       return ava_fbs_impossible;
     } else if (ava_abt_pos_default == fun->args[arg].binding.type) {
       bound_args[arg].type = ava_fbat_parameter;
@@ -866,13 +818,7 @@ ava_function_bind_status ava_function_bind(
         return ava_fbs_unpack;
     }
 
-    *message = ava_string_concat(
-      too_many_parms_message,
-      ava_string_concat(
-        ava_to_string(ava_value_of_integer(parm+1)),
-        ava_string_concat(
-          AVA_ASCII9_STRING(".."),
-          ava_to_string(ava_value_of_integer(parm_limit)))));
+    *message = ava_error_function_too_many_parms(parm+1, parm_limit);
     return ava_fbs_impossible;
   }
 
@@ -901,13 +847,12 @@ ava_function_bind_status ava_function_bind(
       break;
 
     case ava_abt_named:
-      *message = ava_string_concat(
-        unbound_argument_message, fun->args[arg].binding.name);
+      *message = ava_error_function_unbound_argument(
+        fun->args[arg].binding.name);
       return ava_fbs_impossible;
 
     default:
-      *message = ava_string_concat(
-        unbound_argument_message,
+      *message = ava_error_function_unbound_argument(
         ava_string_concat(
           AVA_ASCII9_STRING("#"),
           ava_to_string(ava_value_of_integer(arg+1))));
@@ -958,9 +903,6 @@ void ava_function_apply_bind(
 
 ava_value ava_function_invoke(const ava_function* fun,
                               ava_value args[]) {
-  AVA_STATIC_STRING(non_empty_string_to_void_arg_message,
-                    "Non-empty string passed to void argument.");
-
   ava_ffi_arg ffi_args[fun->num_args], *ffi_arg_ptrs[fun->num_args];
   ava_ffi_arg return_value;
   size_t logical_arg, physical_arg;
@@ -1013,7 +955,7 @@ ava_value ava_function_invoke(const ava_function* fun,
     case ava_cmpt_void:
       if (!ava_string_is_empty(ava_to_string(args[logical_arg])))
         ava_throw_str(&ava_format_exception,
-                      non_empty_string_to_void_arg_message);
+                      ava_error_non_empty_string_to_void_arg());
       break;
 
 #define INT ava_integer_of_value(args[logical_arg], 0)
@@ -1170,7 +1112,6 @@ ava_value ava_function_bind_invoke(
   size_t num_parms,
   const ava_function_parameter parms[]
 ) {
-  AVA_STATIC_STRING(error_prefix, "Can't invoke function: ");
   ava_function_bind_status bind_status;
   ava_value arguments[fun->num_args];
   ava_function_bound_argument bound_args[fun->num_args];
@@ -1200,8 +1141,7 @@ ava_value ava_function_bind_invoke(
     goto tail_call;
 
   case ava_fbs_impossible:
-    ava_throw_str(&ava_error_exception,
-                  ava_string_concat(error_prefix, message));
+    ava_throw_str(&ava_error_exception, message);
   }
 
   ava_function_apply_bind(fun->num_args, arguments,

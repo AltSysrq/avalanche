@@ -148,6 +148,12 @@ void ava_throw(const ava_exception_type* type, ava_value value,
  */
 void ava_throw_str(const ava_exception_type* type, ava_string str) AVA_NORETURN;
 /**
+ * Throws an exception in ava_user_exception format with the given type and
+ * message.
+ */
+void ava_throw_uex(const ava_exception_type* type, ava_string user_type,
+                   ava_string message) AVA_NORETURN;
+/**
  * Convenience for ava_throw(handler->exception_type, handler->value,
  *                           handler->next, handler->stack_trace);
  */
