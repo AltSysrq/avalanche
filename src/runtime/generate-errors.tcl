@@ -344,6 +344,69 @@ set defs {
     }
   }
 
+  serror L4001 unclosed_string_literal {} {
+    msg "Unclosed string literal."
+    explanation {
+      The end of the input file was encountered without the indicated string
+      literal having been closed.
+    }
+  }
+
+  serror L4002 unclosed_verbatim {{ava_integer depth}} {
+    msg "Unclosed verbatim literal (nested %depth% levels at eof)."
+    explanation {
+      The end of the input file was encountered before the indicated verbatim
+      had been fully closed.
+    }
+  }
+
+  serror L4003 invalid_backslash_sequence {} {
+    msg "Invalid backslash sequence."
+    explanation {
+      An illegal backslash escape sequence was encountered at the indicated
+      location.
+    }
+  }
+
+  serror L4004 lone_backslash_at_eof {} {
+    msg "Lone backslash at end of input."
+    explanation {
+      An isolated backslash was found as the very last byte of the input file.
+    }
+  }
+
+  serror L4005 lex_illegal_characters {
+    {ava_integer count} {ava_string plural} {ava_string hex}
+  } {
+    msg "Encountered %count% illegal character%plural%: %hex%"
+    explanation {
+      A sequence of one or more illegal characters was encountered in the input.
+
+      Avalanche forbids all ASCII control characters other than newline ("\n"),
+      carraige-return ("\r"), and horizontal tab ("\t") from occurring
+      literally within and string parsed according to the lexical rules. To
+      encode such characters in the string, use a backslash escape sequence,
+      such as "\x7f" for the ASCII DEL character.
+
+      This error may also indicate that something other than an Avalance
+      lexical string, like a binary file, was input.
+    }
+  }
+
+  serror L4006 token_must_be_separated_from_previous {} {
+    msg "Missing whitespace separation before this token."
+    explanation {
+      Many tokens are required to be separated from what precedes them by
+      whitespace.
+
+      For example, the input "foo"bar is rejected under this rule, as is
+      foo"bar". Instead, "foo" bar and foo "bar" should be written.
+
+      For some inputs, this error may indicate a string that was incorrectly or
+      accidentally closed.
+    }
+  }
+
   cerror C5001 invalid_function_prototype {{ava_value reason}} {
     msg "Invalid funciton prototype: %reason%"
     explanation {
