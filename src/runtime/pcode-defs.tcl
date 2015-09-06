@@ -155,6 +155,22 @@ struct global g {
     str effective-name
   }
 
+  # Exports a global user macro.
+  #
+  # Since macros do not have physical manifestations, they are not declared and
+  # exported separately; non-exported macros do not even appear in P-Code.
+  elt macro {
+    # If true, any P-Code unit created as a composite including this one
+    # (ie, linkage of modules into a package) includes this macro statement. A
+    # value of true corresponds to public visibility; false to internal
+    # visibility.
+    bool reexport
+    # The name by which this macro is exposed to Avalanche code.
+    str name
+    # The body of this macro.
+    struct macro m body
+  }
+
   # Declares that this P-Code unit depends upon a given package.
   #
   # Semantics: Before module-dependency initialisation, all load-pkg statements
@@ -463,4 +479,174 @@ struct exe x {
   elt label {
     str name
   }
+}
+
+# User macros are implemented by a syntax-unit-manipulating virtual machine of
+# sorts.
+#
+# Unlike executable P-Code, the macro VM is a simple stack machine, where every
+# value is an ava_parse_unit or ava_parse_statement. The VM has no control flow
+# instructions; it simply executes every instruction sequentally and
+# unconditionally. When the VM terminates, the stack must contain a single
+# ava_parse_statement.
+#
+# The VM starts with a stack containing an empty ava_parse_statement. Input is
+# provided in the form of the `left` and `right` instructions.
+struct macro m {
+  parent global g
+
+  # Pushes the left input of the macro onto the stack.
+  #
+  #   ( ) -- ( s )
+  #
+  # The parse units to the left of the provoker are cloned into a statement
+  # which is pushed onto the stack.
+  elt left { }
+  # Pushes the right input of the macro onto the stack.
+  #
+  #   ( ) -- ( s )
+  #
+  # The parse units to the right of the provoker are cloned into a statement
+  # which is pushed onto the stack.
+  elt right { }
+  # Truncates a statement to a fixed number of elements.
+  #
+  #   ( s ) -- ( s )
+  #
+  # The statement at the top of the stack has all but the first count elements
+  # deleted. An error occurs if the statement does not have that many elements.
+  elt head {
+    int count
+    constraint { @.count > 0 }
+  }
+  # Removes a fixed number of elements from a statement.
+  #
+  #   ( s ) -- ( s )
+  #
+  # The first count units from the statement at the top of the stack are
+  # deleted. An error occurs if the statement does not have that many elements.
+  elt behead {
+    int count
+    constraint { @.count > 0 }
+  }
+  # Removes initial elements from a statement so that it has the given length.
+  #
+  #   ( s ) -- ( s )
+  #
+  # All but the last count units are removed from the statement at the top of
+  # the stack. An error occurs if the statement does not contain at least count
+  # units.
+  elt tail {
+    int count
+    constraint { @.count > 0 }
+  }
+  # Removes a fixed number of trailing elements from a statement.
+  #
+  #   ( s ) -- ( s )
+  #
+  # The last count units are removed from the statement at the top of the
+  # stack. An error occurs if the statement does not contain at least count
+  # units.
+  elt curtail {
+    int count
+    constraint { @.count > 0 }
+  }
+  # Ensures a statement is non-empty.
+  #
+  #   ( s ) -- ( s )
+  #
+  # An error occurs if the statement at the top of the stack has no units.
+  # Otherwise, this instruction has no effect.
+  elt nonempty { }
+  # Extracts a singular unit from a statement.
+  #
+  #   ( s ) -- ( u )
+  #
+  # A statement is popped from the stack. If it does not contain exactly one
+  # parse unit, an error occurs. Otherwise, the only parse unit it contains is
+  # pushed onto the stack.
+  elt singular { }
+  # Concatenates two statements.
+  #
+  #   ( s s ) -- ( s )
+  #
+  # Two statements are popped from the stack. All units from the former
+  # top-of-stack are added to the other statement, which is then pushed onto
+  # the stack.
+  elt cat { }
+  # Adds an element to a container.
+  #
+  #   ( s u ) -- ( s )
+  #   ( u u ) -- ( u )
+  #   ( u s ) -- ( u )
+  #
+  # Two values are popped off the stack. The second must be a suitable
+  # container for the former top-of-stack. The top-of-stack is added to the end
+  # of the second, which is then pushed onto the stack.
+  elt append { }
+
+  # Pushes a unique bareword onto the stack.
+  #
+  #   ( ) -- ( u )
+  #
+  # During any macro VM execution, equivalent gensym instructions produce
+  # equivalent barewords which are guaranteed to be distinct from any other
+  # gensym in the same invocation, and to never collide with any other gensym
+  # or normal identifier globally.
+  elt gensym {
+    int ordinal
+  }
+
+  # Pushes a bareword onto the stack.
+  #
+  #   ( ) -- ( u )
+  elt bareword {
+    str value
+  }
+  # Pushes an A-String onto the stack.
+  #
+  #   ( ) -- ( u )
+  elt astring {
+    str value
+  }
+  # Pushes an L-String onto the stack.
+  #
+  #   ( ) -- ( u )
+  elt lstring {
+    str value
+  }
+  # Pushes an R-String onto the stack.
+  #
+  #   ( ) -- ( u )
+  elt rstring {
+    str value
+  }
+  # Pushes an LR-String onto the stack.
+  #
+  #   ( ) -- ( u )
+  elt lrstring {
+    str value
+  }
+  # Pushes a Verbatim onto the stack.
+  #
+  #   ( ) -- ( u )
+  elt verbatim {
+    str value
+  }
+  # Pushes an empty substitution onto the stack.
+  #
+  #   ( ) -- ( u )
+  elt subst { }
+  # Pushes an empty semiliteral onto the stack.
+  #
+  #   ( ) -- ( u )
+  elt semilit { }
+  # Pushes an empty block onto the stack.
+  #
+  #   ( ) -- ( u )
+  elt block { }
+  # Pushes an empty statement onto the stack.
+  #
+  #   ( ) -- ( s )
+  elt statement { }
 }

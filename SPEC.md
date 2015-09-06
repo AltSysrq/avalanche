@@ -488,7 +488,7 @@ barewords apply equally to variable names.
 
 - A Bareword whose text begins with `?` is replaced at macro-substitution time
   with a Bareword containing a name guaranteed be unique throughout the entire
-  compilation unit. All occurrences of the same `#`-prefixed Bareword within
+  compilation unit. All occurrences of the same `?`-prefixed Bareword within
   the same substitution of the macro result in the same substitution.
 
 - A Bareword beginning with `>` refers to the syntax units following the macro
