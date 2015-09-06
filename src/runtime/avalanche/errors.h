@@ -107,4 +107,27 @@ typedef TAILQ_HEAD(, ava_compile_error_s) ava_compile_error_list;
 ava_compile_error* ava_compile_error_new(
   ava_string message, const ava_compile_location* location);
 
+/**
+ * Generates a string describing the given error list.
+ *
+ * The string is intended for human consumption, and the original error list
+ * cannot be parsed back. Initially, errors include full detail, but become
+ * terser as they go down. The goal is to maximise utility to the user; the
+ * earliest errors are almost always the most important (eg, because they can
+ * cause later errors), so it is important that they not get scrolled off the
+ * user's terminal; however, we still want to fit as many errors as possible,
+ * so being verbose with all of them is impractical.
+ *
+ * @param errors The list of errors to stringify.
+ * @param max_lines The maximum number of lines to include in the output. It
+ * does not make sense for this to be less than 2.
+ * @param ansi_colour Whether ANSI escape sequences to colour the output should
+ * be used in the string.
+ * @return The generated string, suitable for printing to a terminal or file.
+ */
+ava_string ava_error_list_to_string(
+  const ava_compile_error_list* errors,
+  ava_uint max_lines,
+  ava_bool ansi_colour);
+
 #endif /* AVA_RUNTIME_ERRORS_H_ */
