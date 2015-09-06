@@ -313,10 +313,26 @@ typedef ava_string (*ava_ast_node_to_string_f)(const ava_ast_node*);
 /**
  * Converts this AST node into an equivalent lvalue AST node.
  *
+ * An lvalue AST node *wraps* the node that produces the new value to store
+ * within the lvalue. While perhaps unexpected, this provides a natural and
+ * flexible way for lvalues to be stacked. The producer can access the old
+ * value of the lvalue by generating code for the reader. This implies that the
+ * lvalue must be otherwise initialised before execution, but is optional, and
+ * the producer may simply discard the reader if it does not intend to read the
+ * prior value.
+ *
  * If this node cannot be used as an lvalue, the node must record an error and
  * return a valid lvalue AST node.
+ *
+ * @param lvalue The node to be converted to an lvalue.
+ * @param producer The AST node which will determine the value to write back
+ * into the lvalue.
+ * @param reader An outvar for an AST node which can be used to read the
+ * pre-assignment value of the lvalue.
  */
-typedef ava_ast_node* (*ava_ast_node_to_lvalue_f)(const ava_ast_node*);
+typedef ava_ast_node* (*ava_ast_node_to_lvalue_f)(
+  const ava_ast_node* lvalue, ava_ast_node* producer,
+  ava_ast_node** reader);
 /**
  * Performs post-processing on the given node.
  *
@@ -402,7 +418,9 @@ ava_string ava_ast_node_to_string(const ava_ast_node* node);
  * Calls the given node's to_lvalue method if there is one; otherwise, executes
  * a default implementation.
  */
-ava_ast_node* ava_ast_node_to_lvalue(const ava_ast_node* node);
+ava_ast_node* ava_ast_node_to_lvalue(
+  const ava_ast_node* node, ava_ast_node* producer,
+  ava_ast_node** reader);
 /**
  * Calls the given node's postprocess method if there is one.
  */

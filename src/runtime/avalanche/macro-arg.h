@@ -166,6 +166,16 @@
       TAILQ_NEXT(*_ama_cursor, next))))
 
 /**
+ * Usage: AVA_MACRO_ARG_UNIT(var, "name");
+ *
+ * A combination of AVA_MACRO_ARG_CURRENT_UNIT() and AVA_MACRO_ARG_CONSUME().
+ */
+#define AVA_MACRO_ARG_UNIT(dst, name) do {      \
+    AVA_MACRO_ARG_CURRENT_UNIT(dst, name);      \
+    AVA_MACRO_ARG_CONSUME();                    \
+  } while (0)
+
+/**
  * Usage: AVA_MACRO_ARG_BAREWORD(var, "name")
  *
  * var (an ava_string) is set to the string content of the current parse unit,

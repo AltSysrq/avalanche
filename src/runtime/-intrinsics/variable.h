@@ -21,9 +21,31 @@
 #include "../avalanche/macsub.h"
 
 /**
- * The org.ava-lang.intrinsic:#var# macro.
+ * The intrinsic #var# control macro.
+ *
+ * Syntax:
+ *   #var# name
+ *
+ * name is a bareword identifying the variable to read.
  */
-ava_macro_subst_result ava_intr_variable_read(
+ava_macro_subst_result ava_intr_var_subst(
+  const ava_symbol* self,
+  ava_macsub_context* context,
+  const ava_parse_statement* statement,
+  const ava_parse_unit* provoker,
+  ava_bool* consumed_other_statements);
+
+/**
+ * The intrinsic #set# control macro.
+ *
+ * Syntax:
+ *   #set# target expression
+ *
+ * target and expression are indivually macro-substituted in isolation. target
+ * is then converted to an lvalue wrapping expression, with the lvalue reader
+ * discarded.
+ */
+ava_macro_subst_result ava_intr_set_subst(
   const ava_symbol* self,
   ava_macsub_context* context,
   const ava_parse_statement* statement,
@@ -38,11 +60,17 @@ ava_macro_subst_result ava_intr_variable_read(
  * @param context The macro substitution context.
  * @param name The name of the variable.
  * @param location The location where the name occurs.
+ * @param producer The AST node which produces a value to assign to the
+ * variable.
+ * @param reader Outvar for an AST node that will read the old value of the
+ * variable.
  * @return An AST node representing the variable as an lvalue.
  */
 ava_ast_node* ava_intr_variable_lvalue(
   ava_macsub_context* context,
   ava_string name,
-  const ava_compile_location* location);
+  const ava_compile_location* location,
+  ava_ast_node* producer,
+  ava_ast_node** reader);
 
 #endif /* AVA_RUNTIME__INTRINSICS_VARIABLE_H_ */

@@ -457,6 +457,38 @@ set defs {
     }
   }
 
+  cerror C5020 ambiguous_bareword {} {
+    msg "Bareword is ambiguous."
+    explanation {
+      The compiler was not able to determine whether the indicated token was a
+      macro because more than one symbol matches the name.
+
+      Ambiguous symbols result when more than one import produces the same
+      symbol name. Note that macros share the same namespace as variables
+      and functions, so the conflicting symbols are not necessarily macros.
+
+      This issue can be resolved by using a qualified name for the function, or
+      adjusting imports so that names cannot conflict, for example by ensuring
+      that each import has a distinct prefix on the imported symbols.
+    }
+  }
+
+  cerror C5032 ambiguous_var {{ava_string name}} {
+    msg "Variable name is ambiguous: %name%"
+    explanation {
+      The compiler was not able to determine what variable to read because more
+      than one symbol matches the name.
+
+      Ambiguous symbols result when more than one import produces the same
+      symbol name. Note that variables share the same namespace as functions
+      and macros, so the conflicting symbols are not necessarily variables.
+
+      This issue can be resolved by using a qualified name for the variable, or
+      adjusting imports so that names cannot conflict, for example by ensuring
+      that each import has a distinct prefix on the imported symbols.
+    }
+  }
+
   cerror C5003 no_such_function {{ava_string name}} {
     msg "No such function: %name%"
     explanation {
@@ -624,21 +656,7 @@ set defs {
     }
   }
 
-  cerror C5020 ambiguous_bareword {} {
-    msg "Bareword is ambiguous."
-    explanation {
-      The compiler was not able to determine whether the indicated token was a
-      macro because more than one symbol matches the name.
-
-      Ambiguous symbols result when more than one import produces the same
-      symbol name. Note that macros share the same namespace as variables
-      and functions, so the conflicting symbols are not necessarily macros.
-
-      This issue can be resolved by using a qualified name for the function, or
-      adjusting imports so that names cannot conflict, for example by ensuring
-      that each import has a distinct prefix on the imported symbols.
-    }
-  }
+  # C5020 ambiguous_bareword is grouped with the other ambiguous_* errors
 
   cerror C5021 not_an_lvalue {{ava_string node}} {
     msg "%node% cannot be used as an lvalue."
@@ -700,6 +718,101 @@ set defs {
       This most likely indicates that a dollar sign was forgotten. For example,
       the token $foo$bar$ will produce this error at the very end, whereas the
       intended behaviour would be expressed with $foo$$bar$.
+    }
+  }
+
+  cerror C5027 assignment_to_function {{ava_string name}} {
+    msg "Assignment to function %name%"
+    explanation {
+      The indicated location appears to assign a new value to a function, which
+      is not a permissible operation.
+
+      The intent may have been to introduce a new variable. Most commonly, this
+      may happen at global scope if an import made an external function
+      available with the same name. The name conflict must be resolved either
+      by changing the import or renaming one of the conflicting symbols.
+    }
+  }
+
+  cerror C5028 assignment_to_macro {{ava_string name}} {
+    msg "Assignment to macro %name%"
+    explanation {
+      The indicated location appears to assign a new value to a macro, which is
+      not a meaningful operation.
+
+      The intent may have been to introduce a new variable. Most commonly, this
+      may happen at global scope if an import made an external macro available
+      with the same name. The name conflict must be resolved either by changing
+      the import or renaming one of the conflicting symbols.
+    }
+  }
+
+  cerror C5029 assignment_to_readonly_var {{ava_string name}} {
+    msg "Assignment to read-only variable %name%"
+    explanation {
+      The indicated location appears to assign a new value to a variable, but
+      the variable is marked read-only.
+
+      The intent may have been to introduce a new variable. Most commonly, this
+      may happen at global scope if an import made an external variable
+      available with the same name. The name conflict must be resolved either
+      by changing the import or renaming one of the conflicting symbols.
+    }
+  }
+
+  cerror C5030 assignment_to_closed_var {{ava_string name}} {
+    msg "Assignment to closed-over variable %name% from nested function."
+    explanation {
+      A variable assignment references a local variable from an enclosing
+      function within a nested function as its assignee.
+
+      Nested functions in Avalanche carry snapshots of the local variables from
+      their enclosing function(s), which do not reference the original
+      variables themselves. Updates to these captured variables would not be
+      reflected within the enclosing function, other nested functions, or even
+      later invocations of the same nested function. To prevent such confusion,
+      assignment to the captured variables is forbidden.
+
+      If the intent is to create a new, independent variable, a distinct name
+      must be used.
+
+      In order to use the variable as a shared, mutable location, a box must be
+      assigned to the variable and the box itself updated.
+    }
+  }
+
+  cerror C5031 assignment_to_var_read {} {
+    msg "Assignment to read of variable."
+    explanation {
+      The left-hand-side of an assignment is a variable read rather than the
+      name of a variable.
+
+      An assignment of the form $var = value would imply setting a variable
+      somehow referenced by the expansion of $var to the chosen value (which
+      would be similar to "variable variables" in PHP or the set $var value
+      form in Tcl), rather than setting the "var" variable itself.
+
+      The correct form of assignment is simply var = value, with no dollar
+      sign.
+    }
+  }
+
+  # cerror C5032 ambiguous_var is group with the other ambiguous_* errors
+
+  cerror C5033 no_such_var {{ava_string name}} {
+    msg "No such variable: %name%"
+    explanation {
+      No symbol with the indicated name could be found.
+
+      Most likely, the name is misspelled or there is a misplaced dollar sign.
+    }
+  }
+
+  cerror C5034 use_of_macro_as_var {{ava_string name}} {
+    msg "Variable read refers to macro %name%"
+    explanation {
+      The name in the indicated variable read refers to a macro rather than an
+      actual variable or function.
     }
   }
 }
