@@ -21,9 +21,31 @@
 #include "../avalanche/macsub.h"
 
 /**
- * The intrinsic #var# macro.
+ * The intrinsic #var# control macro.
+ *
+ * Syntax:
+ *   #var# name
+ *
+ * name is a bareword identifying the variable to read.
  */
-ava_macro_subst_result ava_intr_variable_read(
+ava_macro_subst_result ava_intr_var_subst(
+  const ava_symbol* self,
+  ava_macsub_context* context,
+  const ava_parse_statement* statement,
+  const ava_parse_unit* provoker,
+  ava_bool* consumed_other_statements);
+
+/**
+ * The intrinsic #set# control macro.
+ *
+ * Syntax:
+ *   #set# target expression
+ *
+ * target and expression are indivually macro-substituted in isolation. target
+ * is then converted to an lvalue wrapping expression, with the lvalue reader
+ * discarded.
+ */
+ava_macro_subst_result ava_intr_set_subst(
   const ava_symbol* self,
   ava_macsub_context* context,
   const ava_parse_statement* statement,
