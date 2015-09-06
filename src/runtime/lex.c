@@ -20,11 +20,11 @@
 #include <assert.h>
 #include <string.h>
 #include <stdlib.h>
-#include <stdarg.h>
 #include <stdio.h>
 
 #define AVA__INTERNAL_INCLUDE 1
 #include "avalanche/alloc.h"
+#include "avalanche/errors.h"
 #include "avalanche/lex.h"
 #include "-hexes.h"
 #include "gen-lex.h"
@@ -69,11 +69,7 @@ static ava_lex_status ava_lex_put_error(
   ava_lex_result* dst,
   const ava_lex_pos* begin,
   const ava_lex_pos* end,
-  const char* format, ...)
-#if defined(__GNUC__) || defined(__clang__)
-__attribute((format(printf,4,5)))
-#endif
-;
+  ava_string message);
 
 static ava_lex_status ava_lex_bareword(
   ava_lex_result* dst,
@@ -279,17 +275,10 @@ static ava_lex_status ava_lex_put_error(
   ava_lex_result* dst,
   const ava_lex_pos* begin,
   const ava_lex_pos* end,
-  const char* format, ...
+  ava_string message
 ) {
-  va_list args;
-  char message[256];
-
-  va_start(args, format);
-  vsnprintf(message, sizeof(message), format, args);
-  va_end(args);
-
   dst->type = ava_ltt_none;
-  dst->str = ava_string_of_cstring(message);
+  dst->str = message;
   dst->line = begin->line;
   dst->column = begin->column;
   dst->index_start = begin->index;
@@ -488,13 +477,12 @@ ava_lex_status ava_lex_lex(ava_lex_result* dst, ava_lex_context* lex) {
 
   case yycString:
     return ava_lex_put_error(dst, &start, &lex->p,
-                             "unclosed string literal");
+                             ava_error_unclosed_string_literal());
 
   case yycVerb:
     return ava_lex_put_error(dst, &start, &lex->p,
-                             "unclosed verbatim literal "
-                             "(nested %d levels at eof)",
-                             lex->verbatim_depth);
+                             ava_error_unclosed_verbatim(
+                               lex->verbatim_depth));
   }
 
   end:
@@ -696,7 +684,7 @@ static ava_lex_status ava_lex_error_backslash_sequence(
   ava_lex_context* lex
 ) {
   return ava_lex_put_error(dst, frag_start, &lex->p,
-                           "invalid backslash sequence");
+                           ava_error_invalid_backslash_sequence());
 }
 
 static ava_lex_status ava_lex_error_backslash_at_eof(
@@ -706,7 +694,7 @@ static ava_lex_status ava_lex_error_backslash_at_eof(
   ava_lex_context* lex
 ) {
   return ava_lex_put_error(dst, frag_start, &lex->p,
-                           "lone backslash at end of input");
+                           ava_error_lone_backslash_at_eof());
 }
 
 static void ava_lex_verb_init(
@@ -750,9 +738,11 @@ static ava_lex_status ava_lex_error_illegal_chars(
     hex[19] = 0;
   }
 
-  return ava_lex_put_error(dst, start, &lex->p,
-                           "encountered %d illegal character%s: %s",
-                           (unsigned)n, n > 1? "s": "", hex);
+  return ava_lex_put_error(
+    dst, start, &lex->p,
+    ava_error_lex_illegal_characters(
+      n, n > 1? AVA_ASCII9_STRING("s") : AVA_EMPTY_STRING,
+      ava_string_of_cstring(hex)));
 }
 
 static ava_lex_status ava_lex_error_need_separator(
@@ -763,5 +753,5 @@ static ava_lex_status ava_lex_error_need_separator(
 ) {
   return ava_lex_put_error(
     dst, start, &lex->p,
-    "token must be separated from previous by whitespace");
+    ava_error_token_must_be_separated_from_previous());
 }

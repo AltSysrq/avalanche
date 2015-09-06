@@ -25,6 +25,7 @@
 #include "../avalanche/alloc.h"
 #include "../avalanche/string.h"
 #include "../avalanche/value.h"
+#include "../avalanche/errors.h"
 #include "../avalanche/parser.h"
 #include "../avalanche/macsub.h"
 #include "../avalanche/pcode.h"
@@ -135,10 +136,6 @@ static ava_string ava_intr_funcall_to_string(const ava_intr_funcall* this) {
 }
 
 static void ava_intr_funcall_postprocess(ava_intr_funcall* this) {
-  AVA_STATIC_STRING(ambiguous_message, "Function name is ambiguous: ");
-  AVA_STATIC_STRING(not_found_message, "No such function: ");
-  AVA_STATIC_STRING(not_a_function_message, "Not a function: ");
-
   const ava_symbol_table* symtab;
   size_t i;
   ava_string function_name;
@@ -165,25 +162,24 @@ static void ava_intr_funcall_postprocess(ava_intr_funcall* this) {
   case ava_stgs_ok: break;
   case ava_stgs_ambiguous_weak:
     /* TODO: Indicate what the ambiguity is */
-    ava_macsub_record_error(this->header.context,
-                            ava_string_concat(ambiguous_message, function_name),
-                            &this->parms[0]->location);
+    ava_macsub_record_error(
+      this->header.context, ava_error_ambiguous_function(
+        &this->parms[0]->location, function_name));
     return;
 
   case ava_stgs_not_found:
-    ava_macsub_record_error(this->header.context,
-                            ava_string_concat(not_found_message, function_name),
-                            &this->parms[0]->location);
+    ava_macsub_record_error(
+      this->header.context, ava_error_no_such_function(
+        &this->parms[0]->location, function_name));
     return;
   }
 
   function_symbol = get_result.symbol;
   if (ava_st_global_function != function_symbol->type &&
       ava_st_local_function != function_symbol->type) {
-    ava_macsub_record_error(this->header.context,
-                            ava_string_concat(not_a_function_message,
-                                              function_name),
-                            &this->parms[0]->location);
+    ava_macsub_record_error(
+      this->header.context, ava_error_not_a_function(
+        &this->parms[0]->location, function_name));
     return;
   }
 
@@ -228,8 +224,8 @@ static void ava_intr_funcall_bind_parms(ava_intr_funcall* this) {
   case ava_fbs_impossible:
     /* TODO: More precicely indicate the location of the error */
     ava_macsub_record_error(this->header.context,
-                            bind_message,
-                            &this->header.location);
+                            ava_compile_error_new(
+                              bind_message, &this->header.location));
     this->type = ava_ift_dynamic_bind;
     break;
   }

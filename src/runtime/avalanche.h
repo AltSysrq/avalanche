@@ -27,6 +27,7 @@ AVA_BEGIN_DECLS
 #include "avalanche/lex.h"
 #include "avalanche/value.h"
 #include "avalanche/integer.h"
+#include "avalanche/errors.h"
 #include "avalanche/real.h"
 #include "avalanche/exception.h"
 #include "avalanche/context.h"

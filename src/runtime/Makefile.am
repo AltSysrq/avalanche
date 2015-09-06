@@ -6,6 +6,8 @@ avalanche/ava-config.h \
 avalanche/alloc.h \
 avalanche/context.h \
 avalanche/defs.h \
+avalanche/errors.h \
+avalanche/gen-errors.h \
 avalanche/exception.h \
 avalanche/function.h \
 avalanche/integer.h \
@@ -49,3 +51,7 @@ avalanche/pointer-trait.h: avalanche/generate-trait.tcl avalanche/pointer.trait
 avalanche/gen-pcode.h: pcode-defs.tcl generate-pcode.tcl
 	$(AM_V_GEN)$(TCLSH) generate-pcode.tcl header \
 		<pcode-defs.tcl >avalanche/gen-pcode.h
+
+avalanche/gen-errors.h: generate-errors.tcl
+	$(AM_V_GEN)$(TCLSH) generate-errors.tcl header \
+		>avalanche/gen-errors.h

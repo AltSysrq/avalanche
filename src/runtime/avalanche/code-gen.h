@@ -20,6 +20,7 @@
 #ifndef AVA_RUNTIME_CODE_GEN_H_
 #define AVA_RUNTIME_CODE_GEN_H_
 
+#include "errors.h"
 #include "parser.h"
 #include "macsub.h"
 #include "pcode.h"
@@ -70,12 +71,11 @@ ava_codegen_context* ava_codegen_context_new(
   ava_pcx_builder* builder);
 
 /**
- * Adds an error to the given codegen context with the given message and
- * located at the given node.
+ * Adds an error to the given codegen context.
  */
 void ava_codegen_error(ava_codegen_context* context,
                        const ava_ast_node* node,
-                       ava_string message);
+                       ava_compile_error* error);
 
 /**
  * Front-end to ava_pcxb_push() which tracks the stack height.

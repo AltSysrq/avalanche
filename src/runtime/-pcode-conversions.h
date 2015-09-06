@@ -21,9 +21,9 @@ static void format_error(ava_string message) {
   ava_throw(&ava_format_exception, ava_value_of_string(message), NULL);
 }
 
-#define FORMAT_ERROR(message) do {              \
-    AVA_STATIC_STRING(_message, message);       \
-    format_error(_message);                     \
+#define FORMAT_ERROR(message) do {                      \
+    AVA_STATIC_STRING(_message, message);               \
+    format_error(ava_error_bad_pcode(_message));        \
   } while (0)
 
 static ava_pcode_register_type ava_pcode_parse_register_type(

@@ -29,6 +29,7 @@
 #include "avalanche/list.h"
 #include "avalanche/exception.h"
 #include "avalanche/integer.h"
+#include "avalanche/errors.h"
 #include "avalanche/pointer.h"
 
 static ava_pointer_value ava_pointer_of_list(ava_list_value list);
@@ -102,13 +103,11 @@ ava_pointer_value ava_pointer_of_proto(
 }
 
 ava_pointer_value ava_pointer_of_list(ava_list_value list) {
-  AVA_STATIC_STRING(incorrect_length,
-                    "List of non-2 length cannot be interpreted as pointer.");
   ava_intptr ptr;
 
   if (2 != ava_list_length(list))
-    ava_throw(&ava_format_exception, ava_value_of_string(incorrect_length),
-              NULL);
+    ava_throw_str(&ava_format_exception,
+                  ava_error_list_of_non_two_length_as_pointer());
   ptr = (ava_intptr)ava_integer_of_value(ava_list_index(list, 1), 0);
 
   return ava_pointer_of_proto(
@@ -123,18 +122,15 @@ const ava_pointer_prototype* ava_pointer_prototype_parse(ava_string protostr) {
   char constness;
   ava_bool is_const;
 
-  AVA_STATIC_STRING(bad_proto,
-                    "Pointer prototype must end with '*' or '&'.");
-
   if (ava_string_is_empty(protostr))
-    ava_throw(&ava_format_exception, ava_value_of_string(bad_proto), NULL);
+    ava_throw_str(&ava_format_exception, ava_error_bad_pointer_prototype());
 
   constness = ava_string_index(protostr, ava_string_length(protostr)-1);
   switch (constness) {
   case '*': is_const = ava_false; break;
   case '&': is_const = ava_true;  break;
   default:
-    ava_throw(&ava_format_exception, ava_value_of_string(bad_proto), NULL);
+    ava_throw_str(&ava_format_exception, ava_error_bad_pointer_prototype());
     /* unreachable */
   }
 
@@ -204,14 +200,12 @@ static ava_pointer_value ava_pointer_pointer_reinterpret_cast_to(
 
 static void* ava_pointer_pointer_get_mutable(ava_pointer_value this,
                                              ava_string require_tag) {
-  AVA_STATIC_STRING(const_pointer_message,
-                    "const-pointer \\{message \"Attempt to use const pointer"
-                    " in non-const context.\"\\}");
+  AVA_STATIC_STRING(const_pointer, "const-pointer");
   const ava_pointer_prototype*restrict proto = PROTO(this.v);
 
   if (proto->is_const)
-    ava_throw(&ava_error_exception, ava_value_of_string(const_pointer_message),
-              NULL);
+    ava_throw_uex(&ava_error_exception, const_pointer,
+                  ava_error_bad_pointer_constness());
 
   ava_pointer_check_compatible(proto, require_tag);
 
@@ -229,10 +223,6 @@ static void ava_pointer_check_compatible(
   ava_string expected
 ) {
   AVA_STATIC_STRING(incompatible_pointer, "incompatible-pointer");
-  AVA_STATIC_STRING(message0, "Attempt to use pointer of type ");
-  AVA_STATIC_STRING(message1, " where ");
-  AVA_STATIC_STRING(message2, " was expected.");
-  ava_value top[2], content[2];
 
   if (ava_string_is_empty(expected) || ava_string_is_empty(proto->tag))
     return;
@@ -240,17 +230,8 @@ static void ava_pointer_check_compatible(
   if (0 == ava_strcmp(expected, proto->tag))
     return;
 
-  top[0] = ava_value_of_string(incompatible_pointer);
-  content[0] = ava_value_of_string(AVA_ASCII9_STRING("message"));
-  content[1] = ava_value_of_string(
-    ava_string_concat(
-      message0, ava_string_concat(
-        proto->tag, ava_string_concat(
-          message1, ava_string_concat(
-            expected, message2)))));
-  top[1] = ava_list_of_values(content, 2).v;
-
-  ava_throw(&ava_error_exception, ava_list_of_values(top, 2).v, NULL);
+  ava_throw_uex(&ava_error_exception, incompatible_pointer,
+                ava_error_bad_pointer_type(proto->tag, expected));
 }
 
 static size_t ava_pointer_list_length(ava_list_value this) {

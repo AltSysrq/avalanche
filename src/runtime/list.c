@@ -17,11 +17,10 @@
 #include <config.h>
 #endif
 
+#include <assert.h>
 #include <stdlib.h>
 #include <string.h>
 #include <stdio.h>
-
-#include <atomic_ops.h>
 
 #define AVA__INTERNAL_INCLUDE 1
 #include "avalanche/defs.h"
@@ -29,6 +28,7 @@
 #include "avalanche/value.h"
 #include "avalanche/lex.h"
 #include "avalanche/exception.h"
+#include "avalanche/errors.h"
 #include "avalanche/list.h"
 #include "-array-list.h"
 #include "-esba-list.h"
@@ -79,16 +79,9 @@ static ava_list_value ava_list_value_of_string(ava_string str) {
         }
       } else {
         if (ava_ltt_newline != result.type) {
-          char message[256];
-          snprintf(message, sizeof(message),
-                   "unexpected token parsing list at index %d: ",
-                   (int)result.index_start);
-          ava_throw(&ava_format_exception,
-                    ava_value_of_string(
-                      ava_string_concat(
-                        ava_string_of_cstring(message),
-                        result.str)),
-                    NULL);
+          ava_throw_str(&ava_format_exception,
+                        ava_error_unexpected_token_parsing_list(
+                          result.index_start, result.str));
         }
       }
       break;
@@ -97,16 +90,9 @@ static ava_list_value ava_list_value_of_string(ava_string str) {
       goto done;
 
     case ava_ls_error: {
-      char message[256];
-      snprintf(message, sizeof(message),
-               "invalid syntax parsing list at index %d: ",
-               (int)result.index_start);
-      ava_throw(&ava_format_exception,
-                ava_value_of_string(
-                  ava_string_concat(
-                    ava_string_of_cstring(message),
-                    result.str)),
-                NULL);
+      ava_throw_str(&ava_format_exception,
+                    ava_error_invalid_list_syntax(
+                      result.index_start, result.str));
     } break;
     }
   }

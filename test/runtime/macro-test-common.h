@@ -16,14 +16,14 @@
 #ifndef MACRO_TEST_COMMON_H_
 #define MACRO_TEST_COMMON_H_
 
+#include <stdio.h>
+
 #include "runtime/avalanche/defs.h"
 #include "runtime/avalanche/alloc.h"
 #include "runtime/avalanche/string.h"
 #include "runtime/avalanche/parser.h"
 #include "runtime/avalanche/macsub.h"
 #include "bsd.h"
-
-#include "parser-utils.h"
 
 static ava_compile_error_list errors;
 static ava_symbol_table* symbol_table;
@@ -130,7 +130,8 @@ static void test_macsub(const char* expected, const char* input) {
   ast = ava_macsub_run(context, &root.location, &root.v.statements,
                        ava_isrp_void);
 
-  dump_errors(&errors);
+  fputs(ava_string_to_cstring(ava_error_list_to_string(&errors, 50, ava_false)),
+        stderr);
 
   ck_assert_str_eq(expected,
                    ava_string_to_cstring((*ast->v->to_string)(ast)));

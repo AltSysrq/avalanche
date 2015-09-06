@@ -16,14 +16,13 @@
 #include "test.c"
 
 #include <string.h>
+#include <stdio.h>
 
 #include "runtime/avalanche/defs.h"
 #include "runtime/avalanche/alloc.h"
 #include "runtime/avalanche/string.h"
 #include "runtime/avalanche/parser.h"
 #include "bsd.h"
-
-#include "parser-utils.h"
 
 defsuite(parser);
 
@@ -37,7 +36,9 @@ static ava_parse_unit* parse_successfully(const char* source) {
   ava_compile_error_list errors;
 
   if (!ava_parse(dst, &errors, ava_string_of_cstring(source), filename)) {
-    dump_errors(&errors);
+    fputs(ava_string_to_cstring(ava_error_list_to_string(
+                                  &errors, 50, ava_false)),
+          stderr);
     ck_abort_msg("Parse failed unexpectedly");
   }
 
@@ -80,7 +81,8 @@ static void parse_failure(const char* source, const char* expected_error) {
     ck_abort_msg("Parse succeeded unexpectedly");
   }
 
-  dump_errors(&errors);
+  fputs(ava_string_to_cstring(ava_error_list_to_string(&errors, 50, ava_false)),
+        stderr);
 
   TAILQ_FOREACH(error, &errors, next) {
     if (strstr(ava_string_to_cstring(error->message), expected_error))
@@ -370,7 +372,7 @@ deftest(group_tag_simplification_on_semiliteral) {
 }
 
 deftest(string_regrouping_leading_lstring) {
-  parse_failure("[`foo\"]", "L-String");
+  parse_failure("[`foo\"]", "before L-");
 }
 
 deftest(string_regrouping_leading_lrstring) {
@@ -378,7 +380,7 @@ deftest(string_regrouping_leading_lrstring) {
 }
 
 deftest(string_regrouping_trailing_rstring) {
-  parse_failure("[\"foo`]", "R-String");
+  parse_failure("[\"foo`]", "after R-");
 }
 
 deftest(string_regrouping_trailing_lrstring) {

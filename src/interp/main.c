@@ -21,12 +21,6 @@
 #include <stdio.h>
 #include "../runtime/avalanche.h"
 #include "../bsd.h"
-/* Something like this should be in the runtime.
- * None of this file is production-quality code, so just borrow unit test
- * support code for now.
- */
-#define ck_assert_int_lt(a,b) do { (void)(a); (void)(b); } while (0)
-#include "../../test/runtime/parser-utils.h"
 
 static ava_value run(void* filename) {
   FILE* infile;
@@ -58,8 +52,8 @@ static ava_value run(void* filename) {
 
   if (!ava_parse(&parse_root, &errors, source,
                  ava_string_of_cstring(filename))) {
-    warnx("Parse failed.");
-    dump_errors(&errors);
+    warnx("Parse failed.\n%s", ava_string_to_cstring(
+            ava_error_list_to_string(&errors, 50, ava_true)));
     return ret;
   }
 
@@ -72,8 +66,8 @@ static ava_value run(void* filename) {
                              ava_isrp_void);
   ava_ast_node_postprocess(root_node);
   if (!TAILQ_EMPTY(&errors)) {
-    warnx("Macro substitution failed.");
-    dump_errors(&errors);
+    warnx("Macro substitution failed.\n%s", ava_string_to_cstring(
+            ava_error_list_to_string(&errors, 50, ava_true)));
     return ret;
   }
 
@@ -82,8 +76,8 @@ static ava_value run(void* filename) {
 
   pcode = ava_codegen_run(root_node, &errors);
   if (!TAILQ_EMPTY(&errors)) {
-    warnx("P-Code generation failed.");
-    dump_errors(&errors);
+    warnx("P-Code generation failed.\n%s", ava_string_to_cstring(
+            ava_error_list_to_string(&errors, 50, ava_true)));
     return ret;
   }
 

@@ -18,10 +18,12 @@ runtime/code-gen.c \
 runtime/context.c \
 runtime/dtoa.c \
 runtime/empty-list.c \
+runtime/errors.c \
 runtime/esba.c \
 runtime/esba-list.c \
 runtime/exception.c \
 runtime/function.c \
+runtime/gen-errors.c \
 runtime/gen-integer.c \
 runtime/gen-integer-decimal.c \
 runtime/gen-lex.c \
@@ -75,3 +77,7 @@ runtime/gen-integer-decimal.c: runtime/generate-integer-decimal.c.tcl
 runtime/gen-pcode.c: runtime/generate-pcode.tcl runtime/pcode-defs.tcl
 	$(AM_V_GEN)$(TCLSH) runtime/generate-pcode.tcl impl \
 		<runtime/pcode-defs.tcl >runtime/gen-pcode.c
+
+runtime/gen-errors.c: runtime/generate-errors.tcl
+	$(AM_V_GEN)$(TCLSH) runtime/generate-errors.tcl impl \
+		>runtime/gen-errors.c

@@ -176,16 +176,9 @@ void ava_macsub_put_symbol(
   ava_symbol* symbol,
   const ava_compile_location* location
 ) {
-  AVA_STATIC_STRING(visibility_message,
-                    "Non-private definitions may occur only at "
-                    "global scope.");
-  AVA_STATIC_STRING(redefined_message,
-                    "Redefinition of symbol: ");
-  AVA_STATIC_STRING(redefined_import_message,
-                    "Redefinition of symbol's simple name: ");
-
   if (context->level > 0 && ava_v_private != symbol->visibility) {
-    ava_macsub_record_error(context, visibility_message, location);
+    ava_macsub_record_error(
+      context, ava_error_non_private_definition_in_nested_scope(location));
   }
 
   switch (ava_symbol_table_put(context->symbol_table,
@@ -193,15 +186,15 @@ void ava_macsub_put_symbol(
   case ava_stps_ok: break;
   case ava_stps_redefined_strong_local:
     ava_macsub_record_error(
-      context, ava_string_concat(redefined_message, symbol->full_name),
-      location);
+      context, ava_error_symbol_redefined(location, symbol->full_name));
     break;
   case ava_stps_redefined_strong_local_by_auto_import:
-    /* TODO: Return the short name instead */
+    /* TODO: Return the short name instead, indicate what import caused the
+     * problem, etc
+     */
     ava_macsub_record_error(
-      context,
-      ava_string_concat(redefined_import_message, symbol->full_name),
-      location);
+      context, ava_error_symbol_redefined_import(
+        location, symbol->full_name));
     break;
   }
 }
@@ -235,8 +228,6 @@ ava_macsub_saved_symbol_table* ava_macsub_save_symbol_table(
 const ava_symbol_table* ava_macsub_get_saved_symbol_table(
   ava_macsub_saved_symbol_table* saved
 ) {
-  AVA_STATIC_STRING(redefined_strong_local_message,
-                    "Later import resulted in strong name conflict.");
   ava_compile_error* error;
 
   if (!saved->new_table) {
@@ -249,9 +240,7 @@ const ava_symbol_table* ava_macsub_get_saved_symbol_table(
 
     case ava_stis_redefined_strong_local:
       /* TODO: Errors need to indicate where they came from */
-      error = AVA_NEW(ava_compile_error);
-      error->message = redefined_strong_local_message;
-      error->location = saved->location;
+      error = ava_error_apply_imports_produced_conflict(&saved->location);
       TAILQ_INSERT_TAIL(saved->errors, error, next);
       break;
     }
@@ -333,8 +322,6 @@ static ava_ast_node* ava_macsub_run_one_nonempty_statement(
   const ava_parse_statement* statement,
   ava_bool* consumed_rest
 ) {
-  AVA_STATIC_STRING(ambiguous_message, "Bareword is ambiguous.");
-
   const ava_symbol* symbol;
   const ava_parse_unit* unit;
   ava_macro_subst_result subst_result;
@@ -397,7 +384,8 @@ static ava_ast_node* ava_macsub_run_one_nonempty_statement(
 
   ambiguous:
   /* TODO: Should indicate the conflicting symbols */
-  return ava_macsub_error(context, ambiguous_message, &unit->location);
+  return ava_macsub_error(
+    context, ava_error_ambiguous_bareword(&unit->location));
 
   macsub:
   subst_result = (*symbol->v.macro.macro_subst)(
@@ -490,38 +478,30 @@ static const ava_ast_node_vtable ava_macsub_error_vtable = {
 };
 
 void ava_macsub_record_error(ava_macsub_context* context,
-                             ava_string message,
-                             const ava_compile_location* location) {
-  ava_compile_error* error;
-
-  error = AVA_NEW(ava_compile_error);
-  error->message = message;
-  error->location = *location;
+                             ava_compile_error* error) {
   TAILQ_INSERT_TAIL(context->errors, error, next);
 }
 
 ava_ast_node* ava_macsub_error(ava_macsub_context* context,
-                               ava_string message,
-                               const ava_compile_location* location) {
+                               ava_compile_error* error) {
   ava_ast_node* node;
 
-  ava_macsub_record_error(context, message, location);
+  ava_macsub_record_error(context, error);
 
   node = AVA_NEW(ava_ast_node);
   node->v = &ava_macsub_error_vtable;
-  node->location = *location;
+  node->location = error->location;
   return node;
 }
 
 ava_macro_subst_result ava_macsub_error_result(
   ava_macsub_context* context,
-  ava_string message,
-  const ava_compile_location* location
+  ava_compile_error* error
 ) {
   return (ava_macro_subst_result) {
     .status = ava_mss_done,
     .v = {
-      .node = ava_macsub_error(context, message, location)
+      .node = ava_macsub_error(context, error)
     }
   };
 }
@@ -539,15 +519,12 @@ ava_string ava_ast_node_to_string(const ava_ast_node* node) {
 }
 
 ava_ast_node* ava_ast_node_to_lvalue(const ava_ast_node* node) {
-  AVA_STATIC_STRING(error_suffix, " cannot be used as lvalue");
-
   if (node->v->to_lvalue) {
     return (*node->v->to_lvalue)(node);
   } else {
     return ava_macsub_error(
-      node->context, ava_string_concat(
-        ava_string_of_cstring(node->v->name), error_suffix),
-      &node->location);
+      node->context, ava_error_not_an_lvalue(
+        &node->location, ava_string_of_cstring(node->v->name)));
   }
 }
 
@@ -574,29 +551,24 @@ ava_string ava_ast_node_get_funname(const ava_ast_node* node) {
 void ava_ast_node_cg_evaluate(ava_ast_node* node,
                               const struct ava_pcode_register_s* dst,
                               ava_codegen_context* context) {
-  AVA_STATIC_STRING(does_not_produce_value,
-                    " does not produce a value.");
-
   if (node->v->cg_evaluate)
     (*node->v->cg_evaluate)(node, dst, context);
   else
     ava_codegen_error(context, node,
-                      ava_string_concat(
-                        ava_string_of_cstring(node->v->name),
-                        does_not_produce_value));
+                      ava_error_does_not_produce_a_value(
+                        &node->location, ava_string_of_cstring(
+                          node->v->name)));
 }
 
 void ava_ast_node_cg_discard(ava_ast_node* node,
                              ava_codegen_context* context) {
-  AVA_STATIC_STRING(is_pure, " is pure, but value would be discarded.");
-
   if (node->v->cg_discard)
     (*node->v->cg_discard)(node, context);
   else
     ava_codegen_error(context, node,
-                      ava_string_concat(
-                        ava_string_of_cstring(node->v->name),
-                        is_pure));
+                      ava_error_is_pure_but_would_discard(
+                        &node->location, ava_string_of_cstring(
+                          node->v->name)));
 }
 
 void ava_ast_node_cg_define(ava_ast_node* node,
