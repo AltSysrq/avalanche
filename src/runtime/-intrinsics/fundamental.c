@@ -135,7 +135,13 @@ static ava_string ava_intr_seq_to_string(const ava_intr_seq* seq) {
 static ava_ast_node* ava_intr_seq_to_lvalue(
   const ava_intr_seq* seq, ava_ast_node* producer, ava_ast_node** reader
 ) {
+  AVA_STATIC_STRING(non_expression, "Non-expression");
   ava_intr_seq_entry* first;
+
+  if (ava_isrp_void == seq->return_policy)
+    return ava_macsub_error(
+      seq->header.context, ava_error_not_an_lvalue(
+        &seq->header.location, non_expression));
 
   if (STAILQ_EMPTY(&seq->children))
     return ava_macsub_error(
