@@ -337,7 +337,7 @@ set defs {
   }
 
   serror R0032 bad_pointer_type {{ava_string provided} {ava_string expected}} {
-    msg "Use of pointer type %provided%  where %expected% was expected."
+    msg "Use of pointer type %provided% where %expected% was expected."
     explanation {
       A pointer with a strong type was passed to a function which expects a
       different strong pointer type.
