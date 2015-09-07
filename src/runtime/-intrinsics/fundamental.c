@@ -235,13 +235,13 @@ static void ava_intr_seq_cg_evaluate(
   case ava_isrp_only:
     if (!STAILQ_FIRST(&seq->children) ||
         STAILQ_NEXT(STAILQ_FIRST(&seq->children), next))
-      dst = NULL;
+      child_dst = NULL;
     else
       child_dst = dst;
     break;
   }
 
-  ava_intr_seq_cg_common(seq, dst, context);
+  ava_intr_seq_cg_common(seq, child_dst, context);
 
   if (dst && dst != child_dst)
     AVA_PCXB(ld_imm_vd, *dst, AVA_EMPTY_STRING);
