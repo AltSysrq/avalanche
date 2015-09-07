@@ -495,6 +495,11 @@ struct exe x {
 struct macro m {
   parent global g
 
+  # Sets the human-readable context, used in diagnostics
+  elt context {
+    str value
+  }
+
   # Pushes the left input of the macro onto the stack.
   #
   #   ( ) -- ( s )
@@ -566,16 +571,9 @@ struct macro m {
   # parse unit, an error occurs. Otherwise, the only parse unit it contains is
   # pushed onto the stack.
   elt singular { }
-  # Concatenates two statements.
-  #
-  #   ( s s ) -- ( s )
-  #
-  # Two statements are popped from the stack. All units from the former
-  # top-of-stack are added to the other statement, which is then pushed onto
-  # the stack.
-  elt cat { }
   # Adds an element to a container.
   #
+  #   ( s s ) -- ( s )
   #   ( s u ) -- ( s )
   #   ( u u ) -- ( u )
   #   ( u s ) -- ( u )
@@ -583,6 +581,10 @@ struct macro m {
   # Two values are popped off the stack. The second must be a suitable
   # container for the former top-of-stack. The top-of-stack is added to the end
   # of the second, which is then pushed onto the stack.
+  #
+  # Appending a statement to another statement or semiliteral concatenates the
+  # two. (Appending a semiliteral to a statement adds the semiliteral to the
+  # statement.)
   elt append { }
 
   # Pushes a unique bareword onto the stack.
@@ -594,7 +596,7 @@ struct macro m {
   # gensym in the same invocation, and to never collide with any other gensym
   # or normal identifier globally.
   elt gensym {
-    int ordinal
+    str value
   }
 
   # Pushes a bareword onto the stack.

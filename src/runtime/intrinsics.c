@@ -27,6 +27,7 @@
 #include "avalanche/macsub.h"
 #include "-intrinsics/extern.h"
 #include "-intrinsics/variable.h"
+#include "-intrinsics/user-macro.h"
 
 static const ava_visibility
   ava_visibility_private = ava_v_private,
@@ -62,6 +63,9 @@ void ava_register_intrinsics(ava_macsub_context* context) {
   DEFINE("extern", CTL, PRIVATE, extern);
   DEFINE("Extern", CTL, INTERNAL, extern);
   DEFINE("EXTERN", CTL, PUBLIC, extern);
+  DEFINE("macro", CTL, PRIVATE, user_macro);
+  DEFINE("Macro", CTL, INTERNAL, user_macro);
+  DEFINE("MACRO", CTL, PUBLIC, user_macro);
   DEFINE("#var#", CTL, NULL, var);
   DEFINE("#set#", CTL, NULL, set);
   SUCCEED(ava_stis_ok, ava_symbol_table_import(

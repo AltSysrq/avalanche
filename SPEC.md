@@ -479,7 +479,8 @@ barewords apply equally to variable names.
   verbatim, except with the leading `!` removed.
 
 - A Bareword whose text begins with `#` is substituted into the result
-  verbatim, including the leading `#`.
+  verbatim, including the leading `#`. It is an error if the Bareword is only
+  one-character long or does not also end in a `#`.
 
 - A Bareword whose text begins with `%` is replaced at macro-definition time
   with the fully-qualified name of the symbol the remainder of the name
@@ -492,19 +493,20 @@ barewords apply equally to variable names.
   the same substitution of the macro result in the same substitution.
 
 - A Bareword beginning with `>` refers to the syntax units following the macro
-  invoker. It must match the pattern `>[0-9]*(-[0-9]+)[*+]?`. The first of the
+  invoker. It must match the pattern `>[0-9]*(-[0-9]+)?[*+]?`. The first of the
   optional integers indicates the index of the first syntax unit to be
-  substituted, 1-indexed from the left, and the second indicates the index of
-  the last syntax unit to be substituted, 1-indexed from the _right_. Both are
+  substituted, 0-indexed from the left, and the second indicates the index of
+  the last syntax unit to be substituted, 0-indexed from the _right_. Both are
   inclusive, but result in an empty list if the beginning is after the end. A
   trailing `*` indicates that zero or more values are to be substituted; `+`
   indicates that one or more values are to be substituted.
 
-  - A lone `>` expands to all syntax units following the macro invoker, even if
-    there are none.
+  - A lone `>` expands to all syntax units following the macro invoker, but
+    results in an error if there are none.
 
-  - If a trailing `+` or `*` is given, both integers default to 1 if omitted.
-    An error occurs if the token expands to zero elements.
+  - If a trailing `+` or `*` is given, both integers default to 0 if omitted.
+    An error occurs if the token expands to zero elements in the case of `+`;
+    `*` prevents any error from occurring if a range expands to zero elements.
 
   - If only one of the integers is given and neither `+` nor `*` is given, only
     the single syntax unit at that index is used to replace the unit. An error

@@ -236,7 +236,19 @@ static inline ava_ulong rotl(ava_ulong x, ava_ulong b) {
   return (x << b) | (x >> (64 - b));
 }
 
+static ava_ulong ava_value_siphash(ava_value value, ava_ulong k0, ava_ulong k1);
+
 ava_ulong ava_value_hash(ava_value value) {
+  return ava_value_siphash(value, ava_siphash_k[0], ava_siphash_k[1]);
+}
+
+ava_ulong ava_value_hash_semiconsistent(ava_value value) {
+  /* Chosen randomly */
+  return ava_value_siphash(value, 0xE62C3CBEF7BC1A5DULL, 0xE7079F4159060EE8ULL);
+}
+
+static ava_ulong ava_value_siphash(ava_value value,
+                                   ava_ulong k0, ava_ulong k1) {
   /* Adapted from https://github.com/veorq/SipHash
    *
    * More specifically,
@@ -251,7 +263,6 @@ ava_ulong ava_value_hash(ava_value value) {
   ava_string str;
   /* Constants and vars, from lines 69--76 */
   ava_ulong
-    k0 = ava_siphash_k[0], k1 = ava_siphash_k[1],
     v0 = 0x736f6d6570736575ULL, v1 = 0x646f72616e646f6dULL,
     v2 = 0x6c7967656e657261ULL, v3 = 0x7465646279746573ULL,
     b, m;

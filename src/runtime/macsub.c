@@ -57,11 +57,20 @@ SPLAY_GENERATE(ava_macsub_saved_symbol_table_tree,
                ava_macsub_saved_symbol_table_s,
                tree, ava_compare_macsub_saved_symbol_table);
 
+typedef struct {
+  ava_string last_seed;
+  ava_string base_prefix;
+  ava_string prefix;
+  ava_integer generation;
+} ava_macsub_gensym_status;
+
 struct ava_macsub_context_s {
   ava_symbol_table* symbol_table;
   ava_compile_error_list* errors;
   ava_string symbol_prefix;
   unsigned level;
+
+  ava_macsub_gensym_status* gensym;
 
   struct ava_macsub_saved_symbol_table_tree saved_tables;
 };
@@ -74,7 +83,7 @@ typedef enum {
 
 static ava_ast_node* ava_macsub_run_one_nonempty_statement(
   ava_macsub_context* context,
-  const ava_parse_statement* statement,
+  ava_parse_statement* statement,
   ava_bool* consumed_rest);
 
 static ava_macsub_resolve_macro_result ava_macsub_resolve_macro(
@@ -112,7 +121,13 @@ ava_macsub_context* ava_macsub_context_new(
   this->errors = errors;
   this->symbol_prefix = symbol_prefix;
   this->level = 0;
+  this->gensym = AVA_NEW(ava_macsub_gensym_status);
   SPLAY_INIT(&this->saved_tables);
+
+  this->gensym->last_seed = AVA_EMPTY_STRING;
+  this->gensym->base_prefix = AVA_EMPTY_STRING;
+  this->gensym->prefix = AVA_EMPTY_STRING;
+  this->gensym->generation = 0;
 
   return this;
 }
@@ -140,6 +155,48 @@ unsigned ava_macsub_get_level(const ava_macsub_context* context) {
   return context->level;
 }
 
+void ava_macsub_gensym_seed(ava_macsub_context* context,
+                            const ava_compile_location* location) {
+  ava_ulong hash, rem;
+  ava_uint i;
+  char buf[13];
+
+  /* The prefix is determined by hashing the source file itself */
+  if (ava_strcmp(context->gensym->last_seed, location->source)) {
+    hash = ava_value_hash_semiconsistent(
+      ava_value_of_string(location->source));
+    /* Base-32-encode the hash */
+    for (i = 0; i < sizeof(buf); ++i) {
+      rem = hash % 32;
+      hash /= 32;
+      if (rem < 10)
+        buf[i] = '0' + rem;
+      else
+        buf[i] = 'a' + rem - 10;
+    }
+
+    context->gensym->last_seed = location->source;
+    context->gensym->base_prefix =
+      ava_string_concat(
+        AVA_ASCII9_STRING("?["),
+        ava_string_concat(
+          ava_string_of_bytes(buf, sizeof(buf)),
+          AVA_ASCII9_STRING("];")));
+  }
+
+  ++context->gensym->generation;
+  context->gensym->prefix = ava_string_concat(
+    context->gensym->base_prefix,
+    ava_string_concat(
+      ava_to_string(ava_value_of_integer(context->gensym->generation)),
+      AVA_ASCII9_STRING(";")));
+}
+
+ava_string ava_macsub_gensym(const ava_macsub_context* context,
+                             ava_string key) {
+  return ava_string_concat(context->gensym->prefix, key);
+}
+
 ava_macsub_context* ava_macsub_context_push_major(
   const ava_macsub_context* parent,
   ava_string interfix
@@ -151,6 +208,7 @@ ava_macsub_context* ava_macsub_context_push_major(
   this->errors = parent->errors;
   this->symbol_prefix = ava_string_concat(parent->symbol_prefix, interfix);
   this->level = parent->level + 1;
+  this->gensym = parent->gensym;
   SPLAY_INIT(&this->saved_tables);
 
   return this;
@@ -167,6 +225,7 @@ ava_macsub_context* ava_macsub_context_push_minor(
   this->errors = parent->errors;
   this->symbol_prefix = ava_string_concat(parent->symbol_prefix, interfix);
   this->level = parent->level;
+  this->gensym = parent->gensym;
   SPLAY_INIT(&this->saved_tables);
 
   return this;
@@ -252,7 +311,7 @@ const ava_symbol_table* ava_macsub_get_saved_symbol_table(
 
 ava_ast_node* ava_macsub_run(ava_macsub_context* context,
                              const ava_compile_location* start,
-                             const ava_parse_statement_list* statements,
+                             ava_parse_statement_list* statements,
                              ava_intr_seq_return_policy return_policy) {
   if (TAILQ_EMPTY(statements))
     return ava_intr_seq_to_node(
@@ -287,20 +346,24 @@ ava_ast_node* ava_macsub_run_units(ava_macsub_context* context,
 
 ava_ast_node* ava_macsub_run_single(ava_macsub_context* context,
                                     const ava_compile_location* start,
-                                    const ava_parse_statement* orig) {
+                                    ava_parse_statement* orig) {
   ava_parse_statement_list list;
   ava_parse_statement statement;
+  ava_ast_node* result;
 
   TAILQ_INIT(&list);
-  statement = *orig;
+  TAILQ_SWAP(&statement.units, &orig->units, ava_parse_unit_s, next);
   TAILQ_INSERT_TAIL(&list, &statement, next);
 
-  return ava_macsub_run(context, start, &list, ava_isrp_only);
+  result = ava_macsub_run(context, start, &list, ava_isrp_only);
+
+  TAILQ_SWAP(&statement.units, &orig->units, ava_parse_unit_s, next);
+  return result;
 }
 
 ava_ast_node* ava_macsub_run_from(ava_macsub_context* context,
                                   const ava_compile_location* start,
-                                  const ava_parse_statement* statement,
+                                  ava_parse_statement* statement,
                                   ava_intr_seq_return_policy return_policy) {
   ava_intr_seq* seq;
   ava_bool consumed_rest = ava_false;
@@ -320,7 +383,7 @@ ava_ast_node* ava_macsub_run_from(ava_macsub_context* context,
 
 static ava_ast_node* ava_macsub_run_one_nonempty_statement(
   ava_macsub_context* context,
-  const ava_parse_statement* statement,
+  ava_parse_statement* statement,
   ava_bool* consumed_rest
 ) {
   const ava_symbol* symbol;
@@ -398,7 +461,8 @@ static ava_ast_node* ava_macsub_run_one_nonempty_statement(
 
   case ava_mss_again:
     assert(!*consumed_rest);
-    statement = &subst_result.v.statement;
+    TAILQ_SWAP(&statement->units, &subst_result.v.statement->units,
+               ava_parse_statement_s, next);
     goto tail_call;
 
   default: abort();
