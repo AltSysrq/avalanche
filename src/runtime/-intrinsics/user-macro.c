@@ -143,10 +143,6 @@ ava_macro_subst_result ava_intr_user_macro_subst(
         ava_try (handler) {
           precedence = ava_integer_of_value(
             ava_value_of_string(precedence_str), -1);
-          if (precedence < 1 || precedence > AVA_MAX_OPERATOR_MACRO_PRECEDENCE)
-            return ava_macsub_error_result(
-              context, ava_error_bad_macro_precedence(
-                &precedence_unit->location, precedence_str, out_of_range));
         } ava_catch (handler, ava_format_exception) {
           return ava_macsub_error_result(
             context, ava_error_bad_macro_precedence(
@@ -155,6 +151,10 @@ ava_macro_subst_result ava_intr_user_macro_subst(
         } ava_catch_all {
           ava_rethrow(&handler);
         }
+        if (precedence < 1 || precedence > AVA_MAX_OPERATOR_MACRO_PRECEDENCE)
+          return ava_macsub_error_result(
+            context, ava_error_bad_macro_precedence(
+              &precedence_unit->location, precedence_str, out_of_range));
       } else {
         precedence = 0;
       }

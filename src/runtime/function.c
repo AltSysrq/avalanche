@@ -382,14 +382,13 @@ static ava_c_marshalling_type ava_function_parse_marshal_type(ava_value val) {
   ava_try (h) {
     ret.pointer_proto = ava_pointer_prototype_parse(str);
     ret.primitive_type = ava_cmpt_pointer;
-    return ret;
   } ava_catch (h, ava_format_exception) {
-    /* ignore and fall through */
+    ava_throw_str(&ava_format_exception,
+                  ava_error_unknown_marshalling_type(str));
   } ava_catch_all {
     ava_rethrow(&h);
   }
-
-  ava_throw_str(&ava_format_exception, ava_error_unknown_marshalling_type(str));
+  return ret;
 }
 
 static ava_argument_binding ava_function_parse_binding(ava_list_value argspec,
