@@ -261,7 +261,7 @@ ava_macro_subst_result ava_intr_string_pseudomacro(
   const ava_parse_unit* src_unit;
   ava_parse_unit* nucleus, * unit, * bareword;
   ava_parse_unit* left_subexpr, * right_subexpr, * subexpr;
-  ava_parse_statement statement;
+  ava_parse_statement* statement;
   ava_parse_statement* ss;
   ava_bool left_valent, right_valent;
 
@@ -287,8 +287,8 @@ ava_macro_subst_result ava_intr_string_pseudomacro(
   default: abort();
   }
 
-  TAILQ_INIT(&statement.units);
-  statement.next = orig_statement->next;
+  statement = AVA_NEW(ava_parse_statement);
+  TAILQ_INIT(&statement->units);
 
   /* Collect valent units into subexpressions */
   if (left_valent) {
@@ -336,7 +336,7 @@ ava_macro_subst_result ava_intr_string_pseudomacro(
       if (provoker == src_unit) break;
 
       unit = ava_clone(src_unit, sizeof(ava_parse_unit));
-      TAILQ_INSERT_TAIL(&statement.units, unit, next);
+      TAILQ_INSERT_TAIL(&statement->units, unit, next);
     }
   }
 
@@ -384,14 +384,14 @@ ava_macro_subst_result ava_intr_string_pseudomacro(
     subexpr = ava_parse_subst_of_nonempty_statement(ss);
   }
 
-  TAILQ_INSERT_TAIL(&statement.units, subexpr, next);
+  TAILQ_INSERT_TAIL(&statement->units, subexpr, next);
 
   /* If not right-valent, copy everything that remains */
   if (!right_valent) {
     for (src_unit = TAILQ_NEXT(provoker, next); src_unit;
          src_unit = TAILQ_NEXT(src_unit, next)) {
       unit = ava_clone(src_unit, sizeof(ava_parse_unit));
-      TAILQ_INSERT_TAIL(&statement.units, unit, next);
+      TAILQ_INSERT_TAIL(&statement->units, unit, next);
     }
   }
 
@@ -506,7 +506,7 @@ static void ava_intr_string_expr_cg_evaluate(
 }
 
 ava_ast_node* ava_intr_unit(ava_macsub_context* context,
-                            const ava_parse_unit* unit) {
+                            ava_parse_unit* unit) {
   ava_intr_string_expr* str;
 
   switch (unit->type) {

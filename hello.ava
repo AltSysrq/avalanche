@@ -2,9 +2,10 @@ extern fopen fopen c FILE* [string named -file] [string named -mode]
 extern fputs fputs c int [string named -text] [FILE* named -to]
 extern fclose fclose c int [FILE* pos]
 extern get-prog-name getprogname c string "void pos"
+macro = op 1 (%#set# (<) (>))
 
-#set# prog-name (get-prog-name ())
-#set# stdout (fopen -mode w -file /dev/stdout)
+prog-name = get-prog-name ()
+stdout = fopen -mode w -file /dev/stdout
 fputs -to $stdout -text "Hello from "
 fputs -to $stdout -text $prog-name
 fputs -to $stdout -text "!\n"

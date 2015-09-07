@@ -96,21 +96,23 @@ typedef enum {
 
 /**
  * Defines the visiblity of a symbol.
+ *
+ * These are sorted by increasing visibility.
  */
 typedef enum {
   /**
-   * Indicates that the symbol is visible everywhere.
+   * Indicates that the symbol is only visible in the module that defines it.
    */
-  ava_v_public,
+  ava_v_private,
   /**
    * Indicates that the symbol is only  visible within the package that defines
    * it.
    */
   ava_v_internal,
   /**
-   * Indicates that the symbol is only visible in the module that defines it.
+   * Indicates that the symbol is visible everywhere.
    */
-  ava_v_private
+  ava_v_public
 } ava_visibility;
 
 /**
@@ -164,7 +166,7 @@ typedef struct {
     /**
      * If ava_mss_again == status, the nonempty statement to reexamine.
      */
-    ava_parse_statement statement;
+    ava_parse_statement* statement;
   } v;
 } ava_macro_subst_result;
 
@@ -527,6 +529,27 @@ unsigned ava_macsub_get_level(
   const ava_macsub_context* context);
 
 /**
+ * Generates a new gensym prefix for the given location.
+ *
+ * After this call, any string previously returned by ava_macsub_gensym() in
+ * this context will never be returned again from the same context, even if the
+ * same location is used as a seed.
+ */
+void ava_macsub_gensym_seed(
+  ava_macsub_context* context, const ava_compile_location* location);
+
+/**
+ * Returns a unique symbol with the given key.
+ *
+ * Between calls of ava_macsub_gensym_seed(), this function will return the
+ * same symbol when called with the same key.
+ *
+ * If key is all-lower-case, so is the result.
+ */
+ava_string ava_macsub_gensym(const ava_macsub_context* context,
+                             ava_string key);
+
+/**
  * Creates a new context representing a major scope nested within the given
  * parent.
  *
@@ -614,13 +637,14 @@ const ava_symbol_table* ava_macsub_get_saved_symbol_table(
  *
  * @param context The context in which macro substitution is to run.
  * @param start The location where this statement sequence starts.
- * @param statements The list of statements to process.
+ * @param statements The list of statements to process. The statements may be
+ * subject to in-place modification by macros.
  * @param return_policy The return policy for this sequence of statements.
  * @return A valid AST node representing the result of processing.
  */
 ava_ast_node* ava_macsub_run(ava_macsub_context* context,
                              const ava_compile_location* start,
-                             const ava_parse_statement_list* statements,
+                             ava_parse_statement_list* statements,
                              ava_intr_seq_return_policy return_policy);
 
 /**
@@ -629,13 +653,14 @@ ava_ast_node* ava_macsub_run(ava_macsub_context* context,
  *
  * @param context The context in which macro substitution is to run.
  * @param start The location where this statement sequence starts.
- * @param statement The first of the list of statements to process.
+ * @param statement The first of the list of statements to process. The
+ * statements may be subject to in-place modification by macros.
  * @param return_policy The return policy for this sequence of statements.
  * @return A valid AST node representing the result of processing.
  */
 ava_ast_node* ava_macsub_run_from(ava_macsub_context* context,
                                   const ava_compile_location* start,
-                                  const ava_parse_statement* statement,
+                                  ava_parse_statement* statement,
                                   ava_intr_seq_return_policy return_policy);
 
 /**
@@ -647,11 +672,12 @@ ava_ast_node* ava_macsub_run_from(ava_macsub_context* context,
  * @param context The context in which macro substitution is to run.
  * @param start The location where this statement sequence starts.
  * @param statement The single statement to which to apply macro substitution.
+ * The statement may be subject to in-place modification by macros.
  * @return A valid AST node representing the result of processing.
  */
 ava_ast_node* ava_macsub_run_single(ava_macsub_context* context,
                                     const ava_compile_location* start,
-                                    const ava_parse_statement* statement);
+                                    ava_parse_statement* statement);
 
 /**
  * Equivalent to calling ava_macsub_run() with a statement list containing a

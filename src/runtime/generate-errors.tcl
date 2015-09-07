@@ -337,7 +337,7 @@ set defs {
   }
 
   serror R0032 bad_pointer_type {{ava_string provided} {ava_string expected}} {
-    msg "Use of pointer type %provided%  where %expected% was expected."
+    msg "Use of pointer type %provided% where %expected% was expected."
     explanation {
       A pointer with a strong type was passed to a function which expects a
       different strong pointer type.
@@ -486,6 +486,14 @@ set defs {
       This issue can be resolved by using a qualified name for the variable, or
       adjusting imports so that names cannot conflict, for example by ensuring
       that each import has a distinct prefix on the imported symbols.
+    }
+  }
+
+  cerror C5040 macro_resolved_bareword_ambiguous {{ava_string name}} {
+    msg "Symbol is ambiguous: %name%"
+    explanation {
+      The containing macro requested the given name be resolved to a
+      fully-qualified name at definition time, but the given name is ambiguous.
     }
   }
 
@@ -813,6 +821,145 @@ set defs {
     explanation {
       The name in the indicated variable read refers to a macro rather than an
       actual variable or function.
+    }
+  }
+
+  cerror C5035 bad_macro_type {{ava_string type}} {
+    msg "Bad macro type: %type%"
+    explanation {
+      The type of a macro must be one of "control", "op" (operator), or "fun"
+      (function).
+    }
+  }
+
+  cerror C5036 bad_macro_precedence {
+    {ava_string precedence} {ava_string reason}
+  } {
+    msg "Bad macro precedence: %precedence%: %reason%"
+    explanation {
+      The precedence of an operator macro must be a valid integer between 1 and
+      40, inclusive.
+    }
+  }
+
+  cerror C5037 empty_bareword_in_macro_definition {{ava_string bareword}} {
+    msg "Name or bareword is effectively empty: %bareword%"
+    explanation {
+      Barewords and variable names within a macro definition must be preceded
+      by a sigil indicating how the bareword is to be interpreted. In most
+      cases, these sigils are stripped; this would leave the indicated name
+      empty, which is not legal.
+
+      This error most commonly occurs if the actual sigil was forgotten. For
+      example, use "%!" to refer to the logical-not operator from a macro.
+    }
+  }
+
+  cerror C5038 bad_macro_hash_bareword {{ava_string bareword}} {
+    msg "Bad hash-prefixed macro bareword: %bareword%"
+    explanation {
+      The hash ("#") sigil at the beginning of a bareword or variable name in a
+      macro is reserved for passing names of special intrinsics through the
+      macro, and thus must be at least two characters long and also end with
+      another hash character.
+
+      Most likely, the actual sigil was forgotten and this bareword merely
+      happens to begin with a hash.
+    }
+  }
+
+  cerror C5039 macro_resolved_bareword_not_found {{ava_string bareword}} {
+    msg "No such symbol: %bareword%"
+    explanation {
+      The containing macro requested the given bareword to be resolved to a
+      fully-qualified name at definition time, but the given name could not be
+      found.
+    }
+  }
+
+  # cerror C5040 macro_resolved_bareword_ambiguous with other ambiguous errors
+
+  cerror C5041 macro_resolved_bareword_invisible {{ava_string symbol}} {
+    msg "Symbol has tighter visibility than macro: %symbol%"
+    explanation {
+      The containing macro directly references the given symbol by
+      fully-qualified name, but that symbol has less visibility than the macro.
+
+      Avalanche macros are only partially hygenic; even if a symbol is given
+      with its fully-qualified name or is expanded to such at definition time,
+      the client code must itself still be able to reference all symbols
+      mentioned in the macro.
+
+      Because the indicated symbol has less visibility that the macro, an error
+      would result when any client code within the macro's visibility but
+      outside the symbol's visibility attempted to use the macro, since the
+      client code would not be able to directly reference the symbol.
+
+      Note that this check does not cover all cases. For example, it is
+      possible to sneak such references through the macro definition macro by
+      combining the fully-qualified name with the verbatim ("!") sigil or by
+      disguising the name as an intrinsic. However, doing so will not prevent
+      the same problems from arising.
+    }
+  }
+
+  cerror C5042 bad_macro_bareword_sigil {{ava_string bareword}} {
+    msg "Missing or invalid sigil on bareword on macro: %bareword%"
+    explanation {
+      Barewords and variable names within macros are required to be prefixed
+      with a sigil to indicate how they are to be substituted into the calling
+      context.
+
+      For variable substitution, the sigil comes after the dollar sign; eg,
+      "$?some-var".
+
+      Quick reference:
+      "!" --- drop the sigil, then substitute verbatim.
+      "%" --- drop the sigil, substitute the fully-qualified name the result
+              resolves to in the context of the macro definition.
+      "?" --- generate a unique name per macro expansion.
+      "<" --- splice arguments to the left of the macro in.
+      ">" --- splice arguments to the right of the macro in.
+      See the manual for full details.
+
+      For literals which are actually supposed to be plain values, use
+      quotation in preference to the "!" sigil. For example, write
+        "1" %+ "1"
+      rather than
+        !1 %+ !1
+    }
+  }
+
+  cerror C5043 bad_macro_slice_offset {{ava_string tail}} {
+    msg "Bad offset for macro slice: %tail%"
+    explanation {
+      The offset string in a macro splice was not valid.
+
+      Offset strings match the expression
+        [0-9]*(-[0-9]+)?
+      rather than being arbitrary integers, and cannot simply be the string
+      "-".
+    }
+  }
+
+  cerror C5044 user_macro_execution_error {{ava_string message}} {
+    msg "Macro execution error: %message%"
+    explanation {
+      Execution of a user macro resulted in an error that is supposed to be
+      impossible. This error indicates that there is a bug either in the macro
+      evaluation code or the code that generated the P-Code containing this
+      macro.
+    }
+  }
+
+  cerror C5045 user_macro_not_enough_args {
+    {ava_string macro} {ava_string context}
+  } {
+    msg "Near this location, in macro %macro%; %context% missing."
+    explanation {
+      A user macro required certain arguments to be present, but they could not
+      be found. Either the use site is missing arguments, or there is a problem
+      in the user macro itself.
     }
   }
 }

@@ -284,6 +284,8 @@ proc gen-header {} {
       putm {
         ava_pcPMNE_builder* ava_pcCMNE_builder_get_parent\(
           const ava_pcCMNE_builder* builder\);
+        ava_pcCMNE_builder* ava_pcCMNE_builder_new\(
+          ava_pcPMNE_builder* parent\);
       } PMNE $pmne CMNE $smne
     } else {
       putm {
@@ -396,7 +398,7 @@ proc gen-impl {} {
         \) {
           return builder->parent;
         }
-        static ava_pcCMNE_builder* ava_pcCMNE_builder_new\(
+        ava_pcCMNE_builder* ava_pcCMNE_builder_new\(
           ava_pcPMNE_builder* parent
         \) {
           ava_pcCMNE_builder* child = AVA_NEW(ava_pcCMNE_builder);

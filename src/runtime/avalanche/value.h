@@ -488,6 +488,14 @@ ava_bool ava_value_equal(ava_value a, ava_value b) AVA_PURE;
 ava_ulong ava_value_hash(ava_value value) AVA_PURE;
 
 /**
+ * Like ava_value_hash(), except that any two processes on the same platform
+ * will produce the same hashes for the same values.
+ *
+ * This may return different results on different platforms for the same value.
+ */
+ava_ulong ava_value_hash_semiconsistent(ava_value value) AVA_PURE;
+
+/**
  * Initialises the process-wide hashing key.
  *
  * There is generally no reason to call this directly; call ava_init() instead.

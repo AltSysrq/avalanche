@@ -63,9 +63,11 @@ ava_ast_node* ava_intr_statement(ava_macsub_context* context,
 
 /**
  * Creates an AST node holding the given parse unit.
+ *
+ * Statements within the unit may be modified in-place by macro substitution.
  */
 ava_ast_node* ava_intr_unit(ava_macsub_context* context,
-                            const ava_parse_unit* unit);
+                            ava_parse_unit* unit);
 
 /**
  * Implements the pseudo-macro used to process L-Strings, R-Strings, and
