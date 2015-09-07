@@ -654,7 +654,8 @@ ava_ast_node* ava_macsub_run(ava_macsub_context* context,
  * @param context The context in which macro substitution is to run.
  * @param start The location where this statement sequence starts.
  * @param statement The first of the list of statements to process. The
- * statements may be subject to in-place modification by macros.
+ * statements may be subject to in-place modification by macros. A NULL
+ * statement corresponds to a sequence of zero statements.
  * @param return_policy The return policy for this sequence of statements.
  * @return A valid AST node representing the result of processing.
  */

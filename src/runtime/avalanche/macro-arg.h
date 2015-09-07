@@ -199,26 +199,58 @@
   } while (0)
 
 /**
- * Usage: AVA_MACRO_ARG_STRINGOID(var, "name")
+ * Usage: AVA_MACRO_ARG_STRINGOID_T(tvar, svar, "name")
  *
- * var (an ava_string) is set to the string content of the current parse unit,
- * which must be a bareword, A-String, or Verbatim. If there is no current
- * unit, or it is not a stringoid, an error is emitted and the function
- * returns.
+ * svar (an ava_string) is set to the string content of the current parse unit,
+ * which must be a bareword, A-String, or Verbatim, and tvar is set to its
+ * type. If there is no current unit, or it is not a stringoid, an error is
+ * emitted and the function returns.
+ */
+#define AVA_MACRO_ARG_STRINGOID_T(tdst, sdst, name) do {        \
+    AVA_STATIC_STRING(_arg_name, name);                         \
+    AVA_MACRO_ARG_REQUIRE(name);                                \
+    switch ((*_ama_cursor)->type) {                             \
+    case ava_put_bareword:                                      \
+    case ava_put_astring:                                       \
+    case ava_put_verbatim:                                      \
+      sdst = (*_ama_cursor)->v.string;                          \
+      tdst = (*_ama_cursor)->type;                              \
+      break;                                                    \
+    default:                                                    \
+      return ava_macsub_error_result(                           \
+        context,                                                \
+        ava_error_macro_arg_must_be_stringoid(                  \
+          &(*_ama_cursor)->location, _arg_name));               \
+    }                                                           \
+    AVA_MACRO_ARG_CONSUME();                                    \
+  } while (0)
+
+/**
+ * Like AVA_MACRO_ARG_STRINGOID_T, but no type is returned.
  */
 #define AVA_MACRO_ARG_STRINGOID(dst, name) do {         \
+    ava_parse_unit_type _tdst AVA_UNUSED;               \
+    AVA_MACRO_ARG_STRINGOID_T(_tdst, dst, name);        \
+  } while (0)
+
+/**
+ * Usage: AVA_MACRO_ARG_BLOCK(var, "name")
+ *
+ * var (a const ava_parse_unit*) is set to the current parse unit, which must
+ * be a block. If there is no current unit, or it is not a block, an error
+ * is emitted and the function returns.
+ */
+#define AVA_MACRO_ARG_BLOCK(dst, name) do {             \
     AVA_STATIC_STRING(_arg_name, name);                 \
     AVA_MACRO_ARG_REQUIRE(name);                        \
     switch ((*_ama_cursor)->type) {                     \
-    case ava_put_bareword:                              \
-    case ava_put_astring:                               \
-    case ava_put_verbatim:                              \
-      dst = (*_ama_cursor)->v.string;                   \
+    case ava_put_block:                                 \
+      dst = (*_ama_cursor);                             \
       break;                                            \
     default:                                            \
       return ava_macsub_error_result(                   \
         context,                                        \
-        ava_error_macro_arg_must_be_stringoid(          \
+        ava_error_macro_arg_must_be_block(              \
           &(*_ama_cursor)->location, _arg_name));       \
     }                                                   \
     AVA_MACRO_ARG_CONSUME();                            \
@@ -227,7 +259,7 @@
 /**
  * Internal function.
  *
- * @see AVA_MACRO_ARG_STRINGANY
+ * @see AVA_MACRO_ARG_LITERAL
  */
 ava_bool ava_macro_arg_literal(
   ava_value* dst,

@@ -53,6 +53,7 @@ runtime/value.c \
 runtime/-intrinsics/extern.c \
 runtime/-intrinsics/funcall.c \
 runtime/-intrinsics/fundamental.c \
+runtime/-intrinsics/namespace.c \
 runtime/-intrinsics/user-macro.c \
 runtime/-intrinsics/variable.c
 

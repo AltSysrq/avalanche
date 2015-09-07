@@ -26,8 +26,9 @@
 #include "avalanche/symbol-table.h"
 #include "avalanche/macsub.h"
 #include "-intrinsics/extern.h"
-#include "-intrinsics/variable.h"
+#include "-intrinsics/namespace.h"
 #include "-intrinsics/user-macro.h"
+#include "-intrinsics/variable.h"
 
 static const ava_visibility
   ava_visibility_private = ava_v_private,
@@ -60,14 +61,19 @@ void ava_register_intrinsics(ava_macsub_context* context) {
   ava_symbol_table* symtab = ava_macsub_get_current_symbol_table(context);
   ava_symbol_table_import_status status;
 
-  DEFINE("extern", CTL, PRIVATE, extern);
-  DEFINE("Extern", CTL, INTERNAL, extern);
-  DEFINE("EXTERN", CTL, PUBLIC, extern);
-  DEFINE("macro", CTL, PRIVATE, user_macro);
-  DEFINE("Macro", CTL, INTERNAL, user_macro);
-  DEFINE("MACRO", CTL, PUBLIC, user_macro);
-  DEFINE("#var#", CTL, NULL, var);
-  DEFINE("#set#", CTL, NULL, set);
+  DEFINE("extern",      CTL,    PRIVATE,        extern);
+  DEFINE("Extern",      CTL,    INTERNAL,       extern);
+  DEFINE("EXTERN",      CTL,    PUBLIC,         extern);
+  DEFINE("macro",       CTL,    PRIVATE,        user_macro);
+  DEFINE("Macro",       CTL,    INTERNAL,       user_macro);
+  DEFINE("MACRO",       CTL,    PUBLIC,         user_macro);
+  DEFINE("import",      CTL,    NULL,           import);
+  DEFINE("namespace",   CTL,    NULL,           namespace);
+  DEFINE("alias",       CTL,    PRIVATE,        alias);
+  DEFINE("Alias",       CTL,    INTERNAL,       alias);
+  DEFINE("ALIAS",       CTL,    PUBLIC,         alias);
+  DEFINE("#var#",       CTL,    NULL,           var);
+  DEFINE("#set#",       CTL,    NULL,           set);
   SUCCEED(ava_stis_ok, ava_symbol_table_import(
             symtab, intrinsic_prefix, AVA_EMPTY_STRING, ava_false, ava_false));
   SUCCEED(ava_stis_ok, ava_symbol_table_import(

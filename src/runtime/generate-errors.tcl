@@ -497,6 +497,22 @@ set defs {
     }
   }
 
+  cerror C5050 ambiguous_alias {{ava_string name}} {
+    msg "Symbol to be aliased is ambiguous: %name%"
+    explanation {
+      The source name (right-hand-side of an alias) cannot be resolved to a
+      single symbol.
+
+      Ambiguous symbols result when more than one import produces the same
+      symbol name. Note that variables share the same namespace as functions
+      and macros, so the conflicting symbols are not necessarily variables.
+
+      This issue can be resolved by using a qualified name for the variable, or
+      adjusting imports so that names cannot conflict, for example by ensuring
+      that each import has a distinct prefix on the imported symbols.
+    }
+  }
+
   cerror C5003 no_such_function {{ava_string name}} {
     msg "No such function: %name%"
     explanation {
@@ -628,6 +644,14 @@ set defs {
 
       A literal is any string literal, a bareword, or a semiliteral containing
       only other literals.
+    }
+  }
+
+  cerror C5046 macro_arg_must_be_block {{ava_string name}} {
+    msg "Not a block, for argument %name%"
+    explanation {
+      The indicated argument is required to be a brace-enclosed block, but
+      something else was given.
     }
   }
 
@@ -960,6 +984,66 @@ set defs {
       A user macro required certain arguments to be present, but they could not
       be found. Either the use site is missing arguments, or there is a problem
       in the user macro itself.
+    }
+  }
+
+  # cerror C5046 macro_arg_must_be_block is with other must_be errors.
+
+  cerror C5047 import_explicit_dest_required {{ava_string source}} {
+    msg "\"%source%\" is a simple name; must specify import dest explicitly."
+    explanation {
+      If the destination namespace on an import is omitted, defaults to the
+      last conventional namespace part of the source namespace. In this case,
+      that would result in the destination being essentially the same as the
+      source (possibly making a useless whange from ":" to ".").
+
+      Because of this, the destination namespace must be given for the import
+      to be meaningful.
+    }
+  }
+
+  cerror C5048 import_imported_nothing {{ava_string source}} {
+    msg "Import has no effect because nothing starts with \"%source%\""
+    explanation {
+      The indicated import statement doesn't actually import anything. Most
+      likely, the source was misspelled, or the code to make the expected
+      symbols exist was forgotten.
+    }
+  }
+
+  cerror C5049 bad_macro_keyword {
+    {ava_string macro} {ava_string actual} {ava_string expected}
+  } {
+    msg "Bad keyword %actual% in %macro% syntax; expected %expected%"
+    explanation {
+      The indicated macro requires one of a particular set of barewords in the
+      given location, but either a different bareword, or something other than
+      a bareword, was found there.
+    }
+  }
+
+  # cerror C5050 amibguous_alias with other ambiguous_* errors
+
+  cerror C5051 alias_target_not_found {{ava_string name}} {
+    msg "Alias target not found: %name%"
+    explanation {
+      The source name (right-hand-side of an alias) cannot be resolved to a
+      any symbol. Most likely, the name was misspelled or the code to make the
+      symbol visible with that name was forgotten.
+    }
+  }
+
+  cerror C5052 alias_more_visible_than_target {
+    {ava_string source} {ava_string dest}
+  } {
+    msg "Alias has greater visibility than target: %source% -> %dest%"
+    explanation {
+      The indicated alias attempts to assign a wider visibility to the new
+      symbol than the symbol it is an alias of.
+
+      Since visibility may be closely tied to linking on the underlying
+      platform, it is not possible for the alias to expose the symbol to code
+      which cannot see it under the original name.
     }
   }
 }
