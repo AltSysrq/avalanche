@@ -178,8 +178,8 @@ static ava_bool ava_intr_seq_get_constexpr(const ava_intr_seq* seq,
    */
   switch (seq->return_policy) {
   case ava_isrp_void:
-    *dst = empty;
-    break;
+    /* Not an expression */
+    return ava_false;
 
   case ava_isrp_only:
     if (count > 1)
@@ -215,10 +215,16 @@ static void ava_intr_seq_cg_evaluate(
   ava_intr_seq* seq, const ava_pcode_register* dst,
   ava_codegen_context* context
 ) {
+  AVA_STATIC_STRING(block_or_declaration, "Block or declaration");
   const ava_pcode_register* child_dst = NULL;
 
   switch (seq->return_policy) {
   case ava_isrp_void:
+    if (dst) {
+      ava_codegen_error(
+        context, (ava_ast_node*)seq, ava_error_does_not_produce_a_value(
+          &seq->header.location, block_or_declaration));
+    }
     child_dst = NULL;
     break;
 
@@ -237,7 +243,7 @@ static void ava_intr_seq_cg_evaluate(
 
   ava_intr_seq_cg_common(seq, dst, context);
 
-  if (dst != child_dst)
+  if (dst && dst != child_dst)
     AVA_PCXB(ld_imm_vd, *dst, AVA_EMPTY_STRING);
 }
 

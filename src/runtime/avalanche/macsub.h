@@ -474,7 +474,7 @@ typedef struct ava_macsub_saved_symbol_table_s ava_macsub_saved_symbol_table;
  */
 typedef enum {
   /**
-   * Indicates that the sequence always returns the empty string.
+   * Indicates that the sequence does not return a value.
    */
   ava_isrp_void,
   /**
