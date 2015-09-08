@@ -52,6 +52,8 @@
    code generation method changes must be restored by the time it returns.
  */
 
+struct ava_symbol_s;
+
 /**
  * State container for code generation within a single function.
  *
@@ -129,7 +131,7 @@ void ava_codegen_set_global_location(
  * with its visibility and pcode_index.
  */
 void ava_codegen_export(
-  ava_codegen_context* context, const ava_symbol* symbol);
+  ava_codegen_context* context, const struct ava_symbol_s* symbol);
 
 /**
  * Performs code-generation on the given AST node.

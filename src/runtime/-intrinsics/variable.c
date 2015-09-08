@@ -27,6 +27,7 @@
 #include "../avalanche/parser.h"
 #include "../avalanche/symbol-table.h"
 #include "../avalanche/macsub.h"
+#include "../avalanche/symbol.h"
 #include "../avalanche/macro-arg.h"
 #include "../avalanche/pcode.h"
 #include "../avalanche/code-gen.h"

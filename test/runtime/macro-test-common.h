@@ -23,6 +23,7 @@
 #include "runtime/avalanche/string.h"
 #include "runtime/avalanche/parser.h"
 #include "runtime/avalanche/macsub.h"
+#include "runtime/avalanche/symbol.h"
 #include "bsd.h"
 
 static ava_compile_error_list errors;

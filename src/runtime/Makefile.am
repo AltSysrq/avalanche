@@ -29,6 +29,7 @@ avalanche/pointer.h \
 avalanche/pointer-trait.h \
 avalanche/real.h \
 avalanche/string.h \
+avalanche/symbol.h \
 avalanche/symbol-table.h \
 avalanche/value.h
 

@@ -27,6 +27,7 @@
 #include "avalanche/parser.h"
 #include "avalanche/code-gen.h"
 #include "avalanche/macsub.h"
+#include "avalanche/symbol.h"
 #include "-intrinsics/fundamental.h"
 #include "../bsd.h"
 

@@ -25,6 +25,7 @@
 #include "avalanche/string.h"
 #include "avalanche/symbol-table.h"
 #include "avalanche/macsub.h"
+#include "avalanche/symbol.h"
 #include "-intrinsics/extern.h"
 #include "-intrinsics/namespace.h"
 #include "-intrinsics/user-macro.h"
