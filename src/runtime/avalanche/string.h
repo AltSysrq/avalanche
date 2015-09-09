@@ -312,7 +312,7 @@ void ava_string_to_bytes(void*restrict dst, ava_string str,
  *
  * Complexity: O(1)
  */
-size_t ava_string_length(ava_string) AVA_PURE;
+size_t ava_string_length(ava_string str) AVA_PURE;
 /**
  * Returns the character at the given index within the given string.
  *
@@ -321,7 +321,7 @@ size_t ava_string_length(ava_string) AVA_PURE;
  *
  * Complexity: Amortised voluminous O(1)
  */
-char ava_string_index(ava_string, size_t) AVA_PURE;
+char ava_string_index(ava_string str, size_t ix) AVA_PURE;
 /**
  * Returns the contents of the given string between the begin index, inclusive,
  * and the end index, exclusive.
@@ -337,7 +337,7 @@ ava_string ava_string_slice(ava_string, size_t begin, size_t end) AVA_PURE;
  *
  * Complexity: Amortized O(1)
  */
-ava_string ava_string_concat(ava_string, ava_string) AVA_PURE;
+ava_string ava_string_concat(ava_string left, ava_string right) AVA_PURE;
 
 /**
  * Returns a 32-bit hash of the given ASCII9 string.
@@ -374,6 +374,11 @@ ava_uint ava_ascii9_hash(ava_ascii9_string str) AVA_CONSTFUN;
  * before a.
  */
 signed ava_strcmp(ava_string a, ava_string b) AVA_PURE;
+
+/**
+ * Returns whether small is a prefix of big.
+ */
+ava_bool ava_string_starts_with(ava_string big, ava_string small) AVA_PURE;
 
 /**
  * Returns an ava_ascii9_string representing the given string if it is possible
