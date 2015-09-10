@@ -31,6 +31,7 @@ avalanche/real.h \
 avalanche/string.h \
 avalanche/symbol.h \
 avalanche/symbol-table.h \
+avalanche/symtab.h \
 avalanche/value.h
 
 avalanche/ava-config.h: $(top_srcdir)/config.h

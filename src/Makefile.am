@@ -49,6 +49,7 @@ runtime/pointer.c \
 runtime/real.c \
 runtime/string.c \
 runtime/symbol-table.c \
+runtime/symtab.c \
 runtime/value.c \
 runtime/-intrinsics/extern.c \
 runtime/-intrinsics/funcall.c \
