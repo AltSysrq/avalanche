@@ -39,6 +39,36 @@
 #error "No BSD sys/queue.h found. You may need to install libbsd-dev."
 #endif
 
+/* As of 2015-09-08, even libbsd in debian sid doesn't have TAILQ_SWAP. Provide
+ * it if the host does not.
+ */
+#ifndef TAILQ_SWAP
+#define TAILQ_SWAP(head1, head2, type, field) do {			\
+	struct type *swap_first = (head1)->tqh_first;			\
+	struct type **swap_last = (head1)->tqh_last;			\
+	(head1)->tqh_first = (head2)->tqh_first;			\
+	(head1)->tqh_last = (head2)->tqh_last;				\
+	(head2)->tqh_first = swap_first;				\
+	(head2)->tqh_last = swap_last;					\
+	if ((swap_first = (head1)->tqh_first) != NULL)			\
+		swap_first->field.tqe_prev = &(head1)->tqh_first;	\
+	else								\
+		(head1)->tqh_last = &(head1)->tqh_first;		\
+	if ((swap_first = (head2)->tqh_first) != NULL)			\
+		swap_first->field.tqe_prev = &(head2)->tqh_first;	\
+	else								\
+		(head2)->tqh_last = &(head2)->tqh_first;		\
+} while (0)
+#endif
+
+/* Same for TAILQ_FOREACH_SAFE */
+#ifndef TAILQ_FOREACH_SAFE
+#define	TAILQ_FOREACH_SAFE(var, head, field, tvar)			\
+	for ((var) = TAILQ_FIRST((head));				\
+	    (var) && ((tvar) = TAILQ_NEXT((var), field), 1);		\
+	    (var) = (tvar))
+#endif
+
 #if defined(__GNUC__) || defined(__clang__)
 #define AVA_MALLOC __attribute__((__malloc__))
 #define AVA_PURE __attribute__((__pure__))
