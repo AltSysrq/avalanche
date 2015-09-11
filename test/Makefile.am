@@ -28,7 +28,8 @@ runtime/test-string.t \
 runtime/test-symtab.t \
 runtime/test-value.t
 
-BENCHMARKS = benchmarks/list/avalanche.t benchmarks/map/avalanche.t
+BENCHMARKS = benchmarks/list/avalanche.t benchmarks/map/avalanche.t \
+	benchmarks/string/length.t
 
 EXTRA_CFLAGS =
 AM_CFLAGS = $(CHECK_CFLAGS) -I../src $(EXTRA_CFLAGS) -funwind-tables
@@ -42,3 +43,4 @@ runtime_test_cxx_include_t_SOURCES = runtime/test-cxx-include.cxx
 
 benchmarks_list_avalanche_t_SOURCES = benchmarks/list/avalanche.c
 benchmarks_map_avalanche_t_SOURCES = benchmarks/map/avalanche.c
+benchmarks_string_length_t_SOURCES = benchmarks/string/length.c

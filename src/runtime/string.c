@@ -22,6 +22,10 @@
 #include <stdlib.h>
 #include <stddef.h>
 
+#ifdef HAVE_NMMINTRIN_H
+#include <nmmintrin.h>
+#endif
+
 #include <atomic_ops.h>
 
 #define AVA__INTERNAL_INCLUDE 1
@@ -294,12 +298,20 @@ static size_t ava_ascii9_length(ava_ascii9_string s) {
   s |= s >> 1;
   /* Clear all but those lowest bits */
   s &= 0x204081020408102LL;
-  /* Shift fields so that the the final accumulation is aligned with bit 0 */
-  s >>= 1;
   /* Sum the resulting bits.
    * In the notation below, fields are indexed ordered by shift, rather than
    * character.
    */
+#if defined(__GNUC__) && defined(__SSE4_2__)
+#ifdef HAVE_NMMINTRIN_H
+  return _mm_popcnt_u64(s);
+#else
+  return __builtin_popcountll(s);
+#endif /* HAVE_NMMINTRIN_H */
+#else /* Don't have POPCNT */
+  /* Shift fields so that the the final accumulation is aligned with bit 0 */
+  s >>= 1;
+
   /* 0:1 1:1 2:1 3:1 4:1 5:1 6:1 7:1 8:1 =>
    * 0:2 1:0 2:2 3:0 4:2 5:0 6:2 7:0 8:1 */
   s += s >> 7;
@@ -310,6 +322,7 @@ static size_t ava_ascii9_length(ava_ascii9_string s) {
   /* 0:4 8:1 => 0:5 8:0 */
   s += s >> 56;
   return s & 0xF;
+#endif /* defined(__GNUC__) && defined(__SSE4_2__) */
 }
 
 size_t ava_string_length(ava_string str) {
