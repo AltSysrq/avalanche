@@ -38,7 +38,6 @@ AVA_BEGIN_DECLS
 #include "avalanche/function.h"
 #include "avalanche/name-mangle.h"
 #include "avalanche/parser.h"
-#include "avalanche/symbol-table.h"
 #include "avalanche/macsub.h"
 #include "avalanche/symbol.h"
 #include "avalanche/symtab.h"

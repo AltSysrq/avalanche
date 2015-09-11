@@ -27,7 +27,6 @@
 #include "../avalanche/list.h"
 #include "../avalanche/function.h"
 #include "../avalanche/name-mangle.h"
-#include "../avalanche/symbol-table.h"
 #include "../avalanche/macsub.h"
 #include "../avalanche/symbol.h"
 #include "../avalanche/macro-arg.h"
