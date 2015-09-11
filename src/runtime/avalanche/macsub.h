@@ -22,7 +22,6 @@
 
 #include "defs.h"
 #include "string.h"
-#include "symbol-table.h"
 #include "function.h"
 #include "parser.h"
 #include "errors.h"
@@ -37,6 +36,7 @@
 struct ava_codegen_context_s;
 struct ava_pcode_register_s;
 struct ava_symbol_s;
+struct ava_symtab_s;
 
 /**
  * An AST node after macro processing.
@@ -295,15 +295,6 @@ void ava_ast_node_cg_define(ava_ast_node* node,
                             struct ava_codegen_context_s* context);
 
 /**
- * Struct for use with ava_macsub_save_symbol_table() and
- * ava_macsub_get_saved_symbol_table().
- *
- * This is essentially a pair of an ava_symbol_table and ava_import_list, but
- * has additional bookkeeping so that fewer instances need be created.
- */
-typedef struct ava_macsub_saved_symbol_table_s ava_macsub_saved_symbol_table;
-
-/**
  * Describes how a sequence of statements determines what value to return as a
  * result of evaluation.
  */
@@ -334,15 +325,28 @@ typedef enum {
  * @return The new context.
  */
 ava_macsub_context* ava_macsub_context_new(
-  ava_symbol_table* root_symbol_table,
+  struct ava_symtab_s* root_symbol_table,
   ava_compile_error_list* errors,
   ava_string symbol_prefix);
 
 /**
  * Returns the current, mutable symbol table of the given context.
  */
-ava_symbol_table* ava_macsub_get_current_symbol_table(
+struct ava_symtab_s* ava_macsub_get_symtab(
   const ava_macsub_context* context);
+
+/**
+ * Performs an import on the given context's symtab, replacing the symtab with
+ * the new one produced.
+ *
+ * All arguments are as per ava_symtab_import().
+ */
+void ava_macsub_import(
+  ava_string* absolutised, ava_string* ambiguous,
+  ava_macsub_context* context,
+  ava_string old_prefix, ava_string new_prefix,
+  ava_bool absolute, ava_bool is_strong);
+
 /**
  * Returns the error accumulation for the given context.
  */
@@ -430,38 +434,6 @@ ava_macsub_context* ava_macsub_context_push_minor(
 void ava_macsub_put_symbol(
   ava_macsub_context* context, struct ava_symbol_s* symbol,
   const ava_compile_location* location);
-
-/**
- * Captures the current symbol table and import list so that it can be
- * reapplied in the postprocessing pass, so as to be able to see names defined
- * later in the input.
- *
- * @param context The context whose symbol table / import list is to be saved.
- * @param location A source location where the symbol table may later be
- * recalled. Used for diagnostic messages resulting from rebuilding the table.
- * @return A value suitable to be passed to
- * ava_macsub_get_saved_symbol_table(). Instances are reused as much as
- * possible.
- */
-ava_macsub_saved_symbol_table* ava_macsub_save_symbol_table(
-  ava_macsub_context* context,
-  const ava_compile_location* location);
-/**
- * Rebuilds a symbol table from a saved symbol table and import list.
- *
- * Calling this more than once on the same object yields the same value. It is
- * only meaningful to call this postprocessing; behaviour otherwise will be
- * unpredictable.
- *
- * If any errors occur, they will be added to the error list, but a valid
- * symbol table will be returned nonetheless.
- *
- * @param saved Value returned from ava_macsub_save_symbol_table() whose state
- * is to be reconstructed.
- * @return The new symbol table.
- */
-const ava_symbol_table* ava_macsub_get_saved_symbol_table(
-  ava_macsub_saved_symbol_table* saved);
 
 /**
  * Runs full macro substitution on the given list of statements, producing a

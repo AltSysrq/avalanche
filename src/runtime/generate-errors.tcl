@@ -476,8 +476,8 @@ set defs {
   cerror C5032 ambiguous_var {{ava_string name}} {
     msg "Variable name is ambiguous: %name%"
     explanation {
-      The compiler was not able to determine what variable to read because more
-      than one symbol matches the name.
+      The compiler was not able to determine what variable to access because
+      more than one symbol matches the name.
 
       Ambiguous symbols result when more than one import produces the same
       symbol name. Note that variables share the same namespace as functions
@@ -1044,6 +1044,21 @@ set defs {
       Since visibility may be closely tied to linking on the underlying
       platform, it is not possible for the alias to expose the symbol to code
       which cannot see it under the original name.
+    }
+  }
+
+  cerror C5053 import_ambiguous {
+    {ava_string a} {ava_string b}
+  } {
+    msg "Import is ambiguous; options include %a% and %b%"
+    explanation {
+      An import is only permitted to replace one unique prefix from
+      fully-qualified names. If the source of an import is not itself found as
+      a prefix to any fully-qualified names, it instead compounds with another
+      existing import. In this case, there was more than one such import at the
+      same priority level.
+
+      To resolve this, use the fully-qualified name in your import.
     }
   }
 }

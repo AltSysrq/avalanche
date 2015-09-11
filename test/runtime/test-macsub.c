@@ -139,20 +139,16 @@ deftest(isolated_control_macro_not_invoked) {
 }
 
 deftest(ambiguous_possible_macro_results_in_error) {
+  ava_string abs, amb;
+
   defmacro("a.foo", ava_st_operator_macro, 10, ava_false);
   defmacro("b.foo", ava_st_operator_macro, 10, ava_false);
-  ck_assert_int_eq(
-    ava_stis_ok,
-    ava_symbol_table_import(symbol_table,
-                            AVA_ASCII9_STRING("a."),
-                            AVA_EMPTY_STRING,
-                            ava_false, ava_false));
-  ck_assert_int_eq(
-    ava_stis_ok,
-    ava_symbol_table_import(symbol_table,
-                            AVA_ASCII9_STRING("b."),
-                            AVA_EMPTY_STRING,
-                            ava_false, ava_false));
+  ava_macsub_import(&abs, &amb, context,
+                    AVA_ASCII9_STRING("a."), AVA_EMPTY_STRING,
+                    ava_true, ava_false);
+  ava_macsub_import(&abs, &amb, context,
+                    AVA_ASCII9_STRING("b."), AVA_EMPTY_STRING,
+                    ava_true, ava_false);
 
   test_macsub_fail("seq(void) { <error> }",
                    "ambiguous",
@@ -168,158 +164,4 @@ deftest(macro_consuming_rest_of_scope) {
               "next = seq(void) { "
               "macro { right = bareword:foo; } }; } }",
               "defer \"\"\nmacro foo");
-}
-
-deftest(push_major_scope) {
-  ava_macsub_context* inner;
-  ava_symbol_table* inner_scope;
-
-  inner = ava_macsub_context_push_major(
-    context, AVA_ASCII9_STRING("inner."));
-  inner_scope = ava_macsub_get_current_symbol_table(inner);
-
-  ck_assert_ptr_ne(context, inner);
-  ck_assert_ptr_ne(symbol_table, inner_scope);
-  ck_assert_int_eq(1, ava_macsub_get_level(inner));
-
-  ck_assert_int_eq(
-    ava_stis_ok,
-    ava_symbol_table_put(inner_scope,
-                         AVA_ASCII9_STRING("foo"),
-                         inner));
-  ck_assert_int_eq(
-    ava_stgs_not_found,
-    ava_symbol_table_get(symbol_table, AVA_ASCII9_STRING("foo")).status);
-
-  ck_assert_str_eq(
-    "inner.foo", ava_string_to_cstring(
-      ava_macsub_apply_prefix(inner, AVA_ASCII9_STRING("foo"))));
-}
-
-deftest(push_minor_scope) {
-  ava_macsub_context* inner;
-  ava_symbol_table* inner_scope;
-
-  inner = ava_macsub_context_push_minor(
-    context, AVA_ASCII9_STRING("inner."));
-  inner_scope = ava_macsub_get_current_symbol_table(inner);
-
-  ck_assert_ptr_ne(context, inner);
-  ck_assert_ptr_ne(symbol_table, inner_scope);
-  ck_assert_int_eq(0, ava_macsub_get_level(inner));
-
-  ck_assert_int_eq(
-    ava_stis_ok,
-    ava_symbol_table_put(inner_scope,
-                         AVA_ASCII9_STRING("foo"),
-                         inner));
-  ck_assert_int_eq(
-    ava_stgs_ok,
-    ava_symbol_table_get(symbol_table, AVA_ASCII9_STRING("foo")).status);
-
-  ck_assert_str_eq(
-    "inner.foo", ava_string_to_cstring(
-      ava_macsub_apply_prefix(inner, AVA_ASCII9_STRING("foo"))));
-}
-
-deftest(save_apply_imports_no_conflict) {
-  const ava_symbol_table* restored;
-  ava_macsub_saved_symbol_table* saved;
-
-  ava_compile_location location = {
-    .filename = AVA_EMPTY_STRING,
-    .source = AVA_EMPTY_STRING,
-    .line_offset = 0,
-    .start_line = 1,
-    .end_line = 1,
-    .start_column = 1,
-    .end_column = 1,
-  };
-
-  ava_symbol_table_import(
-    symbol_table, AVA_ASCII9_STRING("foo."), AVA_EMPTY_STRING,
-    ava_false, ava_false);
-  saved = ava_macsub_save_symbol_table(context, &location);
-
-  defmacro("foo.bar", ava_st_control_macro, 0, ava_false);
-
-  restored = ava_macsub_get_saved_symbol_table(saved);
-  ck_assert_int_eq(ava_stgs_ok, ava_symbol_table_get(
-                     restored, AVA_ASCII9_STRING("bar")).status);
-  ck_assert_ptr_eq(NULL, TAILQ_FIRST(&errors));
-
-  /* Assert memoised */
-  ck_assert_ptr_eq(restored, ava_macsub_get_saved_symbol_table(saved));
-}
-
-
-deftest(save_apply_imports_strong_conflict) {
-  const ava_symbol_table* restored;
-  ava_macsub_saved_symbol_table* saved;
-
-  ava_compile_location location = {
-    .filename = AVA_EMPTY_STRING,
-    .source = AVA_EMPTY_STRING,
-    .line_offset = 0,
-    .start_line = 1,
-    .end_line = 1,
-    .start_column = 1,
-    .end_column = 1,
-  };
-
-  ava_symbol_table_import(
-    symbol_table, AVA_ASCII9_STRING("foo."), AVA_EMPTY_STRING,
-    ava_true, ava_false);
-  ava_symbol_table_import(
-    symbol_table, AVA_ASCII9_STRING("xyzzy."), AVA_EMPTY_STRING,
-    ava_true, ava_false);
-  saved = ava_macsub_save_symbol_table(context, &location);
-
-  defmacro("foo.bar", ava_st_control_macro, 0, ava_false);
-  defmacro("xyzzy.bar", ava_st_control_macro, 0, ava_false);
-
-  restored = ava_macsub_get_saved_symbol_table(saved);
-  ck_assert_ptr_ne(NULL, restored);
-  ck_assert_ptr_ne(NULL, TAILQ_FIRST(&errors));
-}
-
-deftest(save_apply_imports_multiple) {
-  const ava_symbol_table* restored[2];
-  ava_macsub_saved_symbol_table* saved[2];
-
-  ava_compile_location location = {
-    .filename = AVA_EMPTY_STRING,
-    .source = AVA_EMPTY_STRING,
-    .line_offset = 0,
-    .start_line = 1,
-    .end_line = 1,
-    .start_column = 1,
-    .end_column = 1,
-  };
-
-  ava_symbol_table_import(
-    symbol_table, AVA_ASCII9_STRING("foo."), AVA_EMPTY_STRING,
-    ava_false, ava_false);
-  saved[0] = ava_macsub_save_symbol_table(context, &location);
-  ava_symbol_table_import(
-    symbol_table, AVA_ASCII9_STRING("xyzzy."), AVA_EMPTY_STRING,
-    ava_false, ava_false);
-  saved[1] = ava_macsub_save_symbol_table(context, &location);
-
-  defmacro("foo.bar", ava_st_control_macro, 0, ava_false);
-  defmacro("xyzzy.quux", ava_st_control_macro, 0, ava_false);
-
-  restored[0] = ava_macsub_get_saved_symbol_table(saved[0]);
-  restored[1] = ava_macsub_get_saved_symbol_table(saved[1]);
-
-  ck_assert_ptr_eq(NULL, TAILQ_FIRST(&errors));
-
-  ck_assert_int_eq(ava_stgs_ok, ava_symbol_table_get(
-                     restored[0], AVA_ASCII9_STRING("bar")).status);
-  ck_assert_int_eq(ava_stgs_not_found, ava_symbol_table_get(
-                     restored[0], AVA_ASCII9_STRING("quux")).status);
-  ck_assert_int_eq(ava_stgs_ok, ava_symbol_table_get(
-                     restored[1], AVA_ASCII9_STRING("bar")).status);
-  ck_assert_int_eq(ava_stgs_ok, ava_symbol_table_get(
-                     restored[1], AVA_ASCII9_STRING("quux")).status);
 }

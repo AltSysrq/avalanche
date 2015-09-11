@@ -24,9 +24,9 @@
 #include "../avalanche/alloc.h"
 #include "../avalanche/string.h"
 #include "../avalanche/value.h"
-#include "../avalanche/symbol-table.h"
 #include "../avalanche/macsub.h"
 #include "../avalanche/symbol.h"
+#include "../avalanche/symtab.h"
 #include "../avalanche/macro-arg.h"
 #include "../avalanche/pcode.h"
 #include "../avalanche/code-gen.h"
@@ -68,7 +68,7 @@ ava_macro_subst_result ava_intr_namespace_subst(
   const ava_parse_unit* provoker,
   ava_bool* consumed_other_statements
 ) {
-  ava_string name;
+  ava_string name, absolutised, ambiguous;
   const ava_parse_unit* explicit_body = NULL;
   ava_macsub_context* child_context;
   ava_parse_statement* body;
@@ -85,19 +85,10 @@ ava_macro_subst_result ava_intr_namespace_subst(
 
   name = ava_string_concat(name, AVA_ASCII9_STRING("."));
   child_context = ava_macsub_context_push_minor(context, name);
-  switch (ava_symbol_table_import(
-            ava_macsub_get_current_symbol_table(child_context),
-            ava_macsub_apply_prefix(context, name),
-            AVA_EMPTY_STRING,
-            ava_true, ava_true)) {
-  case ava_stis_ok:
-  case ava_stis_no_symbols_imported: break;
-  case ava_stis_redefined_strong_local:
-    /* TODO: Rethink the symbol table, unclear whether this should ever happen
-     * or what should be done in that case.
-     */
-    abort();
-  }
+  ava_macsub_import(&absolutised, &ambiguous, child_context,
+                    ava_macsub_apply_prefix(context, name),
+                    AVA_EMPTY_STRING,
+                    ava_true, ava_true);
 
   if (explicit_body) {
     body = TAILQ_FIRST(&explicit_body->v.statements);
@@ -123,6 +114,7 @@ ava_macro_subst_result ava_intr_import_subst(
 ) {
   char tmp[AVA_STR_TMPSZ];
   const ava_parse_unit* source_unit;
+  ava_string absolutised, ambiguous;
   ava_string source, dest = AVA_EMPTY_STRING;
   size_t source_len, dest_len, i;
   const char* source_str;
@@ -169,17 +161,16 @@ ava_macro_subst_result ava_intr_import_subst(
     dest = ava_string_of_cstring(source_str + i + 1);
   }
 
-  switch (ava_symbol_table_import(ava_macsub_get_current_symbol_table(context),
-                                  source, dest, ava_false, ava_false)) {
-  case ava_stis_ok: break;
-  case ava_stis_no_symbols_imported:
+  ava_macsub_import(&absolutised, &ambiguous, context,
+                    source, dest, ava_false, ava_false);
+  if (!ava_string_is_present(absolutised)) {
     return ava_macsub_error_result(
       context, ava_error_import_imported_nothing(
         &source_unit->location, source));
-
-  case ava_stis_redefined_strong_local:
-    /* Not strong, should be impossible */
-    abort();
+  } else if (ava_string_is_present(ambiguous)) {
+    return ava_macsub_error_result(
+      context, ava_error_import_ambiguous(
+        &source_unit->location, absolutised, ambiguous));
   }
 
   result = AVA_NEW(ava_ast_node);
@@ -209,10 +200,10 @@ ava_macro_subst_result ava_intr_alias_subst(
 ) {
   const ava_parse_unit* source_unit, * dest_unit, * equals_unit;
   ava_string source_name, dest_name, equals;
-  ava_symbol_table_get_result existing;
-  const ava_symbol* old_symbol;
+  const ava_symbol* old_symbol, ** results;
   ava_symbol* new_symbol;
   ava_intr_alias* this;
+  size_t num_results;
 
   AVA_MACRO_ARG_PARSE {
     AVA_MACRO_ARG_FROM_RIGHT_BEGIN {
@@ -231,22 +222,20 @@ ava_macro_subst_result ava_intr_alias_subst(
     }
   }
 
-  existing = ava_symbol_table_get(
-    ava_macsub_get_current_symbol_table(context), source_name);
-  switch (existing.status) {
-  case ava_stgs_ok: break;
-  case ava_stgs_ambiguous_weak:
+  num_results = ava_symtab_get(
+    &results, ava_macsub_get_symtab(context), source_name);
+
+  if (num_results > 1) {
     return ava_macsub_error_result(
       context, ava_error_ambiguous_alias(
         &source_unit->location, source_name));
-
-  case ava_stgs_not_found:
+  } else if (0 == num_results) {
     return ava_macsub_error_result(
       context, ava_error_alias_target_not_found(
         &source_unit->location, source_name));
   }
 
-  old_symbol = existing.symbol;
+  old_symbol = results[0];
   new_symbol = AVA_CLONE(*old_symbol);
   new_symbol->visibility = *(const ava_visibility*)self->v.macro.userdata;
   new_symbol->full_name = ava_macsub_apply_prefix(context, dest_name);

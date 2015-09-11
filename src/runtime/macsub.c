@@ -28,35 +28,11 @@
 #include "avalanche/code-gen.h"
 #include "avalanche/macsub.h"
 #include "avalanche/symbol.h"
+#include "avalanche/symtab.h"
 #include "-intrinsics/fundamental.h"
 #include "../bsd.h"
 
 #define STRING_PSEUDOMACRO_PRECEDENCE 10
-
-struct ava_macsub_saved_symbol_table_s {
-  const ava_symbol_table* orig_table;
-  size_t num_imports;
-
-  const ava_import_list* imports;
-  ava_compile_location location;
-  ava_compile_error_list* errors;
-
-  ava_symbol_table* new_table;
-
-  SPLAY_ENTRY(ava_macsub_saved_symbol_table_s) tree;
-};
-
-static signed ava_compare_macsub_saved_symbol_table(
-  const ava_macsub_saved_symbol_table* a,
-  const ava_macsub_saved_symbol_table* b);
-
-SPLAY_HEAD(ava_macsub_saved_symbol_table_tree, ava_macsub_saved_symbol_table_s);
-SPLAY_PROTOTYPE(ava_macsub_saved_symbol_table_tree,
-                ava_macsub_saved_symbol_table_s,
-                tree, ava_compare_macsub_saved_symbol_table);
-SPLAY_GENERATE(ava_macsub_saved_symbol_table_tree,
-               ava_macsub_saved_symbol_table_s,
-               tree, ava_compare_macsub_saved_symbol_table);
 
 typedef struct {
   ava_string last_seed;
@@ -66,14 +42,12 @@ typedef struct {
 } ava_macsub_gensym_status;
 
 struct ava_macsub_context_s {
-  ava_symbol_table* symbol_table;
+  ava_symtab* symbol_table;
   ava_compile_error_list* errors;
   ava_string symbol_prefix;
   unsigned level;
 
   ava_macsub_gensym_status* gensym;
-
-  struct ava_macsub_saved_symbol_table_tree saved_tables;
 };
 
 typedef enum {
@@ -98,20 +72,8 @@ static ava_string ava_macsub_error_to_string(const ava_ast_node* this);
 static ava_ast_node* ava_macsub_error_to_lvalue(
   const ava_ast_node* this, ava_ast_node* producer, ava_ast_node** reader);
 
-static signed ava_compare_macsub_saved_symbol_table(
-  const ava_macsub_saved_symbol_table* a,
-  const ava_macsub_saved_symbol_table* b
-) {
-  signed cmp;
-
-  if ((cmp = (a->orig_table < b->orig_table) - (a->orig_table > b->orig_table)))
-    return cmp;
-
-  return (a->num_imports < b->num_imports) - (a->num_imports > b->num_imports);
-}
-
 ava_macsub_context* ava_macsub_context_new(
-  ava_symbol_table* symbol_table,
+  ava_symtab* symbol_table,
   ava_compile_error_list* errors,
   ava_string symbol_prefix
 ) {
@@ -123,7 +85,6 @@ ava_macsub_context* ava_macsub_context_new(
   this->symbol_prefix = symbol_prefix;
   this->level = 0;
   this->gensym = AVA_NEW(ava_macsub_gensym_status);
-  SPLAY_INIT(&this->saved_tables);
 
   this->gensym->last_seed = AVA_EMPTY_STRING;
   this->gensym->base_prefix = AVA_EMPTY_STRING;
@@ -133,10 +94,22 @@ ava_macsub_context* ava_macsub_context_new(
   return this;
 }
 
-ava_symbol_table* ava_macsub_get_current_symbol_table(
+ava_symtab* ava_macsub_get_symtab(
   const ava_macsub_context* context
 ) {
   return context->symbol_table;
+}
+
+void ava_macsub_import(
+  ava_string* absolutised, ava_string* ambiguous,
+  ava_macsub_context* context,
+  ava_string old_prefix, ava_string new_prefix,
+  ava_bool absolute, ava_bool is_strong
+) {
+  context->symbol_table = ava_symtab_import(
+    absolutised, ambiguous, context->symbol_table,
+    old_prefix, new_prefix,
+    absolute, is_strong);
 }
 
 ava_compile_error_list* ava_macsub_get_errors(
@@ -205,12 +178,11 @@ ava_macsub_context* ava_macsub_context_push_major(
   ava_macsub_context* this;
 
   this = AVA_NEW(ava_macsub_context);
-  this->symbol_table = ava_symbol_table_new(parent->symbol_table, ava_false);
+  this->symbol_table = ava_symtab_new(parent->symbol_table);
   this->errors = parent->errors;
   this->symbol_prefix = ava_string_concat(parent->symbol_prefix, interfix);
   this->level = parent->level + 1;
   this->gensym = parent->gensym;
-  SPLAY_INIT(&this->saved_tables);
 
   return this;
 }
@@ -222,12 +194,11 @@ ava_macsub_context* ava_macsub_context_push_minor(
   ava_macsub_context* this;
 
   this = AVA_NEW(ava_macsub_context);
-  this->symbol_table = ava_symbol_table_new(parent->symbol_table, ava_true);
+  this->symbol_table = parent->symbol_table;
   this->errors = parent->errors;
   this->symbol_prefix = ava_string_concat(parent->symbol_prefix, interfix);
   this->level = parent->level;
   this->gensym = parent->gensym;
-  SPLAY_INIT(&this->saved_tables);
 
   return this;
 }
@@ -237,77 +208,17 @@ void ava_macsub_put_symbol(
   ava_symbol* symbol,
   const ava_compile_location* location
 ) {
+  const ava_symbol* conflicting;
+
   if (context->level > 0 && ava_v_private != symbol->visibility) {
     ava_macsub_record_error(
       context, ava_error_non_private_definition_in_nested_scope(location));
   }
 
-  switch (ava_symbol_table_put(context->symbol_table,
-                               symbol->full_name, symbol)) {
-  case ava_stps_ok: break;
-  case ava_stps_redefined_strong_local:
+  conflicting = ava_symtab_put(context->symbol_table, symbol);
+  if (conflicting)
     ava_macsub_record_error(
       context, ava_error_symbol_redefined(location, symbol->full_name));
-    break;
-  case ava_stps_redefined_strong_local_by_auto_import:
-    /* TODO: Return the short name instead, indicate what import caused the
-     * problem, etc
-     */
-    ava_macsub_record_error(
-      context, ava_error_symbol_redefined_import(
-        location, symbol->full_name));
-    break;
-  }
-}
-
-ava_macsub_saved_symbol_table* ava_macsub_save_symbol_table(
-  ava_macsub_context* context,
-  const ava_compile_location* location
-) {
-  ava_macsub_saved_symbol_table exemplar, * ret;
-
-  exemplar.orig_table = context->symbol_table;
-  exemplar.num_imports = ava_symbol_table_count_imports(context->symbol_table);
-
-  ret = SPLAY_FIND(ava_macsub_saved_symbol_table_tree,
-                   &context->saved_tables, &exemplar);
-  if (!ret) {
-    ret = AVA_NEW(ava_macsub_saved_symbol_table);
-    ret->orig_table = exemplar.orig_table;
-    ret->num_imports = exemplar.num_imports;
-    ret->imports = ava_symbol_table_get_imports(ret->orig_table);
-    ret->location = *location;
-    ret->errors = context->errors;
-    ret->new_table = NULL;
-    SPLAY_INSERT(ava_macsub_saved_symbol_table_tree,
-                 &context->saved_tables, ret);
-  }
-
-  return ret;
-}
-
-const ava_symbol_table* ava_macsub_get_saved_symbol_table(
-  ava_macsub_saved_symbol_table* saved
-) {
-  ava_compile_error* error;
-
-  if (!saved->new_table) {
-    switch (ava_symbol_table_apply_imports(
-              &saved->new_table,
-              saved->orig_table, saved->imports)) {
-    case ava_stis_ok:
-    case ava_stis_no_symbols_imported:
-      break;
-
-    case ava_stis_redefined_strong_local:
-      /* TODO: Errors need to indicate where they came from */
-      error = ava_error_apply_imports_produced_conflict(&saved->location);
-      TAILQ_INSERT_TAIL(saved->errors, error, next);
-      break;
-    }
-  }
-
-  return saved->new_table;
 }
 
 ava_ast_node* ava_macsub_run(ava_macsub_context* context,
@@ -490,8 +401,8 @@ static ava_macsub_resolve_macro_result ava_macsub_resolve_macro(
   ava_symbol_type target_type,
   unsigned target_precedence
 ) {
-  ava_symbol_table_get_result gotten;
-  const ava_symbol* sym;
+  const ava_symbol** results;
+  size_t num_results, i;
 
   /* L-Strings, LR-Strings, and R-Strings are treated as precedence-10 operator
    * macros.
@@ -507,34 +418,26 @@ static ava_macsub_resolve_macro_result ava_macsub_resolve_macro(
 
   if (ava_put_bareword != provoker->type) return ava_mrmr_not_macro;
 
-  gotten = ava_symbol_table_get(context->symbol_table, provoker->v.string);
+  num_results = ava_symtab_get(
+    &results, context->symbol_table, provoker->v.string);
 
-  switch (gotten.status) {
-  case ava_stgs_ok:
-    sym = gotten.symbol;
-    if (target_type == sym->type &&
-        target_precedence == sym->v.macro.precedence) {
-      *dst = sym;
-      return ava_mrmr_is_macro;
-    } else {
-      return ava_mrmr_not_macro;
+  /* See if any result is a macro. If there is a matching macro, it must be
+   * unambiguous; but if there is no possible macro that would be substituted
+   * now, don't raise an error since this might not be a candidate for macro
+   * substitution later.
+   */
+  for (i = 0; i < num_results; ++i) {
+    if (target_type == results[i]->type &&
+        target_precedence == results[i]->v.macro.precedence) {
+      *dst = results[i];
+      if (1 != num_results)
+        return ava_mrmr_ambiguous;
+      else
+        return ava_mrmr_is_macro;
     }
-    break;
-
-  case ava_stgs_not_found:
-    return ava_mrmr_not_macro;
-
-  case ava_stgs_ambiguous_weak:
-    /* TODO This should probably only be an error if at least one of the
-     * symbols was a macro, since otherwise there is no ambiguity and the unit
-     * would be treated as a bareword string either way (at least as far as we
-     * care here).
-     */
-    return ava_mrmr_ambiguous;
   }
 
-  /* unreachable */
-  abort();
+  return ava_mrmr_not_macro;
 }
 
 static const ava_ast_node_vtable ava_macsub_error_vtable = {

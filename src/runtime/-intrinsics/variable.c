@@ -25,9 +25,9 @@
 #include "../avalanche/alloc.h"
 #include "../avalanche/string.h"
 #include "../avalanche/parser.h"
-#include "../avalanche/symbol-table.h"
 #include "../avalanche/macsub.h"
 #include "../avalanche/symbol.h"
+#include "../avalanche/symtab.h"
 #include "../avalanche/macro-arg.h"
 #include "../avalanche/pcode.h"
 #include "../avalanche/code-gen.h"
@@ -36,7 +36,7 @@
 typedef struct {
   ava_ast_node header;
   const ava_symbol* var;
-  ava_macsub_saved_symbol_table* symbol_table;
+  ava_symtab* symtab;
   ava_string name;
   ava_bool postprocessed;
 } ava_intr_var_read;
@@ -104,25 +104,27 @@ ava_ast_node* ava_intr_variable_lvalue(
   ava_ast_node* producer,
   ava_ast_node** reader
 ) {
-  ava_symbol_table_get_result existing;
-  const ava_symbol* symbol = NULL;
+  const ava_symbol* symbol, ** results;
   ava_symbol* new_symbol;
   ava_uint level = ava_macsub_get_level(context);
   ava_intr_var_write* definer;
   ava_var_casing casing;
+  size_t num_results, i;
 
-  existing = ava_symbol_table_get(
-    ava_macsub_get_current_symbol_table(context), name);
-  switch (existing.status) {
-  case ava_stgs_ok: symbol = existing.symbol; break;
-  case ava_stgs_ambiguous_weak:
-    /* TODO: Handle ambiguous better */
-  case ava_stgs_not_found: symbol = NULL; break;
-  }
+  num_results = ava_symtab_get(
+    &results, ava_macsub_get_symtab(context), name);
 
-  if (symbol && 0 == symbol->level && 0 != level) {
-    /* Global symbol, but local variable; the existing symbol may be ignored. */
-    symbol = NULL;
+  symbol = NULL;
+  for (i = 0; i < num_results; ++i) {
+    /* Global symbols when we aren't global can be ignored */
+    if (0 == results[i]->level && 0 != level) continue;
+
+    if (!symbol) {
+      symbol = results[i];
+    } else {
+      return ava_macsub_error(
+        context, ava_error_ambiguous_var(location, name));
+    }
   }
 
   definer = AVA_NEW(ava_intr_var_write);
@@ -257,8 +259,7 @@ ava_macro_subst_result ava_intr_var_subst(
   this->header.v = &ava_intr_var_read_vtable;
   this->header.context = context;
   this->header.location = provoker->location;
-  this->symbol_table = ava_macsub_save_symbol_table(
-    context, &provoker->location);
+  this->symtab = ava_macsub_get_symtab(context);
 
   AVA_MACRO_ARG_PARSE {
     AVA_MACRO_ARG_FROM_RIGHT_BEGIN {
@@ -297,30 +298,26 @@ static ava_ast_node* ava_intr_var_read_to_lvalue(
 }
 
 static void ava_intr_var_read_postprocess(ava_intr_var_read* node) {
-  const ava_symbol_table* symtab;
-  ava_symbol_table_get_result get;
+  const ava_symbol** results;
+  size_t num_results;
 
   if (node->postprocessed || node->var) return;
   node->postprocessed = ava_true;
 
-  symtab = ava_macsub_get_saved_symbol_table(node->symbol_table);
-  get = ava_symbol_table_get(symtab, node->name);
-  switch (get.status) {
-  case ava_stgs_not_found:
+  num_results = ava_symtab_get(&results, node->symtab, node->name);
+
+  if (0 == num_results) {
     ava_macsub_record_error(node->header.context,
                             ava_error_no_such_var(
                               &node->header.location, node->name));
     return;
-
-  case ava_stgs_ambiguous_weak:
+  } else if (num_results > 1) {
     ava_macsub_record_error(node->header.context,
                             ava_error_ambiguous_var(
                               &node->header.location, node->name));
     return;
-
-  case ava_stgs_ok:
-    node->var = get.symbol;
-    break;
+  } else {
+    node->var = results[0];
   }
 
   switch (node->var->type) {

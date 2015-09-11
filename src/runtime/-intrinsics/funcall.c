@@ -29,6 +29,7 @@
 #include "../avalanche/parser.h"
 #include "../avalanche/macsub.h"
 #include "../avalanche/symbol.h"
+#include "../avalanche/symtab.h"
 #include "../avalanche/pcode.h"
 #include "../avalanche/code-gen.h"
 #include "fundamental.h"
@@ -59,7 +60,7 @@ typedef struct {
   size_t num_parms;
   ava_ast_node** parms;
 
-  ava_macsub_saved_symbol_table* saved_symtab;
+  ava_symtab* symtab;
 
   /* The below fields are populated upon postprocessing */
   ava_intr_funcall_type type;
@@ -110,8 +111,7 @@ ava_ast_node* ava_intr_funcall_of(
     &TAILQ_LAST(&statement->units, ava_parse_unit_list_s)->location);
   this->header.context = context;
 
-  this->saved_symtab = ava_macsub_save_symbol_table(
-    context, &TAILQ_FIRST(&statement->units)->location);
+  this->symtab = ava_macsub_get_symtab(context);
   this->num_parms = num_parms;
   this->parms = ava_alloc(num_parms * sizeof(ava_ast_node*));
   i = 0;
@@ -137,11 +137,9 @@ static ava_string ava_intr_funcall_to_string(const ava_intr_funcall* this) {
 }
 
 static void ava_intr_funcall_postprocess(ava_intr_funcall* this) {
-  const ava_symbol_table* symtab;
-  size_t i;
+  size_t num_results, i;
   ava_string function_name;
-  const ava_symbol* function_symbol;
-  ava_symbol_table_get_result get_result;
+  const ava_symbol* function_symbol, ** results;
 
   /* In case of early return, ensure type is set to something that makes the
    * whole structure valid.
@@ -157,25 +155,22 @@ static void ava_intr_funcall_postprocess(ava_intr_funcall* this) {
     return;
   }
 
-  symtab = ava_macsub_get_saved_symbol_table(this->saved_symtab);
-  get_result = ava_symbol_table_get(symtab, function_name);
-  switch (get_result.status) {
-  case ava_stgs_ok: break;
-  case ava_stgs_ambiguous_weak:
+  num_results = ava_symtab_get(&results, this->symtab, function_name);
+
+  if (num_results > 1) {
     /* TODO: Indicate what the ambiguity is */
     ava_macsub_record_error(
       this->header.context, ava_error_ambiguous_function(
         &this->parms[0]->location, function_name));
     return;
-
-  case ava_stgs_not_found:
+  } else if (0 == num_results) {
     ava_macsub_record_error(
       this->header.context, ava_error_no_such_function(
         &this->parms[0]->location, function_name));
     return;
   }
 
-  function_symbol = get_result.symbol;
+  function_symbol = results[0];
   if (ava_st_global_function != function_symbol->type &&
       ava_st_local_function != function_symbol->type) {
     ava_macsub_record_error(
