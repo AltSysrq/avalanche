@@ -374,7 +374,7 @@ static ava_ast_node* ava_macsub_run_one_nonempty_statement(
   case ava_mss_again:
     assert(!*consumed_rest);
     TAILQ_SWAP(&statement->units, &subst_result.v.statement->units,
-               ava_parse_statement_s, next);
+               ava_parse_unit_s, next);
     goto tail_call;
 
   default: abort();
