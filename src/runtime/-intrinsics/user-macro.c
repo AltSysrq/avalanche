@@ -101,11 +101,11 @@ ava_macro_subst_result ava_intr_user_macro_subst(
 ) {
   AVA_STATIC_STRING(out_of_range, "Out of legal range.");
   ava_exception_handler handler;
-  const ava_parse_unit* name_unit, * type_unit, * precedence_unit;
-  const ava_parse_unit* definition_begin;
+  const ava_parse_unit* name_unit = NULL, * type_unit, * precedence_unit;
+  const ava_parse_unit* definition_begin = NULL;
   ava_string name, type_str, precedence_str;
-  ava_symbol_type type;
-  ava_integer precedence;
+  ava_symbol_type type = -1;
+  ava_integer precedence = -1;
   ava_pcode_macro_list* body;
   ava_intr_user_macro* this;
   ava_symbol* symbol;
@@ -167,6 +167,11 @@ ava_macro_subst_result ava_intr_user_macro_subst(
       }
     }
   }
+
+  assert(-1 != precedence);
+  assert(-1 != (signed)type);
+  assert(definition_begin);
+  assert(name_unit);
 
   body = ava_intr_user_macro_make_body(context, definition_begin,
                                        visibility);

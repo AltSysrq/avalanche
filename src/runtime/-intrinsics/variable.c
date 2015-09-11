@@ -159,6 +159,8 @@ ava_ast_node* ava_intr_variable_lvalue(
         context, ava_error_assignment_to_closed_var(
           location, name));
     }
+
+    new_symbol = NULL;
   } else {
     casing = ava_var_casing_of(name);
 
