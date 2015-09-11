@@ -58,7 +58,7 @@ static ava_value run(void* filename) {
   }
 
   macsub_context = ava_macsub_context_new(
-    ava_symbol_table_new(NULL, ava_false), &errors,
+    ava_symtab_new(NULL), &errors,
     AVA_ASCII9_STRING("input:"));
   ava_register_intrinsics(macsub_context);
   root_node = ava_macsub_run(macsub_context, &parse_root.location,

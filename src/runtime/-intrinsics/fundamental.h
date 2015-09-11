@@ -77,7 +77,7 @@ ava_ast_node* ava_intr_unit(ava_macsub_context* context,
  * effect since it is not meaningful for Strings.
  */
 ava_macro_subst_result ava_intr_string_pseudomacro(
-  const ava_symbol* ignored,
+  const struct ava_symbol_s* ignored,
   ava_macsub_context* context,
   const ava_parse_statement* statement,
   const ava_parse_unit* provoker,

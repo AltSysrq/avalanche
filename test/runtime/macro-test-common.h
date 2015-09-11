@@ -23,15 +23,17 @@
 #include "runtime/avalanche/string.h"
 #include "runtime/avalanche/parser.h"
 #include "runtime/avalanche/macsub.h"
+#include "runtime/avalanche/symbol.h"
+#include "runtime/avalanche/symtab.h"
 #include "bsd.h"
 
 static ava_compile_error_list errors;
-static ava_symbol_table* symbol_table;
+static ava_symtab* symbol_table;
 static ava_macsub_context* context;
 
 defsetup {
   TAILQ_INIT(&errors);
-  symbol_table = ava_symbol_table_new(NULL, ava_false);
+  symbol_table = ava_symtab_new(NULL);
   context = ava_macsub_context_new(symbol_table, &errors, AVA_EMPTY_STRING);
 }
 
@@ -177,12 +179,12 @@ static void defmacro(const char* name,
   symbol->type = type;
   symbol->level = 0;
   symbol->visibility = ava_v_public;
+  symbol->full_name = ava_string_of_cstring(name);
   symbol->v.macro.precedence = precedence;
   symbol->v.macro.macro_subst = dummy_macro_subst;
   symbol->v.macro.userdata = props;
 
-  ck_assert_int_eq(ava_stps_ok, ava_symbol_table_put(
-                     symbol_table, ava_string_of_cstring(name), symbol));
+  ck_assert_ptr_eq(NULL, ava_symtab_put(symbol_table, symbol));
 }
 
 /* A dummy macro which stands in for a function.
@@ -268,12 +270,12 @@ static void defun(const char* name) {
   symbol->type = ava_st_function_macro;
   symbol->level = 0;
   symbol->visibility = ava_v_public;
+  symbol->full_name = ava_string_of_cstring(name);
   symbol->v.macro.precedence = 0;
   symbol->v.macro.macro_subst = funmacro_subst;
   symbol->v.macro.userdata = props;
 
-  ck_assert_int_eq(ava_stps_ok, ava_symbol_table_put(
-                     symbol_table, ava_string_of_cstring(name), symbol));
+  ck_assert_ptr_eq(NULL, ava_symtab_put(symbol_table, symbol));
 }
 
 #endif /* MACRO_TEST_COMMON_H_ */

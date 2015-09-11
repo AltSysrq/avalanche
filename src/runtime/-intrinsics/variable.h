@@ -29,7 +29,7 @@
  * name is a bareword identifying the variable to read.
  */
 ava_macro_subst_result ava_intr_var_subst(
-  const ava_symbol* self,
+  const struct ava_symbol_s* self,
   ava_macsub_context* context,
   const ava_parse_statement* statement,
   const ava_parse_unit* provoker,
@@ -46,7 +46,7 @@ ava_macro_subst_result ava_intr_var_subst(
  * discarded.
  */
 ava_macro_subst_result ava_intr_set_subst(
-  const ava_symbol* self,
+  const struct ava_symbol_s* self,
   ava_macsub_context* context,
   const ava_parse_statement* statement,
   const ava_parse_unit* provoker,

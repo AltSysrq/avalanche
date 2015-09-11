@@ -38,7 +38,7 @@
  * empty string is in effect.
  */
 ava_macro_subst_result ava_intr_namespace_subst(
-  const ava_symbol* self,
+  const struct ava_symbol_s* self,
   ava_macsub_context* context,
   const ava_parse_statement* statement,
   const ava_parse_unit* provoker,
@@ -61,7 +61,7 @@ ava_macro_subst_result ava_intr_namespace_subst(
  * fewer than two such characters, dest is mandatory.
  */
 ava_macro_subst_result ava_intr_import_subst(
-  const ava_symbol* self,
+  const struct ava_symbol_s* self,
   ava_macsub_context* context,
   const ava_parse_statement* statement,
   const ava_parse_unit* provoker,
@@ -84,7 +84,7 @@ ava_macro_subst_result ava_intr_import_subst(
  * from *(ava_visibility*)userdata on the self symbol.
  */
 ava_macro_subst_result ava_intr_alias_subst(
-  const ava_symbol* self,
+  const struct ava_symbol_s* self,
   ava_macsub_context* context,
   const ava_parse_statement* statement,
   const ava_parse_unit* provoker,

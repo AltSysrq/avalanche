@@ -23,8 +23,9 @@
 #include "avalanche/defs.h"
 #include "avalanche/alloc.h"
 #include "avalanche/string.h"
-#include "avalanche/symbol-table.h"
 #include "avalanche/macsub.h"
+#include "avalanche/symbol.h"
+#include "avalanche/symtab.h"
 #include "-intrinsics/extern.h"
 #include "-intrinsics/namespace.h"
 #include "-intrinsics/user-macro.h"
@@ -45,21 +46,18 @@ static const ava_visibility
   ava_register_intrinsic(symtab, AVA_AVAST_INTRINSIC "." name,          \
                          type_and_prec, ud,                             \
                          ava_intr_##base##_subst)
-#define SUCCEED(expected, actual) do {          \
-    if ((expected) != (actual)) abort();        \
-  } while (0)
 
 static void ava_register_intrinsic(
-  ava_symbol_table* symtab,
+  ava_symtab* symtab,
   const char* suffix, ava_symbol_type type, ava_uint precedence,
   const void* userdata, ava_macro_subst_f fun);
 
 void ava_register_intrinsics(ava_macsub_context* context) {
   AVA_STATIC_STRING(intrinsic_prefix, AVA_AVAST_INTRINSIC ".");
   AVA_STATIC_STRING(avast_prefix, AVA_AVAST_PACKAGE ":");
+  ava_string abs, amb;
 
-  ava_symbol_table* symtab = ava_macsub_get_current_symbol_table(context);
-  ava_symbol_table_import_status status;
+  ava_symtab* symtab = ava_macsub_get_symtab(context);
 
   DEFINE("extern",      CTL,    PRIVATE,        extern);
   DEFINE("Extern",      CTL,    INTERNAL,       extern);
@@ -74,19 +72,22 @@ void ava_register_intrinsics(ava_macsub_context* context) {
   DEFINE("ALIAS",       CTL,    PUBLIC,         alias);
   DEFINE("#var#",       CTL,    NULL,           var);
   DEFINE("#set#",       CTL,    NULL,           set);
-  SUCCEED(ava_stis_ok, ava_symbol_table_import(
-            symtab, intrinsic_prefix, AVA_EMPTY_STRING, ava_false, ava_false));
-  SUCCEED(ava_stis_ok, ava_symbol_table_import(
-            symtab, avast_prefix, AVA_EMPTY_STRING, ava_false, ava_true));
-  status = ava_symbol_table_import(
-    symtab, ava_macsub_apply_prefix(context, AVA_EMPTY_STRING),
-    AVA_EMPTY_STRING, ava_true, ava_true);
-  if (status != ava_stis_ok && status != ava_stis_no_symbols_imported)
-    abort();
+  /* Weak absolute imports of the intrinsics and standard library */
+  ava_macsub_import(&abs, &amb, context,
+                    intrinsic_prefix, AVA_EMPTY_STRING,
+                    ava_true, ava_false);
+  ava_macsub_import(&abs, &amb, context,
+                    avast_prefix, AVA_EMPTY_STRING,
+                    ava_true, ava_false);
+  /* Strong absolute import of the user's namespace */
+  ava_macsub_import(&abs, &amb, context,
+                    ava_macsub_apply_prefix(context, AVA_EMPTY_STRING),
+                    AVA_EMPTY_STRING,
+                    ava_true, ava_true);
 }
 
 static void ava_register_intrinsic(
-  ava_symbol_table* symtab,
+  ava_symtab* symtab,
   const char* name, ava_symbol_type type, ava_uint precedence,
   const void* userdata, ava_macro_subst_f fun
 ) {
@@ -101,6 +102,5 @@ static void ava_register_intrinsic(
   symbol->v.macro.macro_subst = fun;
   symbol->v.macro.userdata = userdata;
 
-  SUCCEED(ava_stps_ok, ava_symbol_table_put(
-            symtab, symbol->full_name, symbol));
+  if (ava_symtab_put(symtab, symbol)) abort();
 }

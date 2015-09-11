@@ -25,7 +25,7 @@ runtime/test-pcode.t \
 runtime/test-pointer.t \
 runtime/test-real.t \
 runtime/test-string.t \
-runtime/test-symbol-table.t \
+runtime/test-symtab.t \
 runtime/test-value.t
 
 BENCHMARKS = benchmarks/list/avalanche.t benchmarks/map/avalanche.t

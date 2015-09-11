@@ -29,6 +29,7 @@
 #include "avalanche/list.h"
 #include "avalanche/parser.h"
 #include "avalanche/macsub.h"
+#include "avalanche/symbol.h"
 #include "avalanche/pcode.h"
 #include "avalanche/code-gen.h"
 

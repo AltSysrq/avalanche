@@ -110,6 +110,8 @@ static char ava_ascii9_index(ava_ascii9_string, size_t);
 static ava_ascii9_string ava_ascii9_concat(ava_ascii9_string,
                                            ava_ascii9_string);
 static ava_ascii9_string ava_ascii9_slice(ava_ascii9_string, size_t, size_t);
+static ava_bool ava_ascii9_starts_with(ava_ascii9_string big,
+                                       ava_ascii9_string small);
 
 /**
  * Allocates a flat, forced twine with space for the given number of
@@ -442,6 +444,62 @@ signed ava_strcmp(ava_string a, ava_string b) {
   if (cmp) return cmp;
 
   return (alen > blen) - (alen < blen);
+}
+
+ava_bool ava_string_starts_with(ava_string big, ava_string small) {
+  size_t big_len, small_len;
+  char bigtmp[AVA_STR_TMPSZ], smalltmp[AVA_STR_TMPSZ];
+  const char* bigc, * smallc;
+
+  if (ava_string_is_empty(small))
+    return ava_true;
+
+  if (ava_string_is_empty(big))
+    return ava_false;
+
+  if (ava_string_is_ascii9(big) && ava_string_is_ascii9(small))
+    return ava_ascii9_starts_with(big.ascii9, small.ascii9);
+
+  small_len = ava_string_length(small);
+  if (small_len > 9 && ava_string_is_ascii9(big)) return ava_false;
+
+  big_len = ava_string_length(big);
+  if (small_len > big_len) return ava_false;
+
+  smallc = ava_string_to_cstring_buff(smalltmp, small);
+  bigc = ava_string_to_cstring_buff(bigtmp, big);
+
+  return !memcmp(bigc, smallc, small_len);
+}
+
+static ava_bool ava_ascii9_starts_with(ava_ascii9_string big,
+                                       ava_ascii9_string small) {
+  ava_ascii9_string s;
+
+  /* If big does start with small, it is guaranteed to be >= it */
+  if (big < small) return ava_false;
+
+  /* Make mask of present characters in small */
+  s = small;
+  /* 1111111 => ---1111 */
+  s |= s >> 3;
+  /* ---1111 => -----11 */
+  s |= s >> 2;
+  /* -----11 => ------1 */
+  s |= s >> 1;
+  /* Clear all but those lowest bits */
+  s &= 0x204081020408102ULL;
+  /* Select only the lowest of those bits */
+  s &= -s;
+
+  /* If big starts with small, it will be strictly less than small with the
+   * final character incremented, ie, small + s. Since small+s can overflow and
+   * produce zero, instead test big-s, which won't underflow since we already
+   * know big>=small and small necessarily has at least 1 in that position. (It
+   * could be zero if the string were empty and we got here, but then s would
+   * be zero as well.)
+   */
+  return big - s < small;
 }
 
 ava_ascii9_string ava_string_to_ascii9(ava_string str) {

@@ -41,7 +41,7 @@
  * from *(ava_visibility*)userdata on the self symbol.
  */
 ava_macro_subst_result ava_intr_extern_subst(
-  const ava_symbol* self,
+  const struct ava_symbol_s* self,
   ava_macsub_context* context,
   const ava_parse_statement* statement,
   const ava_parse_unit* provoker,

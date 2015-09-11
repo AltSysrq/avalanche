@@ -627,6 +627,98 @@ deftest(mixed_strcmp) {
   ck_assert_int_eq(0, ava_strcmp(a, b));
 }
 
+deftest(empty_string_starts_with_empty_string) {
+  ck_assert(ava_string_starts_with(AVA_EMPTY_STRING, AVA_EMPTY_STRING));
+}
+
+deftest(ascii9_string_starts_with_empty_string) {
+  ck_assert(ava_string_starts_with(
+              AVA_ASCII9_STRING("avalanche"), AVA_EMPTY_STRING));
+}
+
+deftest(twine_starts_with_empty_string) {
+  AVA_STATIC_STRING(a, "avalanches");
+  ck_assert(ava_string_starts_with(a, AVA_EMPTY_STRING));
+}
+
+deftest(empty_string_doesnt_start_with_nonempty) {
+  ck_assert(!ava_string_starts_with(
+              AVA_EMPTY_STRING, AVA_ASCII9_STRING("foo")));
+}
+
+deftest(ascii9_starts_with_self) {
+  ck_assert(ava_string_starts_with(AVA_ASCII9_STRING("avalanche"),
+                                   AVA_ASCII9_STRING("avalanche")));
+}
+
+deftest(twine_starts_with_self) {
+  AVA_STATIC_STRING(a, "avalanches");
+  ck_assert(ava_string_starts_with(a, a));
+}
+
+deftest(ascii9_cant_start_with_needle_longer_than_9) {
+  AVA_STATIC_STRING(a, "avalanches");
+  ck_assert(!ava_string_starts_with(AVA_ASCII9_STRING("avalanche"), a));
+}
+
+deftest(ascii9_starts_with_ascii9_simple_positive) {
+  ck_assert(ava_string_starts_with(
+              AVA_ASCII9_STRING("foobar"), AVA_ASCII9_STRING("foo")));
+}
+
+deftest(ascii9_starts_with_ascii9_simple_negative_lt) {
+  ck_assert(!ava_string_starts_with(
+              AVA_ASCII9_STRING("foobar"), AVA_ASCII9_STRING("bar")));
+}
+
+deftest(ascii9_starts_with_ascii9_simple_negative_gt) {
+  ck_assert(!ava_string_starts_with(
+              AVA_ASCII9_STRING("foobar"), AVA_ASCII9_STRING("quux")));
+}
+
+deftest(ascii9_starts_with_ascii9_negative_extension) {
+  ck_assert(!ava_string_starts_with(
+              AVA_ASCII9_STRING("foo"), AVA_ASCII9_STRING("foob")));
+}
+
+deftest(ascii9_starts_with_ascii9_positive_overflow) {
+  ck_assert(ava_string_starts_with(
+              AVA_ASCII9_STRING("\x7f\x7f"), AVA_ASCII9_STRING("\x7f")));
+}
+
+deftest(ascii9_starts_with_ascii9_positive_underflow) {
+  ck_assert(ava_string_starts_with(
+              AVA_ASCII9_STRING("\x01\x01"), AVA_ASCII9_STRING("\x01")));
+}
+
+deftest(ascii9_starts_with_twine_positive) {
+  AVA_STATIC_STRING(a, "ava");
+  ck_assert(ava_string_starts_with(AVA_ASCII9_STRING("avalanche"), a));
+}
+
+deftest(ascii9_starts_with_twine_negative) {
+  AVA_STATIC_STRING(a, "foo");
+  ck_assert(!ava_string_starts_with(AVA_ASCII9_STRING("avalanche"), a));
+}
+
+deftest(twine_starts_with_twine_positive) {
+  AVA_STATIC_STRING(a, "ava");
+  AVA_STATIC_STRING(b, "avalanche");
+  ck_assert(ava_string_starts_with(b, a));
+}
+
+deftest(twine_starts_with_twine_negative) {
+  AVA_STATIC_STRING(a, "foo");
+  AVA_STATIC_STRING(b, "avalanche");
+  ck_assert(!ava_string_starts_with(b, a));
+}
+
+deftest(twine_starts_with_twine_negative_extension) {
+  AVA_STATIC_STRING(a, "ava");
+  AVA_STATIC_STRING(b, "avalanche");
+  ck_assert(!ava_string_starts_with(a, b));
+}
+
 deftest(is_empty_ascii9_empty) {
   ck_assert(ava_string_is_empty(AVA_EMPTY_STRING));
 }

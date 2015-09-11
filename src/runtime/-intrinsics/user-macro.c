@@ -28,6 +28,8 @@
 #include "../avalanche/integer.h"
 #include "../avalanche/parser.h"
 #include "../avalanche/macsub.h"
+#include "../avalanche/symbol.h"
+#include "../avalanche/symtab.h"
 #include "../avalanche/macro-arg.h"
 #include "../avalanche/errors.h"
 #include "../avalanche/pcode.h"
@@ -282,11 +284,10 @@ static void ava_intr_user_macro_body_translate_bareword(
   const ava_parse_unit* unit,
   ava_visibility visibility
 ) {
-  ava_symbol_table_get_result get;
-  const ava_symbol* symbol;
+  const ava_symbol* symbol, ** results;
   ava_string value, chopped;
   char sigil;
-  size_t strlen;
+  size_t strlen, num_results;
 
   assert(ava_put_bareword == unit->type);
 
@@ -324,25 +325,22 @@ static void ava_intr_user_macro_body_translate_bareword(
       goto error;
     }
 
-    get = ava_symbol_table_get(ava_macsub_get_current_symbol_table(context),
-                               chopped);
-    switch (get.status) {
-    case ava_stgs_not_found:
+    num_results = ava_symtab_get(
+      &results, ava_macsub_get_symtab(context), chopped);
+
+    if (0 == num_results) {
       ava_macsub_record_error(
         context, ava_error_macro_resolved_bareword_not_found(
           &unit->location, chopped));
       goto error;
-
-    case ava_stgs_ambiguous_weak:
+    } else if (num_results > 1) {
       ava_macsub_record_error(
         context, ava_error_macro_resolved_bareword_ambiguous(
           &unit->location, chopped));
       goto error;
-
-    case ava_stgs_ok: break;
     }
 
-    symbol = get.symbol;
+    symbol = results[0];
     if (symbol->visibility < visibility) {
       ava_macsub_record_error(
         context, ava_error_macro_resolved_bareword_invisible(
