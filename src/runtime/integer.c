@@ -49,7 +49,7 @@ ava_integer ava_integer_of_noninteger_value(
   ava_string error_message;
   const char*restrict strdata, *restrict cursor, *restrict marker = NULL;
   const char*restrict tok;
-  char tmpbuff[AVA_STR_TMPSZ];
+  ava_str_tmpbuff tmpbuff;
   size_t strlen;
 
   strlen = ava_string_length(str);
@@ -137,7 +137,7 @@ ava_integer ava_integer_of_noninteger_value(
 
 ava_bool ava_string_is_integer(ava_string str) {
   const char*restrict strdata, *restrict cursor, * restrict marker = NULL;
-  char tmpbuff[AVA_STR_TMPSZ];
+  ava_str_tmpbuff tmpbuff;
   size_t strlen;
 
   strlen = ava_string_length(str);

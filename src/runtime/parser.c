@@ -459,7 +459,7 @@ static ava_parse_unit_read_result ava_parse_bareword(
   const ava_parse_context* context,
   const ava_lex_result* token
 ) {
-  char strtmp[AVA_STR_TMPSZ];
+  ava_str_tmpbuff strtmp;
   const char* content;
   size_t strlen, begin, end, i;
   ava_parse_unit* unit, * subunit, * varword;

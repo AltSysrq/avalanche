@@ -45,7 +45,7 @@ struct ava_lex_context_s {
   char string_started_with;
 
   const char*restrict buffer;
-  char tmpbuff[AVA_STR_TMPSZ];
+  ava_str_tmpbuff tmpbuff;
   size_t buffer_off;
   /* The most recent 4 characters, excluding the one under the cursor, to
    * guarantee that, eg, string escaping doesn't have to go deep-diving in the

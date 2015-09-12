@@ -119,7 +119,7 @@ signed ava_value_strcmp(ava_value a, ava_value b) {
   ava_datum ait, bit;
   ava_string as, bs;
   const char*restrict ac, *restrict bc;
-  char atmp[AVA_STR_TMPSZ], btmp[AVA_STR_TMPSZ];
+  ava_str_tmpbuff atmp, btmp;
   size_t nac, nbc, n;
   ava_bool a_finished = ava_false, b_finished = ava_false;
   signed cmp;
@@ -267,7 +267,7 @@ static ava_ulong ava_value_siphash(ava_value value,
     v2 = 0x6c7967656e657261ULL, v3 = 0x7465646279746573ULL,
     b, m;
   size_t i, n, rem, strlen;
-  char tmpbuf[16] AVA_STR_ALIGN = { 0 };
+  ava_str_tmpbuff tmpbuf;
   const ava_ulong*restrict data;
 
   /* Lines 42--48 */

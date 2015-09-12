@@ -251,10 +251,10 @@ const char* ava_string_to_cstring(ava_string str) {
   }
 }
 
-const char* ava_string_to_cstring_buff(char buff[AVA_STR_TMPSZ],
+const char* ava_string_to_cstring_buff(ava_str_tmpbuff buff,
                                        ava_string str) {
   if (ava_string_is_ascii9(str)) {
-    memset(buff, 0, AVA_STR_TMPSZ);
+    memset(buff, 0, sizeof(ava_str_tmpbuff));
     ava_ascii9_decode(buff, str.ascii9);
     return buff;
   } else {
@@ -439,7 +439,7 @@ ava_string ava_string_slice(ava_string str, size_t begin, size_t end) {
 }
 
 signed ava_strcmp(ava_string a, ava_string b) {
-  char atmp[AVA_STR_TMPSZ], btmp[AVA_STR_TMPSZ];
+  ava_str_tmpbuff atmp, btmp;
   const char*restrict ac, *restrict bc;
   size_t n, alen, blen;
   signed cmp;
@@ -461,7 +461,7 @@ signed ava_strcmp(ava_string a, ava_string b) {
 
 ava_bool ava_string_starts_with(ava_string big, ava_string small) {
   size_t big_len, small_len;
-  char bigtmp[AVA_STR_TMPSZ], smalltmp[AVA_STR_TMPSZ];
+  ava_str_tmpbuff bigtmp, smalltmp;
   const char* bigc, * smallc;
 
   if (ava_string_is_empty(small))
@@ -602,7 +602,7 @@ static void ava_twine_force_into(char*restrict dst,
   const ava_twine*restrict body_twine;
   size_t max_stack_required;
   size_t a9len;
-  char a9tmp[AVA_STR_TMPSZ];
+  ava_str_tmpbuff a9tmp;
 
   /* Estimate how much stack space will be required.
    *

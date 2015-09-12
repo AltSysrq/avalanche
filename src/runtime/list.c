@@ -130,7 +130,7 @@ ava_string ava_list_escape(ava_string str) {
   ava_bool quote_with_verbatim = ava_false;
 
   const char*restrict strdat;
-  char tmpbuff[AVA_STR_TMPSZ];
+  ava_str_tmpbuff tmpbuff;
   size_t strlen, i;
 
   strlen = ava_string_length(str);

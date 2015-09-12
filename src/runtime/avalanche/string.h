@@ -35,10 +35,14 @@
  * AVA_STRING_ALIGNMENT-byte boundary.
  */
 #define AVA_STR_ALIGN AVA_ALIGN(AVA_STRING_ALIGNMENT)
+
 /**
- * The minimum size of temporary buffers passed to string functions.
+ * Type suitable for being passed to ava_string_to_cstring_buff().
+ *
+ * It is guaranteed to be an array type, and may be initialised with `{0}`. No
+ * other properties are guaranteed to client code.
  */
-#define AVA_STR_TMPSZ 10
+typedef char ava_str_tmpbuff[16] AVA_STR_ALIGN;
 
 /**
  * An ASCII string of up to 9 characters packed into a 64-bit integer. The
@@ -286,16 +290,12 @@ const char* ava_string_to_cstring(ava_string str) AVA_PURE;
  *
  * This never requires an extra heap allocation.
  *
- * If tmp is 8-byte-aligned, so is the result. If tmp is actually at least 16
- * bytes in length and was zero-initialised by the caller, the return value is
- * guaranteed to have a readable size which is a multiple of 8, as per
- * ava_string_to_cstring().
+ * The result meets all guarantees provided by ava_string_to_cstring().
  *
- * @param tmp A 10-character array to use as a buffer in the case of an ASCII9
- * string.
+ * @param tmp A scratch buffer to use if necessary to back the returned string.
  * @param str The string to convert to a C String.
  */
-const char* ava_string_to_cstring_buff(char tmp[AVA_STR_TMPSZ],
+const char* ava_string_to_cstring_buff(ava_str_tmpbuff tmp,
                                        ava_string str) AVA_PURE;
 /**
  * Copies the characters in str, starting at start, inclusive, and ending at

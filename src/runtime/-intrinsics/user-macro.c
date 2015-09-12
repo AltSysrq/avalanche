@@ -458,7 +458,7 @@ static void ava_intr_user_macro_body_translate_splice(
 static ava_bool ava_intr_user_macro_parse_offset(
   ava_uint* begin_dst, ava_uint* end_dst, ava_string tail
 ) {
-  char tmp[AVA_STR_TMPSZ];
+  ava_str_tmpbuff tmp;
   const char* s;
   ava_ulong begin = ~0uLL, end = ~0uLL;
 

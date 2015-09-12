@@ -42,7 +42,7 @@ ava_stack_trace* ava_generate_stack_trace(void) {
   unw_cursor_t cursor;
   unw_word_t ip, ip_off;
   ava_demangled_name demangled;
-  char strtmp[AVA_STR_TMPSZ];
+  ava_str_tmpbuff strtmp;
 
   ava_stack_trace* trace = NULL, * new;
 

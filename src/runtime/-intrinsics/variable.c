@@ -190,7 +190,7 @@ ava_ast_node* ava_intr_variable_lvalue(
 }
 
 static ava_var_casing ava_var_casing_of(ava_string name) {
-  char tmp[AVA_STR_TMPSZ];
+  ava_str_tmpbuff tmp;
   const char* str;
   ava_bool has_upper = ava_false, has_lower = ava_false;
   size_t strlen, i;

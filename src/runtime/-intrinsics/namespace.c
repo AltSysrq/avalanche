@@ -112,7 +112,7 @@ ava_macro_subst_result ava_intr_import_subst(
   const ava_parse_unit* provoker,
   ava_bool* consumed_other_statements
 ) {
-  char tmp[AVA_STR_TMPSZ];
+  ava_str_tmpbuff tmp;
   const ava_parse_unit* source_unit;
   ava_string absolutised, ambiguous;
   ava_string source, dest = AVA_EMPTY_STRING;

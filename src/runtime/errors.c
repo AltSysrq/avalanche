@@ -71,7 +71,7 @@ static ava_string extract_source_line(const ava_compile_location* loc) {
 }
 
 static ava_bool is_printable(ava_string str) {
-  char tmp[AVA_STR_TMPSZ];
+  ava_str_tmpbuff tmp;
   const char* raw = ava_string_to_cstring_buff(tmp, str);
   char ch;
   size_t strlen = ava_string_length(str), i;

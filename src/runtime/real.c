@@ -37,7 +37,7 @@ const ava_value_trait ava_real_type = {
 };
 
 ava_real ava_real_of_nonnumeric_value(ava_value value, ava_real dfault) {
-  char tmp[AVA_STR_TMPSZ];
+  ava_str_tmpbuff tmp;
   const char* str;
   char* end;
   ava_real ret;

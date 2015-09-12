@@ -168,7 +168,7 @@ deftest(ascii9_string_to_cstring) {
 }
 
 deftest(ascci9_string_to_cstring_buff_fit) {
-  char buf[AVA_STR_TMPSZ];
+  ava_str_tmpbuff buf;
   const char* ret;
 
   ret = ava_string_to_cstring_buff(buf, AVA_ASCII9_STRING("hello"));
