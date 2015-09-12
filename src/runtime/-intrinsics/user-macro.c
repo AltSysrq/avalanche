@@ -431,15 +431,15 @@ static void ava_intr_user_macro_body_translate_splice(
     }
 
     if (singular == plurality) {
-      /* Implicit plurality is star if both endpoints given */
+      /* Implicit plurality is plus if both endpoints given */
       if (~begin && ~end) {
-        plurality = star;
+        plurality = plus;
       }
     }
   }
 
   (direction < 0? ava_pcmb_left : ava_pcmb_right)(builder);
-  if (~begin)
+  if (~begin && begin)
     (direction < 0? ava_pcmb_curtail : ava_pcmb_behead)(builder, begin);
   if (~end)
     (direction < 0? ava_pcmb_behead : ava_pcmb_curtail)(builder, end);
@@ -449,7 +449,7 @@ static void ava_intr_user_macro_body_translate_splice(
      * right, begin only: leftmost
      * right, end only: rightmost
      */
-    ((direction < 0) ^ (!~begin)? ava_pcmb_head : ava_pcmb_tail)(builder, 1);
+    ((direction < 0) ^ (!!~begin)? ava_pcmb_head : ava_pcmb_tail)(builder, 1);
     ava_pcmb_singular(builder);
   } else if (plus == plurality) {
     ava_pcmb_nonempty(builder);
