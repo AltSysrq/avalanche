@@ -1074,6 +1074,16 @@ set defs {
       the same effect.
     }
   }
+
+  cerror C5055 use_of_invalid_macro {{ava_string macro}} {
+    msg "Use of invalid macro %macro%"
+    explanation {
+      There is an error in the indicated macro's definition, so the macro
+      cannot be expanded. Usages of this macro are flagged with this error to
+      indicate that no further macro substitution could be performed on the
+      expression.
+    }
+  }
 }
 
 proc ncode {code} {

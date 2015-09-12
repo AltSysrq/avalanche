@@ -651,4 +651,11 @@ struct macro m {
   #
   #   ( ) -- ( s )
   elt statement { }
+
+  # Causes the attempt at macro expansion to be abandoned and an error node to
+  # be produced.
+  #
+  # This should not actually be found in P-Code files, but rather is used to
+  # effect a placeholder while the file containing the bad macro is processed.
+  elt die { }
 }

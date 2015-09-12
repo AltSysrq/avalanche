@@ -386,7 +386,7 @@ static void ava_intr_user_macro_body_translate_bareword(
   return;
 
   error:
-  ava_pcmb_bareword(builder, AVA_EMPTY_STRING);
+  ava_pcmb_die(builder);
 }
 
 static void ava_intr_user_macro_body_translate_splice(
@@ -905,6 +905,12 @@ static ava_macro_subst_result ava_intr_user_macro_eval(
       ava_parse_statement* s = AVA_NEW(ava_parse_statement);
       TAILQ_INIT(&s->units);
       PUSH_STATEMENT(s);
+    } break;
+
+    case ava_pcmt_die: {
+      return ava_macsub_error_result(
+        context, ava_error_use_of_invalid_macro(
+          &provoker->location, self->full_name));
     } break;
     }
   }
