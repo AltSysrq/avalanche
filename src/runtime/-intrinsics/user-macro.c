@@ -403,22 +403,27 @@ static void ava_intr_user_macro_body_translate_splice(
 
   /* TODO: Indicate context */
 
-  if (0 == strlen) {
-    plurality = plus;
-    begin = ~0u;
-    end = ~0u;
-  } else {
+  if (strlen > 0) {
     plurality_ch = ava_string_index(tail, strlen-1);
     if ('+' == plurality_ch) {
       plurality = plus;
       tail = ava_string_slice(tail, 0, strlen-1);
+      --strlen;
     } else if ('*' == plurality_ch) {
       plurality = star;
       tail = ava_string_slice(tail, 0, strlen-1);
+      --strlen;
     } else {
       plurality = singular;
     }
+  } else {
+    plurality = plus;
+  }
 
+  if (0 == strlen) {
+    begin = ~0u;
+    end = ~0u;
+  } else {
     if (!ava_intr_user_macro_parse_offset(&begin, &end, tail)) {
       ava_macsub_record_error(
         context, ava_error_bad_macro_slice_offset(location, tail));
