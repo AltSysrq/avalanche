@@ -1064,6 +1064,16 @@ set defs {
       To resolve this, use the fully-qualified name in your import.
     }
   }
+
+  cerror C5054 macro_expanded_to_nothing {{ava_string macro}} {
+    msg "Macro %macro% expanded to nothing."
+    explanation {
+      The indicated macro "expanded" into the empty statement. This is almost
+      certainly unintentional, and so is flagged as an error. If intentional,
+      the macro should be adjusted to expand into some non-empty form that has
+      the same effect.
+    }
+  }
 }
 
 proc ncode {code} {

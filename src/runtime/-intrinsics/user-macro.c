@@ -914,6 +914,11 @@ static ava_macro_subst_result ava_intr_user_macro_eval(
   if (!SLIST_EMPTY(&stack))
     DIE("Execution terminated with more than one element on stack.");
 
+  if (TAILQ_EMPTY(&statement->units))
+    return ava_macsub_error_result(
+      context, ava_error_macro_expanded_to_nothing(
+        &provoker->location, self->full_name));
+
   return (ava_macro_subst_result) {
     .status = ava_mss_again,
     .v = { .statement = statement },
