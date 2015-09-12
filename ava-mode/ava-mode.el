@@ -34,8 +34,8 @@
                       "namespace" "import"
                       "alias" "Alias" "ALIAS")
                      'symbols)
-         'font-lock-keyword-face))
-   (cons "\\$\\(\\s_\\|\\w\\)+\\$?" 'font-lock-variable-name-face))
+         'font-lock-keyword-face)
+   (cons "\\$\\(\\s_\\|\\w\\)+\\$?" 'font-lock-variable-name-face)))
 
 (defvar ava-mode-syntax-table
   (let ((st (make-syntax-table)))
