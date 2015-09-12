@@ -522,7 +522,7 @@ struct macro m {
   # deleted. An error occurs if the statement does not have that many elements.
   elt head {
     int count
-    constraint { @.count > 0 }
+    constraint { @.count >= 0 }
   }
   # Removes a fixed number of elements from a statement.
   #
@@ -532,7 +532,7 @@ struct macro m {
   # deleted. An error occurs if the statement does not have that many elements.
   elt behead {
     int count
-    constraint { @.count > 0 }
+    constraint { @.count >= 0 }
   }
   # Removes initial elements from a statement so that it has the given length.
   #
@@ -543,7 +543,7 @@ struct macro m {
   # units.
   elt tail {
     int count
-    constraint { @.count > 0 }
+    constraint { @.count >= 0 }
   }
   # Removes a fixed number of trailing elements from a statement.
   #
@@ -554,7 +554,7 @@ struct macro m {
   # units.
   elt curtail {
     int count
-    constraint { @.count > 0 }
+    constraint { @.count >= 0 }
   }
   # Ensures a statement is non-empty.
   #
