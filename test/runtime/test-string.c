@@ -173,7 +173,7 @@ deftest(ascci9_string_to_cstring_buff_fit) {
 
   ret = ava_string_to_cstring_buff(buf, AVA_ASCII9_STRING("hello"));
   ck_assert_ptr_eq(buf, ret);
-  ck_assert_str_eq("hello", buf);
+  ck_assert_str_eq("hello", ret);
 }
 
 deftest(flat_string_to_cstring) {

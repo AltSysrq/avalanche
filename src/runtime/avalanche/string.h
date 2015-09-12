@@ -42,7 +42,7 @@
  * It is guaranteed to be an array type, and may be initialised with `{0}`. No
  * other properties are guaranteed to client code.
  */
-typedef char ava_str_tmpbuff[16] AVA_STR_ALIGN;
+typedef ava_ulong ava_str_tmpbuff[2] AVA_STR_ALIGN;
 
 /**
  * An ASCII string of up to 9 characters packed into a 64-bit integer. The

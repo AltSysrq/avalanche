@@ -108,7 +108,7 @@ static void assert_aligned(const void* ptr) {
 static ava_bool ava_string_is_ascii9(ava_string);
 static ava_bool ava_string_can_encode_ascii9(const char*, size_t);
 static ava_ascii9_string ava_ascii9_encode(const char*, size_t);
-static void ava_ascii9_decode(char*restrict dst, ava_ascii9_string);
+static void ava_ascii9_decode(ava_ulong*restrict dst, ava_ascii9_string);
 static size_t ava_ascii9_length(ava_ascii9_string);
 static char ava_ascii9_index(ava_ascii9_string, size_t);
 static ava_ascii9_string ava_ascii9_concat(ava_ascii9_string,
@@ -244,7 +244,7 @@ const char* ava_string_to_cstring(ava_string str) {
   if (ava_string_is_ascii9(str)) {
     ava_ulong* dst = ava_alloc_atomic(2 * sizeof(ava_ulong));
     dst[0] = dst[1] = 0;
-    ava_ascii9_decode((char*)dst, str.ascii9);
+    ava_ascii9_decode(dst, str.ascii9);
     return (char*)dst;
   } else {
     return ava_twine_force(str.twine);
@@ -256,27 +256,64 @@ const char* ava_string_to_cstring_buff(ava_str_tmpbuff buff,
   if (ava_string_is_ascii9(str)) {
     memset(buff, 0, sizeof(ava_str_tmpbuff));
     ava_ascii9_decode(buff, str.ascii9);
-    return buff;
+    return (const char*)buff;
   } else {
     return ava_twine_force(str.twine);
   }
 }
 
-static void ava_ascii9_decode(char*restrict dst, ava_ascii9_string s) {
-  unsigned shift = 64 - 7, i;
-  char ch;
+static void ava_ascii9_decode(ava_ulong*restrict dst, ava_ascii9_string s) {
+  ava_ulong w0, w1, c0, c1, c2, c3, c4, c5, c6, c7, c8;
 
-  for (i = 0; i < 9; ++i, shift -= 7) {
-    ch = (s >> shift) & 0x7F;
-    if (!ch) break;
-    dst[i] = ch;
-  }
+  /* This isn't the most efficient way to express things, but for now trust the
+   * optimiser to figure things out.
+   *
+   * TODO: Clang has a really hard time with this one. GCC does an excellent
+   * job and reduces it to around two dozen instructions, but clang produces a
+   * sprawl of shift and or instructions that looks muck like a literal
+   * translation of the C code.
+   */
+  s >>= 1;
+  c8 = s & 0x7F; s >>= 7;
+  c7 = s & 0x7F; s >>= 7;
+  c6 = s & 0x7F; s >>= 7;
+  c5 = s & 0x7F; s >>= 7;
+  c4 = s & 0x7F; s >>= 7;
+  c3 = s & 0x7F; s >>= 7;
+  c2 = s & 0x7F; s >>= 7;
+  c1 = s & 0x7F; s >>= 7;
+  c0 = s & 0x7F;
+
+#if WORDS_BIGENDIAN
+  w1  = c8 << 56;
+  w0  = c7 <<  0;
+  w0 |= c6 <<  8;
+  w0 |= c5 << 16;
+  w0 |= c4 << 24;
+  w0 |= c3 << 32;
+  w0 |= c2 << 40;
+  w0 |= c1 << 48;
+  w0 |= c0 << 56;
+#else
+  w1  = c8 << 0;
+  w0  = c7 << 56;
+  w0 |= c6 << 48;
+  w0 |= c5 << 40;
+  w0 |= c4 << 32;
+  w0 |= c3 << 24;
+  w0 |= c2 << 16;
+  w0 |= c1 <<  8;
+  w0 |= c0 <<  0;
+#endif
+
+  dst[0] = w0;
+  dst[1] = w1;
 }
 
 void ava_string_to_bytes(void*restrict dst, ava_string str,
                          size_t start, size_t end) {
-  char a9buf[9];
-  const char*restrict src;
+  ava_str_tmpbuff a9buf;
+  const void*restrict src;
 
   if (ava_string_is_ascii9(str)) {
     ava_ascii9_decode(a9buf, str.ascii9);
@@ -374,9 +411,11 @@ ava_string ava_string_concat(ava_string a, ava_string b) {
   if (ava_string_is_ascii9(a) && ava_string_is_ascii9(b)) {
     ava_twine*restrict twine = ava_twine_alloc(alen + blen);
     char*restrict dst = (char*)&twine->tail;
+    ava_str_tmpbuff second;
 
-    ava_ascii9_decode(dst, a.ascii9);
-    ava_ascii9_decode(dst + alen, b.ascii9);
+    ava_ascii9_decode((ava_ulong*)dst, a.ascii9);
+    ava_ascii9_decode(second, b.ascii9);
+    memcpy(dst + alen, second, blen);
     ret.twine = twine;
   } else if (ava_string_is_ascii9(a)) {
     ava_twine twine;
@@ -650,7 +689,7 @@ static void ava_twine_force_into(char*restrict dst,
       /* Only need the right child */
       if (ava_string_is_ascii9(other.string)) {
         ava_ascii9_decode(a9tmp, other.string.ascii9);
-        memcpy(dst, a9tmp + offset - body_twine->length, count);
+        memcpy(dst, (const char*)a9tmp + offset - body_twine->length, count);
       } else {
         twine = other.string.twine;
         offset -= body_twine->length;
@@ -689,7 +728,7 @@ static void ava_twine_force_into(char*restrict dst,
 
     if (offset < a9len) {
       ava_ascii9_decode(a9tmp, other.string.ascii9);
-      memcpy(dst, a9tmp + offset,
+      memcpy(dst, (const char*)a9tmp + offset,
              count > a9len - offset? a9len - offset : count);
     }
 
