@@ -437,7 +437,7 @@ set defs {
       More details can be found in the nested error message.
 
       This error indicates that the macro did not correctly validate its
-      input correctly and is probably a bug.
+      input and is probably a bug.
     }
   }
 
@@ -461,7 +461,8 @@ set defs {
     msg "Bareword is ambiguous."
     explanation {
       The compiler was not able to determine whether the indicated token was a
-      macro because more than one symbol matches the name.
+      macro because more than one symbol matches the name, at least one of
+      which was a potentially-matching macro.
 
       Ambiguous symbols result when more than one import produces the same
       symbol name. Note that macros share the same namespace as variables
@@ -672,21 +673,23 @@ set defs {
     }
   }
 
-  cerror C5018 symbol_redefined_import {{ava_string symbol}} {
-    msg "Redefinition of symbol's simple name: %symbol%"
-    explanation {
-      An attempt was made to define the given symbol, but an automaic import in
-      effect resulted in a name collision with another symbol.
-    }
-  }
+  # No longer a possible error after the symtab rewrite
+  # cerror C5018 symbol_redefined_import {{ava_string symbol}} {
+  #   msg "Redefinition of symbol's simple name: %symbol%"
+  #   explanation {
+  #     An attempt was made to define the given symbol, but an automaic import in
+  #     effect resulted in a name collision with another symbol.
+  #   }
+  # }
 
-  cerror C5019 apply_imports_produced_conflict {} {
-    msg "Name conflict caused by later definitions."
-    explanation {
-      The imports in effect at this location caused a name conflict with names
-      defined later in the same input.
-    }
-  }
+  # No longer a possible error after the symtab rewrite
+  # cerror C5019 apply_imports_produced_conflict {} {
+  #   msg "Name conflict caused by later definitions."
+  #   explanation {
+  #     The imports in effect at this location caused a name conflict with names
+  #     defined later in the same input.
+  #   }
+  # }
 
   # C5020 ambiguous_bareword is grouped with the other ambiguous_* errors
 
