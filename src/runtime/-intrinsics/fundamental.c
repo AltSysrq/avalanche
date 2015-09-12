@@ -204,6 +204,7 @@ static void ava_intr_seq_cg_common(
   ava_intr_seq* seq, const ava_pcode_register* dst,
   ava_codegen_context* context
 ) {
+  AVA_STATIC_STRING(empty_expression, "Empty expression");
   ava_intr_seq_entry* e;
 
   STAILQ_FOREACH(e, &seq->children, next) {
@@ -215,6 +216,12 @@ static void ava_intr_seq_cg_common(
 
   if (STAILQ_EMPTY(&seq->children) && dst) {
     AVA_PCXB(ld_imm_vd, *dst, AVA_EMPTY_STRING);
+  }
+
+  if (STAILQ_EMPTY(&seq->children) && !dst) {
+    ava_codegen_error(
+      context, (ava_ast_node*)seq, ava_error_is_pure_but_would_discard(
+        &seq->header.location, empty_expression));
   }
 }
 
