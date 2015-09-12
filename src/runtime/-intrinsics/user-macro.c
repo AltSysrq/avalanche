@@ -480,15 +480,17 @@ static ava_bool ava_intr_user_macro_parse_offset(
 
   if ('-' == *s) {
     ++s;
-    end = 0;
-    while (*s) {
-      if (*s < '0' || *s > '9') return ava_false;
+    if (*s) {
+      end = 0;
+      while (*s) {
+        if (*s < '0' || *s > '9') return ava_false;
 
-      end *= 10;
-      end += *s - '0';
-      if (end >= 0xFFFFFFFFULL) return ava_false;
+        end *= 10;
+        end += *s - '0';
+        if (end >= 0xFFFFFFFFULL) return ava_false;
 
-      ++s;
+        ++s;
+      }
     }
   }
 
