@@ -1,0 +1,5 @@
+#set# foo.plugh.var 42
+#set# bar.plugh.var 56
+import foo *
+import bar *
+import plugh xyzzy

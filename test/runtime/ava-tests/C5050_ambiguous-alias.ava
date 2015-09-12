@@ -1,0 +1,5 @@
+#set# a.var xyzzy
+#set# b.var plugh
+import a *
+import b *
+alias foo = var

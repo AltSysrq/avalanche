@@ -1,0 +1,10 @@
+namespace a {
+  macro = op 1 (%#set# (<) (>))
+}
+namespace b {
+  macro = op 1 (%#set# (>) (<))
+}
+
+import a *
+import b *
+foo = bar

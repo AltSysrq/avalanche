@@ -1,0 +1,8 @@
+extern pass-test pass_test c void [int pos]
+macro = op 1 (%#set# (<) (>))
+a.var = plugh
+b.var = xyzzy
+
+import a *
+import b *
+pass-test $var

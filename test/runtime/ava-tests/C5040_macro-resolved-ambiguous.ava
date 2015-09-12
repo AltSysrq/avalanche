@@ -1,0 +1,7 @@
+macro = op 1 (%#set# (<) (>))
+a.var = plugh
+b.var = xyzzy
+
+import a *
+import b *
+macro doit control $%var

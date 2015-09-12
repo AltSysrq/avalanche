@@ -1,0 +1,10 @@
+namespace a {
+  extern pass-test pass_test c void [int pos]
+}
+namespace b {
+  extern pass-test pass_test c void [int pos]
+}
+
+import a *
+import b *
+pass-test 56

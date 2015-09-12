@@ -1,0 +1,3 @@
+macro noop fun >
+extern pass-test pass_test c void [int pos]
+noop pass-test 42

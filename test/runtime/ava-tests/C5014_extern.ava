@@ -1,0 +1,1 @@
+extern pass-test [foo bar] c void [int pos]

@@ -1,0 +1,2 @@
+macro chop op 1 <1-1
+foo bar chop

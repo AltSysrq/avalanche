@@ -1,0 +1,2 @@
+#set# Foo bar
+MACRO fum control $%Foo

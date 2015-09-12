@@ -1,0 +1,4 @@
+extern pass-test pass_test c void [int pos]
+#set# foo.bar.var 42
+import foo.bar
+pass-test $bar.var

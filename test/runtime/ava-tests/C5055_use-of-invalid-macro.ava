@@ -1,0 +1,2 @@
+macro foo control illegal bareword
+foo bar

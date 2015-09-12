@@ -1,0 +1,11 @@
+; This fails if gensyms aren't unique, since the two macro invocations would
+; assign to the same constant global.
+;
+; `namespace` is used to get nested blocks since there's nothing else that
+; works that way right now.
+macro doit control %namespace !ns { %#set# ?FOO "bar" \ %#set# ?BAR $?FOO }
+doit ()
+doit ()
+
+extern pass-test pass_test c void [int pos]
+pass-test 42
