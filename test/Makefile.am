@@ -26,7 +26,8 @@ runtime/test-pointer.t \
 runtime/test-real.t \
 runtime/test-string.t \
 runtime/test-symtab.t \
-runtime/test-value.t
+runtime/test-value.t \
+runtime/test-avalanche.t
 
 BENCHMARKS = benchmarks/list/avalanche.t benchmarks/map/avalanche.t \
 	benchmarks/string/length.t
