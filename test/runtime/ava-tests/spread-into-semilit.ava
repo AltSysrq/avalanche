@@ -1,0 +1,6 @@
+extern pass-test pass_test c void [int pos]
+extern lindex lindex ava pos pos
+
+#set# left [0 1 2]
+#set# right [42 4 5]
+pass-test (lindex [\*$left \*$right] 3)

@@ -32,6 +32,7 @@
 #include "avalanche/string.h"
 #include "avalanche/value.h"
 #include "avalanche/list.h"
+#include "avalanche/list-proj.h"
 #include "avalanche/function.h"
 #include "avalanche/name-mangle.h"
 #include "avalanche/pcode.h"
@@ -334,6 +335,11 @@ static ava_value ava_interp_run_function(
                       ava_error_extract_element_from_empty_list());
 
       lists[lh->dst.index] = ava_list_slice(src, 1, length);
+    } break;
+
+    case ava_pcxt_lflatten: {
+      const ava_pcx_lflatten* lf = (const ava_pcx_lflatten*)instr;
+      lists[lf->dst.index] = ava_list_proj_flatten(lists[lf->src.index]);
     } break;
 
     case ava_pcxt_invoke_ss: {

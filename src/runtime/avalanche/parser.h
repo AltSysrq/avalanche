@@ -76,7 +76,11 @@ typedef enum {
   /**
    * A syntax unit corresponding to a single Verbatim token.
    */
-  ava_put_verbatim
+  ava_put_verbatim,
+  /**
+   * A syntax unit spreading another syntax unit.
+   */
+  ava_put_spread
 } ava_parse_unit_type;
 
 typedef struct ava_parse_unit_s ava_parse_unit;
@@ -122,6 +126,10 @@ struct ava_parse_unit_s {
      * The list of units/elements within a Semiliteral syntax unit.
      */
     ava_parse_unit_list units;
+    /**
+     * The unit spread by a Spread unit.
+     */
+    ava_parse_unit* unit;
   } v;
 
   TAILQ_ENTRY(ava_parse_unit_s) next;

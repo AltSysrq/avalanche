@@ -25,14 +25,15 @@
 #include "../avalanche/alloc.h"
 #include "../avalanche/string.h"
 #include "../avalanche/value.h"
+#include "../avalanche/exception.h"
 #include "../avalanche/list.h"
+#include "../avalanche/list-proj.h"
 #include "../avalanche/errors.h"
 #include "../avalanche/parser.h"
 #include "../avalanche/macsub.h"
 #include "../avalanche/symbol.h"
 #include "../avalanche/pcode.h"
 #include "../avalanche/code-gen.h"
-#include "../avalanche/exception.h"
 #include "fundamental.h"
 #include "funcall.h"
 #include "variable.h"
@@ -615,25 +616,23 @@ static void ava_intr_semilit_postprocess(
 static ava_bool ava_intr_semilit_get_constexpr(
   const ava_intr_semilit* node, ava_value* dst
 ) {
-  ava_exception_handler handler;
-  ava_list_value accum = ava_empty_list();
+  ava_list_value accum = ava_empty_list(), sublist;
   ava_value elt;
   size_t i;
 
   for (i = 0; i < node->num_elements; ++i) {
-    if (ava_ast_node_get_constexpr(node->elements[i], &elt)) {
-      if (node->elements[i]->v->is_spread) {
-        ava_try (handler) {
-          accum = ava_list_concat(
-            accum, ava_list_value_of(elt));
-        } ava_catch (handler, ava_format_exception) {
-          return ava_false;
-        }
+    if (node->elements[i]->v->cg_spread) {
+      if (ava_ast_node_get_constexpr_spread(node->elements[i], &sublist)) {
+          accum = ava_list_concat(accum, sublist);
       } else {
-        accum = ava_list_append(accum, elt);
+        return ava_false;
       }
     } else {
-      return ava_false;
+      if (ava_ast_node_get_constexpr(node->elements[i], &elt)) {
+        accum = ava_list_append(accum, elt);
+      } else {
+        return ava_false;
+      }
     }
   }
 
@@ -661,12 +660,13 @@ static void ava_intr_semilit_cg_evaluate(
 
     AVA_PCXB(lempty, accum);
     for (i = 0; i < node->num_elements; ++i) {
-      ava_ast_node_cg_evaluate(node->elements[i], &eltreg, context);
-      ava_codegen_set_location(context, &node->elements[i]->location);
-      if (node->elements[i]->v->is_spread) {
-        AVA_PCXB(ld_reg, tmplist, eltreg);
+      if (node->elements[i]->v->cg_spread) {
+        ava_ast_node_cg_spread(node->elements[i], &tmplist, context);
+        ava_codegen_set_location(context, &node->elements[i]->location);
         AVA_PCXB(lcat, accum, accum, tmplist);
       } else {
+        ava_ast_node_cg_evaluate(node->elements[i], &eltreg, context);
+        ava_codegen_set_location(context, &node->elements[i]->location);
         AVA_PCXB(lappend, accum, accum, eltreg);
       }
     }
@@ -683,6 +683,131 @@ static void ava_intr_semilit_cg_discard(
   ava_codegen_error(
     context, (ava_ast_node*)node,
     ava_error_would_discard_semilit(&node->header.location));
+}
+
+typedef struct {
+  ava_ast_node header;
+  ava_ast_node* child;
+} ava_intr_spread;
+
+static ava_ast_node* ava_intr_spread_of(
+  ava_macsub_context* context, ava_parse_unit* unit);
+
+static ava_string ava_intr_spread_to_string(const ava_intr_spread* node);
+static void ava_intr_spread_postprocess(ava_intr_spread* node);
+static ava_bool ava_intr_spread_get_constexpr_spread(
+  const ava_intr_spread* node, ava_list_value* dst);
+static void ava_intr_spread_cg_evaluate(
+  ava_intr_spread* node, const ava_pcode_register* dst,
+  ava_codegen_context* context);
+static void ava_intr_spread_cg_spread(
+  ava_intr_spread* node, const ava_pcode_register* dst,
+  ava_codegen_context* context);
+static void ava_intr_spread_cg_discard(
+  ava_intr_spread* node, ava_codegen_context* context);
+
+static const ava_ast_node_vtable ava_intr_spread_vtable = {
+  .name = "spread",
+  .to_string = (ava_ast_node_to_string_f)ava_intr_spread_to_string,
+  .postprocess = (ava_ast_node_postprocess_f)ava_intr_spread_postprocess,
+  .get_constexpr_spread =
+    (ava_ast_node_get_constexpr_spread_f)ava_intr_spread_get_constexpr_spread,
+  .cg_evaluate = (ava_ast_node_cg_evaluate_f)ava_intr_spread_cg_evaluate,
+  .cg_spread = (ava_ast_node_cg_spread_f)ava_intr_spread_cg_spread,
+  .cg_discard = (ava_ast_node_cg_discard_f)ava_intr_spread_cg_discard,
+};
+
+static ava_ast_node* ava_intr_spread_of(
+  ava_macsub_context* context, ava_parse_unit* unit
+) {
+  ava_parse_unit_list dummy_list;
+  ava_intr_spread* node = AVA_NEW(ava_intr_spread);
+  node->header.v = &ava_intr_spread_vtable;
+  node->header.context = context;
+  node->header.location = unit->location;
+  /* The unit needs to be in a valid list to be traversed */
+  TAILQ_INIT(&dummy_list);
+  TAILQ_INSERT_TAIL(&dummy_list, unit->v.unit, next);
+  node->child = ava_macsub_run_units(context, unit->v.unit, unit->v.unit);
+
+  return (ava_ast_node*)node;
+}
+
+static ava_string ava_intr_spread_to_string(const ava_intr_spread* node) {
+  return ava_string_concat(AVA_ASCII9_STRING("\\*"),
+                           ava_ast_node_to_string(node->child));
+}
+
+static void ava_intr_spread_postprocess(ava_intr_spread* node) {
+  ava_ast_node_postprocess(node->child);
+}
+
+static ava_bool ava_intr_spread_get_constexpr_spread(
+  const ava_intr_spread* node, ava_list_value* dst
+) {
+  ava_exception_handler handler;
+  ava_list_value sublist;
+  ava_value child;
+  ava_bool ret;
+
+  ava_try (handler) {
+    if (node->child->v->cg_spread) {
+      if (ava_ast_node_get_constexpr_spread(node->child, &sublist)) {
+        *dst = ava_list_proj_flatten(sublist);
+        ret = ava_true;
+      } else {
+        ret = ava_false;
+      }
+    } else {
+      if (ava_ast_node_get_constexpr(node->child, &child)) {
+        *dst = ava_list_value_of(child);
+        ret = ava_true;
+      } else {
+        ret = ava_false;
+      }
+    }
+  } ava_catch (handler, ava_format_exception) {
+    return ava_false;
+  } ava_catch_all {
+    ava_rethrow(&handler);
+  }
+
+  return ret;
+}
+
+static void ava_intr_spread_cg_evaluate(
+  ava_intr_spread* node, const ava_pcode_register* dst,
+  ava_codegen_context* context
+) {
+  ava_codegen_error(
+    context, (ava_ast_node*)node, ava_error_spread_cannot_be_used_here(
+      &node->header.location));
+}
+
+static void ava_intr_spread_cg_spread(
+  ava_intr_spread* node, const ava_pcode_register* dst,
+  ava_codegen_context* context
+) {
+  ava_pcode_register tmp;
+
+  if (node->child->v->cg_spread) {
+    ava_ast_node_cg_spread(node->child, dst, context);
+    AVA_PCXB(lflatten, *dst, *dst);
+  } else {
+    tmp.type = ava_prt_data;
+    tmp.index = ava_codegen_push_reg(context, ava_prt_data, 1);
+    ava_ast_node_cg_evaluate(node->child, &tmp, context);
+    AVA_PCXB(ld_reg, *dst, tmp);
+    ava_codegen_pop_reg(context, ava_prt_data, 1);
+  }
+}
+
+static void ava_intr_spread_cg_discard(
+  ava_intr_spread* node, ava_codegen_context* context
+) {
+  ava_codegen_error(
+    context, (ava_ast_node*)node, ava_error_spread_cannot_be_used_here(
+      &node->header.location));
 }
 
 ava_ast_node* ava_intr_unit(ava_macsub_context* context,
@@ -711,6 +836,9 @@ ava_ast_node* ava_intr_unit(ava_macsub_context* context,
   case ava_put_rstring:
     return ava_macsub_error(context, ava_error_rstring_missing_right_expr(
                               &unit->location));
+
+  case ava_put_spread:
+    return ava_intr_spread_of(context, unit);
 
   case ava_put_substitution:
     return ava_macsub_run(

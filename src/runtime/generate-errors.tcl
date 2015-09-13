@@ -1105,6 +1105,27 @@ set defs {
       a programming error.
     }
   }
+
+  serror C5057 parse_isolated_spread {} {
+    msg "Spread operator followed by nothing."
+    explanation {
+      The spread operator ("\*") must be immediately followed by the expression
+      it is to spread.
+
+      In the indicated location, it is either at the end of its statement or
+      expression, or is incorrectly followed by a line break. Conventionally,
+      the operator is directly attached to the thing it spreads, in which case
+      this error would not occur.
+    }
+  }
+
+  cerror C5058 spread_cannot_be_used_here {} {
+    msg "Spread operator cannot be used here."
+    explanation {
+      The spread ("\*") operator only makes sense in certain contexts; it is an
+      error to use it anywhere else.
+    }
+  }
 }
 
 proc ncode {code} {

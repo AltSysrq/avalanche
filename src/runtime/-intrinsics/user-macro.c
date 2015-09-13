@@ -253,6 +253,12 @@ static void ava_intr_user_macro_body_translate_unit(
     ava_pcmb_verbatim(builder, unit->v.string);
     break;
 
+  case ava_put_spread:
+    ava_intr_user_macro_body_translate_unit(
+      context, builder, unit->v.unit, visibility);
+    ava_pcmb_spread(builder);
+    break;
+
   case ava_put_substitution:
   case ava_put_block:
     if (ava_put_substitution == unit->type)
@@ -662,6 +668,14 @@ static ava_macro_subst_result ava_intr_user_macro_eval(
     (dst) = _e->v.statement;                            \
   } while (0)
 
+#define TOS_UNIT(dst) do {                              \
+    stack_entry* _e;                                    \
+    TOS(_e);                                            \
+    if (set_unit != _e->type)                           \
+      DIE("Expected to pop unit, got statement");       \
+    (dst) = _e->v.unit;                                 \
+  } while (0)
+
 #define NEAR(unit) do {                                 \
     const ava_parse_unit* _unit = (unit);               \
     if (_unit) last_location = &_unit->location;        \
@@ -905,6 +919,17 @@ static ava_macro_subst_result ava_intr_user_macro_eval(
       ava_parse_statement* s = AVA_NEW(ava_parse_statement);
       TAILQ_INIT(&s->units);
       PUSH_STATEMENT(s);
+    } break;
+
+    case ava_pcmt_spread: {
+      ava_parse_unit* nested, * spread;
+
+      TOS_UNIT(nested); POP();
+      spread = AVA_NEW(ava_parse_unit);
+      spread->type = ava_put_spread;
+      spread->location = provoker->location;
+      spread->v.unit = nested;
+      PUSH_UNIT(spread);
     } break;
 
     case ava_pcmt_die: {

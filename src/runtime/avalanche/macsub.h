@@ -22,6 +22,8 @@
 
 #include "defs.h"
 #include "string.h"
+#include "value.h"
+#include "list.h"
 #include "function.h"
 #include "parser.h"
 #include "errors.h"
@@ -192,6 +194,17 @@ typedef void (*ava_ast_node_postprocess_f)(ava_ast_node*);
 typedef ava_bool (*ava_ast_node_get_constexpr_f)(
   const ava_ast_node*, ava_value* dst);
 /**
+ * Extracts the compile-time constant value of this AST node, if there is one
+ * and this is a spread node.
+ *
+ * @param dst If this AST node has a compile-time constant value which is a
+ * list and this node is a spread, set to that value.
+ * @return Whether this AST node has a compile-time constant value which is a
+ * spread list.
+ */
+typedef ava_bool (*ava_ast_node_get_constexpr_spread_f)(
+  const ava_ast_node*, ava_list_value* dst);
+/**
  * If this AST node may act like a function name, extracts its text.
  *
  * @return The function name represented by this AST node, or the absent string
@@ -200,9 +213,19 @@ typedef ava_bool (*ava_ast_node_get_constexpr_f)(
 typedef ava_string (*ava_ast_node_get_funname_f)(const ava_ast_node*);
 /**
  * If this AST node can be evaluated to produce a value, generates the
- * necessary code to save the value in the given register.
+ * necessary code to save the value in the given D- or V-register.
  */
 typedef void (*ava_ast_node_cg_evaluate_f)(
+  ava_ast_node* node, const struct ava_pcode_register_s* dst,
+  struct ava_codegen_context_s* context);
+/**
+ * If this AST node can be evaluated as a spread, generates the necessary code
+ * to save the value in the given L-register.
+ *
+ * The presence of this method on a node indicates the node *is* a spread. It
+ * must never be called for nodes that do not define it.
+ */
+typedef void (*ava_ast_node_cg_spread_f)(
   ava_ast_node* node, const struct ava_pcode_register_s* dst,
   struct ava_codegen_context_s* context);
 /**
@@ -236,15 +259,12 @@ struct ava_ast_node_vtable_s {
   ava_ast_node_to_lvalue_f to_lvalue;
   ava_ast_node_postprocess_f postprocess;
   ava_ast_node_get_constexpr_f get_constexpr;
+  ava_ast_node_get_constexpr_spread_f get_constexpr_spread;
   ava_ast_node_get_funname_f get_funname;
   ava_ast_node_cg_evaluate_f cg_evaluate;
+  ava_ast_node_cg_spread_f cg_spread;
   ava_ast_node_cg_discard_f cg_discard;
   ava_ast_node_cg_define_f cg_define;
-  /**
-   * Indicates whether the AST node should be spread when passed as a function
-   * argument.
-   */
-  ava_bool is_spread;
 };
 
 /**
@@ -269,6 +289,12 @@ void ava_ast_node_postprocess(ava_ast_node* node);
 ava_bool ava_ast_node_get_constexpr(const ava_ast_node* node,
                                     ava_value* dst);
 /**
+ * Calls the given node's get_constexpr_spread method if there is one;
+ * otherwise, executes a default implementation.
+ */
+ava_bool ava_ast_node_get_constexpr_spread(
+  const ava_ast_node* node, ava_list_value* dst);
+/**
  * Calls the given node's get_funname method if there is one; otherwise,
  * executes a default implementation.
  */
@@ -280,6 +306,14 @@ ava_string ava_ast_node_get_funname(const ava_ast_node* node);
 void ava_ast_node_cg_evaluate(ava_ast_node* node,
                               const struct ava_pcode_register_s* dst,
                               struct ava_codegen_context_s* context);
+/**
+ * Calls the given node's cg_spread method.
+ *
+ * The process aborts if the method is not defined on the node.
+ */
+void ava_ast_node_cg_spread(ava_ast_node* node,
+                            const struct ava_pcode_register_s* dst,
+                            struct ava_codegen_context_s* context);
 /**
  * Calls the given node's cg_discard method if there is one; otherwise, records
  * an error that the node is pure.

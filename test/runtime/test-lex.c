@@ -550,3 +550,40 @@ deftest(lstring_can_be_attached) {
   lex(ava_ltt_lstring, "b");
   end();
 }
+
+deftest(isolated_spread) {
+  start("\\*");
+  lex(ava_ltt_spread, "\\*");
+  end();
+}
+
+deftest(spread_with_attached_bareword) {
+  start("\\*$foo");
+  lex(ava_ltt_spread, "\\*");
+  lex(ava_ltt_bareword, "$foo");
+  end();
+}
+
+deftest(spread_with_attached_parens) {
+  start("\\*()");
+  lex(ava_ltt_spread, "\\*");
+  lex(ava_ltt_begin_substitution, "(");
+  lex(ava_ltt_close_paren, ")");
+  end();
+}
+
+deftest(compound_spread) {
+  start("\\*\\*$foo");
+  lex(ava_ltt_spread, "\\*");
+  lex(ava_ltt_spread, "\\*");
+  lex(ava_ltt_bareword, "$foo");
+  end();
+}
+
+deftest(spread_must_be_independent) {
+  start("foo\\*bar");
+  lex(ava_ltt_bareword, "foo");
+  error();
+  error();
+  end();
+}

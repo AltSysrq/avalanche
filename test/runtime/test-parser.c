@@ -159,6 +159,11 @@ static ava_string stringify_unit(const ava_parse_unit* unit) {
     }
     accum = ava_string_concat(accum, AVA_ASCII9_STRING("]"));
     return accum;
+
+  case ava_put_spread:
+    accum = AVA_ASCII9_STRING("\\*");
+    accum = ava_string_concat(accum, stringify_unit(unit->v.unit));
+    return accum;
   }
 
   /* Unreachable */
@@ -564,4 +569,42 @@ deftest(chained_subscript) {
              "(bareword:42)) "
              "(bareword:56))}",
              "foo(bar)[42]{56}");
+}
+
+deftest(spread_at_eof) {
+  parse_failure("\\*", "C5057");
+}
+
+deftest(spread_followed_by_nl) {
+  parse_failure("\\*\nfoo", "C5057");
+}
+
+deftest(spread_followed_by_close) {
+  parse_failure("(\\*)", "C5057");
+}
+
+deftest(simple_spread) {
+  parse_like("{\\*bareword:foo}", "\\*foo");
+}
+
+deftest(chained_spread) {
+  parse_like("{\\*\\*bareword:foo}", "\\*\\*foo");
+}
+
+deftest(spread_over_subscript) {
+  parse_like("{\\*(bareword:#numeric-subscript# bareword:## "
+             "bareword:foo (bareword:42))}",
+             "\\*foo[42]");
+}
+
+deftest(compound_spread_over_compound_subscript) {
+  parse_like("{\\*\\*(bareword:#name-subscript# bareword:## "
+             "(bareword:#numeric-subscript# bareword:## "
+             "bareword:foo (bareword:42)) "
+             "(bareword:bar))}",
+             "\\*\\*foo[42](bar)");
+}
+
+deftest(spread_over_variable) {
+  parse_like("{\\*((bareword:#var# bareword:foo))}", "\\*$foo");
 }

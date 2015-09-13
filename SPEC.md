@@ -177,6 +177,10 @@ are preserved verbatim. Verbatim tokens must occur Independent.
   span lines\}
 ```
 
+A Backslash followed by an Asterisk `*` forms a Spread token. Any token
+immediately following the Spread token is considered Independent. The Spread
+token must always be Independent.
+
 Modules, Packages, and Names
 ----------------------------
 
@@ -295,6 +299,10 @@ follows:
 - A Close-Parenthesis, Close-Bracket, or Close-Brace token not consumed by one
   of the above rules results in an error.
 
+- A Spread token forms a Spread unit wrapping whatever syntax unit follows it,
+  which must not be a Newline token (even if Newline tokens are normally
+  deleted in the context). It is an error if it is not followed by anything.
+
 - Any other token is a syntax unit by itself.
 
 All Newline tokens directly within a Substitution, Name-Subscript, Semiliteral,
@@ -321,6 +329,10 @@ For example, the expression `foo[a + b]tag` is transformed into
 ```
   (#numeric-subscript# #tag# foo (a + b))
 ```
+
+When a subscript is preceded by a Spread unit, the subscript acts as if it were
+within the spread, such that `\*foo[42]` is equivalent to `\*(foo[42])` rather
+than `(\*foo)[42]`.
 
 After grouping and subscript simplification, the parser recursively walks the
 structure to perform variable symplification. For each Bareword syntax unit

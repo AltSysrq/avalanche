@@ -1,0 +1,7 @@
+extern pass-test pass_test c void [int pos]
+extern lindex lindex ava varargs pos
+
+#set# foo [0 1 2]
+#set# bar [42 4 5]
+#set# foobar [$foo $bar]
+pass-test (lindex \*\*$foobar 3)

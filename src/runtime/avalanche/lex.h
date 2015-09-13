@@ -101,6 +101,10 @@ typedef enum {
    */
   ava_ltt_verbatim,
   /**
+   * The token is the Spread token, \*.
+   */
+  ava_ltt_spread,
+  /**
    * Not an actual token type; used when no token could be extracted due to
    * end-of-input or error.
    */

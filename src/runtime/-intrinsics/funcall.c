@@ -192,7 +192,7 @@ static void ava_intr_funcall_bind_parms(ava_intr_funcall* this) {
   size_t i;
 
   for (i = 0; i < this->num_parms - 1; ++i) {
-    if (this->parms[i+1]->v->is_spread) {
+    if (this->parms[i+1]->v->cg_spread) {
       parms[i].type = ava_fpt_spread;
     } else if (ava_ast_node_get_constexpr(this->parms[i+1], &parms[i].value)) {
       parms[i].type = ava_fpt_static;
@@ -245,7 +245,7 @@ static void ava_intr_funcall_cg_evaluate(
   ava_codegen_context* context
 ) {
   ava_pcode_register_index parm_base;
-  ava_pcode_register parm_reg;
+  ava_pcode_register parm_reg, list_reg;
   ava_uint i;
   ava_bool static_fun =
     ava_ift_dynamic_invoke != funcall->type;
@@ -260,8 +260,17 @@ static void ava_intr_funcall_cg_evaluate(
   /* Evaluate all parms from left-to-right */
   for (i = 0; i < funcall->num_parms - static_fun; ++i) {
     parm_reg.index = parm_base + i;
-    ava_ast_node_cg_evaluate(funcall->parms[i + static_fun],
-                             &parm_reg, context);
+    if (funcall->parms[i + static_fun]->v->cg_spread) {
+      list_reg.type = ava_prt_list;
+      list_reg.index = ava_codegen_push_reg(context, ava_prt_list, 1);
+      ava_ast_node_cg_spread(
+        funcall->parms[i + static_fun], &list_reg, context);
+      AVA_PCXB(ld_reg, parm_reg, list_reg);
+      ava_codegen_pop_reg(context, ava_prt_list, 1);
+    } else {
+      ava_ast_node_cg_evaluate(funcall->parms[i + static_fun],
+                               &parm_reg, context);
+    }
   }
 
   ava_codegen_set_location(context, &funcall->header.location);
@@ -303,7 +312,7 @@ static void ava_intr_funcall_cg_evaluate(
         } else {
           parm_reg.index = parm_base + funcall->variadic_collection[0];
           if (funcall->parms[
-                funcall->variadic_collection[0] + 1]->v->is_spread) {
+                funcall->variadic_collection[0] + 1]->v->cg_spread) {
             AVA_PCXB(ld_reg, accum, parm_reg);
           } else {
             AVA_PCXB(lempty, accum);
@@ -313,7 +322,7 @@ static void ava_intr_funcall_cg_evaluate(
           for (j = 1; j < funcall->bound_args[i].v.collection_size; ++j) {
             parm_reg.index = parm_base + funcall->variadic_collection[j];
             if (funcall->parms[
-                  funcall->variadic_collection[j] + 1]->v->is_spread) {
+                  funcall->variadic_collection[j] + 1]->v->cg_spread) {
               AVA_PCXB(ld_reg, tmplist, parm_reg);
               AVA_PCXB(lcat, accum, accum, tmplist);
             } else {
@@ -346,7 +355,7 @@ static void ava_intr_funcall_cg_evaluate(
     for (i = 0; i < funcall->num_parms - 1; ++i) {
       preg.index = preg_base + i;
       parm_reg.index = parm_base + i;
-      AVA_PCXB(ld_parm, preg, parm_reg, funcall->parms[i+1]->v->is_spread);
+      AVA_PCXB(ld_parm, preg, parm_reg, !!funcall->parms[i+1]->v->cg_spread);
     }
 
     AVA_PCXB(invoke_sd, *dst, funcall->static_function->pcode_index,

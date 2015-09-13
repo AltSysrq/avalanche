@@ -40,6 +40,7 @@ struct ava_lex_context_s {
 
   /* Misc state that needs to be passed around */
   ava_bool is_independent;
+  ava_bool force_next_independent;
   unsigned verbatim_depth;
   ava_string accum;
   char string_started_with;
@@ -77,6 +78,11 @@ static ava_lex_status ava_lex_bareword(
   const ava_lex_pos* frag_start,
   ava_lex_context* lex);
 static ava_lex_status ava_lex_newline(
+  ava_lex_result* dst,
+  const ava_lex_pos* start,
+  const ava_lex_pos* frag_start,
+  ava_lex_context* lex);
+static ava_lex_status ava_lex_spread(
   ava_lex_result* dst,
   const ava_lex_pos* start,
   const ava_lex_pos* frag_start,
@@ -399,7 +405,8 @@ ava_lex_status ava_lex_lex(ava_lex_result* dst, ava_lex_context* lex) {
       unsigned prev = lex->prev_char & 0xFF;
       lex->is_independent = !!(
         is_independent_prefix[prev / 64] &
-        (1LL << (prev % 64)));
+        (1LL << (prev % 64))) || lex->force_next_independent;
+      lex->force_next_independent = ava_false;
       start = lex->p;
     }
     frag_start = lex->p;
@@ -427,6 +434,7 @@ ava_lex_status ava_lex_lex(ava_lex_result* dst, ava_lex_context* lex) {
       <Ground> BS WS* COM? NL   {         IGNORE(); }
       <Ground> BS WS+           { IND();  ACCEPT(ava_lex_newline); }
       <Ground> COM              {         IGNORE(); }
+      <Ground> BS '*'           { IND();  ACCEPT(ava_lex_spread); }
       <Ground> "("              {         ACCEPT(ava_lex_left_paren); }
       <Ground> ")" NS*          {         ACCEPT(ava_lex_right_paren); }
       <Ground> "["              {         ACCEPT(ava_lex_left_bracket); }
@@ -506,6 +514,17 @@ static ava_lex_status ava_lex_newline(
 ) {
   return ava_lex_put_token_str(
     dst, ava_ltt_newline, AVA_ASCII9_STRING("\n"), start, &lex->p);
+}
+
+static ava_lex_status ava_lex_spread(
+  ava_lex_result* dst,
+  const ava_lex_pos* start,
+  const ava_lex_pos* frag_start,
+  ava_lex_context* lex
+) {
+  lex->force_next_independent = ava_true;
+  return ava_lex_put_token_str(
+    dst, ava_ltt_spread, AVA_ASCII9_STRING("\\*"), start, &lex->p);
 }
 
 static ava_lex_status ava_lex_left_paren(

@@ -451,6 +451,19 @@ struct exe x {
     }
   }
 
+  # Flattens a list.
+  #
+  # Semantics: Every element in L-register src is interpreted as a list, and
+  # all are concatenated into one list, which is stored in L-register dst.
+  elt lflatten {
+    register l dst {
+      prop reg-write
+    }
+    register l src {
+      prop reg-read
+    }
+  }
+
   # Invokes a statically-known function with statically-bound arguments.
   #
   # Semantics: The given function is invoked with an array of D-registers
@@ -748,6 +761,10 @@ struct macro m {
   #
   #   ( ) -- ( s )
   elt statement { }
+  # Wraps the unit at the top of the stack in a Spread.
+  #
+  #   ( u ) -- ( u )
+  elt spread { }
 
   # Causes the attempt at macro expansion to be abandoned and an error node to
   # be produced.
