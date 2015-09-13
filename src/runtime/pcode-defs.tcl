@@ -331,7 +331,8 @@ struct exe x {
   #   ld-reg d0 i0
   # result in changing *both* registers.
   #
-  # This instruction cannot operate on P-registers at all.
+  # This instruction cannot operate on P-registers at all, see ld-parm for
+  # that.
   elt ld-reg {
     register dvifl dst {
       prop reg-write
@@ -347,6 +348,21 @@ struct exe x {
       @.src.type == ava_prt_var ||
       @.src.type == ava_prt_data
     }
+  }
+
+  # Loads a value into a P-register.
+  #
+  # Semantics: The given D- or V-register is read and its value stored into the
+  # chosen P-register. If spread is true, the parameter is to be treated as a
+  # spread parameter; otherwise, it is a singular dynamic parameter.
+  elt ld-parm {
+    register p dst {
+      prop reg-write
+    }
+    register dv src {
+      prop reg-read
+    }
+    bool spread
   }
 
   # Sets a global variable to the value of a local variable.
@@ -397,7 +413,9 @@ struct exe x {
   # Invokes a statically-known function with dynamically-bound arguments.
   #
   # Semantics: The given function is invoked, passing the parameters stored in
-  # the given P-register. The parameters are bound to arguments at runtime.
+  # the P-registers starting at p$base, inclusive, and ending at
+  # p($base+$nargs), exclusive. The parameters are bound to arguments at
+  # runtime.
   #
   # If binding the parameters fails, an ava_error_exception with the type name
   # "bad-arguments" is thrown.
@@ -411,15 +429,21 @@ struct exe x {
       prop global-ref
       prop global-fun-ref
     }
-    register p parms {
-      prop reg-read
+
+    int base
+    int nargs
+
+    constraint {
+      @.base >= 0 && @.nargs > 0
     }
   }
 
   # Invokes a dynamically-known function with dynamically-bound arguments.
   #
   # Semantics: The function in `function` is invoked, passing the parameters
-  # stored in the given P-register.
+  # stored in the P-registers starting at p$base, inclusive, and ending at
+  # p($base+$nargs), exclusive. The parameters are bound to arguments at
+  # runtime.
   #
   # If binding the parameters fails, an ava_error_exception with the type name
   # "bad-arguments" is thrown.
@@ -432,8 +456,12 @@ struct exe x {
     register f fun {
       prop reg-read
     }
-    register p parms {
-      prop reg-read
+
+    int base
+    int nargs
+
+    constraint {
+      @.base >= 0 && @.nargs > 0
     }
   }
 

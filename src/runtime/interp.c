@@ -116,6 +116,7 @@ static ava_value ava_interp_run_function(
   ava_integer ints[256];
   const ava_function* funs[256];
   ava_list_value lists[256];
+  ava_function_parameter parms[256] AVA_UNUSED;
   const ava_pcode_global* global;
   const ava_pcode_exe* instr;
 
@@ -249,6 +250,21 @@ static ava_value ava_interp_run_function(
         } break;
       default: abort();
       }
+    } break;
+
+    case ava_pcxt_ld_parm: {
+      const ava_pcx_ld_parm* ld = (const ava_pcx_ld_parm*)instr;
+      ava_value src;
+
+      switch (ld->src.type) {
+      case ava_prt_var:  src = vars[ld->src.index]; break;
+      case ava_prt_data: src = data[ld->src.index]; break;
+      default: abort();
+      }
+
+      parms[ld->dst.index].value = src;
+      parms[ld->dst.index].type = ld->spread?
+        ava_fpt_spread : ava_fpt_static;
     } break;
 
     case ava_pcxt_set_glob: {

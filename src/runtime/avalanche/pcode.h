@@ -77,7 +77,7 @@
    - Data, also an ava_value (but anonymous)
    - Integer
    - List
-   - Parameter array
+   - Parameter
    - Function
    For example, "i2" denotes the third integer register.
 
@@ -157,12 +157,12 @@ typedef enum {
    */
   ava_prt_list,
   /**
-   * A register holding an array of ava_function_parameters.
+   * A register holding an ava_function_parameter.
    *
    * P-registers are used when constructing calls to functions with dynamic
    * parameter binding.
    */
-  ava_prt_parray,
+  ava_prt_parm,
   /**
    * A register holding an ava_function.
    *

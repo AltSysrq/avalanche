@@ -41,7 +41,7 @@ static ava_pcode_register_type ava_pcode_parse_register_type(
   case 'i': return ava_prt_int; break;
   case 'f': return ava_prt_function; break;
   case 'l': return ava_prt_list; break;
-  case 'p': return ava_prt_parray; break;
+  case 'p': return ava_prt_parm; break;
   default: FORMAT_ERROR("Illegal register type");
   }
 }
@@ -55,7 +55,7 @@ static ava_string ava_pcode_register_type_to_string(
   case ava_prt_int:     return AVA_ASCII9_STRING("i");
   case ava_prt_function:return AVA_ASCII9_STRING("f");
   case ava_prt_list:    return AVA_ASCII9_STRING("l");
-  case ava_prt_parray:  return AVA_ASCII9_STRING("p");
+  case ava_prt_parm:    return AVA_ASCII9_STRING("p");
   default:
     /* unreachable */
     abort();
