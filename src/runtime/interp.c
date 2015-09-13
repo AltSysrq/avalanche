@@ -291,8 +291,8 @@ static ava_value ava_interp_run_function(
       const ava_pcx_lappend* la = (const ava_pcx_lappend*)instr;
       ava_value esrc;
       switch (la->esrc.type) {
-      case ava_prt_var:  esrc = vars[la->dst.index]; break;
-      case ava_prt_data: esrc = data[la->dst.index]; break;
+      case ava_prt_var:  esrc = vars[la->esrc.index]; break;
+      case ava_prt_data: esrc = data[la->esrc.index]; break;
       default: abort();
       }
       lists[la->dst.index] = ava_list_append(lists[la->lsrc.index], esrc);

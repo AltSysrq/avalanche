@@ -281,10 +281,43 @@ static void ava_intr_funcall_cg_evaluate(
         AVA_PCXB(ld_reg, arg_reg, parm_reg);
         break;
 
-      case ava_fbat_collect:
-        /* TODO */
-        abort();
-        break;
+      case ava_fbat_collect: {
+        ava_pcode_register accum, tmplist;
+        size_t j;
+
+        accum.type = ava_prt_list;
+        accum.index = ava_codegen_push_reg(context, ava_prt_list, 2);
+        tmplist.type = ava_prt_list;
+        tmplist.index = accum.index + 1;
+
+        if (0 == funcall->bound_args[i].v.collection_size) {
+          AVA_PCXB(lempty, accum);
+        } else {
+          parm_reg.index = parm_base + funcall->variadic_collection[0];
+          if (funcall->parms[
+                funcall->variadic_collection[0] + 1]->v->is_spread) {
+            AVA_PCXB(ld_reg, accum, parm_reg);
+          } else {
+            AVA_PCXB(lempty, accum);
+            AVA_PCXB(lappend, accum, accum, parm_reg);
+          }
+
+          for (j = 1; j < funcall->bound_args[i].v.collection_size; ++j) {
+            parm_reg.index = parm_base + funcall->variadic_collection[j];
+            if (funcall->parms[
+                  funcall->variadic_collection[j] + 1]->v->is_spread) {
+              AVA_PCXB(ld_reg, tmplist, parm_reg);
+              AVA_PCXB(lcat, accum, accum, tmplist);
+            } else {
+              AVA_PCXB(lappend, accum, accum, parm_reg);
+            }
+          }
+        }
+
+        AVA_PCXB(ld_reg, arg_reg, accum);
+
+        ava_codegen_pop_reg(context, ava_prt_list, 2);
+      } break;
       }
     }
     ava_codegen_pop_reg(context, ava_prt_data, funcall->num_parms-1);

@@ -39,6 +39,12 @@
 
   The declaration for test_pass is
     extern pass-test pass_test c void [int pos]
+
+  Other functions provied for the tests include:
+
+  - extern lindex lindex ava varargs pos
+    Returns the second argumentth element in the list in the first argument. If
+    the index is out of range, returns the empty string.
  */
 
 #define SUITE_NAME "avalanche"
@@ -49,6 +55,16 @@ void pass_test(int i) {
   ck_assert_int_eq(42, i);
   ck_assert(!test_passed);
   test_passed = ava_true;
+}
+
+ava_value lindex(ava_value list, ava_value index) {
+  ava_integer ix = ava_integer_of_value(index, 0);
+  ava_value ret;
+
+  if (ix < 0 || (size_t)ix >= ava_list_length(list))
+    return ava_empty_list().v;
+  else
+    return ava_list_index(list, ix);
 }
 
 static const char** inputs;
