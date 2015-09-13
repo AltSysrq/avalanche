@@ -24,12 +24,15 @@
 #include "../avalanche/defs.h"
 #include "../avalanche/alloc.h"
 #include "../avalanche/string.h"
+#include "../avalanche/value.h"
+#include "../avalanche/list.h"
 #include "../avalanche/errors.h"
 #include "../avalanche/parser.h"
 #include "../avalanche/macsub.h"
 #include "../avalanche/symbol.h"
 #include "../avalanche/pcode.h"
 #include "../avalanche/code-gen.h"
+#include "../avalanche/exception.h"
 #include "fundamental.h"
 #include "funcall.h"
 #include "variable.h"
@@ -525,6 +528,163 @@ static void ava_intr_string_expr_cg_evaluate(
   AVA_PCXB(ld_imm_vd, *dst, node->value);
 }
 
+typedef struct {
+  ava_ast_node header;
+
+  size_t num_elements;
+  ava_ast_node* elements[];
+} ava_intr_semilit;
+
+static ava_ast_node* ava_intr_semilit_of(
+  ava_macsub_context* context, ava_parse_unit* semilit);
+
+static ava_string ava_intr_semilit_to_string(
+  const ava_intr_semilit* node);
+/* TODO: support lvalues in semiliterals */
+static void ava_intr_semilit_postprocess(
+  ava_intr_semilit* node);
+static ava_bool ava_intr_semilit_get_constexpr(
+  const ava_intr_semilit* node, ava_value* dst);
+static void ava_intr_semilit_cg_evaluate(
+  ava_intr_semilit* node, const ava_pcode_register* dst,
+  ava_codegen_context* context);
+static void ava_intr_semilit_cg_discard(
+  ava_intr_semilit* node, ava_codegen_context* context);
+
+static const ava_ast_node_vtable ava_intr_semilit_vtable = {
+  .name = "semiliteral",
+  .to_string = (ava_ast_node_to_string_f)ava_intr_semilit_to_string,
+  .postprocess = (ava_ast_node_postprocess_f)ava_intr_semilit_postprocess,
+  .get_constexpr = (ava_ast_node_get_constexpr_f)ava_intr_semilit_get_constexpr,
+  .cg_evaluate = (ava_ast_node_cg_evaluate_f)ava_intr_semilit_cg_evaluate,
+  .cg_discard = (ava_ast_node_cg_discard_f)ava_intr_semilit_cg_discard,
+};
+
+static ava_ast_node* ava_intr_semilit_of(
+  ava_macsub_context* context, ava_parse_unit* unit
+) {
+  ava_intr_semilit* node;
+  size_t num_elements, i;
+  ava_parse_unit* subunit;
+
+  num_elements = 0;
+  TAILQ_FOREACH(subunit, &unit->v.units, next)
+    ++num_elements;
+
+  node = ava_alloc(sizeof(ava_intr_semilit) +
+                   sizeof(ava_ast_node*) * num_elements);
+  node->header.v = &ava_intr_semilit_vtable;
+  node->header.context = context;
+  node->header.location = unit->location;
+  node->num_elements = num_elements;
+
+  i = 0;
+  TAILQ_FOREACH(subunit, &unit->v.units, next)
+    node->elements[i++] = ava_intr_unit(context, subunit);
+
+  return (ava_ast_node*)node;
+}
+
+static ava_string ava_intr_semilit_to_string(
+  const ava_intr_semilit* node
+) {
+  ava_string accum;
+  size_t i;
+
+  accum = AVA_ASCII9_STRING("[");
+  for (i = 0; i < node->num_elements; ++i) {
+    if (i)
+      accum = ava_string_concat(accum, AVA_ASCII9_STRING(" "));
+
+    accum = ava_string_concat(
+      accum, ava_ast_node_to_string(node->elements[i]));
+  }
+
+  return ava_string_concat(accum, AVA_ASCII9_STRING("]"));
+}
+
+static void ava_intr_semilit_postprocess(
+  ava_intr_semilit* node
+) {
+  size_t i;
+
+  for (i = 0; i < node->num_elements; ++i)
+    ava_ast_node_postprocess(node->elements[i]);
+}
+
+static ava_bool ava_intr_semilit_get_constexpr(
+  const ava_intr_semilit* node, ava_value* dst
+) {
+  ava_exception_handler handler;
+  ava_list_value accum = ava_empty_list();
+  ava_value elt;
+  size_t i;
+
+  for (i = 0; i < node->num_elements; ++i) {
+    if (ava_ast_node_get_constexpr(node->elements[i], &elt)) {
+      if (node->elements[i]->v->is_spread) {
+        ava_try (handler) {
+          accum = ava_list_concat(
+            accum, ava_list_value_of(elt));
+        } ava_catch (handler, ava_format_exception) {
+          return ava_false;
+        }
+      } else {
+        accum = ava_list_append(accum, elt);
+      }
+    } else {
+      return ava_false;
+    }
+  }
+
+  *dst = accum.v;
+  return ava_true;
+}
+
+static void ava_intr_semilit_cg_evaluate(
+  ava_intr_semilit* node, const ava_pcode_register* dst,
+  ava_codegen_context* context
+) {
+  ava_pcode_register accum, tmplist, eltreg;
+  ava_value constexpr;
+  size_t i;
+
+  if (ava_ast_node_get_constexpr((ava_ast_node*)node, &constexpr)) {
+    AVA_PCXB(ld_imm_vd, *dst, ava_to_string(constexpr));
+  } else {
+    accum.type = ava_prt_list;
+    accum.index = ava_codegen_push_reg(context, ava_prt_list, 2);
+    tmplist.type = ava_prt_list;
+    tmplist.index = accum.index + 1;
+    eltreg.type = ava_prt_data;
+    eltreg.index = ava_codegen_push_reg(context, ava_prt_data, 1);
+
+    AVA_PCXB(lempty, accum);
+    for (i = 0; i < node->num_elements; ++i) {
+      ava_ast_node_cg_evaluate(node->elements[i], &eltreg, context);
+      ava_codegen_set_location(context, &node->elements[i]->location);
+      if (node->elements[i]->v->is_spread) {
+        AVA_PCXB(ld_reg, tmplist, eltreg);
+        AVA_PCXB(lcat, accum, accum, tmplist);
+      } else {
+        AVA_PCXB(lappend, accum, accum, eltreg);
+      }
+    }
+
+    AVA_PCXB(ld_reg, *dst, accum);
+    ava_codegen_pop_reg(context, ava_prt_data, 1);
+    ava_codegen_pop_reg(context, ava_prt_list, 2);
+  }
+}
+
+static void ava_intr_semilit_cg_discard(
+  ava_intr_semilit* node, ava_codegen_context* context
+) {
+  ava_codegen_error(
+    context, (ava_ast_node*)node,
+    ava_error_would_discard_semilit(&node->header.location));
+}
+
 ava_ast_node* ava_intr_unit(ava_macsub_context* context,
                             ava_parse_unit* unit) {
   ava_intr_string_expr* str;
@@ -559,8 +719,7 @@ ava_ast_node* ava_intr_unit(ava_macsub_context* context,
       ava_isrp_last);
 
   case ava_put_semiliteral:
-    /* TODO */
-    abort();
+    return ava_intr_semilit_of(context, unit);
 
   case ava_put_block:
     /* TODO */

@@ -1093,6 +1093,18 @@ set defs {
       expression.
     }
   }
+
+  cerror C5056 would_discard_semilit {} {
+    msg "Value of semiliteral is discarded."
+    explanation {
+      The indicated semiliteral expression's result is not used.
+
+      While construction of the semiliteral is not necessarily pure (i.e.,
+      evaluating its elements could have side-effects), there would still be no
+      reason to wrap the contents in a semiliteral, so this is almost certainly
+      a programming error.
+    }
+  }
 }
 
 proc ncode {code} {
