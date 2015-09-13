@@ -244,28 +244,36 @@ static void ava_intr_funcall_cg_evaluate(
   const ava_pcode_register* dst,
   ava_codegen_context* context
 ) {
-  switch (funcall->type) {
-  case ava_ift_static_bind: {
-    ava_pcode_register_index arg_base, parm_base;
-    ava_pcode_register arg_reg, parm_reg;
-    ava_uint i;
+  ava_pcode_register_index parm_base;
+  ava_pcode_register parm_reg;
+  ava_uint i;
+  ava_bool static_fun =
+    ava_ift_dynamic_invoke != funcall->type;
 
-    arg_reg.type = ava_prt_data;
-    parm_reg.type = ava_prt_data;
-    arg_base = ava_codegen_push_reg(
-      context, ava_prt_data, funcall->static_function->v.var.fun.num_args);
-    parm_base = ava_codegen_push_reg(
-      context, ava_prt_data, funcall->num_parms-1);
+  parm_reg.type = ava_prt_data;
+  parm_base = ava_codegen_push_reg(
+    context, ava_prt_data, funcall->num_parms - static_fun);
 
+  if (static_fun)
     ava_ast_node_cg_define(funcall->static_function->definer, context);
 
-    /* Evaluate all parms from left-to-right */
-    for (i = 0; i < funcall->num_parms-1; ++i) {
-      parm_reg.index = parm_base + i;
-      ava_ast_node_cg_evaluate(funcall->parms[i+1], &parm_reg, context);
-    }
+  /* Evaluate all parms from left-to-right */
+  for (i = 0; i < funcall->num_parms - static_fun; ++i) {
+    parm_reg.index = parm_base + i;
+    ava_ast_node_cg_evaluate(funcall->parms[i + static_fun],
+                             &parm_reg, context);
+  }
 
-    ava_codegen_set_location(context, &funcall->header.location);
+  ava_codegen_set_location(context, &funcall->header.location);
+
+  switch (funcall->type) {
+  case ava_ift_static_bind: {
+    ava_pcode_register_index arg_base;
+    ava_pcode_register arg_reg;
+
+    arg_reg.type = ava_prt_data;
+    arg_base = ava_codegen_push_reg(
+      context, ava_prt_data, funcall->static_function->v.var.fun.num_args);
 
     /* Map parms to args */
     for (i = 0; i < funcall->static_function->v.var.fun.num_args; ++i) {
@@ -320,7 +328,6 @@ static void ava_intr_funcall_cg_evaluate(
       } break;
       }
     }
-    ava_codegen_pop_reg(context, ava_prt_data, funcall->num_parms-1);
 
     AVA_PCXB(invoke_ss, *dst, funcall->static_function->pcode_index,
              arg_base, funcall->static_function->v.var.fun.num_args);
@@ -330,8 +337,21 @@ static void ava_intr_funcall_cg_evaluate(
   } break;
 
   case ava_ift_dynamic_bind: {
-    /* TODO */
-    abort();
+    ava_pcode_register_index preg_base;
+    ava_pcode_register preg;
+
+    preg_base = ava_codegen_push_reg(
+      context, ava_prt_parm, funcall->num_parms - 1);
+    preg.type = ava_prt_parm;
+    for (i = 0; i < funcall->num_parms - 1; ++i) {
+      preg.index = preg_base + i;
+      parm_reg.index = parm_base + i;
+      AVA_PCXB(ld_parm, preg, parm_reg, funcall->parms[i+1]->v->is_spread);
+    }
+
+    AVA_PCXB(invoke_sd, *dst, funcall->static_function->pcode_index,
+             preg_base, funcall->num_parms - 1);
+    ava_codegen_pop_reg(context, ava_prt_parm, funcall->num_parms - 1);
   } break;
 
   case ava_ift_dynamic_invoke: {
@@ -339,4 +359,6 @@ static void ava_intr_funcall_cg_evaluate(
     abort();
   } break;
   }
+
+  ava_codegen_pop_reg(context, ava_prt_data, funcall->num_parms - static_fun);
 }

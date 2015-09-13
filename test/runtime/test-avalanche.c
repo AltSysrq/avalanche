@@ -59,7 +59,6 @@ void pass_test(int i) {
 
 ava_value lindex(ava_value list, ava_value index) {
   ava_integer ix = ava_integer_of_value(index, 0);
-  ava_value ret;
 
   if (ix < 0 || (size_t)ix >= ava_list_length(list))
     return ava_empty_list().v;
