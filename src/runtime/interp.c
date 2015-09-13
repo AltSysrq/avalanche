@@ -35,6 +35,8 @@
 #include "avalanche/function.h"
 #include "avalanche/name-mangle.h"
 #include "avalanche/pcode.h"
+#include "avalanche/exception.h"
+#include "avalanche/errors.h"
 #include "avalanche/interp.h"
 
 /*
@@ -278,6 +280,60 @@ static ava_value ava_interp_run_function(
       *ava_interp_get_global_var_ptr(
         ava_interp_get_global(pcode, set->dst),
         global_vars, set->dst) = src;
+    } break;
+
+    case ava_pcxt_lempty: {
+      const ava_pcx_lempty* le = (const ava_pcx_lempty*)instr;
+      lists[le->dst.index] = ava_empty_list();
+    } break;
+
+    case ava_pcxt_lappend: {
+      const ava_pcx_lappend* la = (const ava_pcx_lappend*)instr;
+      ava_value esrc;
+      switch (la->esrc.type) {
+      case ava_prt_var:  esrc = vars[la->dst.index]; break;
+      case ava_prt_data: esrc = data[la->dst.index]; break;
+      default: abort();
+      }
+      lists[la->dst.index] = ava_list_append(lists[la->lsrc.index], esrc);
+    } break;
+
+    case ava_pcxt_lcat: {
+      const ava_pcx_lcat* lc = (const ava_pcx_lcat*)instr;
+      lists[lc->dst.index] = ava_list_concat(
+        lists[lc->left.index], lists[lc->right.index]);
+    } break;
+
+    case ava_pcxt_lhead: {
+      AVA_STATIC_STRING(empty_list, "empty-list");
+      const ava_pcx_lhead* lh = (const ava_pcx_lhead*)instr;
+      ava_list_value src = lists[lh->src.index];
+      ava_value dst;
+
+      if (ava_list_length(src) == 0)
+        ava_throw_uex(&ava_error_exception, empty_list,
+                      ava_error_extract_element_from_empty_list());
+
+      dst = ava_list_index(src, 0);
+      switch (lh->dst.type) {
+      case ava_prt_var:  vars[lh->dst.index] = dst; break;
+      case ava_prt_data: data[lh->dst.index] = dst; break;
+      default: abort();
+      }
+    } break;
+
+    case ava_pcxt_lbehead: {
+      AVA_STATIC_STRING(empty_list, "empty-list");
+      const ava_pcx_lbehead* lh = (const ava_pcx_lbehead*)instr;
+      ava_list_value src = lists[lh->src.index];
+      size_t length;
+
+      length = ava_list_length(src);
+      if (0 == length)
+        ava_throw_uex(&ava_error_exception, empty_list,
+                      ava_error_extract_element_from_empty_list());
+
+      lists[lh->dst.index] = ava_list_slice(src, 1, length);
     } break;
 
     case ava_pcxt_invoke_ss: {

@@ -382,6 +382,75 @@ struct exe x {
     }
   }
 
+  # Loads the empty list into an L-register.
+  #
+  # Semantics: The given L-register is set to the empty list.
+  elt lempty {
+    register l dst {
+      prop reg-write
+    }
+  }
+
+  # Appends an element to a list.
+  #
+  # Semantics: The L-register dst is set to the value of the L-register in lsrc
+  # with the element read from esrc appended.
+  elt lappend {
+    register l dst {
+      prop reg-write
+    }
+    register l lsrc {
+      prop reg-read
+    }
+    register dv esrc {
+      prop reg-read
+    }
+  }
+
+  # Concatenates two lists.
+  #
+  # Semantics: The L-register dst is set to the concatenation of the lists in
+  # the L-registers left and right, in that order.
+  elt lcat {
+    register l dst {
+      prop reg-write
+    }
+    register l left {
+      prop reg-read
+    }
+    register l right {
+      prop reg-read
+    }
+  }
+
+  # Extracts the first element of a list.
+  #
+  # Semantics: The D- or V-register dst is set to the first element in the
+  # L-register src. If src is the empty list, an error_exception of type
+  # empty-list is thrown.
+  elt lhead {
+    register dv dst {
+      prop reg-write
+    }
+    register l src {
+      prop reg-read
+    }
+  }
+
+  # Deletes the first element of a list.
+  #
+  # Semantics: The L-register dst is set to the value of the L-register src,
+  # with the first element deleted. If src is the empty list, an
+  # error_exception of type empty-list is thrown.
+  elt lbehead {
+    register l dst {
+      prop reg-write
+    }
+    register l src {
+      prop reg-read
+    }
+  }
+
   # Invokes a statically-known function with statically-bound arguments.
   #
   # Semantics: The given function is invoked with an array of D-registers

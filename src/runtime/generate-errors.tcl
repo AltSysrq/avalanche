@@ -366,6 +366,15 @@ set defs {
     }
   }
 
+  serror R0035 extract_element_from_empty_list {} {
+    msg "Attempt to extract elements from empty list."
+    explanation {
+      The user code implies that some list should be non-empty, but it is not.
+      This error only arises from relatively low-level situations, such as
+      using the spread operator where a function name would normally occur.
+    }
+  }
+
   serror L4001 unclosed_string_literal {} {
     msg "Unclosed string literal."
     explanation {
