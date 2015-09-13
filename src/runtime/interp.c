@@ -116,7 +116,7 @@ static ava_value ava_interp_run_function(
   ava_integer ints[256];
   const ava_function* funs[256];
   ava_list_value lists[256];
-  ava_function_parameter parms[256] AVA_UNUSED;
+  ava_function_parameter parms[256];
   const ava_pcode_global* global;
   const ava_pcode_exe* instr;
 
@@ -294,10 +294,32 @@ static ava_value ava_interp_run_function(
       }
     } break;
 
-    case ava_pcxt_invoke_sd:
-    case ava_pcxt_invoke_dd:
-      /* TODO */
-      abort();
+    case ava_pcxt_invoke_sd: {
+      const ava_pcx_invoke_sd* inv = (const ava_pcx_invoke_sd*)instr;
+      ava_function fun;
+      ava_value ret;
+      ava_interp_get_global_function(
+        &fun, ava_interp_get_global(pcode, inv->fun));
+      ret = ava_function_bind_invoke(
+        &fun, inv->nparms, parms + inv->base);
+      switch (inv->dst.type) {
+      case ava_prt_var:  vars[inv->dst.index] = ret; break;
+      case ava_prt_data: data[inv->dst.index] = ret; break;
+      default: abort();
+      }
+    } break;
+
+    case ava_pcxt_invoke_dd: {
+      const ava_pcx_invoke_dd* inv = (const ava_pcx_invoke_dd*)instr;
+      ava_value ret;
+      ret = ava_function_bind_invoke(
+        funs[inv->fun.index], inv->nparms, parms + inv->base);
+      switch (inv->dst.type) {
+      case ava_prt_var:  vars[inv->dst.index] = ret; break;
+      case ava_prt_data: data[inv->dst.index] = ret; break;
+      default: abort();
+      }
+    } break;
 
     case ava_pcxt_ret: {
       const ava_pcx_ret* ret = (const ava_pcx_ret*)instr;

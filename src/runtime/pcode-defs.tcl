@@ -414,7 +414,7 @@ struct exe x {
   #
   # Semantics: The given function is invoked, passing the parameters stored in
   # the P-registers starting at p$base, inclusive, and ending at
-  # p($base+$nargs), exclusive. The parameters are bound to arguments at
+  # p($base+$nparms), exclusive. The parameters are bound to arguments at
   # runtime.
   #
   # If binding the parameters fails, an ava_error_exception with the type name
@@ -431,10 +431,10 @@ struct exe x {
     }
 
     int base
-    int nargs
+    int nparms
 
     constraint {
-      @.base >= 0 && @.nargs > 0
+      @.base >= 0 && @.nparms > 0
     }
   }
 
@@ -442,7 +442,7 @@ struct exe x {
   #
   # Semantics: The function in `function` is invoked, passing the parameters
   # stored in the P-registers starting at p$base, inclusive, and ending at
-  # p($base+$nargs), exclusive. The parameters are bound to arguments at
+  # p($base+$nparms), exclusive. The parameters are bound to arguments at
   # runtime.
   #
   # If binding the parameters fails, an ava_error_exception with the type name
@@ -458,10 +458,10 @@ struct exe x {
     }
 
     int base
-    int nargs
+    int nparms
 
     constraint {
-      @.base >= 0 && @.nargs > 0
+      @.base >= 0 && @.nparms > 0
     }
   }
 
