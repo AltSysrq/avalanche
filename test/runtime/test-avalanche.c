@@ -73,12 +73,12 @@ int main(void) {
   if (glob(DIRECTORY "/*.ava", GLOB_NOSORT, NULL, &globbed))
     err(EX_NOINPUT, "Failed to list test cases");
 
-  if (0 == globbed.gl_matchc)
+  if (0 == globbed.gl_pathc)
     errx(EX_NOINPUT, "No test cases found");
 
-  inputs = calloc(sizeof(char*), globbed.gl_matchc);
+  inputs = calloc(sizeof(char*), globbed.gl_pathc);
 
-  for (i = 0; i < globbed.gl_matchc; ++i) {
+  for (i = 0; i < globbed.gl_pathc; ++i) {
     inputs[i] = globbed.gl_pathv[i];
     name = strrchr(globbed.gl_pathv[i], '/') + 1;
     kase = tcase_create(name);
