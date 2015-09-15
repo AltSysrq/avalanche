@@ -188,6 +188,10 @@ static ava_ulong ava_value_siphash(ava_value value,
    * characters is reversed. This doesn't affect the soundness of the
    * algorithm, though, as it's equivalent to passing the string through a 1:1
    * function first.
+   *
+   * It also differs in that ASCII9 strings are passed in as an 8-byte-long
+   * chunk with a reported length of 0, in order to avoid the decoding
+   * overhead.
    */
 
   ava_string str;
@@ -195,7 +199,7 @@ static ava_ulong ava_value_siphash(ava_value value,
   ava_ulong
     v0 = 0x736f6d6570736575ULL, v1 = 0x646f72616e646f6dULL,
     v2 = 0x6c7967656e657261ULL, v3 = 0x7465646279746573ULL,
-    b, m;
+    b, m, a9;
   size_t i, n, rem, strlen;
   ava_str_tmpbuff tmpbuf;
   const ava_ulong*restrict data;
@@ -219,10 +223,17 @@ static ava_ulong ava_value_siphash(ava_value value,
    * time and not worry about chunk boundaries.
    */
   str = ava_to_string(value);
-  strlen = ava_string_length(str);
-  data = (const ava_ulong*)ava_string_to_cstring_buff(tmpbuf, str);
-  n = strlen / sizeof(ava_ulong);
-  rem = strlen % sizeof(ava_ulong);
+  if ((a9 = ava_string_to_ascii9(str))) {
+    strlen = 0;
+    data = &a9;
+    n = 1;
+    rem = 0;
+  } else {
+    strlen = ava_string_length(str);
+    data = (const ava_ulong*)ava_string_to_cstring_buff(tmpbuf, str);
+    n = strlen / sizeof(ava_ulong);
+    rem = strlen % sizeof(ava_ulong);
+  }
 
   /* Mix key with initialisation vector, and initialise b.
    *
