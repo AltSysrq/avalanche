@@ -349,6 +349,7 @@ static void ava_intr_funcall_cg_evaluate(
     ava_pcode_register_index preg_base;
     ava_pcode_register preg;
 
+    ava_codegen_set_location(context, &funcall->header.location);
     preg_base = ava_codegen_push_reg(
       context, ava_prt_parm, funcall->num_parms - 1);
     preg.type = ava_prt_parm;
@@ -364,8 +365,90 @@ static void ava_intr_funcall_cg_evaluate(
   } break;
 
   case ava_ift_dynamic_invoke: {
-    /* TODO */
-    abort();
+    ava_pcode_register fun_reg;
+    ava_pcode_register_index preg_base;
+    ava_pcode_register preg;
+    ava_pcode_register rlist_reg;
+    ava_pcode_register tmp_reg;
+    ava_uint normal_parm_offset;
+    ava_bool extra_parm;
+
+    ava_codegen_set_location(context, &funcall->header.location);
+
+    fun_reg.type = ava_prt_function;
+    fun_reg.index = ava_codegen_push_reg(context, ava_prt_function, 1);
+    preg.type = ava_prt_parm;
+    preg_base = ava_codegen_push_reg(context, ava_prt_parm, funcall->num_parms);
+
+    if (!funcall->parms[0]->v->cg_spread) {
+      /* Simple case: The function is a lone expression */
+      parm_reg.index = parm_base;
+      AVA_PCXB(ld_reg, fun_reg, parm_reg);
+      normal_parm_offset = 1;
+      extra_parm = ava_false;
+    } else {
+      /* The function to call comes from a spread.
+       *
+       * We can't just take the first parm and disassemble it, because if the
+       * first parm is empty, the function will come from the *next* parm, and
+       * so on.
+       *
+       * Instead, accumulate parms into a list until we encounter one that
+       * isn't spread (which must be appended to the accumulation) or run out
+       * of parameters, then disassemble that.
+       */
+      extra_parm = ava_true;
+      list_reg.type = ava_prt_list;
+      list_reg.index = ava_codegen_push_reg(context, ava_prt_list, 2);
+      rlist_reg.type = ava_prt_list;
+      rlist_reg.index = list_reg.index + 1;
+      parm_reg.index = parm_base;
+      /* Accumulatign leading spreads and first non-spread (if any) into a
+       * single list.
+       */
+      AVA_PCXB(ld_reg, list_reg, parm_reg);
+      for (normal_parm_offset = 1;
+           normal_parm_offset < funcall->num_parms; ++normal_parm_offset) {
+        parm_reg.index = parm_base + normal_parm_offset;
+        if (funcall->parms[normal_parm_offset]->v->cg_spread) {
+          AVA_PCXB(ld_reg, rlist_reg, parm_reg);
+          AVA_PCXB(lcat, list_reg, list_reg, rlist_reg);
+        } else {
+          AVA_PCXB(lappend, list_reg, list_reg, parm_reg);
+          ++normal_parm_offset;
+          break;
+        }
+      }
+
+      tmp_reg.type = ava_prt_data;
+      tmp_reg.index = ava_codegen_push_reg(context, ava_prt_data, 1);
+      /* The function is the first element in the list; error if empty */
+      AVA_PCXB(lhead, tmp_reg, list_reg);
+      AVA_PCXB(ld_reg, fun_reg, tmp_reg);
+
+      /* The rest becomes the first spread argument to the function */
+      AVA_PCXB(lbehead, list_reg, list_reg);
+      AVA_PCXB(ld_reg, tmp_reg, list_reg);
+      preg.index = preg_base + normal_parm_offset - 1;
+      AVA_PCXB(ld_parm, preg, tmp_reg, ava_true);
+      ava_codegen_pop_reg(context, ava_prt_data, 1);
+
+      ava_codegen_pop_reg(context, ava_prt_list, 2);
+    }
+
+    /* Anything not consumed by the above forms the rest of the parms */
+    for (i = normal_parm_offset; i < funcall->num_parms; ++i) {
+      preg.index = preg_base + i;
+      parm_reg.index = parm_base + i;
+      AVA_PCXB(ld_parm, preg, parm_reg, !!funcall->parms[i]->v->cg_spread);
+    }
+
+    AVA_PCXB(invoke_dd, *dst, fun_reg,
+             preg_base + normal_parm_offset - extra_parm,
+             funcall->num_parms - normal_parm_offset + extra_parm);
+
+    ava_codegen_pop_reg(context, ava_prt_parm, funcall->num_parms - 1);
+    ava_codegen_pop_reg(context, ava_prt_function, 1);
   } break;
   }
 
