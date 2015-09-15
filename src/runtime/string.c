@@ -243,7 +243,6 @@ ava_string ava_string_of_bytes(const char* str, size_t sz) {
 const char* ava_string_to_cstring(ava_string str) {
   if (ava_string_is_ascii9(str)) {
     ava_ulong* dst = ava_alloc_atomic(2 * sizeof(ava_ulong));
-    dst[0] = dst[1] = 0;
     ava_ascii9_decode(dst, str.ascii9);
     return (char*)dst;
   } else {
@@ -254,7 +253,6 @@ const char* ava_string_to_cstring(ava_string str) {
 const char* ava_string_to_cstring_buff(ava_str_tmpbuff buff,
                                        ava_string str) {
   if (ava_string_is_ascii9(str)) {
-    memset(buff, 0, sizeof(ava_str_tmpbuff));
     ava_ascii9_decode(buff, str.ascii9);
     return (const char*)buff;
   } else {
