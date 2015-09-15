@@ -1139,6 +1139,15 @@ deftest(bind_doesnt_need_unpack_for_spreads_spanning_varargs_only) {
   ck_assert_int_eq(3, bound_args[2].v.parameter_index);
 }
 
+deftest(bind_is_unpack_if_spread_onto_single_arg) {
+  BIND_BOILERPLATE = {
+    { .type = ava_fpt_spread },
+  };
+  status = BIND("42 ava \\{pos foo\\}");
+
+  ck_assert_int_eq(ava_fbs_unpack, status);
+}
+
 #define TEST_INVOKE(test_name, expected_result_str,     \
                     function_suffix,                    \
                     return_type, args_decls, impl, ...) \

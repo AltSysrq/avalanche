@@ -785,6 +785,9 @@ ava_function_bind_status ava_function_bind(
       *message = ava_error_function_unknown_named_argument(target_name);
       return ava_fbs_impossible;
     } else if (ava_abt_pos_default == fun->args[arg].binding.type) {
+      if (ava_fpt_spread == parms[parm].type)
+        return ava_fbs_unpack;
+
       bound_args[arg].type = ava_fbat_parameter;
       bound_args[arg].v.parameter_index = parm;
       consumed_args[arg] = ava_true;
