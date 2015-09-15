@@ -519,6 +519,15 @@ ava_bool ava_ast_node_get_constexpr(const ava_ast_node* node,
     return ava_false;
 }
 
+ava_bool ava_ast_node_get_constexpr_spread(
+  const ava_ast_node* node, ava_list_value* dst
+) {
+  if (node->v->get_constexpr_spread)
+    return (*node->v->get_constexpr_spread)(node, dst);
+  else
+    return ava_false;
+}
+
 ava_string ava_ast_node_get_funname(const ava_ast_node* node) {
   if (node->v->get_funname)
     return (*node->v->get_funname)(node);
@@ -529,6 +538,7 @@ ava_string ava_ast_node_get_funname(const ava_ast_node* node) {
 void ava_ast_node_cg_evaluate(ava_ast_node* node,
                               const struct ava_pcode_register_s* dst,
                               ava_codegen_context* context) {
+  assert(ava_prt_data == dst->type || ava_prt_var == dst->type);
   if (node->v->cg_evaluate)
     (*node->v->cg_evaluate)(node, dst, context);
   else
@@ -536,6 +546,14 @@ void ava_ast_node_cg_evaluate(ava_ast_node* node,
                       ava_error_does_not_produce_a_value(
                         &node->location, ava_string_of_cstring(
                           node->v->name)));
+}
+
+void ava_ast_node_cg_spread(ava_ast_node* node,
+                            const struct ava_pcode_register_s* dst,
+                            ava_codegen_context* context) {
+  assert(ava_prt_list == dst->type);
+  assert(node->v->cg_spread);
+  (*node->v->cg_spread)(node, dst, context);
 }
 
 void ava_ast_node_cg_discard(ava_ast_node* node,

@@ -1,0 +1,4 @@
+extern pass-test pass_test c void [int pos]
+extern lindex lindex ava pos pos
+
+pass-test (lindex [0 1 (lindex [2 3 42 4] 2) 919] 2)

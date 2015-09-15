@@ -161,6 +161,11 @@ static ava_parse_unit_read_result ava_parse_subscript(
   const ava_lex_result* first_token,
   ava_string prefix,
   ava_lex_token_type closing_token_type);
+static ava_parse_unit_read_result ava_parse_spread(
+  ava_parse_unit_list* dst,
+  ava_compile_error_list* errors,
+  const ava_parse_context* context,
+  ava_lex_result* token);
 
 ava_bool ava_parse(ava_parse_unit* dst,
                    ava_compile_error_list* errors,
@@ -237,6 +242,9 @@ static ava_parse_unit_read_result ava_parse_unit_read(
 
     case ava_ltt_begin_string_subscript:
       return ava_parse_string_subscript(dst, errors, context, lexed);
+
+    case ava_ltt_spread:
+      return ava_parse_spread(dst, errors, context, lexed);
 
     case ava_ltt_newline:
     case ava_ltt_close_paren:
@@ -857,7 +865,7 @@ static ava_parse_unit_read_result ava_parse_subscript(
   ava_string prefix,
   ava_lex_token_type closing_token_type
 ) {
-  ava_parse_unit* unit, * bareword, * base, * subscript;
+  ava_parse_unit* unit, * bareword, * base, * effective_base, * subscript;
   ava_parse_statement* statement, * substatement;
   ava_lex_result last_token;
   ava_parse_unit_read_result result;
@@ -897,10 +905,6 @@ static ava_parse_unit_read_result ava_parse_subscript(
   ava_parse_location_from_lex(&unit->location, context, first_token);
   TAILQ_INIT(&unit->v.statements);
 
-  base = TAILQ_LAST(dst, ava_parse_unit_list_s);
-  assert(base);
-  TAILQ_REMOVE(dst, base, next);
-
   statement = AVA_NEW(ava_parse_statement);
   TAILQ_INIT(&statement->units);
   TAILQ_INSERT_TAIL(&unit->v.statements, statement, next);
@@ -919,7 +923,22 @@ static ava_parse_unit_read_result ava_parse_subscript(
   bareword->v.string = tag;
   TAILQ_INSERT_TAIL(&statement->units, bareword, next);
 
-  TAILQ_INSERT_TAIL(&statement->units, base, next);
+  base = TAILQ_LAST(dst, ava_parse_unit_list_s);
+  assert(base);
+
+  /* Subscripts have higher precedence than spreads */
+  effective_base = base;
+  while (ava_put_spread == effective_base->type) {
+    base = effective_base;
+    effective_base = base->v.unit;
+  }
+
+  if (base == effective_base)
+    TAILQ_REMOVE(dst, base, next);
+  /* if base != effective_base, effective_base is isolated right now, so we
+   * don't need to (and can't) remove it from anything.
+   */
+  TAILQ_INSERT_TAIL(&statement->units, effective_base, next);
 
   subscript = AVA_NEW(ava_parse_unit);
   subscript->type = ava_put_substitution;
@@ -928,7 +947,10 @@ static ava_parse_unit_read_result ava_parse_subscript(
   TAILQ_INSERT_TAIL(&subscript->v.statements, substatement, next);
   TAILQ_INSERT_TAIL(&statement->units, subscript, next);
 
-  TAILQ_INSERT_TAIL(dst, unit, next);
+  if (base == effective_base)
+    TAILQ_INSERT_TAIL(dst, unit, next);
+  else
+    base->v.unit = unit;
   return result;
 }
 
@@ -946,6 +968,45 @@ ava_parse_unit* ava_parse_subst_of_nonempty_statement(
   TAILQ_INSERT_TAIL(&unit->v.statements, statement, next);
 
   return unit;
+}
+
+static ava_parse_unit_read_result ava_parse_spread(
+  ava_parse_unit_list* dst,
+  ava_compile_error_list* errors,
+  const ava_parse_context* context,
+  ava_lex_result* token
+) {
+  ava_parse_unit_list next;
+  ava_parse_unit_read_result next_result;
+  ava_lex_result next_token;
+  ava_parse_unit* spread;
+
+  TAILQ_INIT(&next);
+  next_result = ava_parse_unit_read(&next, errors, &next_token, context);
+
+  switch (next_result) {
+  case ava_purr_ok: break;
+  case ava_purr_fatal_error:
+    return ava_purr_fatal_error;
+
+  case ava_purr_nonunit:
+  case ava_purr_eof:
+    ava_parse_error_on_lex(
+      errors, context, token,
+      ava_error_parse_isolated_spread());
+    *token = next_token;
+    return next_result;
+  }
+
+  assert(TAILQ_FIRST(&next));
+  assert(!TAILQ_NEXT(TAILQ_FIRST(&next), next));
+
+  spread = AVA_NEW(ava_parse_unit);
+  spread->type = ava_put_spread;
+  ava_parse_location_from_lex(&spread->location, context, token);
+  spread->v.unit = TAILQ_FIRST(&next);
+  TAILQ_INSERT_TAIL(dst, spread, next);
+  return ava_purr_ok;
 }
 
 ava_compile_location ava_compile_location_span(

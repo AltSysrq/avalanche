@@ -125,7 +125,7 @@ set REGISTER_MNE {
   i ava_prt_int
   f ava_prt_function
   l ava_prt_list
-  p ava_prt_parray
+  p ava_prt_parm
 }
 
 proc register {types name args} {

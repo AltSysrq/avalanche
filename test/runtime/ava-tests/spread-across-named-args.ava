@@ -1,0 +1,4 @@
+extern pass-test pass_test c void [int named -code] [void named -baz]
+
+#set# foo [-baz [] -code 42]
+pass-test \*$foo

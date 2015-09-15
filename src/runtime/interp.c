@@ -32,9 +32,12 @@
 #include "avalanche/string.h"
 #include "avalanche/value.h"
 #include "avalanche/list.h"
+#include "avalanche/list-proj.h"
 #include "avalanche/function.h"
 #include "avalanche/name-mangle.h"
 #include "avalanche/pcode.h"
+#include "avalanche/exception.h"
+#include "avalanche/errors.h"
 #include "avalanche/interp.h"
 
 /*
@@ -116,6 +119,7 @@ static ava_value ava_interp_run_function(
   ava_integer ints[256];
   const ava_function* funs[256];
   ava_list_value lists[256];
+  ava_function_parameter parms[256];
   const ava_pcode_global* global;
   const ava_pcode_exe* instr;
 
@@ -251,6 +255,21 @@ static ava_value ava_interp_run_function(
       }
     } break;
 
+    case ava_pcxt_ld_parm: {
+      const ava_pcx_ld_parm* ld = (const ava_pcx_ld_parm*)instr;
+      ava_value src;
+
+      switch (ld->src.type) {
+      case ava_prt_var:  src = vars[ld->src.index]; break;
+      case ava_prt_data: src = data[ld->src.index]; break;
+      default: abort();
+      }
+
+      parms[ld->dst.index].value = src;
+      parms[ld->dst.index].type = ld->spread?
+        ava_fpt_spread : ava_fpt_static;
+    } break;
+
     case ava_pcxt_set_glob: {
       const ava_pcx_set_glob* set = (const ava_pcx_set_glob*)instr;
       ava_value src;
@@ -262,6 +281,65 @@ static ava_value ava_interp_run_function(
       *ava_interp_get_global_var_ptr(
         ava_interp_get_global(pcode, set->dst),
         global_vars, set->dst) = src;
+    } break;
+
+    case ava_pcxt_lempty: {
+      const ava_pcx_lempty* le = (const ava_pcx_lempty*)instr;
+      lists[le->dst.index] = ava_empty_list();
+    } break;
+
+    case ava_pcxt_lappend: {
+      const ava_pcx_lappend* la = (const ava_pcx_lappend*)instr;
+      ava_value esrc;
+      switch (la->esrc.type) {
+      case ava_prt_var:  esrc = vars[la->esrc.index]; break;
+      case ava_prt_data: esrc = data[la->esrc.index]; break;
+      default: abort();
+      }
+      lists[la->dst.index] = ava_list_append(lists[la->lsrc.index], esrc);
+    } break;
+
+    case ava_pcxt_lcat: {
+      const ava_pcx_lcat* lc = (const ava_pcx_lcat*)instr;
+      lists[lc->dst.index] = ava_list_concat(
+        lists[lc->left.index], lists[lc->right.index]);
+    } break;
+
+    case ava_pcxt_lhead: {
+      AVA_STATIC_STRING(empty_list, "empty-list");
+      const ava_pcx_lhead* lh = (const ava_pcx_lhead*)instr;
+      ava_list_value src = lists[lh->src.index];
+      ava_value dst;
+
+      if (ava_list_length(src) == 0)
+        ava_throw_uex(&ava_error_exception, empty_list,
+                      ava_error_extract_element_from_empty_list());
+
+      dst = ava_list_index(src, 0);
+      switch (lh->dst.type) {
+      case ava_prt_var:  vars[lh->dst.index] = dst; break;
+      case ava_prt_data: data[lh->dst.index] = dst; break;
+      default: abort();
+      }
+    } break;
+
+    case ava_pcxt_lbehead: {
+      AVA_STATIC_STRING(empty_list, "empty-list");
+      const ava_pcx_lbehead* lh = (const ava_pcx_lbehead*)instr;
+      ava_list_value src = lists[lh->src.index];
+      size_t length;
+
+      length = ava_list_length(src);
+      if (0 == length)
+        ava_throw_uex(&ava_error_exception, empty_list,
+                      ava_error_extract_element_from_empty_list());
+
+      lists[lh->dst.index] = ava_list_slice(src, 1, length);
+    } break;
+
+    case ava_pcxt_lflatten: {
+      const ava_pcx_lflatten* lf = (const ava_pcx_lflatten*)instr;
+      lists[lf->dst.index] = ava_list_proj_flatten(lists[lf->src.index]);
     } break;
 
     case ava_pcxt_invoke_ss: {
@@ -278,10 +356,32 @@ static ava_value ava_interp_run_function(
       }
     } break;
 
-    case ava_pcxt_invoke_sd:
-    case ava_pcxt_invoke_dd:
-      /* TODO */
-      abort();
+    case ava_pcxt_invoke_sd: {
+      const ava_pcx_invoke_sd* inv = (const ava_pcx_invoke_sd*)instr;
+      ava_function fun;
+      ava_value ret;
+      ava_interp_get_global_function(
+        &fun, ava_interp_get_global(pcode, inv->fun));
+      ret = ava_function_bind_invoke(
+        &fun, inv->nparms, parms + inv->base);
+      switch (inv->dst.type) {
+      case ava_prt_var:  vars[inv->dst.index] = ret; break;
+      case ava_prt_data: data[inv->dst.index] = ret; break;
+      default: abort();
+      }
+    } break;
+
+    case ava_pcxt_invoke_dd: {
+      const ava_pcx_invoke_dd* inv = (const ava_pcx_invoke_dd*)instr;
+      ava_value ret;
+      ret = ava_function_bind_invoke(
+        funs[inv->fun.index], inv->nparms, parms + inv->base);
+      switch (inv->dst.type) {
+      case ava_prt_var:  vars[inv->dst.index] = ret; break;
+      case ava_prt_data: data[inv->dst.index] = ret; break;
+      default: abort();
+      }
+    } break;
 
     case ava_pcxt_ret: {
       const ava_pcx_ret* ret = (const ava_pcx_ret*)instr;

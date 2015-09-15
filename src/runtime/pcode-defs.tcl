@@ -331,7 +331,8 @@ struct exe x {
   #   ld-reg d0 i0
   # result in changing *both* registers.
   #
-  # This instruction cannot operate on P-registers at all.
+  # This instruction cannot operate on P-registers at all, see ld-parm for
+  # that.
   elt ld-reg {
     register dvifl dst {
       prop reg-write
@@ -349,6 +350,21 @@ struct exe x {
     }
   }
 
+  # Loads a value into a P-register.
+  #
+  # Semantics: The given D- or V-register is read and its value stored into the
+  # chosen P-register. If spread is true, the parameter is to be treated as a
+  # spread parameter; otherwise, it is a singular dynamic parameter.
+  elt ld-parm {
+    register p dst {
+      prop reg-write
+    }
+    register dv src {
+      prop reg-read
+    }
+    bool spread
+  }
+
   # Sets a global variable to the value of a local variable.
   #
   # Semantics: The global variable at the given index is set to the value stored
@@ -362,6 +378,88 @@ struct exe x {
       prop global-ref
     }
     register dv src {
+      prop reg-read
+    }
+  }
+
+  # Loads the empty list into an L-register.
+  #
+  # Semantics: The given L-register is set to the empty list.
+  elt lempty {
+    register l dst {
+      prop reg-write
+    }
+  }
+
+  # Appends an element to a list.
+  #
+  # Semantics: The L-register dst is set to the value of the L-register in lsrc
+  # with the element read from esrc appended.
+  elt lappend {
+    register l dst {
+      prop reg-write
+    }
+    register l lsrc {
+      prop reg-read
+    }
+    register dv esrc {
+      prop reg-read
+    }
+  }
+
+  # Concatenates two lists.
+  #
+  # Semantics: The L-register dst is set to the concatenation of the lists in
+  # the L-registers left and right, in that order.
+  elt lcat {
+    register l dst {
+      prop reg-write
+    }
+    register l left {
+      prop reg-read
+    }
+    register l right {
+      prop reg-read
+    }
+  }
+
+  # Extracts the first element of a list.
+  #
+  # Semantics: The D- or V-register dst is set to the first element in the
+  # L-register src. If src is the empty list, an error_exception of type
+  # empty-list is thrown.
+  elt lhead {
+    register dv dst {
+      prop reg-write
+    }
+    register l src {
+      prop reg-read
+    }
+  }
+
+  # Deletes the first element of a list.
+  #
+  # Semantics: The L-register dst is set to the value of the L-register src,
+  # with the first element deleted. If src is the empty list, an
+  # error_exception of type empty-list is thrown.
+  elt lbehead {
+    register l dst {
+      prop reg-write
+    }
+    register l src {
+      prop reg-read
+    }
+  }
+
+  # Flattens a list.
+  #
+  # Semantics: Every element in L-register src is interpreted as a list, and
+  # all are concatenated into one list, which is stored in L-register dst.
+  elt lflatten {
+    register l dst {
+      prop reg-write
+    }
+    register l src {
       prop reg-read
     }
   }
@@ -397,7 +495,9 @@ struct exe x {
   # Invokes a statically-known function with dynamically-bound arguments.
   #
   # Semantics: The given function is invoked, passing the parameters stored in
-  # the given P-register. The parameters are bound to arguments at runtime.
+  # the P-registers starting at p$base, inclusive, and ending at
+  # p($base+$nparms), exclusive. The parameters are bound to arguments at
+  # runtime.
   #
   # If binding the parameters fails, an ava_error_exception with the type name
   # "bad-arguments" is thrown.
@@ -411,15 +511,21 @@ struct exe x {
       prop global-ref
       prop global-fun-ref
     }
-    register p parms {
-      prop reg-read
+
+    int base
+    int nparms
+
+    constraint {
+      @.base >= 0 && @.nparms > 0
     }
   }
 
   # Invokes a dynamically-known function with dynamically-bound arguments.
   #
   # Semantics: The function in `function` is invoked, passing the parameters
-  # stored in the given P-register.
+  # stored in the P-registers starting at p$base, inclusive, and ending at
+  # p($base+$nparms), exclusive. The parameters are bound to arguments at
+  # runtime.
   #
   # If binding the parameters fails, an ava_error_exception with the type name
   # "bad-arguments" is thrown.
@@ -432,8 +538,12 @@ struct exe x {
     register f fun {
       prop reg-read
     }
-    register p parms {
-      prop reg-read
+
+    int base
+    int nparms
+
+    constraint {
+      @.base >= 0 && @.nparms > 0
     }
   }
 
@@ -651,6 +761,10 @@ struct macro m {
   #
   #   ( ) -- ( s )
   elt statement { }
+  # Wraps the unit at the top of the stack in a Spread.
+  #
+  #   ( u ) -- ( u )
+  elt spread { }
 
   # Causes the attempt at macro expansion to be abandoned and an error node to
   # be produced.

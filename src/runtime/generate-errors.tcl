@@ -366,6 +366,15 @@ set defs {
     }
   }
 
+  serror R0035 extract_element_from_empty_list {} {
+    msg "Attempt to extract elements from empty list."
+    explanation {
+      The user code implies that some list should be non-empty, but it is not.
+      This error only arises from relatively low-level situations, such as
+      using the spread operator where a function name would normally occur.
+    }
+  }
+
   serror L4001 unclosed_string_literal {} {
     msg "Unclosed string literal."
     explanation {
@@ -1082,6 +1091,39 @@ set defs {
       cannot be expanded. Usages of this macro are flagged with this error to
       indicate that no further macro substitution could be performed on the
       expression.
+    }
+  }
+
+  cerror C5056 would_discard_semilit {} {
+    msg "Value of semiliteral is discarded."
+    explanation {
+      The indicated semiliteral expression's result is not used.
+
+      While construction of the semiliteral is not necessarily pure (i.e.,
+      evaluating its elements could have side-effects), there would still be no
+      reason to wrap the contents in a semiliteral, so this is almost certainly
+      a programming error.
+    }
+  }
+
+  serror C5057 parse_isolated_spread {} {
+    msg "Spread operator followed by nothing."
+    explanation {
+      The spread operator ("\*") must be immediately followed by the expression
+      it is to spread.
+
+      In the indicated location, it is either at the end of its statement or
+      expression, or is incorrectly followed by a line break. Conventionally,
+      the operator is directly attached to the thing it spreads, in which case
+      this error would not occur.
+    }
+  }
+
+  cerror C5058 spread_cannot_be_used_here {} {
+    msg "Spread operator cannot be used here."
+    explanation {
+      The spread ("\*") operator only makes sense in certain contexts; it is an
+      error to use it anywhere else.
     }
   }
 }
