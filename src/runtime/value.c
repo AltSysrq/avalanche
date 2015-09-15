@@ -116,81 +116,11 @@ ava_bool ava_value_equal(ava_value a, ava_value b) {
 }
 
 signed ava_value_strcmp(ava_value a, ava_value b) {
-  ava_datum ait, bit;
-  ava_string as, bs;
-  const char*restrict ac, *restrict bc;
-  ava_str_tmpbuff atmp, btmp;
-  size_t nac, nbc, n;
-  ava_bool a_finished = ava_false, b_finished = ava_false;
-  signed cmp;
-
-  /* If both values are byte-for-byte the same, we need not actually inspect
-   * them deeply; they're definitely equal.
-   */
-  if (0 == memcmp(&a, &b, sizeof(a)))
+  if (ava_value_attr(a) == ava_value_attr(b) &&
+      ava_value_ulong(a) == ava_value_ulong(b))
     return 0;
 
-
-  ait = ava_string_chunk_iterator(a);
-  bit = ava_string_chunk_iterator(b);
-  nac = nbc = 0;
-
-  for (;;) {
-    if (!nac) {
-      do {
-        as = ava_iterate_string_chunk(&ait, a);
-      } while (ava_string_is_present(as) &&
-               0 == ava_string_length(as));
-
-      if (!ava_string_is_present(as)) {
-        a_finished = ava_true;
-      } else {
-        nac = ava_string_length(as);
-        ac = ava_string_to_cstring_buff(atmp, as);
-      }
-    }
-
-    if (!nbc) {
-      do {
-        bs = ava_iterate_string_chunk(&bit, b);
-      } while (ava_string_is_present(bs) &&
-               0 == ava_string_length(bs));
-
-      if (!ava_string_is_present(bs)) {
-        b_finished = ava_true;
-      } else {
-        nbc = ava_string_length(bs);
-        bc = ava_string_to_cstring_buff(btmp, bs);
-      }
-    }
-
-    if (a_finished || b_finished) break;
-
-    n = nac < nbc? nac : nbc;
-
-    cmp = memcmp(ac, bc, n);
-    if (cmp) return cmp;
-
-    ac += n;
-    bc += n;
-    nac -= n;
-    nbc -= n;
-  }
-
-  /* One is a prefix of the other */
-  /* The perhaps odd return values below are chosen to make it more likely code
-   * switch()ing on the return value is discovered to be broken on platforms
-   * where memcmp() returns only +1 and -1.
-   */
-  if (!a_finished)
-    /* b is shorter */
-    return +4;
-  else if (!b_finished)
-    /* a is shorter */
-    return -3;
-  else
-    /* Equal */
-    return 0;
+  return ava_strcmp(ava_to_string(a), ava_to_string(b));
 }
 
 static ava_ulong ava_siphash_k[2];
