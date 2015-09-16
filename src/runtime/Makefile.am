@@ -31,7 +31,8 @@ avalanche/real.h \
 avalanche/string.h \
 avalanche/symbol.h \
 avalanche/symtab.h \
-avalanche/value.h
+avalanche/value.h \
+avalanche/varscope.h
 
 avalanche/ava-config.h: $(top_srcdir)/config.h
 	$(AM_V_GEN)$(SED) <$(top_srcdir)/config.h >avalanche/ava-config.h \
