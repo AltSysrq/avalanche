@@ -53,6 +53,8 @@ struct ava_symbol_s;
  * - Either
  *   - It directly references the variable, or
  *   - It references another scope which captures the variable
+ *
+ * The NULL varscope universally stands for the immutable empty scope.
  */
 typedef struct ava_varscope_s ava_varscope;
 

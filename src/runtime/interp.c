@@ -407,6 +407,25 @@ static ava_value ava_interp_run_function(
       }
     } break;
 
+    case ava_pcxt_partial: {
+      const ava_pcx_partial* p = (const ava_pcx_partial*)instr;
+      ava_function* fun;
+      ava_argument_spec* argspecs;
+      size_t i, off, n;
+
+      fun = AVA_CLONE(*funs[p->src.index]);
+      fun->args = argspecs =
+        ava_clone(fun->args, sizeof(ava_argument_spec) * fun->num_args);
+
+      for (off = 0; ava_abt_implicit == argspecs[off].binding.type; ++off);
+      for (i = 0, n = p->nargs; i < n; ++i) {
+        argspecs[i + off].binding.type = ava_abt_implicit;
+        argspecs[i + off].binding.value = data[i + p->base];
+      }
+
+      funs[p->dst.index] = fun;
+    } break;
+
     case ava_pcxt_ret: {
       const ava_pcx_ret* ret = (const ava_pcx_ret*)instr;
       switch (ret->return_value.type) {

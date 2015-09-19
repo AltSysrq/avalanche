@@ -555,6 +555,37 @@ struct exe x {
     }
   }
 
+  # Performs partial application of a function.
+  #
+  # Semantics: Starting from the first non-implicit argument in the function in
+  # src, each argument in the function is changed to an implicit argument whose
+  # value is read from successive D-registers starting at d$base. $nargs
+  # arguments are rebound this way. The result is written into dst.
+  #
+  # The behaviour of this function is undefined if the function in src does not
+  # have at least $nargs arguments following the first non-implicit argument,
+  # or if it has no non-implicit arguments at all.
+  #
+  # This instruction is intended for the construction of closures. It is
+  # important to note that it ignores the actual binding type of arguments it
+  # rebinds, and thus does not behave the way one might intend if it binds over
+  # non-pos arguments.
+  elt partial {
+    register f dst {
+      prop reg-write
+    }
+    register f src {
+      prop reg-write
+    }
+
+    int base
+    int nargs
+
+    constraint {
+      @.base >= 0 && @.nargs > 0
+    }
+  }
+
   # Returns from the containing function.
   #
   # Semantics: The current function immediately terminates execution, producing

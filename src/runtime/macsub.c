@@ -581,7 +581,9 @@ void ava_ast_node_cg_discard(ava_ast_node* node,
 void ava_ast_node_cg_force(ava_ast_node* node,
                            const ava_pcode_register* dst,
                            ava_codegen_context* context) {
-  if (node->v->cg_evaluate) {
+  if (node->v->cg_force) {
+    (*node->v->cg_force)(node, dst, context);
+  } else if (node->v->cg_evaluate) {
     ava_ast_node_cg_evaluate(node, dst, context);
   } else {
     ava_ast_node_cg_discard(node, context);

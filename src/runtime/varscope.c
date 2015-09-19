@@ -159,17 +159,22 @@ ava_uint ava_varscope_get_index(
 }
 
 size_t ava_varscope_num_captures(const ava_varscope* scope) {
-  return scope->num_captures;
+  return scope? scope->num_captures : 0;
 }
 
 size_t ava_varscope_num_vars(const ava_varscope* scope) {
-  return scope->num_captures + scope->num_locals;
+  return scope? scope->num_captures + scope->num_locals : 0;
 }
 
 void ava_varscope_get_vars(
   const ava_symbol** dst, const ava_varscope* src, size_t count
 ) {
   ava_varscope_varref* ref;
+
+  if (!src) {
+    assert(0 == count);
+    return;
+  }
 
   assert(count <= src->num_locals + src->num_captures);
 

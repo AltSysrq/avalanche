@@ -323,6 +323,9 @@ static void ava_intr_fun_cg_define(
   size_t num_vars = ava_varscope_num_vars(this->symbol->v.var.scope), i;
   const ava_symbol* var_symbols[num_vars];
   ava_list_value vars;
+  ava_function* prototype;
+  ava_argument_spec* argspecs;
+  size_t num_captures;
 
   if (this->defined) return;
   this->defined = ava_true;
@@ -332,6 +335,19 @@ static void ava_intr_fun_cg_define(
   for (i = 0; i < num_vars; ++i)
     vars = ava_list_append(
       vars, ava_value_of_string(var_symbols[i]->full_name));
+
+  /* Modify the function's prototype to include captured variables */
+  num_captures = ava_varscope_num_captures(this->symbol->v.var.scope);
+  prototype = AVA_CLONE(this->symbol->v.var.fun);
+  prototype->args = argspecs =
+    ava_alloc(sizeof(ava_argument_spec) *
+              (prototype->num_args + num_captures));
+  prototype->num_args += num_captures;
+  for (i = 0; i < num_captures; ++i) {
+    argspecs[i].binding.type = ava_abt_pos;
+  }
+  memcpy(argspecs + num_captures, this->symbol->v.var.fun.args,
+         sizeof(ava_argument_spec) * this->symbol->v.var.fun.num_args);
 
   ava_codegen_set_global_location(context, &this->header.location);
   this->symbol->pcode_index = AVA_PCGB(

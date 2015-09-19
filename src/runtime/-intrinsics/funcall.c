@@ -32,6 +32,7 @@
 #include "../avalanche/symtab.h"
 #include "../avalanche/pcode.h"
 #include "../avalanche/code-gen.h"
+#include "../avalanche/varscope.h"
 #include "fundamental.h"
 #include "funcall.h"
 
@@ -180,6 +181,8 @@ static void ava_intr_funcall_postprocess(ava_intr_funcall* this) {
   }
 
   this->static_function = function_symbol;
+  ava_varscope_ref_scope(ava_macsub_get_varscope(this->header.context),
+                         function_symbol->v.var.scope);
   ava_intr_funcall_bind_parms(this);
 }
 
@@ -278,15 +281,30 @@ static void ava_intr_funcall_cg_evaluate(
   switch (funcall->type) {
   case ava_ift_static_bind: {
     ava_pcode_register_index arg_base;
-    ava_pcode_register arg_reg;
+    ava_pcode_register arg_reg, var_reg;
+    const ava_varscope* localscope =
+      ava_macsub_get_varscope(funcall->header.context);
+    const ava_varscope* funscope = funcall->static_function->v.var.scope;
+    size_t num_captures = ava_varscope_num_captures(funscope);
+    const ava_symbol* captures[num_captures];
 
     arg_reg.type = ava_prt_data;
     arg_base = ava_codegen_push_reg(
-      context, ava_prt_data, funcall->static_function->v.var.fun.num_args);
+      context, ava_prt_data,
+      num_captures + funcall->static_function->v.var.fun.num_args);
+
+    /* Copy captures */
+    ava_varscope_get_vars(captures, funscope, num_captures);
+    var_reg.type = ava_prt_var;
+    for (i = 0; i < num_captures; ++i) {
+      var_reg.index = ava_varscope_get_index(localscope, captures[i]);
+      arg_reg.index = arg_base + i;
+      AVA_PCXB(ld_reg, arg_reg, var_reg);
+    }
 
     /* Map parms to args */
     for (i = 0; i < funcall->static_function->v.var.fun.num_args; ++i) {
-      arg_reg.index = arg_base + i;
+      arg_reg.index = arg_base + i + num_captures;
       switch (funcall->bound_args[i].type) {
       case ava_fbat_implicit:
         AVA_PCXB(ld_imm_vd, arg_reg,
@@ -342,26 +360,44 @@ static void ava_intr_funcall_cg_evaluate(
              arg_base, funcall->static_function->v.var.fun.num_args);
 
     ava_codegen_pop_reg(
-      context, ava_prt_data, funcall->static_function->v.var.fun.num_args);
+      context, ava_prt_data,
+      funcall->static_function->v.var.fun.num_args + num_captures);
   } break;
 
   case ava_ift_dynamic_bind: {
     ava_pcode_register_index preg_base;
-    ava_pcode_register preg;
+    ava_pcode_register preg, var_reg;
+    const ava_varscope* localscope =
+      ava_macsub_get_varscope(funcall->header.context);
+    const ava_varscope* funscope = funcall->static_function->v.var.scope;
+    size_t num_captures = ava_varscope_num_captures(funscope);
+    const ava_symbol* captures[num_captures];
 
     ava_codegen_set_location(context, &funcall->header.location);
     preg_base = ava_codegen_push_reg(
-      context, ava_prt_parm, funcall->num_parms - 1);
+      context, ava_prt_parm, funcall->num_parms - 1 + num_captures);
     preg.type = ava_prt_parm;
+
+    /* Copy captures */
+    ava_varscope_get_vars(captures, funscope, num_captures);
+    var_reg.type = ava_prt_var;
+    for (i = 0; i < num_captures; ++i) {
+      var_reg.index = ava_varscope_get_index(localscope, captures[i]);
+      preg.index = preg_base + i;
+      AVA_PCXB(ld_parm, preg, var_reg, ava_false);
+    }
+
+    /* Copy parms */
     for (i = 0; i < funcall->num_parms - 1; ++i) {
       preg.index = preg_base + i;
-      parm_reg.index = parm_base + i;
+      parm_reg.index = parm_base + i + num_captures;
       AVA_PCXB(ld_parm, preg, parm_reg, !!funcall->parms[i+1]->v->cg_spread);
     }
 
     AVA_PCXB(invoke_sd, *dst, funcall->static_function->pcode_index,
              preg_base, funcall->num_parms - 1);
-    ava_codegen_pop_reg(context, ava_prt_parm, funcall->num_parms - 1);
+    ava_codegen_pop_reg(context, ava_prt_parm,
+                        funcall->num_parms - 1 + num_captures);
   } break;
 
   case ava_ift_dynamic_invoke: {
