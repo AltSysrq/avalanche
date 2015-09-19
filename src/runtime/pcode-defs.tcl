@@ -474,6 +474,8 @@ struct exe x {
   # If marshalling the function's arguments or return value fails, the
   # exception propagates.
   #
+  # This instruction uninitialises the D-registers passed as arguments.
+  #
   # The number of arguments given must exactly match the number of arguments
   # taken by the function.
   elt invoke-ss {
@@ -502,6 +504,9 @@ struct exe x {
   # If binding the parameters fails, an ava_error_exception with the type name
   # "bad-arguments" is thrown.
   #
+  # Regardless of whether the statement succeeds, the input P-registers are
+  # uninitialised by this instruction.
+  #
   # Any exceptions resulting from marshalling the function call propagate.
   elt invoke-sd {
     register dv dst {
@@ -529,6 +534,9 @@ struct exe x {
   #
   # If binding the parameters fails, an ava_error_exception with the type name
   # "bad-arguments" is thrown.
+  #
+  # Regardless of whether the statement succeeds, the input P-registers are
+  # uninitialised by this instruction.
   #
   # Any exceptions resulting from marshalling the function call propagate.
   elt invoke-dd {

@@ -1239,7 +1239,7 @@ TEST_INVOKE(invoke_ava_8_arg, "abcdefgh",
 
 TEST_INVOKE(invoke_ava_9_arg, "abcdefghi",
             "ava pos pos pos pos pos pos pos pos pos",
-            ava_value, (ava_value*restrict a),
+            ava_value, (size_t n, ava_value*restrict a),
             cat(9, a[0], a[1], a[2], a[3],
                 a[4], a[5], a[6], a[7], a[8]),
             STATWORD(a), STATWORD(b), STATWORD(c), STATWORD(d),

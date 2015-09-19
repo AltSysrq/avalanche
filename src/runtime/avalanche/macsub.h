@@ -39,6 +39,7 @@ struct ava_codegen_context_s;
 struct ava_pcode_register_s;
 struct ava_symbol_s;
 struct ava_symtab_s;
+struct ava_varscope_s;
 
 /**
  * An AST node after macro processing.
@@ -238,6 +239,14 @@ typedef void (*ava_ast_node_cg_spread_f)(
 typedef void (*ava_ast_node_cg_discard_f)(
   ava_ast_node* node, struct ava_codegen_context_s* context);
 /**
+ * If this AST node can produce a value, has the same effect as cg_evaluate().
+ * Otherwise, equivalent to cg_discard(), except that it must load the empty
+ * string into the destination register.
+ */
+typedef void (*ava_ast_node_cg_force_f)(
+  ava_ast_node* node, const struct ava_pcode_register_s* dst,
+  struct ava_codegen_context_s* context);
+/**
  * If this AST node may insert itself into the symbol table, creates any
  * definitions required for references to the node to be generated.
  */
@@ -264,6 +273,7 @@ struct ava_ast_node_vtable_s {
   ava_ast_node_cg_evaluate_f cg_evaluate;
   ava_ast_node_cg_spread_f cg_spread;
   ava_ast_node_cg_discard_f cg_discard;
+  ava_ast_node_cg_force_f cg_force;
   ava_ast_node_cg_define_f cg_define;
 };
 
@@ -321,6 +331,13 @@ void ava_ast_node_cg_spread(ava_ast_node* node,
 void ava_ast_node_cg_discard(ava_ast_node* node,
                              struct ava_codegen_context_s* context);
 /**
+ * Calls the given node's cg_force method if there is one. Otherwise, chooses a
+ * default implementation based on whether the node defines cg_evaluate().
+ */
+void ava_ast_node_cg_force(ava_ast_node* node,
+                           const struct ava_pcode_register_s* dst,
+                           struct ava_codegen_context_s* context);
+/**
  * Calls the given node's cg_define method.
  *
  * The process aborts if this method is not defined on the node.
@@ -367,6 +384,12 @@ ava_macsub_context* ava_macsub_context_new(
  * Returns the current, mutable symbol table of the given context.
  */
 struct ava_symtab_s* ava_macsub_get_symtab(
+  const ava_macsub_context* context);
+
+/**
+ * Returns the varscope governing the scope of the given context.
+ */
+struct ava_varscope_s* ava_macsub_get_varscope(
   const ava_macsub_context* context);
 
 /**
@@ -428,7 +451,8 @@ ava_string ava_macsub_gensym(const ava_macsub_context* context,
  *
  * Major scopes are essentially function boundaries; names defined within are
  * not visible outside the major scope. The level of a major scope is one
- * greater than its parent.
+ * greater than its parent, and the inner scope has a fresh varscope from that
+ * of the parent.
  *
  * @param parent The parent context.
  * @param interfix New string to append to the implicit prefix of the resulting
@@ -444,7 +468,8 @@ ava_macsub_context* ava_macsub_context_push_major(
  * Minor scopes are used for namespace sections and such, which may use a
  * different prefix and have different imports, but still define symbols at the
  * same level. The level of a minor scope is the same as that of its parent,
- * and any names defined within are also visible in the parent.
+ * and any names defined within are also visible in the parent. The minor
+ * scope's varscope is the same as the parent's.
  *
  * @param parent The parent context.
  * @param interfix New string to append to the implicit prefix of the resulting

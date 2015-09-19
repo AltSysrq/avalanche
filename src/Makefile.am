@@ -51,6 +51,7 @@ runtime/string.c \
 runtime/symtab.c \
 runtime/value.c \
 runtime/varscope.c \
+runtime/-intrinsics/defun.c \
 runtime/-intrinsics/extern.c \
 runtime/-intrinsics/funcall.c \
 runtime/-intrinsics/fundamental.c \

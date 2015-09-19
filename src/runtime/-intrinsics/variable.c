@@ -31,6 +31,7 @@
 #include "../avalanche/macro-arg.h"
 #include "../avalanche/pcode.h"
 #include "../avalanche/code-gen.h"
+#include "../avalanche/varscope.h"
 #include "variable.h"
 
 typedef struct {
@@ -344,6 +345,8 @@ static void ava_intr_var_read_cg_evaluate(
   ava_intr_var_read* node, const ava_pcode_register* dst,
   ava_codegen_context* context
 ) {
+  ava_pcode_register var_reg;
+
   switch (node->var->type) {
   case ava_st_global_variable:
   case ava_st_global_function:
@@ -353,8 +356,11 @@ static void ava_intr_var_read_cg_evaluate(
     break;
 
   case ava_st_local_variable:
-    /* TODO */
-    abort();
+    var_reg.type = ava_prt_var;
+    var_reg.index = ava_varscope_get_index(
+      ava_macsub_get_varscope(node->header.context), node->var);
+    AVA_PCXB(ld_reg, *dst, var_reg);
+    break;
 
   case ava_st_local_function:
     /* TODO */
@@ -392,8 +398,14 @@ static void ava_intr_var_write_cg_evaluate(
 
   ava_ast_node_cg_define(node->var->definer, context);
 
-  reg.type = ava_prt_data;
-  reg.index = ava_codegen_push_reg(context, ava_prt_data, 1);
+  if (ava_st_local_variable != node->var->type) {
+    reg.type = ava_prt_data;
+    reg.index = ava_codegen_push_reg(context, ava_prt_data, 1);
+  } else {
+    reg.type = ava_prt_var;
+    reg.index = ava_varscope_get_index(
+      ava_macsub_get_varscope(node->header.context), node->var);
+  }
   ava_ast_node_cg_evaluate(node->producer, &reg, context);
 
   ava_codegen_set_location(context, &node->header.location);
@@ -401,13 +413,13 @@ static void ava_intr_var_write_cg_evaluate(
     AVA_PCXB(set_glob, node->var->pcode_index, reg);
   } else {
     assert(ava_st_local_variable == node->var->type);
-    /* TODO */
-    abort();
+    /* Nothing else to do with the var */
   }
 
   if (dst) AVA_PCXB(ld_reg, *dst, reg);
 
-  ava_codegen_pop_reg(context, ava_prt_data, 1);
+  if (ava_st_local_variable != node->var->type)
+    ava_codegen_pop_reg(context, ava_prt_data, 1);
 }
 
 static void ava_intr_var_write_cg_discard(

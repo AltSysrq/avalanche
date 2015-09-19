@@ -28,6 +28,8 @@
  */
 #define AVA_MAX_OPERATOR_MACRO_PRECEDENCE 40
 
+struct ava_varscope_s;
+
 /**
  * The type of a symbol in a symbol table.
  */
@@ -160,11 +162,24 @@ struct ava_symbol_s {
        */
       ava_demangled_name name;
       /**
-       * For  functions,  a  partial  function  sufficient  to  perform  static
+       * For functions, a partial function sufficient to perform static
        * binding. The function is not invokable; it may not have an initialised
        * FFI field and probably does not point to an actual native function.
+       *
+       * Additionally, the function prototype does *not* include any implicit
+       * arguments which arise from captures; this must be obtained when
+       * necessary from the function's varscope.
        */
       ava_function fun;
+      /**
+       * If this symbol is a function which has visible scope effects in this
+       * context, the varscope which governs it.
+       *
+       * If set, whenever this symbol is referenced (either by function call or
+       * variable substitution), the containing's varscope must make a
+       * reference to this varscope.
+       */
+      struct ava_varscope_s* scope;
     } var;
 
     /**

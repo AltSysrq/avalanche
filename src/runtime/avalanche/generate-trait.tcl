@@ -137,6 +137,9 @@ package require Tcl 8.5
 #       .void_method = name##_widget_void_method,                           \
 #     };
 #
+#   #define PREFIX_WIDGET_DEFIMPL_PUBLIC() \
+#     /* same as DEFIMPL, but the _impl variable is not static */
+#
 # Note that PREFIX_WIDGET_DEFIMPL() can be used by implementors of the trait to
 # generate via the preprocessor most of the boilerplate surrounding the
 # implementation.
@@ -327,24 +330,26 @@ $mdoc
   }
 }
 
-puts "#define [string toupper "${prefix}_${name}_defimpl"](name,chain) \\"
-foreach meth $methods {
-  dict with meth {
-    puts "static [typesub $return_type $valtype] name##_${name}_${mname}(\\"
-    puts "  ${prefix}_${name}_value _this \\"
-    foreach {t n} $args {
-      puts "  , [typesub $t $valtype] $n \\"
+foreach {linkage suffix} {static "" "" _public} {
+  puts "#define [string toupper "${prefix}_${name}_defimpl${suffix}"](name,chain) \\"
+  foreach meth $methods {
+    dict with meth {
+      puts "static [typesub $return_type $valtype] name##_${name}_${mname}(\\"
+      puts "  ${prefix}_${name}_value _this \\"
+      foreach {t n} $args {
+        puts "  , [typesub $t $valtype] $n \\"
+      }
+      puts ") $attributes; \\"
     }
-    puts ") $attributes; \\"
   }
-}
-puts "static const ${prefix}_${name}_trait name##_${name}_impl = {\\"
-puts "  .header = { \\
+  puts "$linkage const ${prefix}_${name}_trait name##_${name}_impl = {\\"
+  puts "  .header = { \\
     .next = (const ava_attribute*)(chain), \\
     .tag = &${prefix}_${name}_trait_tag },\\"
-foreach meth $methods {
-  dict with meth {
+  foreach meth $methods {
+    dict with meth {
       puts "  .${mname} = name##_${name}_${mname},\\"
+    }
   }
+  puts "};"
 }
-puts "};"

@@ -26,6 +26,7 @@
 #include "avalanche/macsub.h"
 #include "avalanche/symbol.h"
 #include "avalanche/symtab.h"
+#include "-intrinsics/defun.h"
 #include "-intrinsics/extern.h"
 #include "-intrinsics/namespace.h"
 #include "-intrinsics/user-macro.h"
@@ -62,6 +63,9 @@ void ava_register_intrinsics(ava_macsub_context* context) {
   DEFINE("extern",      CTL,    PRIVATE,        extern);
   DEFINE("Extern",      CTL,    INTERNAL,       extern);
   DEFINE("EXTERN",      CTL,    PUBLIC,         extern);
+  DEFINE("fun",         CTL,    PRIVATE,        fun);
+  DEFINE("Fun",         CTL,    INTERNAL,       fun);
+  DEFINE("FUN",         CTL,    PUBLIC,         fun);
   DEFINE("macro",       CTL,    PRIVATE,        user_macro);
   DEFINE("Macro",       CTL,    INTERNAL,       user_macro);
   DEFINE("MACRO",       CTL,    PUBLIC,         user_macro);

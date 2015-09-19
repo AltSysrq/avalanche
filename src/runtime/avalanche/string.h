@@ -233,6 +233,12 @@ struct ava_twine_s {
     })
 
 /**
+ * Like AVA_ASCII9_STRING(), but the result is a legal static initialiser, and
+ * each character must be passed in separately.
+ */
+#define AVA_ASCII9_INIT(...) { .ascii9 = AVA_ASCII9(__VA_ARGS__) }
+
+/**
  * Returns whether the given string is considered present.
  */
 static inline ava_bool ava_string_is_present(ava_string str) AVA_CONSTFUN;

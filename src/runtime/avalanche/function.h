@@ -270,7 +270,10 @@ typedef enum {
   /**
    * The ava calling convention. Up to AVA_CC_AVA_MAX_INLINE_ARGS arguments are
    * passed as ava_value arguments; if there are more, the function instead
-   * takes a single `ava_value*restrict`. The function returns ava_value.
+   * takes a size_t indicating argument count, followed by
+   * `ava_value*restrict`, which is an array of arguments passed to the
+   * function. In the latter case, the array is considered clobbered by the
+   * call. The function returns ava_value.
    */
   ava_cc_ava,
   /**

@@ -60,12 +60,15 @@ static ava_bool ava_intr_seq_get_constexpr(const ava_intr_seq* node,
                                            ava_value* dst);
 static void ava_intr_seq_cg_common(
   ava_intr_seq* node, const ava_pcode_register* dst,
-  ava_codegen_context* context);
+  ava_codegen_context* context, ava_bool force);
 static void ava_intr_seq_cg_evaluate(
   ava_intr_seq* node, const ava_pcode_register* dst,
   ava_codegen_context* context);
 static void ava_intr_seq_cg_discard(
   ava_intr_seq* node, ava_codegen_context* context);
+static void ava_intr_seq_cg_force(
+  ava_intr_seq* node, const ava_pcode_register* dst,
+  ava_codegen_context* context);
 
 static const ava_ast_node_vtable ava_intr_seq_vtable = {
   .name = "statement sequence",
@@ -75,6 +78,7 @@ static const ava_ast_node_vtable ava_intr_seq_vtable = {
   .get_constexpr = (ava_ast_node_get_constexpr_f)ava_intr_seq_get_constexpr,
   .cg_evaluate = (ava_ast_node_cg_evaluate_f)ava_intr_seq_cg_evaluate,
   .cg_discard = (ava_ast_node_cg_discard_f)ava_intr_seq_cg_discard,
+  .cg_force = (ava_ast_node_cg_force_f)ava_intr_seq_cg_force,
 };
 
 ava_intr_seq* ava_intr_seq_new(
@@ -206,14 +210,15 @@ static ava_bool ava_intr_seq_get_constexpr(const ava_intr_seq* seq,
 
 static void ava_intr_seq_cg_common(
   ava_intr_seq* seq, const ava_pcode_register* dst,
-  ava_codegen_context* context
+  ava_codegen_context* context, ava_bool force
 ) {
   AVA_STATIC_STRING(empty_expression, "Empty expression");
   ava_intr_seq_entry* e;
 
   STAILQ_FOREACH(e, &seq->children, next) {
     if (dst && !STAILQ_NEXT(e, next))
-      ava_ast_node_cg_evaluate(e->node, dst, context);
+      (force? ava_ast_node_cg_force : ava_ast_node_cg_evaluate)(
+        e->node, dst, context);
     else
       ava_ast_node_cg_discard(e->node, context);
   }
@@ -259,7 +264,7 @@ static void ava_intr_seq_cg_evaluate(
     break;
   }
 
-  ava_intr_seq_cg_common(seq, child_dst, context);
+  ava_intr_seq_cg_common(seq, child_dst, context, ava_false);
 
   if (dst && dst != child_dst)
     AVA_PCXB(ld_imm_vd, *dst, AVA_EMPTY_STRING);
@@ -268,7 +273,14 @@ static void ava_intr_seq_cg_evaluate(
 static void ava_intr_seq_cg_discard(
   ava_intr_seq* seq, ava_codegen_context* context
 ) {
-  ava_intr_seq_cg_common(seq, NULL, context);
+  ava_intr_seq_cg_common(seq, NULL, context, ava_false);
+}
+
+static void ava_intr_seq_cg_force(
+  ava_intr_seq* seq, const ava_pcode_register* dst,
+  ava_codegen_context* context
+) {
+  ava_intr_seq_cg_common(seq, dst, context, ava_true);
 }
 
 ava_macro_subst_result ava_intr_string_pseudomacro(

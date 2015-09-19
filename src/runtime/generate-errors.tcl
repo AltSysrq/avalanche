@@ -1126,6 +1126,94 @@ set defs {
       error to use it anywhere else.
     }
   }
+
+  cerror C5059 function_without_body {} {
+    msg "Missing function body."
+    explanation {
+      A function body consists of either a single block (brace-enclosed) or an
+      "=" bareword followed by an arbitrary non-empty expression. No such
+      definition was found near the indicated location.
+
+      Possible causes include forgetting spaces around "=", or placing the "="
+      at the end of the line without a backslash or opening parenthesis to
+      allow the statement to continue ont o the next line.
+    }
+  }
+
+  cerror C5060 garbage_after_function_body {} {
+    msg "Unexpected tokens after brace-form function body."
+    explanation {
+      A brace-enclosed block alone defines the whole function body; thus, it is
+      an error for anything else to follow it, as found in the indicated
+      location.
+    }
+  }
+
+  cerror C5061 defun_without_args {} {
+    msg "Function declares no arguments."
+    explanation {
+      All Avalanche functions are required to take at least one argument, since
+      it is awkward to impossible to invoke functions with no arguments.
+
+      If the function doesn't take any meaningful inputs, give the function a
+      single argument "()".
+
+      This error could also occur if the code tries to name a positional
+      argument "=", since the "=" token begins the function body.
+    }
+  }
+
+  cerror C5062 defun_nonempty_empty {} {
+    msg "Unexpeceted tokens inside \"empty\" argument. (Forgot \"=\"?)"
+    explanation {
+      A function argument declared by parentheses indicates a nominal, empty
+      argument, and the space between the parentheses must be empty.
+
+      Most likely, this was actually intended to be part of the expression-form
+      function body, but the actual "=" was forgotten.
+    }
+  }
+
+  cerror C5063 defun_optional_empty {} {
+    msg "Optional argument doesn't declare anything. (Forgot \"=\"?)"
+    explanation {
+      A function argument declaration enclosed in brackets indicates an optional
+      argument. The indicated location has brackets enclosing nothing, which is
+      not meaningful.
+
+      Most likely, this was actually intended to be part of the expression-form
+      function body, but the actual "=" was forgotten. It is also possible that
+      the empty argument "()" was intended.
+    }
+  }
+
+  cerror C5064 defun_extra_tokens_after_default {} {
+    msg "Extraneous tokens after argument default."
+    explanation {
+      A defaulted argument consists of either a single token identifying the
+      argument itself, or a token identifying the argument followed by a
+      literal indicating the default value. The indicated token lies beyond the
+      default and therefore cannot be ascribed any meaning.
+    }
+  }
+
+  cerror C5065 defun_invalid_arg {} {
+    msg "Invalid argument declaration. (Forgot \"=\"?)"
+    explanation {
+      An argument declaration for a function takes one of the following forms:
+      () --- nominal positional argument that must always be empty
+      name --- mandatory positional argument
+      -name --- mandatory named argument
+      [name] --- optional positional argument, default empty string
+      [name default] --- optional positional argument with given default
+      [-name] --- optional named argument, default empty string
+      [-name default] --- optional named argument with given default
+
+      If the indicated token isn't expected to be a function argument
+      declaration, most likely the "=" of the expression-form function body was
+      forgotten.
+    }
+  }
 }
 
 proc ncode {code} {
