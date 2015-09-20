@@ -624,9 +624,10 @@ struct exe x {
 
   # Branches to another location within the function.
   #
-  # Semantics: The key I-register is read. If it is equal to value, control
-  # jumps to the label whose name matches target. Otherwise, control continues
-  # to the next instruction.
+  # Semantics: The key I-register is read. If it is equal to value and invert
+  # is false, or is not equal to value and invert is true, control jumps to the
+  # label whose name matches target. Otherwise, control continues to the next
+  # instruction.
   #
   # The P-Code is considered invalid if target references a nonexistent label.
   elt branch {
@@ -634,6 +635,16 @@ struct exe x {
       prop reg-read
     }
     int value
+    bool invert
+    int target
+  }
+
+  # Unconditionally branches to another location within the function.
+  #
+  # Semantics: Control jumps to the label whes name matches the given target.
+  #
+  # The P-Code is considered invalid if target references a nonexistent label.
+  elt goto {
     int target
   }
 

@@ -33,6 +33,8 @@
 #include "avalanche/pcode.h"
 #include "avalanche/code-gen.h"
 
+typedef SLIST_HEAD(,ava_codegen_jprot_s) ava_codegen_jprot_stack;
+
 struct ava_codegen_context_s {
   ava_compile_error_list* errors;
   ava_pcx_builder* builder;
@@ -40,11 +42,16 @@ struct ava_codegen_context_s {
   ava_integer last_src_line;
 
   ava_pcode_register_index register_stacks[ava_prt_function+1];
+
+  ava_uint next_label;
+  ava_codegen_jprot_stack jprots;
 };
 
 static ava_codegen_context* ava_codegen_context_alloc(
   ava_pcx_builder* builder,
   ava_compile_error_list* errors);
+static ava_bool ava_codegen_crosses_jprot(
+  const ava_codegen_context* context, ava_uint target);
 
 void ava_codegen_error(ava_codegen_context* context,
                        const ava_ast_node* node,
@@ -63,6 +70,8 @@ static ava_codegen_context* ava_codegen_context_alloc(
   this->errors = errors;
   this->last_src_filename = AVA_EMPTY_STRING;
   this->last_src_line = 0;
+  this->next_label = 0;
+  SLIST_INIT(&this->jprots);
   return this;
 }
 
@@ -134,6 +143,92 @@ void ava_codegen_export(
   case ava_v_public:
     AVA_PCGB(export, symbol->pcode_index, ava_true, symbol->full_name);
     break;
+  }
+}
+
+void ava_codegen_push_jprot(ava_codegen_jprot* jprot,
+                            ava_codegen_context* context,
+                            ava_codegen_jprot_exit_f exit,
+                            void* userdata) {
+  jprot->ordinal = ava_codegen_genlabel(context);
+  jprot->exit = exit;
+  jprot->userdata = userdata;
+  SLIST_INSERT_HEAD(&context->jprots, jprot, next);
+}
+
+void ava_codegen_pop_jprot(ava_codegen_context* context) {
+  ava_codegen_jprot* jprot;
+
+  jprot = SLIST_FIRST(&context->jprots);
+  SLIST_REMOVE_HEAD(&context->jprots, next);
+
+  (*jprot->exit)(context, jprot->userdata);
+}
+
+ava_uint ava_codegen_genlabel(ava_codegen_context* context) {
+  return context->next_label++;
+}
+
+static ava_bool ava_codegen_crosses_jprot(
+  const ava_codegen_context* context, ava_uint target
+) {
+  return !SLIST_EMPTY(&context->jprots) &&
+    SLIST_FIRST(&context->jprots)->ordinal > target;
+}
+
+void ava_codegen_branch(ava_codegen_context* context,
+                        ava_pcode_register key,
+                        ava_integer value,
+                        ava_bool invert,
+                        ava_uint target) {
+  ava_uint tmplbl;
+
+  if (ava_codegen_crosses_jprot(context, target)) {
+    tmplbl = ava_codegen_genlabel(context);
+    /* Need to run protector exits. Direct the non-taken path around them. */
+    ava_codegen_branch(context, key, value, !invert, tmplbl);
+    ava_codegen_goto(context, target);
+    AVA_PCXB(label, tmplbl);
+  } else {
+    AVA_PCXB(branch, key, value, invert, target);
+  }
+}
+
+void ava_codegen_goto(ava_codegen_context* context,
+                      ava_uint target) {
+  ava_codegen_jprot* jprot;
+
+  if (ava_codegen_crosses_jprot(context, target)) {
+    /* Temporarily pop the jprot off the stack in case it also does an early
+     * return.
+     */
+    jprot = SLIST_FIRST(&context->jprots);
+    SLIST_REMOVE_HEAD(&context->jprots, next);
+    (*jprot->exit)(context, jprot->userdata);
+    /* Invoke any other exits needed; otherwise, just jump to the label
+     * directly.
+     */
+    ava_codegen_goto(context, target);
+    SLIST_INSERT_HEAD(&context->jprots, jprot, next);
+  } else {
+    AVA_PCXB(goto, target);
+  }
+}
+
+void ava_codegen_ret(ava_codegen_context* context, ava_pcode_register value) {
+  ava_codegen_jprot* jprot;
+
+  if (SLIST_EMPTY(&context->jprots)) {
+    AVA_PCXB(ret, value);
+  } else {
+    /* Invoke all protector exits. As with goto, they must be temporarily
+     * popped in case they themselves trigger an early exit.
+     */
+    jprot = SLIST_FIRST(&context->jprots);
+    SLIST_REMOVE_HEAD(&context->jprots, next);
+    (*jprot->exit)(context, jprot->userdata);
+    ava_codegen_ret(context, value);
+    SLIST_INSERT_HEAD(&context->jprots, jprot, next);
   }
 }
 

@@ -447,10 +447,19 @@ static ava_value ava_interp_run_function(
     case ava_pcxt_branch: {
       const ava_pcx_branch* br = (const ava_pcx_branch*)instr;
 
-      if (br->value == ints[br->key.index])
+      if ((br->value == ints[br->key.index]) ^ br->invert)
         TAILQ_FOREACH(instr, body, next)
           if (ava_pcxt_label == instr->type &&
               br->target == ((const ava_pcx_label*)instr)->name)
+            break;
+    } break;
+
+    case ava_pcxt_goto: {
+      const ava_pcx_goto* br = (const ava_pcx_goto*)instr;
+
+      TAILQ_FOREACH(instr, body, next)
+        if (ava_pcxt_label == instr->type &&
+            br->target == ((const ava_pcx_label*)instr)->name)
             break;
     } break;
 
