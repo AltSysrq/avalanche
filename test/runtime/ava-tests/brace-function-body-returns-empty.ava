@@ -1,0 +1,8 @@
+fun plugh () = plugh
+
+fun xyzzy () {
+  plugh ()
+}
+
+extern pass-test pass_test c void [int pos]
+pass-test \*(xyzzy ()) 42

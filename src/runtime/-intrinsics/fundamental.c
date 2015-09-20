@@ -280,7 +280,12 @@ static void ava_intr_seq_cg_force(
   ava_intr_seq* seq, const ava_pcode_register* dst,
   ava_codegen_context* context
 ) {
-  ava_intr_seq_cg_common(seq, dst, context, ava_true);
+  if (ava_isrp_void == seq->return_policy) {
+    ava_intr_seq_cg_common(seq, NULL, context, ava_false);
+    AVA_PCXB(ld_imm_vd, *dst, AVA_EMPTY_STRING);
+  } else {
+    ava_intr_seq_cg_common(seq, dst, context, ava_true);
+  }
 }
 
 ava_macro_subst_result ava_intr_string_pseudomacro(
