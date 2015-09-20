@@ -70,6 +70,8 @@ static const char** inputs;
 static void run_test(int ix);
 static ava_value run_test_impl(void* arg);
 
+static void nop(void) { }
+
 int main(void) {
   glob_t globbed;
   const char* name;
@@ -97,6 +99,8 @@ int main(void) {
     inputs[i] = globbed.gl_pathv[i];
     name = strrchr(globbed.gl_pathv[i], '/') + 1;
     kase = tcase_create(name);
+    /* libcheck 0.10.0 dies if running in NOFORK mode if there are no fixtures */
+    tcase_add_checked_fixture(kase, nop, nop);
     /* The only way to pass i into the test function it o use a loop test, even
      * though we only execute it for one index.
      */
