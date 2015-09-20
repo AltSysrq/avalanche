@@ -17,6 +17,16 @@
 #include <config.h>
 #endif
 
+/* The macro AVA_NOEXTRACE can be used to disable all libunwind usage, ie,
+ * exceptions will have no stack trace.
+ *
+ * This is useful for running within valgrind, since valgrind and libunwind do
+ * not get along very well.
+ *
+ * Note that this *will* break the exception unit tests, which expect the stack
+ * trace to exist.
+ */
+
 #define UNW_LOCAL_ONLY
 
 #include <stdio.h>
@@ -27,7 +37,9 @@
 #include <bsd/string.h>
 #endif
 
+#ifndef AVA_NOEXTRACE
 #include <libunwind.h>
+#endif
 
 #define AVA__INTERNAL_INCLUDE 1
 #include "avalanche/alloc.h"
@@ -38,12 +50,12 @@
 #include "bsd.h"
 
 ava_stack_trace* ava_generate_stack_trace(void) {
+#ifndef AVA_NOEXTRACE
   unw_context_t uc;
   unw_cursor_t cursor;
   unw_word_t ip, ip_off;
   ava_demangled_name demangled;
   ava_str_tmpbuff strtmp;
-
   ava_stack_trace* trace = NULL, * new;
 
   unw_getcontext(&uc);
@@ -83,6 +95,9 @@ ava_stack_trace* ava_generate_stack_trace(void) {
   }
 
   return trace;
+#else
+  return NULL;
+#endif
 }
 
 jmp_buf* ava_push_handler(ava_exception_handler*restrict dst) {
