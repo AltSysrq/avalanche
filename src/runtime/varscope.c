@@ -46,7 +46,7 @@ static signed ava_compare_varscope_varref(
   return (a->var > b->var) - (a->var < b->var);
 }
 
-SLIST_HEAD(ava_varscope_referrer_list, ava_varscope_referrer_s);
+SLIST_HEAD(ava_varscope_referrer_list, ava_varscope_scoperef_s);
 RB_HEAD(ava_varscope_map, ava_varscope_varref_s);
 RB_PROTOTYPE_STATIC(ava_varscope_map, ava_varscope_varref_s, map,
                     ava_compare_varscope_varref);
