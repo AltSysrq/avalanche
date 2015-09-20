@@ -1,0 +1,3 @@
+extern pass-test pass_test c void [int pos]
+fun f [stuff plugh] \*f code = \*$stuff $f $code
+f () \*$pass-test 42

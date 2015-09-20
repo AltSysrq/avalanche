@@ -36,6 +36,7 @@
 #include "../avalanche/varscope.h"
 #include "../avalanche/errors.h"
 #include "defun.h"
+#include "bsd.h"
 
 typedef struct {
   ava_ast_node header;
@@ -87,6 +88,9 @@ ava_macro_subst_result ava_intr_fun_subst(
   ava_argument_spec* argspecs;
   ava_intr_fun* this;
   ava_symbol** empty_args;
+  ava_bool has_nonoptional_arg = ava_false, expect_valid = ava_true;
+  ava_bool has_varargs = ava_false, has_varshape = ava_false;
+  ava_bool last_was_varshape = ava_false, is_varshape;
 
   name_unit = TAILQ_NEXT(provoker, next);
   if (!name_unit)
@@ -155,14 +159,20 @@ ava_macro_subst_result ava_intr_fun_subst(
 
     switch (arg_unit->type) {
     case ava_put_bareword:
+      has_nonoptional_arg = ava_true;
       arg_name = arg_unit->v.string;
-      if (ava_intr_fun_is_named(&arg_name))
+      if (ava_intr_fun_is_named(&arg_name)) {
         arg_type = ava_abt_named;
-      else
+        is_varshape = ava_true;
+      } else {
         arg_type = ava_abt_pos;
+        is_varshape = ava_false;
+      }
       break;
 
     case ava_put_substitution:
+      has_nonoptional_arg = ava_true;
+      is_varshape = ava_false;
       arg_name = AVA_EMPTY_STRING;
       arg_type = ava_abt_pos;
       require_empty = ava_true;
@@ -173,11 +183,39 @@ ava_macro_subst_result ava_intr_fun_subst(
             &subunit->location));
       break;
 
+    case ava_put_spread:
+      has_nonoptional_arg = ava_true;
+      is_varshape = ava_true;
+      subunit = arg_unit->v.unit;
+      if (subunit->type != ava_put_bareword) {
+        arg_name = AVA_EMPTY_STRING;
+        arg_type = ava_abt_varargs;
+        ava_macsub_record_error(
+          context, ava_error_defun_varargs_name_must_be_simple(
+            &subunit->location));
+      } else {
+        arg_name_unit = subunit;
+        arg_name = arg_name_unit->v.string;
+        arg_type = ava_abt_varargs;
+        if (ava_intr_fun_is_named(&arg_name))
+          ava_macsub_record_error(
+            context, ava_error_defun_varargs_name_must_be_simple(
+              &arg_name_unit->location));
+      }
+      break;
+
     case ava_put_semiliteral:
+      is_varshape = ava_true;
       subunit = TAILQ_FIRST(&arg_unit->v.units);
       if (!subunit) {
         ava_macsub_record_error(
           context, ava_error_defun_optional_empty(&arg_unit->location));
+        arg_type = ava_abt_pos_default;
+        arg_name = AVA_EMPTY_STRING;
+      } else if (ava_put_spread == subunit->type) {
+        ava_macsub_record_error(
+          context, ava_error_defun_varargs_in_optional(
+            &subunit->location));
         arg_type = ava_abt_pos_default;
         arg_name = AVA_EMPTY_STRING;
       } else if (ava_put_bareword != subunit->type) {
@@ -216,6 +254,7 @@ ava_macro_subst_result ava_intr_fun_subst(
         context, ava_error_defun_invalid_arg(&arg_unit->location));
       arg_name = AVA_EMPTY_STRING;
       arg_type = ava_abt_pos;
+      is_varshape = ava_false;
       break;
     }
 
@@ -234,13 +273,34 @@ ava_macro_subst_result ava_intr_fun_subst(
     var->v.var.name.name = var->full_name;
 
     if (!ava_string_is_empty(arg_name))
-      ava_macsub_put_symbol(subcontext, var, &arg_name_unit->location);
+      expect_valid &= ava_macsub_put_symbol(
+        subcontext, var, &arg_name_unit->location);
 
     ava_varscope_put_local(ava_macsub_get_varscope(subcontext), var);
 
     if (require_empty)
       empty_args[num_empty_args++] = var;
+
+    if (is_varshape && has_varshape && !last_was_varshape && expect_valid) {
+      expect_valid = ava_false;
+      ava_macsub_record_error(
+        context, ava_error_defun_discontiguous_varshape(&arg_name_unit->location));
+    }
+
+    if (has_varargs && is_varshape && expect_valid) {
+      expect_valid = ava_false;
+      ava_macsub_record_error(
+        context, ava_error_defun_varshape_after_varargs(&arg_name_unit->location));
+    }
+
+    has_varshape |= is_varshape;
+    last_was_varshape = is_varshape;
+    has_varargs |= ava_abt_varargs == arg_type;
   }
+
+  if (!has_nonoptional_arg)
+    ava_macsub_record_error(
+      context, ava_error_defun_no_explicit_args(&name_unit->location));
 
   this = AVA_NEW(ava_intr_fun);
   this->header.v = &ava_intr_fun_vtable;
@@ -272,6 +332,15 @@ ava_macro_subst_result ava_intr_fun_subst(
     this->body = ava_macsub_run(
       subcontext, &body_begin->location,
       (ava_parse_statement_list*)&body_begin->v.statements, ava_isrp_void);
+  }
+
+  {
+    ava_string msg;
+    if (expect_valid && !ava_function_is_valid(&msg, fun)) {
+      ava_macsub_record_error(
+        context, ava_error_invalid_function_prototype(
+          &provoker->location, ava_value_of_string(msg)));
+    }
   }
 
   return (ava_macro_subst_result) {

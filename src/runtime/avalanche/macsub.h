@@ -489,8 +489,10 @@ ava_macsub_context* ava_macsub_context_push_minor(
  * @param symbol The symbol to add. It is added using its full_name.
  * @param location If an error occurs, the location at which to report the
  * error.
+ * @return Whether the symbol was actually added. A false value indicates that
+ * an error occurred.
  */
-void ava_macsub_put_symbol(
+ava_bool ava_macsub_put_symbol(
   ava_macsub_context* context, struct ava_symbol_s* symbol,
   const ava_compile_location* location);
 

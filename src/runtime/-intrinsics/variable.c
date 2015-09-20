@@ -176,6 +176,7 @@ ava_ast_node* ava_intr_variable_lvalue(
     new_symbol->v.var.name.scheme = ava_nms_ava;
     new_symbol->v.var.name.name = new_symbol->full_name;
     ava_macsub_put_symbol(context, new_symbol, location);
+    ava_varscope_put_local(ava_macsub_get_varscope(context), new_symbol);
   }
 
   definer->header.v = &ava_intr_var_write_vtable;

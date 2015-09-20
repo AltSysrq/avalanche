@@ -1153,7 +1153,7 @@ set defs {
     msg "Function declares no arguments."
     explanation {
       All Avalanche functions are required to take at least one argument, since
-      it is awkward to impossible to invoke functions with no arguments.
+      it is awkward to impossible to invoke functions with no parameters.
 
       If the function doesn't take any meaningful inputs, give the function a
       single argument "()".
@@ -1208,10 +1208,65 @@ set defs {
       [name default] --- optional positional argument with given default
       [-name] --- optional named argument, default empty string
       [-name default] --- optional named argument with given default
+      \*name --- variadic arguments
 
       If the indicated token isn't expected to be a function argument
       declaration, most likely the "=" of the expression-form function body was
       forgotten.
+    }
+  }
+
+  cerror C5066 defun_no_explicit_args {} {
+    msg "Function declares only optional arguments."
+    explanation {
+      The indicated function only declares itself to take optional arguments;
+      ie, it has only bracket-enclosed argument declarations.
+
+      Since it is awkward to invoke functions without any parameters, functions
+      are required to take at least one argument. If all the arguments are
+      truly intended to be optional, conventionally a "()" argument is added to
+      the end of the argument list.
+    }
+  }
+
+  cerror C5067 defun_varargs_name_must_be_simple {} {
+    msg "Invalid variadic argument name."
+    explanation {
+      A variadic argument must have a single bareword as its name. This name
+      may not begin with a hyphen, since that would imply it is a named
+      argument.
+    }
+  }
+
+  cerror C5068 defun_varargs_in_optional {} {
+    msg "Variadic argument cannot be enclosed in brackets."
+    explanation {
+      Variadic arguments cannot be defaulted (or otherwise made "optional" by
+      enclosing them in brackets) because they are necessarily bound to the
+      empty list when no parameters are passed to them.
+
+      In most cases, the correct fix is to write "\*foo" instead of "[\*foo]".
+      There is no equivalent to "[\*foo default]".
+    }
+  }
+
+  cerror C5069 defun_discontiguous_varshape {} {
+    msg "Variably-shaped arguments is discontiguous from others."
+    explanation {
+      All "variably-shaped" arguments (optional arguments, named arguments, and
+      variadic arguments) must occur in one contiguous group within a
+      function's argument list. Were this not the case, the binding of
+      parameters to arguments could be ambiguous.
+    }
+  }
+
+  cerror C5070 defun_varshape_after_varargs {} {
+    msg "Variably-shaped argument after variadic argument."
+    explanation {
+      A "variably-shaped" argument (optional argument, named argument, or
+      variadic argument) cannot occur anywhere after a variadic argument in a
+      function's argument list, as this could make the binding of parameters to
+      arguments ambiguous.
     }
   }
 }

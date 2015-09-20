@@ -87,7 +87,7 @@ int main(void) {
 
   suite = suite_create(SUITE_NAME);
 
-  if (glob(DIRECTORY "/*.ava", GLOB_NOSORT, NULL, &globbed))
+  if (glob(DIRECTORY "/*.ava", 0, NULL, &globbed))
     err(EX_NOINPUT, "Failed to list test cases");
 
   if (0 == globbed.gl_pathc)
@@ -109,7 +109,7 @@ int main(void) {
   }
 
   sr = srunner_create(suite);
-  srunner_run_all(sr, CK_VERBOSE);
+  srunner_run_all(sr, CK_ENV);
   failures = srunner_ntests_failed(sr);
 
   srunner_free(sr);

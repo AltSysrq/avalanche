@@ -214,7 +214,7 @@ ava_macsub_context* ava_macsub_context_push_minor(
   return this;
 }
 
-void ava_macsub_put_symbol(
+ava_bool ava_macsub_put_symbol(
   ava_macsub_context* context,
   ava_symbol* symbol,
   const ava_compile_location* location
@@ -230,6 +230,8 @@ void ava_macsub_put_symbol(
   if (conflicting)
     ava_macsub_record_error(
       context, ava_error_symbol_redefined(location, symbol->full_name));
+
+  return NULL == conflicting;
 }
 
 ava_ast_node* ava_macsub_run(ava_macsub_context* context,
