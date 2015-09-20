@@ -449,10 +449,16 @@ static void ava_intr_fun_codegen(
   ava_intr_fun* this, ava_codegen_context* context
 ) {
   ava_pcode_register reg;
+  size_t i;
 
   ava_codegen_set_location(context, &this->header.location);
 
-  /* TODO: Assert empty args are empty */
+  reg.type = ava_prt_var;
+  for (i = 0; i < this->num_empty_args; ++i) {
+    reg.index = ava_varscope_get_index(
+      ava_macsub_get_varscope(this->subcontext), this->empty_args[i]);
+    AVA_PCXB(aaempty, reg);
+  }
 
   reg.type = ava_prt_data;
   reg.index = ava_codegen_push_reg(context, ava_prt_data, 1);

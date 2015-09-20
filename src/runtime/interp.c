@@ -357,6 +357,9 @@ static ava_value ava_interp_run_function(
       lists[lf->dst.index] = ava_list_proj_flatten(lists[lf->src.index]);
     } break;
 
+    case ava_pcxt_aaempty: {
+    } break;
+
     case ava_pcxt_invoke_ss: {
       const ava_pcode_global* target;
       const ava_pcx_invoke_ss* inv = (const ava_pcx_invoke_ss*)instr;
