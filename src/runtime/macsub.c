@@ -29,6 +29,7 @@
 #include "avalanche/macsub.h"
 #include "avalanche/symbol.h"
 #include "avalanche/symtab.h"
+#include "avalanche/varscope.h"
 #include "-intrinsics/fundamental.h"
 #include "../bsd.h"
 
@@ -43,6 +44,7 @@ typedef struct {
 
 struct ava_macsub_context_s {
   ava_symtab* symbol_table;
+  ava_varscope* varscope;
   ava_compile_error_list* errors;
   ava_string symbol_prefix;
   unsigned level;
@@ -81,6 +83,7 @@ ava_macsub_context* ava_macsub_context_new(
 
   this = AVA_NEW(ava_macsub_context);
   this->symbol_table = symbol_table;
+  this->varscope = ava_varscope_new();
   this->errors = errors;
   this->symbol_prefix = symbol_prefix;
   this->level = 0;
@@ -98,6 +101,12 @@ ava_symtab* ava_macsub_get_symtab(
   const ava_macsub_context* context
 ) {
   return context->symbol_table;
+}
+
+ava_varscope* ava_macsub_get_varscope(
+  const ava_macsub_context* context
+) {
+  return context->varscope;
 }
 
 void ava_macsub_import(
@@ -179,6 +188,7 @@ ava_macsub_context* ava_macsub_context_push_major(
 
   this = AVA_NEW(ava_macsub_context);
   this->symbol_table = ava_symtab_new(parent->symbol_table);
+  this->varscope = ava_varscope_new();
   this->errors = parent->errors;
   this->symbol_prefix = ava_string_concat(parent->symbol_prefix, interfix);
   this->level = parent->level + 1;
@@ -195,6 +205,7 @@ ava_macsub_context* ava_macsub_context_push_minor(
 
   this = AVA_NEW(ava_macsub_context);
   this->symbol_table = parent->symbol_table;
+  this->varscope = parent->varscope;
   this->errors = parent->errors;
   this->symbol_prefix = ava_string_concat(parent->symbol_prefix, interfix);
   this->level = parent->level;
@@ -203,7 +214,7 @@ ava_macsub_context* ava_macsub_context_push_minor(
   return this;
 }
 
-void ava_macsub_put_symbol(
+ava_bool ava_macsub_put_symbol(
   ava_macsub_context* context,
   ava_symbol* symbol,
   const ava_compile_location* location
@@ -219,6 +230,8 @@ void ava_macsub_put_symbol(
   if (conflicting)
     ava_macsub_record_error(
       context, ava_error_symbol_redefined(location, symbol->full_name));
+
+  return NULL == conflicting;
 }
 
 ava_ast_node* ava_macsub_run(ava_macsub_context* context,
@@ -565,6 +578,19 @@ void ava_ast_node_cg_discard(ava_ast_node* node,
                       ava_error_is_pure_but_would_discard(
                         &node->location, ava_string_of_cstring(
                           node->v->name)));
+}
+
+void ava_ast_node_cg_force(ava_ast_node* node,
+                           const ava_pcode_register* dst,
+                           ava_codegen_context* context) {
+  if (node->v->cg_force) {
+    (*node->v->cg_force)(node, dst, context);
+  } else if (node->v->cg_evaluate) {
+    ava_ast_node_cg_evaluate(node, dst, context);
+  } else {
+    ava_ast_node_cg_discard(node, context);
+    AVA_PCXB(ld_imm_vd, *dst, AVA_EMPTY_STRING);
+  }
 }
 
 void ava_ast_node_cg_define(ava_ast_node* node,

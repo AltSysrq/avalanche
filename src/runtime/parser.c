@@ -272,7 +272,7 @@ static ava_parse_unit_read_result ava_parse_block_content(
   dst->type = ava_put_block;
   dst->location.filename = context->filename;
   dst->location.source = context->source;
-  dst->location.line_offset = 0;
+  dst->location.line_offset = first_token->line_offset;
   dst->location.start_line = first_token->line;
   dst->location.start_column = first_token->column;
   TAILQ_INIT(&dst->v.statements);

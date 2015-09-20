@@ -464,6 +464,21 @@ struct exe x {
     }
   }
 
+  # Asserts that a value (an argument, presumably) is the empty string.
+  #
+  # Semantics: The given V-register is read. If it is the empty string, this
+  # instruction has no effect. If it is not the empty string, behaviour is
+  # undefined.
+  #
+  # This is normally only used on arguments, and is used to assert that ()
+  # arguments are indeed empty. Implementations which throw exceptions in
+  # response to the assertion failure should indicate that.
+  elt aaempty {
+    register v src {
+      prop reg-read
+    }
+  }
+
   # Invokes a statically-known function with statically-bound arguments.
   #
   # Semantics: The given function is invoked with an array of D-registers
@@ -473,6 +488,8 @@ struct exe x {
   #
   # If marshalling the function's arguments or return value fails, the
   # exception propagates.
+  #
+  # This instruction uninitialises the D-registers passed as arguments.
   #
   # The number of arguments given must exactly match the number of arguments
   # taken by the function.
@@ -502,6 +519,9 @@ struct exe x {
   # If binding the parameters fails, an ava_error_exception with the type name
   # "bad-arguments" is thrown.
   #
+  # Regardless of whether the statement succeeds, the input P-registers are
+  # uninitialised by this instruction.
+  #
   # Any exceptions resulting from marshalling the function call propagate.
   elt invoke-sd {
     register dv dst {
@@ -530,6 +550,9 @@ struct exe x {
   # If binding the parameters fails, an ava_error_exception with the type name
   # "bad-arguments" is thrown.
   #
+  # Regardless of whether the statement succeeds, the input P-registers are
+  # uninitialised by this instruction.
+  #
   # Any exceptions resulting from marshalling the function call propagate.
   elt invoke-dd {
     register dv dst {
@@ -544,6 +567,37 @@ struct exe x {
 
     constraint {
       @.base >= 0 && @.nparms > 0
+    }
+  }
+
+  # Performs partial application of a function.
+  #
+  # Semantics: Starting from the first non-implicit argument in the function in
+  # src, each argument in the function is changed to an implicit argument whose
+  # value is read from successive D-registers starting at d$base. $nargs
+  # arguments are rebound this way. The result is written into dst.
+  #
+  # The behaviour of this function is undefined if the function in src does not
+  # have at least $nargs arguments following the first non-implicit argument,
+  # or if it has no non-implicit arguments at all.
+  #
+  # This instruction is intended for the construction of closures. It is
+  # important to note that it ignores the actual binding type of arguments it
+  # rebinds, and thus does not behave the way one might intend if it binds over
+  # non-pos arguments.
+  elt partial {
+    register f dst {
+      prop reg-write
+    }
+    register f src {
+      prop reg-write
+    }
+
+    int base
+    int nargs
+
+    constraint {
+      @.base >= 0 && @.nargs > 0
     }
   }
 

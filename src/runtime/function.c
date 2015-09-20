@@ -944,7 +944,8 @@ ava_value ava_function_invoke(const ava_function* fun,
                     (args[0], args[1], args[2], args[3],
                      args[4], args[5], args[6], args[7]));
     default:
-      return (*(ava_value(*)(ava_value*restrict))fun->address)(args);
+      return (*(ava_value(*)(size_t,ava_value*restrict))fun->address)(
+        fun->num_args, args);
     }
   }
 

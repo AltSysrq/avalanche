@@ -1,0 +1,5 @@
+fun foo x {
+  fun bar () {
+    #set# x y
+  }
+}

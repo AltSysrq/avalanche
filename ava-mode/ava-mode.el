@@ -30,6 +30,7 @@
   (list
    (cons (regexp-opt (list
                       "extern" "Extern" "EXTERN"
+                      "fun" "Fun" "FUN"
                       "macro" "Macro" "MACRO"
                       "namespace" "import"
                       "alias" "Alias" "ALIAS")

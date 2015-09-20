@@ -31,6 +31,7 @@
 #include "../avalanche/macro-arg.h"
 #include "../avalanche/pcode.h"
 #include "../avalanche/code-gen.h"
+#include "../avalanche/varscope.h"
 #include "variable.h"
 
 typedef struct {
@@ -93,9 +94,6 @@ static ava_var_casing ava_var_casing_of(ava_string name);
 static ava_visibility ava_var_visibility_of(
   ava_var_casing casing, ava_uint level);
 static ava_bool ava_var_is_casing_mutable(ava_var_casing casing);
-static ava_ast_node* ava_intr_var_read_new(
-  ava_macsub_context* context, const ava_symbol* symbol,
-  const ava_compile_location* location);
 
 ava_ast_node* ava_intr_variable_lvalue(
   ava_macsub_context* context,
@@ -175,6 +173,7 @@ ava_ast_node* ava_intr_variable_lvalue(
     new_symbol->v.var.name.scheme = ava_nms_ava;
     new_symbol->v.var.name.name = new_symbol->full_name;
     ava_macsub_put_symbol(context, new_symbol, location);
+    ava_varscope_put_local(ava_macsub_get_varscope(context), new_symbol);
   }
 
   definer->header.v = &ava_intr_var_write_vtable;
@@ -237,7 +236,7 @@ static ava_bool ava_var_is_casing_mutable(ava_var_casing casing) {
   abort();
 }
 
-static ava_ast_node* ava_intr_var_read_new(
+ava_ast_node* ava_intr_var_read_new(
   ava_macsub_context* context, const ava_symbol* symbol,
   const ava_compile_location* location
 ) {
@@ -324,10 +323,17 @@ static void ava_intr_var_read_postprocess(ava_intr_var_read* node) {
 
   switch (node->var->type) {
   case ava_st_global_variable:
+    break;
+
   case ava_st_local_variable:
+    ava_varscope_ref_var(
+      ava_macsub_get_varscope(node->header.context), node->var);
+    break;
+
   case ava_st_global_function:
   case ava_st_local_function:
-    /* OK */
+    ava_varscope_ref_scope(
+      ava_macsub_get_varscope(node->header.context), node->var->v.var.scope);
     break;
 
   case ava_st_control_macro:
@@ -344,6 +350,9 @@ static void ava_intr_var_read_cg_evaluate(
   ava_intr_var_read* node, const ava_pcode_register* dst,
   ava_codegen_context* context
 ) {
+  ava_pcode_register var_reg, fun_reg, data_reg;
+  ava_pcode_register_index data_base;
+
   switch (node->var->type) {
   case ava_st_global_variable:
   case ava_st_global_function:
@@ -353,12 +362,50 @@ static void ava_intr_var_read_cg_evaluate(
     break;
 
   case ava_st_local_variable:
-    /* TODO */
-    abort();
+    var_reg.type = ava_prt_var;
+    var_reg.index = ava_varscope_get_index(
+      ava_macsub_get_varscope(node->header.context), node->var);
+    AVA_PCXB(ld_reg, *dst, var_reg);
+    break;
 
-  case ava_st_local_function:
-    /* TODO */
-    abort();
+  case ava_st_local_function: {
+    const ava_varscope* localscope =
+      ava_macsub_get_varscope(node->header.context);
+    const ava_varscope* funscope = node->var->v.var.scope;
+    size_t i, num_captures = ava_varscope_num_captures(funscope);
+    const ava_symbol* captures[num_captures];
+
+    ava_ast_node_cg_define(node->var->definer, context);
+    ava_codegen_set_location(context, &node->header.location);
+
+    if (num_captures) {
+      ava_varscope_get_vars(captures, funscope, num_captures);
+
+      fun_reg.type = ava_prt_function;
+      fun_reg.index = ava_codegen_push_reg(context, ava_prt_function, 1);
+      data_reg.type = ava_prt_data;
+      data_base = ava_codegen_push_reg(context, ava_prt_data, num_captures + 1);
+
+      data_reg.index = data_base + num_captures;
+      AVA_PCXB(ld_glob, data_reg, node->var->pcode_index);
+      AVA_PCXB(ld_reg, fun_reg, data_reg);
+
+      var_reg.type = ava_prt_var;
+      for (i = 0; i < num_captures; ++i) {
+        var_reg.index = ava_varscope_get_index(localscope, captures[i]);
+        data_reg.index = data_base + i;
+        AVA_PCXB(ld_reg, data_reg, var_reg);
+      }
+
+      AVA_PCXB(partial, fun_reg, fun_reg, data_base, num_captures);
+      AVA_PCXB(ld_reg, *dst, fun_reg);
+
+      ava_codegen_pop_reg(context, ava_prt_data, 1);
+      ava_codegen_pop_reg(context, ava_prt_function, 1);
+    } else {
+      AVA_PCXB(ld_glob, *dst, node->var->pcode_index);
+    }
+  } break;
 
   case ava_st_control_macro:
   case ava_st_operator_macro:
@@ -392,8 +439,14 @@ static void ava_intr_var_write_cg_evaluate(
 
   ava_ast_node_cg_define(node->var->definer, context);
 
-  reg.type = ava_prt_data;
-  reg.index = ava_codegen_push_reg(context, ava_prt_data, 1);
+  if (ava_st_local_variable != node->var->type) {
+    reg.type = ava_prt_data;
+    reg.index = ava_codegen_push_reg(context, ava_prt_data, 1);
+  } else {
+    reg.type = ava_prt_var;
+    reg.index = ava_varscope_get_index(
+      ava_macsub_get_varscope(node->header.context), node->var);
+  }
   ava_ast_node_cg_evaluate(node->producer, &reg, context);
 
   ava_codegen_set_location(context, &node->header.location);
@@ -401,13 +454,13 @@ static void ava_intr_var_write_cg_evaluate(
     AVA_PCXB(set_glob, node->var->pcode_index, reg);
   } else {
     assert(ava_st_local_variable == node->var->type);
-    /* TODO */
-    abort();
+    /* Nothing else to do with the var */
   }
 
   if (dst) AVA_PCXB(ld_reg, *dst, reg);
 
-  ava_codegen_pop_reg(context, ava_prt_data, 1);
+  if (ava_st_local_variable != node->var->type)
+    ava_codegen_pop_reg(context, ava_prt_data, 1);
 }
 
 static void ava_intr_var_write_cg_discard(

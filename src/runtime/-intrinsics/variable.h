@@ -36,6 +36,17 @@ ava_macro_subst_result ava_intr_var_subst(
   ava_bool* consumed_other_statements);
 
 /**
+ * Creates an AST node which directly reads the given symbol.
+ *
+ * @param context The macro substitution context in which this occurs.
+ * @param symbol The symbol of a variable or function to read.
+ * @param location The location to report if anything goes wrong.
+ */
+ava_ast_node* ava_intr_var_read_new(
+  ava_macsub_context* context, const ava_symbol* symbol,
+  const ava_compile_location* location);
+
+/**
  * The intrinsic #set# control macro.
  *
  * Syntax:

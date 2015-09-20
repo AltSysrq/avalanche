@@ -68,7 +68,7 @@ static const ava_value_trait ava_pointer_generic_impl = {
 };
 
 AVA_LIST_DEFIMPL(ava_pointer, &ava_pointer_generic_impl)
-AVA_POINTER_DEFIMPL(ava_pointer, &ava_pointer_list_impl)
+AVA_POINTER_DEFIMPL_PUBLIC(ava_pointer, &ava_pointer_list_impl)
 
 const ava_pointer_prototype ava_pointer_proto_mut_void =
     AVA_INIT_POINTER_PROTOTYPE(AVA_EMPTY_STRING_INIT, ava_false);

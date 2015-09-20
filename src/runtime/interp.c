@@ -38,6 +38,7 @@
 #include "avalanche/pcode.h"
 #include "avalanche/exception.h"
 #include "avalanche/errors.h"
+#include "avalanche/pointer.h"
 #include "avalanche/interp.h"
 
 /*
@@ -75,11 +76,25 @@ static const ava_pcode_global* ava_interp_get_global(
   ava_uint index);
 static void ava_interp_get_global_function(
   ava_function* dst,
-  const ava_pcode_global* fun);
+  const ava_pcode_global* fun,
+  const ava_pcode_global_list* pcode,
+  ava_value* globals);
 static ava_value* ava_interp_get_global_var_ptr(
   const ava_pcode_global* var,
   ava_value* global_vars,
   ava_uint index);
+static ava_value ava_interp_invoke_user(
+  size_t nargs, ava_value*restrict args);
+
+static const ava_pointer_prototype ava_interp_pcode_ptr =
+  AVA_INIT_POINTER_PROTOTYPE(
+    AVA_ASCII9_INIT('p','c','o','d','e'), ava_true);
+static const ava_pointer_prototype ava_interp_pcode_fun_ptr =
+  AVA_INIT_POINTER_PROTOTYPE(
+    AVA_ASCII9_INIT('p','c','o','d','e','-','f','u','n'), ava_true);
+static const ava_pointer_prototype ava_interp_globals_ptr =
+  AVA_INIT_POINTER_PROTOTYPE(
+    AVA_ASCII9_INIT('a','v','a','_','v','a','l','u','e'), ava_false);
 
 void ava_interp_exec(const ava_pcode_global_list* pcode) {
   const ava_pcode_global* statement;
@@ -164,7 +179,7 @@ static ava_value ava_interp_run_function(
       case ava_pcgt_ext_fun:
       case ava_pcgt_fun: {
         ava_function tmp;
-        ava_interp_get_global_function(&tmp, global);
+        ava_interp_get_global_function(&tmp, global, pcode, global_vars);
         src = ava_value_of_function(AVA_CLONE(tmp));
       } break;
 
@@ -342,13 +357,25 @@ static ava_value ava_interp_run_function(
       lists[lf->dst.index] = ava_list_proj_flatten(lists[lf->src.index]);
     } break;
 
+    case ava_pcxt_aaempty: {
+    } break;
+
     case ava_pcxt_invoke_ss: {
+      const ava_pcode_global* target;
       const ava_pcx_invoke_ss* inv = (const ava_pcx_invoke_ss*)instr;
       ava_function fun;
       ava_value ret;
-      ava_interp_get_global_function(
-        &fun, ava_interp_get_global(pcode, inv->fun));
-      ret = ava_function_invoke(&fun, data + inv->base);
+
+      target = ava_interp_get_global(pcode, inv->fun);
+      if (ava_pcgt_ext_fun == target->type) {
+        ava_interp_get_global_function(
+          &fun, target, pcode, global_vars);
+        ret = ava_function_invoke(&fun, data + inv->base);
+      } else {
+        ret = ava_interp_run_function(
+          pcode, ((const ava_pcg_fun*)target)->body,
+          data + inv->base, inv->nargs, global_vars);
+      }
       switch (inv->dst.type) {
       case ava_prt_var:  vars[inv->dst.index] = ret; break;
       case ava_prt_data: data[inv->dst.index] = ret; break;
@@ -361,7 +388,7 @@ static ava_value ava_interp_run_function(
       ava_function fun;
       ava_value ret;
       ava_interp_get_global_function(
-        &fun, ava_interp_get_global(pcode, inv->fun));
+        &fun, ava_interp_get_global(pcode, inv->fun), pcode, global_vars);
       ret = ava_function_bind_invoke(
         &fun, inv->nparms, parms + inv->base);
       switch (inv->dst.type) {
@@ -381,6 +408,25 @@ static ava_value ava_interp_run_function(
       case ava_prt_data: data[inv->dst.index] = ret; break;
       default: abort();
       }
+    } break;
+
+    case ava_pcxt_partial: {
+      const ava_pcx_partial* p = (const ava_pcx_partial*)instr;
+      ava_function* fun;
+      ava_argument_spec* argspecs;
+      size_t i, off, n;
+
+      fun = AVA_CLONE(*funs[p->src.index]);
+      fun->args = argspecs =
+        ava_clone(fun->args, sizeof(ava_argument_spec) * fun->num_args);
+
+      for (off = 0; ava_abt_implicit == argspecs[off].binding.type; ++off);
+      for (i = 0, n = p->nargs; i < n; ++i) {
+        argspecs[i + off].binding.type = ava_abt_implicit;
+        argspecs[i + off].binding.value = data[i + p->base];
+      }
+
+      funs[p->dst.index] = fun;
     } break;
 
     case ava_pcxt_ret: {
@@ -454,7 +500,9 @@ static ava_value* ava_interp_get_global_var_ptr(
 
 static void ava_interp_get_global_function(
   ava_function* dst,
-  const ava_pcode_global* global
+  const ava_pcode_global* global,
+  const ava_pcode_global_list* pcode,
+  ava_value* globals
 ) {
   switch (global->type) {
   case ava_pcgt_ext_fun: {
@@ -469,9 +517,52 @@ static void ava_interp_get_global_function(
 #endif
   } break;
   case ava_pcgt_fun: {
-    /* TODO */
-    abort();
+    ava_argument_spec* argspec;
+    const ava_pcg_fun* f = (const ava_pcg_fun*)global;
+    size_t i;
+
+    dst->address = (void(*)())ava_interp_invoke_user;
+    dst->calling_convention = ava_cc_ava;
+    /* Pad the argument list to ensure it's always called with size+array
+     * instead of separate values.
+     */
+    dst->num_args = f->prototype->num_args + AVA_CC_AVA_MAX_INLINE_ARGS;
+    dst->args = argspec = ava_alloc(sizeof(ava_argument_spec) * dst->num_args);
+    argspec[0].binding.type = ava_abt_implicit;
+    argspec[0].binding.value =
+      ava_pointer_of_proto(&ava_interp_pcode_ptr, pcode).v;
+    argspec[1].binding.type = ava_abt_implicit;
+    argspec[1].binding.value =
+      ava_pointer_of_proto(&ava_interp_pcode_fun_ptr, f->body).v;
+    argspec[2].binding.type = ava_abt_implicit;
+    argspec[2].binding.value =
+      ava_pointer_of_proto(&ava_interp_globals_ptr, globals).v;
+    for (i = 3; i < AVA_CC_AVA_MAX_INLINE_ARGS; ++i) {
+      argspec[i].binding.type = ava_abt_implicit;
+      argspec[i].binding.value = ava_empty_list().v;
+    }
+    memcpy(argspec + AVA_CC_AVA_MAX_INLINE_ARGS,
+           f->prototype->args,
+           sizeof(ava_argument_spec) * f->prototype->num_args);
   } break;
   default: abort();
   }
+}
+
+static ava_value ava_interp_invoke_user(
+  size_t nargs, ava_value*restrict args
+) {
+  const ava_pcode_global_list* pcode;
+  const ava_pcode_exe_list* fun;
+  ava_value* globals;
+
+  pcode = ava_pointer_get_const(args[0], ava_interp_pcode_ptr.tag);
+  fun = ava_pointer_get_const(args[1], ava_interp_pcode_fun_ptr.tag);
+  globals = ava_pointer_get_mutable(args[2], ava_interp_globals_ptr.tag);
+
+  return ava_interp_run_function(
+    pcode, fun,
+    args + AVA_CC_AVA_MAX_INLINE_ARGS,
+    nargs - AVA_CC_AVA_MAX_INLINE_ARGS,
+    globals);
 }
