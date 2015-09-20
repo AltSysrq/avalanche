@@ -438,26 +438,20 @@ static ava_value ava_interp_run_function(
       }
     } break;
 
-    case ava_pcxt_goto: {
-      const ava_pcx_goto* go = (const ava_pcx_goto*)instr;
-      TAILQ_FOREACH(instr, body, next) {
-        if (ava_pcxt_label == instr->type &&
-            !ava_strcmp(go->target, ((const ava_pcx_label*)instr)->name))
-          break;
-      }
+    case ava_pcxt_bool: {
+      const ava_pcx_bool* b = (const ava_pcx_bool*)instr;
+
+      ints[b->dst.index] = !!ints[b->src.index];
     } break;
 
-    case ava_pcxt_goto_c: {
-      const ava_pcx_goto_c* go = (const ava_pcx_goto_c*)instr;
+    case ava_pcxt_branch: {
+      const ava_pcx_branch* br = (const ava_pcx_branch*)instr;
 
-      if (!ints[go->condition.index])
-        break;
-
-      TAILQ_FOREACH(instr, body, next) {
-        if (ava_pcxt_label == instr->type &&
-            !ava_strcmp(go->target, ((const ava_pcx_label*)instr)->name))
-          break;
-      }
+      if (br->value == ints[br->key.index])
+        TAILQ_FOREACH(instr, body, next)
+          if (ava_pcxt_label == instr->type &&
+              br->target == ((const ava_pcx_label*)instr)->name)
+            break;
     } break;
 
     case ava_pcxt_label: break;

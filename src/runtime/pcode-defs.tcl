@@ -216,8 +216,6 @@ struct exe x {
   prop str jump-target
   prop int global-ref
   prop int global-fun-ref
-  attr conditional-jump
-  attr unconditional-jump
 
   # Records the source filename in effect until the next declaration indicating
   # otherwise.
@@ -606,42 +604,45 @@ struct exe x {
   # Semantics: The current function immediately terminates execution, producing
   # the chosen register's value as its return value.
   elt ret {
-    attr unconditional-jump
     register dv return-value {
       prop reg-read
     }
   }
 
-  # Jumps to a label within the current function.
+  # Normalises a boolean integer to be 0 or 1.
   #
-  # Semantics: Control transfers to the statement following the label whose
-  # name is specified by target. The label must be found within the function
-  # containing this statement.
-  elt goto {
-    attr unconditional-jump
-    str target {
-      prop jump-target
+  # Semantics: The src I-register is read. If it is 0, 0 is written to the dst
+  # I-register. Otherwise, 1 is written to the dst I-register.
+  elt bool {
+    register i dst {
+      prop reg-write
+    }
+    register i src {
+      prop reg-read
     }
   }
 
-  # Conditionally jumps to a label within the current function.
+  # Branches to another location within the function.
   #
-  # Semantics: If the value in `condition` is non-zero, this statement behaves
-  # like `goto`. Otherwise, it does nothing.
-  elt goto-c {
-    attr conditional-jump
-    register i condition
-    str target {
-      prop jump-target
+  # Semantics: The key I-register is read. If it is equal to value, control
+  # jumps to the label whose name matches target. Otherwise, control continues
+  # to the next instruction.
+  #
+  # The P-Code is considered invalid if target references a nonexistent label.
+  elt branch {
+    register i key {
+      prop reg-read
     }
+    int value
+    int target
   }
 
-  # Labels a location within a function.
+  # Labels a point in the instruction sequence.
   #
-  # Semantics: This statement has no effect, but may be used as a jump target
-  # by other statements within the same subroutine.
+  # Semantics: This instruction has no effect, but serves as a jump target for
+  # the branch instruction.
   elt label {
-    str name
+    int name
   }
 }
 
