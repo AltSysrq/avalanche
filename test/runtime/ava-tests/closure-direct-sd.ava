@@ -1,0 +1,10 @@
+extern pass-test pass_test c void [int pos]
+fun foo code {
+  fun bar () {
+    pass-test $code
+  }
+
+  bar \*[()]
+}
+
+foo 42

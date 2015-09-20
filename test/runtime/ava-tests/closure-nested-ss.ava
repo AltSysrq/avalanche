@@ -1,0 +1,18 @@
+extern pass-test pass_test c void [int pos]
+fun foo code {
+  fun a () {
+    b ()
+    fun b () {
+      fun c () {
+        fun d () {
+          pass-test $code
+        }
+        d ()
+      }
+      c ()
+    }
+  }
+  a ()
+}
+
+foo 42

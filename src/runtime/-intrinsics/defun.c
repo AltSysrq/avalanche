@@ -434,8 +434,7 @@ static void ava_intr_fun_cg_define(
   ava_codegen_set_global_location(context, &this->header.location);
   this->symbol->pcode_index = AVA_PCGB(
     fun, ava_v_private != this->symbol->visibility,
-    this->symbol->v.var.name,
-    &this->symbol->v.var.fun, vars, &body_builder);
+    this->symbol->v.var.name, prototype, vars, &body_builder);
   ava_codegen_export(context, this->symbol);
 
   ava_intr_fun_codegen(this, ava_codegen_context_new(context, body_builder));

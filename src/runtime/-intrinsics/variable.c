@@ -401,6 +401,7 @@ static void ava_intr_var_read_cg_evaluate(
       }
 
       AVA_PCXB(partial, fun_reg, fun_reg, data_base, num_captures);
+      AVA_PCXB(ld_reg, *dst, fun_reg);
 
       ava_codegen_pop_reg(context, ava_prt_data, 1);
       ava_codegen_pop_reg(context, ava_prt_function, 1);

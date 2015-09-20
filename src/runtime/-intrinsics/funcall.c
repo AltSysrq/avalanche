@@ -389,13 +389,13 @@ static void ava_intr_funcall_cg_evaluate(
 
     /* Copy parms */
     for (i = 0; i < funcall->num_parms - 1; ++i) {
-      preg.index = preg_base + i;
-      parm_reg.index = parm_base + i + num_captures;
+      preg.index = preg_base + i + num_captures;
+      parm_reg.index = parm_base + i;
       AVA_PCXB(ld_parm, preg, parm_reg, !!funcall->parms[i+1]->v->cg_spread);
     }
 
     AVA_PCXB(invoke_sd, *dst, funcall->static_function->pcode_index,
-             preg_base, funcall->num_parms - 1);
+             preg_base, funcall->num_parms - 1 + num_captures);
     ava_codegen_pop_reg(context, ava_prt_parm,
                         funcall->num_parms - 1 + num_captures);
   } break;
