@@ -94,9 +94,6 @@ static ava_var_casing ava_var_casing_of(ava_string name);
 static ava_visibility ava_var_visibility_of(
   ava_var_casing casing, ava_uint level);
 static ava_bool ava_var_is_casing_mutable(ava_var_casing casing);
-static ava_ast_node* ava_intr_var_read_new(
-  ava_macsub_context* context, const ava_symbol* symbol,
-  const ava_compile_location* location);
 
 ava_ast_node* ava_intr_variable_lvalue(
   ava_macsub_context* context,
@@ -239,7 +236,7 @@ static ava_bool ava_var_is_casing_mutable(ava_var_casing casing) {
   abort();
 }
 
-static ava_ast_node* ava_intr_var_read_new(
+ava_ast_node* ava_intr_var_read_new(
   ava_macsub_context* context, const ava_symbol* symbol,
   const ava_compile_location* location
 ) {

@@ -26,6 +26,7 @@
 #include "../avalanche/string.h"
 #include "../avalanche/value.h"
 #include "../avalanche/list.h"
+#include "../avalanche/integer.h"
 #include "../avalanche/function.h"
 #include "../avalanche/name-mangle.h"
 #include "../avalanche/symbol.h"
@@ -35,8 +36,12 @@
 #include "../avalanche/code-gen.h"
 #include "../avalanche/varscope.h"
 #include "../avalanche/errors.h"
+#include "variable.h"
+#include "fundamental.h"
 #include "defun.h"
 #include "bsd.h"
+
+#define LAMBDA_ARGS 4
 
 typedef struct {
   ava_ast_node header;
@@ -454,4 +459,80 @@ static void ava_intr_fun_codegen(
   ava_ast_node_cg_force(this->body, &reg, context);
   AVA_PCXB(ret, reg);
   ava_codegen_pop_reg(context, ava_prt_data, 1);
+}
+
+ava_ast_node* ava_intr_lambda_expr(
+  ava_macsub_context* context,
+  ava_parse_unit* lambda
+) {
+  ava_macsub_context* subcontext;
+  ava_string name, abs, amb;
+  ava_function* fun;
+  ava_argument_spec* argspecs;
+  ava_intr_fun* definition;
+  ava_intr_seq* seq;
+  ava_symbol* symbol;
+  size_t i;
+
+  ava_macsub_gensym_seed(context, &lambda->location);
+  name = ava_macsub_gensym(context, AVA_ASCII9_STRING("{}\\"));
+
+  subcontext = ava_macsub_context_push_major(context, name);
+  ava_macsub_import(&abs, &amb, subcontext,
+                    ava_macsub_apply_prefix(subcontext, AVA_EMPTY_STRING),
+                    AVA_EMPTY_STRING,
+                    ava_true, ava_true);
+
+  fun = AVA_NEW(ava_function);
+  fun->address = (void(*)())1;
+  fun->calling_convention = ava_cc_ava;
+  fun->num_args = LAMBDA_ARGS;
+  fun->args = argspecs = ava_alloc(sizeof(ava_argument_spec) * LAMBDA_ARGS);
+  for (i = 0; i < LAMBDA_ARGS; ++i) {
+    argspecs[i].binding.type = i? ava_abt_pos_default : ava_abt_pos;
+    argspecs[i].binding.value = ava_value_of_string(AVA_EMPTY_STRING);
+
+    symbol = AVA_NEW(ava_symbol);
+    symbol->type = ava_st_local_variable;
+    symbol->level = ava_macsub_get_level(subcontext);
+    symbol->full_name = ava_macsub_apply_prefix(
+      subcontext, ava_to_string(ava_value_of_integer(i + 1)));
+    symbol->v.var.is_mutable = ava_true;
+    symbol->v.var.name.scheme = ava_nms_ava;
+    symbol->v.var.name.name = symbol->full_name;
+    ava_macsub_put_symbol(subcontext, symbol, &lambda->location);
+    ava_varscope_put_local(ava_macsub_get_varscope(subcontext), symbol);
+  }
+
+  symbol = AVA_NEW(ava_symbol);
+  definition = AVA_NEW(ava_intr_fun);
+  symbol->type = ava_st_local_function; /* even if global, consider local */
+  symbol->level = ava_macsub_get_level(context);
+  symbol->full_name = ava_macsub_apply_prefix(context, name);
+  symbol->definer = (ava_ast_node*)definition;
+  symbol->v.var.is_mutable = ava_false;
+  symbol->v.var.name.scheme = ava_nms_ava;
+  symbol->v.var.name.name = symbol->full_name;
+  symbol->v.var.fun = *fun;
+  symbol->v.var.scope = ava_macsub_get_varscope(subcontext);
+  ava_macsub_put_symbol(context, symbol, &lambda->location);
+
+  definition->header.v = &ava_intr_fun_vtable;
+  definition->header.location = lambda->location;
+  definition->header.context = context;
+  definition->self_name = AVA_ASCII9_STRING("{}");
+  definition->subcontext = subcontext;
+  definition->symbol = symbol;
+  definition->num_empty_args = 0;
+  definition->empty_args = NULL;
+
+  definition->body = ava_macsub_run(
+    subcontext, &lambda->location,
+    &lambda->v.statements, ava_isrp_only);
+
+  seq = ava_intr_seq_new(context, &lambda->location, ava_isrp_last);
+  ava_intr_seq_add(seq, (ava_ast_node*)definition);
+  ava_intr_seq_add(seq, ava_intr_var_read_new(
+                     context, symbol, &lambda->location));
+  return ava_intr_seq_to_node(seq);
 }

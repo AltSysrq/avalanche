@@ -36,6 +36,7 @@
 #include "../avalanche/code-gen.h"
 #include "fundamental.h"
 #include "funcall.h"
+#include "defun.h"
 #include "variable.h"
 #include "../../bsd.h"
 
@@ -280,11 +281,25 @@ static void ava_intr_seq_cg_force(
   ava_intr_seq* seq, const ava_pcode_register* dst,
   ava_codegen_context* context
 ) {
-  if (ava_isrp_void == seq->return_policy) {
+  switch (seq->return_policy) {
+  case ava_isrp_void:
     ava_intr_seq_cg_common(seq, NULL, context, ava_false);
     AVA_PCXB(ld_imm_vd, *dst, AVA_EMPTY_STRING);
-  } else {
+    break;
+
+  case ava_isrp_only:
+    if (!STAILQ_EMPTY(&seq->children) &&
+        STAILQ_NEXT(STAILQ_FIRST(&seq->children), next)) {
+      ava_intr_seq_cg_common(seq, NULL, context, ava_false);
+      AVA_PCXB(ld_imm_vd, *dst, AVA_EMPTY_STRING);
+    } else {
+      ava_intr_seq_cg_common(seq, dst, context, ava_true);
+    }
+    break;
+
+  case ava_isrp_last:
     ava_intr_seq_cg_common(seq, dst, context, ava_true);
+    break;
   }
 }
 
@@ -867,8 +882,7 @@ ava_ast_node* ava_intr_unit(ava_macsub_context* context,
     return ava_intr_semilit_of(context, unit);
 
   case ava_put_block:
-    /* TODO */
-    abort();
+    return ava_intr_lambda_expr(context, unit);
   }
 
   /* unreachable */

@@ -78,4 +78,17 @@ ava_macro_subst_result ava_intr_fun_subst(
   const ava_parse_unit* provoker,
   ava_bool* consumed_other_statements);
 
+/**
+ * Implementation for lambda expression syntax units.
+ *
+ * Essentially equivalent to
+ *   fun ?gensym 1 [2] [3] [4] = <body>
+ *   $?gensym
+ *
+ * Except that the body uses the `only` return policy.
+ */
+ava_ast_node* ava_intr_lambda_expr(
+  ava_macsub_context* context,
+  ava_parse_unit* unit);
+
 #endif /* AVA_RUNTIME__INTRINSICS_DEFUN_H_ */
