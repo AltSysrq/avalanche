@@ -51,6 +51,7 @@ typedef struct {
   ava_bool defined;
 } ava_intr_fun;
 
+static const ava_parse_unit* first_unit(const ava_parse_statement_list* list);
 static ava_bool ava_intr_fun_is_named(ava_string* name);
 static ava_bool ava_intr_fun_is_def_begin(const ava_parse_unit* unit);
 
@@ -165,10 +166,11 @@ ava_macro_subst_result ava_intr_fun_subst(
       arg_name = AVA_EMPTY_STRING;
       arg_type = ava_abt_pos;
       require_empty = ava_true;
-      if (!TAILQ_EMPTY(&arg_unit->v.units))
+      subunit = first_unit(&arg_unit->v.statements);
+      if (subunit)
         ava_macsub_record_error(
           context, ava_error_defun_nonempty_empty(
-            &TAILQ_FIRST(&arg_unit->v.units)->location));
+            &subunit->location));
       break;
 
     case ava_put_semiliteral:
@@ -287,6 +289,17 @@ static ava_bool ava_intr_fun_is_def_begin(const ava_parse_unit* unit) {
   default:
     return ava_false;
   }
+}
+
+static const ava_parse_unit* first_unit(const ava_parse_statement_list* list) {
+  ava_parse_unit_list* units;
+
+  if (TAILQ_EMPTY(list)) return NULL;
+
+  units = &TAILQ_FIRST(list)->units;
+  if (TAILQ_EMPTY(units)) return NULL;
+
+  return TAILQ_FIRST(units);
 }
 
 static ava_bool ava_intr_fun_is_named(ava_string* name) {
