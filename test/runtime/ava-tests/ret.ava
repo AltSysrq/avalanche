@@ -1,0 +1,8 @@
+extern pass-test pass_test c void [int pos]
+
+fun doit a b {
+  #set# x $b
+  ret $x
+}
+
+pass-test (doit 56 42)

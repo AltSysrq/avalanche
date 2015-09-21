@@ -1269,6 +1269,14 @@ set defs {
       arguments ambiguous.
     }
   }
+
+  cerror C5071 ret_at_global_scope {} {
+    msg "\"ret\" at global scope."
+    explanation {
+      A "ret" (return) statement cannot be used at global scope, since there is
+      no containing function from which to return.
+    }
+  }
 }
 
 proc ncode {code} {

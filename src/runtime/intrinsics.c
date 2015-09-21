@@ -29,6 +29,7 @@
 #include "-intrinsics/defun.h"
 #include "-intrinsics/extern.h"
 #include "-intrinsics/namespace.h"
+#include "-intrinsics/ret.h"
 #include "-intrinsics/user-macro.h"
 #include "-intrinsics/variable.h"
 
@@ -60,6 +61,9 @@ void ava_register_intrinsics(ava_macsub_context* context) {
 
   ava_symtab* symtab = ava_macsub_get_symtab(context);
 
+  DEFINE("alias",       CTL,    PRIVATE,        alias);
+  DEFINE("Alias",       CTL,    INTERNAL,       alias);
+  DEFINE("ALIAS",       CTL,    PUBLIC,         alias);
   DEFINE("extern",      CTL,    PRIVATE,        extern);
   DEFINE("Extern",      CTL,    INTERNAL,       extern);
   DEFINE("EXTERN",      CTL,    PUBLIC,         extern);
@@ -71,9 +75,7 @@ void ava_register_intrinsics(ava_macsub_context* context) {
   DEFINE("MACRO",       CTL,    PUBLIC,         user_macro);
   DEFINE("import",      CTL,    NULL,           import);
   DEFINE("namespace",   CTL,    NULL,           namespace);
-  DEFINE("alias",       CTL,    PRIVATE,        alias);
-  DEFINE("Alias",       CTL,    INTERNAL,       alias);
-  DEFINE("ALIAS",       CTL,    PUBLIC,         alias);
+  DEFINE("ret",         CTL,    NULL,           ret);
   DEFINE("#var#",       CTL,    NULL,           var);
   DEFINE("#set#",       CTL,    NULL,           set);
   /* Weak absolute imports of the intrinsics and standard library */

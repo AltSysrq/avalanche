@@ -33,6 +33,7 @@
                       "fun" "Fun" "FUN"
                       "macro" "Macro" "MACRO"
                       "namespace" "import"
+                      "ret"
                       "alias" "Alias" "ALIAS")
                      'symbols)
          'font-lock-keyword-face)
