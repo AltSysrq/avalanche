@@ -661,7 +661,23 @@ set defs {
     msg "Not a block, for argument %name%"
     explanation {
       The indicated argument is required to be a brace-enclosed block, but
-      something else was given.
+      something else was found.
+    }
+  }
+
+  cerror C5072 macro_arg_must_be_substitution {{ava_string name}} {
+    msg "Not a substitution, for argument %name%"
+    explanation {
+      The indicated argument is required to be a parenthesis-enclosed
+      substitution, but something else was found.
+    }
+  }
+
+  cerror C5075 macro_arg_must_be_substitution_or_block {{ava_string name}} {
+    msg "Not a substitution or block, for argument %name%"
+    explanation {
+      The indicated argument is required to be a parenthesis-enclosed
+      substitution or a brace-enclosed block, but something else was found.
     }
   }
 
@@ -1275,6 +1291,63 @@ set defs {
     explanation {
       A "ret" (return) statement cannot be used at global scope, since there is
       no containing function from which to return.
+    }
+  }
+
+  # C5072 macro_arg_must_be_substitution group with other must-be errors
+
+  cerror C5073 if_required_else_omitted {} {
+    msg "\"else\" required before this point."
+    explanation {
+      Uses of the "if" macro require the "else" keyword before the final result
+      for the sake of clarity whenever the statement has more than one
+      conditional clause or when using statement form (i.e., with blocks
+      enclosed in braces).
+    }
+  }
+
+  cerror C5074 if_inconsistent_result_form {} {
+    msg "Inconsistent expression/statement-form results in if."
+    explanation {
+      All result arguments for an "if" usage must be blocks (brace-enclosed, no
+      value returned) or substitutions (parenthesis-enclosed, result returned).
+      The expected form for a single "if" usage is decided by the first result
+      argument; this error is raised if another result block differs from the
+      first result argument.
+    }
+  }
+
+  # cerror C5075 macro_arg_must_be_substitution_or_block with other must-bes
+
+  cerror C5076 statement_form_does_not_produce_a_value {} {
+    msg "Statement-form construct does not produce a value."
+    explanation {
+      Control structures generally come in two forms: statement-form and
+      expression-form, identified by result bodies being brace-enclosed blocks
+      or parenthesis-enclosed substitutions, respectively. The indicated
+      construct is in statement form, and thus cannot be used as an expression.
+
+      For example, the following is invalid due to this error:
+        foo = if ($answer) { 42 } else { 56 }
+      The above would be correctly written
+        foo = if ($answer) (42) (56)
+    }
+  }
+
+  cerror C5077 expression_form_discarded {} {
+    msg "Statement-form construct does not produce a value."
+    explanation {
+      Control structures generally come in two forms: statement-form and
+      expression-form, identified by result bodies being brace-enclosed blocks
+      or parenthesis-enclosed substitutions, respectively. The indicated
+      construct is in expression form, but its result is discarded. This is
+      almost certainly unintended, at the very least indicating disaggreement
+      between implied intent and actuality.
+
+      For example, the following is invalid due to this error:
+        if ($control) (do-something ())
+      The above would be correctly written
+        if ($control) { do-something () }
     }
   }
 }

@@ -32,8 +32,7 @@
                       "extern" "Extern" "EXTERN"
                       "fun" "Fun" "FUN"
                       "macro" "Macro" "MACRO"
-                      "namespace" "import"
-                      "ret"
+                      "else" "if" "import" "namespace" "ret"
                       "alias" "Alias" "ALIAS")
                      'symbols)
          'font-lock-keyword-face)
