@@ -1,0 +1,18 @@
+extern pass-test pass_test c void [int pos]
+
+#set# result 0
+pasta head {
+  if ($result) {
+    goto done
+  } else {
+    goto prepare
+  }
+} prepare {
+  #set# result 42
+  goto head
+} done {
+  #set# another $result
+} fallthrough {
+  pass-test $another
+}
+

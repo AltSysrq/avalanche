@@ -32,9 +32,9 @@
                       "alias" "Alias" "ALIAS"
                       "break" "collect" "collecting" "continue" "do" "each"
                       "else" "extern" "Extern" "EXTERN"
-                      "for" "fun" "Fun" "FUN"
+                      "for" "fun" "Fun" "FUN" "goto"
                       "in" "if" "import" "macro" "Macro" "MACRO" "namespace"
-                      "ret" "until" "while")
+                      "pasta" "ret" "until" "while")
                      'symbols)
          'font-lock-keyword-face)
    (cons "\\$\\(\\s_\\|\\w\\)+\\$?" 'font-lock-variable-name-face)))

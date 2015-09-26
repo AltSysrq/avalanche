@@ -1,0 +1,9 @@
+pasta foo.plugh {
+  goto foo.plugh
+} bar.plugh {
+  goto bar.plugh
+} xyzzy {
+  import foo *
+  import bar *
+  goto plugh
+}

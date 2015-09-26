@@ -1,0 +1,5 @@
+pasta foo {
+  goto foo
+}
+
+goto foo

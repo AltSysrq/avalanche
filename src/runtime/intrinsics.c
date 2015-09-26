@@ -31,6 +31,7 @@
 #include "-intrinsics/if.h"
 #include "-intrinsics/loop.h"
 #include "-intrinsics/namespace.h"
+#include "-intrinsics/pasta.h"
 #include "-intrinsics/ret.h"
 #include "-intrinsics/user-macro.h"
 #include "-intrinsics/variable.h"
@@ -77,6 +78,7 @@ void ava_register_intrinsics(ava_macsub_context* context) {
   DEFINE("macro",       CTL,    PRIVATE,        user_macro);
   DEFINE("Macro",       CTL,    INTERNAL,       user_macro);
   DEFINE("MACRO",       CTL,    PUBLIC,         user_macro);
+  DEFINE("goto",        CTL,    NULL,           goto);
   DEFINE("if",          CTL,    NULL,           if);
   DEFINE("each",        CTL,    "each",         loop);
   DEFINE("for",         CTL,    "for",          loop);
@@ -85,6 +87,7 @@ void ava_register_intrinsics(ava_macsub_context* context) {
   DEFINE("do",          CTL,    "do",           loop);
   DEFINE("import",      CTL,    NULL,           import);
   DEFINE("namespace",   CTL,    NULL,           namespace);
+  DEFINE("pasta",       CTL,    NULL,           pasta);
   DEFINE("ret",         CTL,    NULL,           ret);
   DEFINE("#var#",       CTL,    NULL,           var);
   DEFINE("#set#",       CTL,    NULL,           set);

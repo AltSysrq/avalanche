@@ -539,6 +539,17 @@ set defs {
     }
   }
 
+  cerror C5102 ambiguous_label {{ava_string name}} {
+    msg "Label reference is ambiguous: %name%"
+    explanation {
+      The given name used as a label reference could refer to more than one
+      symbol.
+
+      Labels occupy the same namespace as other symbols, so the conflicting
+      symbols are not necessarily labels.
+    }
+  }
+
   cerror C5003 no_such_function {{ava_string name}} {
     msg "No such function: %name%"
     explanation {
@@ -1616,6 +1627,50 @@ set defs {
 
   # cerror C5099 assignment_to_other with other assignment_to errors
   # cerror C5100 use_of_other_as_var with other use_of_*_as_var errors
+
+  cerror C5101 no_such_label {{ava_string name}} {
+    msg "No such label: %name%"
+    explanation {
+      The given goto target does not match any label visible in the current
+      scope.
+
+      Presumably either this reference or its definition was mispelled.
+    }
+  }
+
+  # cerror C5102 ambiguous_label with other ambiguous errors
+
+  cerror C5103 use_of_other_as_label {
+    {ava_string name} {ava_string type}
+  } {
+    msg "Use of %type% %name% as label."
+    explanation {
+      The given bareword was expected to resolve to a reference to a label, but
+      something else was found instead.
+    }
+  }
+
+  cerror C5104 use_of_label_in_enclosing_scope {} {
+    msg "Use of label from enclosing scope."
+    explanation {
+      The referenced label is defined in an outer function but used from an
+      inner function.
+
+      Labels cannot be used for non-local (i.e., cross-function) control flow.
+      Use exception handling for that.
+    }
+  }
+
+  cerror C5105 use_of_inaccessible_label {} {
+    msg "Label is not accessible from this point."
+    explanation {
+      While the given label is defined in the same scope as this reference, it
+      is not legal to reference it from the indicated location.
+
+      Label references may only occur within the structure that defines them,
+      even though their symbols follow normal rules of lexical visibility.
+    }
+  }
 }
 
 proc ncode {code} {
