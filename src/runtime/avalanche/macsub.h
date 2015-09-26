@@ -516,6 +516,22 @@ ava_ast_node* ava_macsub_run(ava_macsub_context* context,
                              ava_intr_seq_return_policy return_policy);
 
 /**
+ * Convenience for calling ava_macsub_run() on a block's statements or
+ * ava_macsub_run_units() on a single substitution.
+ *
+ * This is used for the common convention of structures accepting either blocks
+ * as void-multistatement structures or expressions as last-monostatement
+ * structures.
+ *
+ * @param context The context in which macro substitution is to run.
+ * @param container The unit containing the sequence of statements for which to
+ * run macro substitution.
+ * @return A valid AST node representing the result of processing.
+ */
+ava_ast_node* ava_macsub_run_contents(ava_macsub_context* context,
+                                      const ava_parse_unit* container);
+
+/**
  * Equivalent to calling ava_macsub_run() with a statement list containing the
  * given statement and all statements that follow it.
  *

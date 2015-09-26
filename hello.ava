@@ -4,9 +4,13 @@ extern fclose fclose c int [FILE* pos]
 extern get-prog-name getprogname c string "void pos"
 macro = op 1 (%#set# (<) (>))
 
+fun puts-stdout \*strings {
+  stdout = fopen -mode w -file /dev/stdout
+  each fragment in $strings {
+    fputs -to $stdout -text $fragment
+  }
+  fclose $stdout
+}
+
 prog-name = get-prog-name ()
-stdout = fopen -mode w -file /dev/stdout
-fputs -to $stdout -text "Hello from "
-fputs -to $stdout -text $prog-name
-fputs -to $stdout -text "!\n"
-fclose $stdout
+puts-stdout "Hello from " $prog-name "!\n"

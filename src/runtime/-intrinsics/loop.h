@@ -59,8 +59,8 @@
  *   - For an each clause with _n_ lvalues, the first _n_ elements are removed
  *     from the head of the list and assigned to each lvalue in order. If no
  *     elements at all were available, the loop switches to the completion
- *     stage. Otherwise, any lvalue that did not get a value is assigned the
- *     empty string.
+ *     stage. Otherwise, if any lvalue was not assigned anything, an
+ *     error_exception of type bad-list-multiplicity it thrown.
  *
  *   - For a for clause, the middle rvalue is evaluated and interpreted as an
  *     integer, default 0. If it is zero, the loop switches to the completion
@@ -102,6 +102,9 @@
  *
  * The evaluation result of the loop is the value of the loop accumulator upon
  * termination of the loop.
+ *
+ * The macro userdata for this function is a C string indicating the implicit
+ * first token.
  */
 ava_macro_subst_result ava_intr_loop_subst(
   const struct ava_symbol_s* self,
@@ -109,6 +112,5 @@ ava_macro_subst_result ava_intr_loop_subst(
   const ava_parse_statement* statement,
   const ava_parse_unit* provoker,
   ava_bool* consumed_other_statements);
-
 
 #endif /* AVA_RUNTIME__INTRINSICS_LOOP_H_ */

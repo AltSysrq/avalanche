@@ -45,6 +45,16 @@
   - extern lindex lindex ava varargs pos
     Returns the second argumentth element in the list in the first argument. If
     the index is out of range, returns the empty string.
+
+  - extern iadd iadd ava pos pos
+    Interprets both arguments as integers, adds them, and returns the result.
+
+  - extern iless iless ava pos pos
+    If the first integer argument is less than the second, returns 1.
+    Otherwise, returns 0.
+
+  - extern lnot lnot ava pos
+    Interprets the argument as an integer, and returns its logical negation.
  */
 
 #define SUITE_NAME "avalanche"
@@ -64,6 +74,23 @@ ava_value lindex(ava_value list, ava_value index) {
     return ava_empty_list().v;
   else
     return ava_list_index(list, ix);
+}
+
+ava_value iadd(ava_value a, ava_value b) {
+  return ava_value_of_integer(
+    ava_integer_of_value(a, 0) +
+    ava_integer_of_value(b, 0));
+}
+
+ava_value iless(ava_value a, ava_value b) {
+  return ava_value_of_integer(
+    ava_integer_of_value(a, 0) <
+    ava_integer_of_value(b, 0));
+}
+
+ava_value lnot(ava_value a) {
+  return ava_value_of_integer(
+    !ava_integer_of_value(a, 0));
 }
 
 static const char** inputs;

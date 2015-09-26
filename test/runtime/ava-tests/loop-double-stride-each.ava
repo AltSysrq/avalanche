@@ -1,0 +1,10 @@
+extern pass-test pass_test c void [int pos]
+extern iadd iadd ava pos pos
+
+fun drop accum new = pass-test $accum
+
+#set# accum ()
+#set# values [$iadd 2 $iadd 10 $iadd 15 $iadd 7 $iadd 8 $drop 0]
+each f v in $values {
+  #set# accum ($f $accum $v)
+}

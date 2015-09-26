@@ -56,6 +56,7 @@ runtime/-intrinsics/extern.c \
 runtime/-intrinsics/funcall.c \
 runtime/-intrinsics/fundamental.c \
 runtime/-intrinsics/if.c \
+runtime/-intrinsics/loop.c \
 runtime/-intrinsics/namespace.c \
 runtime/-intrinsics/ret.c \
 runtime/-intrinsics/user-macro.c \

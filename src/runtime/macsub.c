@@ -246,6 +246,22 @@ ava_ast_node* ava_macsub_run(ava_macsub_context* context,
                              TAILQ_FIRST(statements), return_policy);
 }
 
+ava_ast_node* ava_macsub_run_contents(
+  ava_macsub_context* context,
+  const ava_parse_unit* container
+) {
+  switch (container->type) {
+  case ava_put_block:
+    return ava_macsub_run(context, &container->location,
+                          (ava_parse_statement_list*)&container->v.statements,
+                          ava_isrp_void);
+  case ava_put_substitution:
+    return ava_macsub_run_units(context, container, container);
+
+  default: abort();
+  }
+}
+
 ava_ast_node* ava_macsub_run_units(ava_macsub_context* context,
                                    const ava_parse_unit* first,
                                    const ava_parse_unit* last) {

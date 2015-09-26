@@ -375,6 +375,22 @@ set defs {
     }
   }
 
+  serror R0036 bad_list_multiplicity {} {
+    msg "Bad list element multiplicity."
+    explanation {
+      An "each" clause of a loop expected a list whose length was an even
+      multiple of some integer, but it was not and the end of the list was
+      reached.
+
+      For example, the clause
+        each a b c in $list
+      requires $list to be a list whose length is an even multiple of 3. If it
+      is not, upon reaching the end of the list, there will not be sufficient
+      elements to assign to c and possibly b, and this exception will be
+      thrown.
+    }
+  }
+
   serror L4001 unclosed_string_literal {} {
     msg "Unclosed string literal."
     explanation {
@@ -1348,6 +1364,173 @@ set defs {
         if ($control) (do-something ())
       The above would be correctly written
         if ($control) { do-something () }
+    }
+  }
+
+  cerror C5078 loop_each_without_in {} {
+    msg "\"each\" clause of loop missing \"in\" keyword."
+    explanation {
+      At the indicated location, the end of the containing statement had been
+      encountered before the requisite "in" word.
+
+      The general syntax for the "each" loop clause is
+
+        each lvalue ... in value
+
+      If "in" occurs on a separate line, it may be necessary to escape the line
+      separators with a backslash or to surround the expression in parentheses.
+    }
+  }
+
+  cerror C5079 loop_each_without_lvalues {} {
+    msg "\"each\" clause has no lvalues."
+    explanation {
+      The "in" keyword was found immediately after the start of an "each"
+      clause within a loop.
+
+      This would imply iteratively taking zero elements from the list, which is
+      not a useful operation.
+    }
+  }
+
+  cerror C5080 loop_each_without_list {} {
+    msg "Missing value after \"in\" of \"each\" loop clause."
+    explanation {
+      The "in" keyword was found at the end of the containing statement of an
+      "each" clause within a loop.
+
+      If the expression for the list occurs on a separate line, it may be
+      necessary to escape the line separators with a backslash ,to surround
+      the loop as a whole with parentheses, or to place the opening parenthesis
+      for the list expression on the same line as "in".
+    }
+  }
+
+  cerror C5081 loop_for_without_init {} {
+    msg "Missing initialiser block for \"for\" loop clause."
+    explanation {
+      The "for" keyword was found at the end of the statement containing a
+      "loop" macro.
+    }
+  }
+
+  cerror C5082 loop_for_init_not_block {} {
+    msg "Unexpected non-block for \"for\" clause initialiser."
+    explanation {
+      The initialiser clause of a "for" clause in a loop must be a
+      brace-surrounded block.
+    }
+  }
+
+  cerror C5083 loop_for_without_cond {} {
+    msg "Missing conditional expression for \"for\" loop clause."
+    explanation {
+      The condition expression (second argument) of a "for" clause of a loop
+      was not found.
+
+      If the condition is on another line, the line separators may need to be
+      escaped with backslashes, or the whole loop enclosed in parentheses.
+    }
+  }
+
+  cerror C5084 loop_for_cond_not_subst {} {
+    msg "Unexpected non-substitution for \"for\" clause condition."
+    explanation {
+      The condition expresison of a "for" clause must be a
+      parenthesis-surrounded substitution.
+    }
+  }
+
+  cerror C5085 loop_for_without_update {} {
+    msg "Missing update block for \"for\" loop clause."
+    explanation {
+      The update block (third argument) of a "for" clause of a loop was not
+      found.
+
+      If the update is on another line, the line separators may need to be
+      escaped with backslashes, or the whole loop enclosed in parentheses.
+    }
+  }
+
+  cerror C5086 loop_for_update_not_block {} {
+    msg "Unexpected non-block for \"for\" clause update."
+    explanation {
+      The update block of a "for" clause bust be a brace-enclosed block.
+    }
+  }
+
+  cerror C5087 loop_while_without_cond {{ava_string name}} {
+    msg "Missing condition expression for \"%name%\" loop clause."
+    explanation {
+      The "while" and "until" loop clauses must be followed by a single
+      expression providing the loop condition.
+    }
+  }
+
+  cerror C5088 loop_while_cond_not_subst {{ava_string name}} {
+    msg "Unexpected non-substitution for \"%name%\" clause condition."
+    explanation {
+      The condition of a "while" or "until" clause must be a single
+      parentheses-enclosed expression.
+    }
+  }
+
+  cerror C5089 loop_do_without_body {{ava_string type}} {
+    msg "Missing body block for \"%type%\" loop clause."
+    explanation {
+      The specified loop clause must be followed by a single block providing
+      the loop body.
+    }
+  }
+
+  cerror C5090 loop_do_body_not_block_or_subst {{ava_string type}} {
+    msg "Invalid body of \"%type%\" clause."
+    explanation {
+      The body of the specified clause must be a single brace-enclosed block or
+      parenthesis-enclosed expression.
+    }
+  }
+
+  cerror C5091 loop_collect_without_value {} {
+    msg "Missing value expression for \"collect\" loop clause."
+    explanation {
+      The "collect" loop clause must be followed by a single expression
+      providing the collection value.
+
+      See also "collecting", which takes no arguments and operates on the
+      implicit loop value.
+    }
+  }
+
+  cerror C5092 bad_loop_clause_id {{ava_string id}} {
+    msg "Invalid loop clause type: %id%"
+    explanation {
+      The indicated bareword appears where a loop clause type was expected, but
+      it is not a known type of loop clause.
+
+      Quick reference:
+        each lvalue... in list
+        for {init} (condition) {update}
+        while (condition)
+        until (condition)
+        do { body }
+        do (body)
+        { body }
+        collect value
+        collecting
+        else { body }
+        else (body)
+    }
+  }
+
+  cerror C5093 loop_garbage_after_else {} {
+    msg "Unexpected tokens after \"else\" loop clause."
+    explanation {
+      The "else" clause of a loop must be the final clause, but something was
+      found beyond it.
+
+      If the indicated item was intended to be part of the body of the loop's
+      else clause, the whole body must be surrounded in parentheses.
     }
   }
 }

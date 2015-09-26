@@ -29,6 +29,7 @@
 #include "-intrinsics/defun.h"
 #include "-intrinsics/extern.h"
 #include "-intrinsics/if.h"
+#include "-intrinsics/loop.h"
 #include "-intrinsics/namespace.h"
 #include "-intrinsics/ret.h"
 #include "-intrinsics/user-macro.h"
@@ -75,6 +76,11 @@ void ava_register_intrinsics(ava_macsub_context* context) {
   DEFINE("Macro",       CTL,    INTERNAL,       user_macro);
   DEFINE("MACRO",       CTL,    PUBLIC,         user_macro);
   DEFINE("if",          CTL,    NULL,           if);
+  DEFINE("each",        CTL,    "each",         loop);
+  DEFINE("for",         CTL,    "for",          loop);
+  DEFINE("while",       CTL,    "while",        loop);
+  DEFINE("until",       CTL,    "until",        loop);
+  DEFINE("do",          CTL,    "do",           loop);
   DEFINE("import",      CTL,    NULL,           import);
   DEFINE("namespace",   CTL,    NULL,           namespace);
   DEFINE("ret",         CTL,    NULL,           ret);
