@@ -84,8 +84,11 @@
  *
  *   - The rightmost block of a for clause is evaluated.
  *
- *   - For a collect clause, the rvalue is evaluated. The loop accumulator is
- *     interpreted as a list, and set to that list with the rvalue appended.
+ *   - For a collect clause, the loop accumulator is interpreted as a list,
+ *     then the rvalue is evaluated. The loop accumulator is set to its list
+ *     value with the result of the rvalue appended. If the rvalue is spread,
+ *     the result is instead interpreted as a list and concatenated onto the
+ *     loop accumulator.
  *
  *   - For a collecting clause, the loop accumulator is interpreted as a list,
  *     and set to that list with the loop iteration value appended.

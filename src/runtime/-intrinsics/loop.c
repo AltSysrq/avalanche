@@ -707,20 +707,30 @@ static void ava_intr_loop_cg_evaluate(
 
       ltmp.type = ava_prt_list;
       ltmp.index = ava_codegen_push_reg(context, ava_prt_list, 1);
-      etmp.type = ava_prt_data;
-      etmp.index = ava_codegen_push_reg(context, ava_prt_data, 1);
-
-      if (loop->clauses[clause].v.collect.expression)
-        ava_ast_node_cg_evaluate(
-          loop->clauses[clause].v.collect.expression, &etmp, context);
-      else
-        AVA_PCXB(ld_reg, etmp, iterval);
 
       AVA_PCXB(ld_reg, ltmp, accum);
-      AVA_PCXB(lappend, ltmp, ltmp, etmp);
+      if (loop->clauses[clause].v.collect.expression) {
+        if (loop->clauses[clause].v.collect.expression->v->cg_spread) {
+          etmp.type = ava_prt_list;
+          etmp.index = ava_codegen_push_reg(context, ava_prt_list, 1);
+          ava_ast_node_cg_spread(
+            loop->clauses[clause].v.collect.expression, &etmp, context);
+          AVA_PCXB(lcat, ltmp, ltmp, etmp);
+          ava_codegen_pop_reg(context, ava_prt_list, 1);
+        } else {
+          etmp.type = ava_prt_data;
+          etmp.index = ava_codegen_push_reg(context, ava_prt_data, 1);
+          ava_ast_node_cg_evaluate(
+            loop->clauses[clause].v.collect.expression, &etmp, context);
+          AVA_PCXB(lappend, ltmp, ltmp, etmp);
+          ava_codegen_pop_reg(context, ava_prt_data, 1);
+        }
+      } else {
+        AVA_PCXB(lappend, ltmp, ltmp, iterval);
+      }
+
       AVA_PCXB(ld_reg, accum, ltmp);
 
-      ava_codegen_pop_reg(context, ava_prt_data, 1);
       ava_codegen_pop_reg(context, ava_prt_list, 1);
     } break;
     }
