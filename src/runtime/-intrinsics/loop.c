@@ -682,6 +682,26 @@ static void ava_intr_loop_cg_evaluate(
       ava_codegen_pop_symlabel(context);
     } break;
 
+    case ava_ilct_collect:
+      break;
+    }
+  }
+
+  /* Update phase */
+  for (clause = loop->num_clauses - 1; clause < loop->num_clauses; --clause) {
+    AVA_PCXB(label, loop->clauses[clause].update_start_label);
+    switch (loop->clauses[clause].type) {
+    case ava_ilct_each:
+      break;
+
+    case ava_ilct_for: {
+      ava_ast_node_cg_discard(loop->clauses[clause].v.vor.update, context);
+    } break;
+
+    case ava_ilct_while:
+    case ava_ilct_do:
+      break;
+
     case ava_ilct_collect: {
       ava_pcode_register ltmp, etmp;
 
@@ -703,24 +723,6 @@ static void ava_intr_loop_cg_evaluate(
       ava_codegen_pop_reg(context, ava_prt_data, 1);
       ava_codegen_pop_reg(context, ava_prt_list, 1);
     } break;
-    }
-  }
-
-  /* Update phase */
-  for (clause = loop->num_clauses - 1; clause < loop->num_clauses; --clause) {
-    AVA_PCXB(label, loop->clauses[clause].update_start_label);
-    switch (loop->clauses[clause].type) {
-    case ava_ilct_each:
-      break;
-
-    case ava_ilct_for: {
-      ava_ast_node_cg_discard(loop->clauses[clause].v.vor.update, context);
-    } break;
-
-    case ava_ilct_while:
-    case ava_ilct_do:
-    case ava_ilct_collect:
-      break;
     }
   }
   ava_codegen_goto(context, iterate_label);

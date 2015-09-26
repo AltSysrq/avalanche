@@ -74,12 +74,6 @@
  *     a substitution, the loop iteration value is set to the result of the
  *     evaluation.
  *
- *   - For a collect clause, the rvalue is evaluated. The loop accumulator is
- *     interpreted as a list, and set to that list with the rvalue appended.
- *
- *   - For a collecting clause, the loop accumulator is interpreted as a list,
- *     and set to that list with the loop iteration value appended.
- *
  * 3. The loop proceeds to the update stage.
  *
  * Update:
@@ -88,7 +82,13 @@
  *    last operation of the iteration stage and moving backwards to the first
  *    clause, for each clause:
  *
- *     - The rightmost block of a for clause is evaluated.
+ *   - The rightmost block of a for clause is evaluated.
+ *
+ *   - For a collect clause, the rvalue is evaluated. The loop accumulator is
+ *     interpreted as a list, and set to that list with the rvalue appended.
+ *
+ *   - For a collecting clause, the loop accumulator is interpreted as a list,
+ *     and set to that list with the loop iteration value appended.
  *
  * 2. The loop returns to the iteration stage.
  *
@@ -169,6 +169,14 @@ ava_macro_subst_result ava_intr_break_subst(
  * expression is evaluated. Its result is written back into the iteration value
  * of the immediately enclosing loop, unless the "-" flag is used to suppress
  * this. The loop transitions to the update stage.
+ *
+ * Note that the continue macro does *not* cause any conditions later in the
+ * loop to be tested. For example, the following is an infinite loop:
+ *    do { continue - } while (false)
+ * While this is rather unusual, the simpler and more consistent solution of
+ * skipping later conditionals is implemented on the grounds that `continue`s
+ * are used in do-while loops so rarely that there is no clear benefit of
+ * either approach.
  */
 ava_macro_subst_result ava_intr_continue_subst(
   const struct ava_symbol_s* self,
