@@ -34,6 +34,8 @@
 #include "avalanche/code-gen.h"
 
 typedef SLIST_HEAD(,ava_codegen_jprot_s) ava_codegen_jprot_stack;
+typedef SLIST_HEAD(,ava_codegen_symlabel_s) ava_codegen_symlabel_stack;
+typedef SLIST_HEAD(,ava_codegen_symreg_s) ava_codegen_symreg_stack;
 
 struct ava_codegen_context_s {
   ava_compile_error_list* errors;
@@ -44,6 +46,8 @@ struct ava_codegen_context_s {
   ava_pcode_register_index register_stacks[ava_prt_function+1];
 
   ava_uint next_label;
+  ava_codegen_symlabel_stack symlabels;
+  ava_codegen_symreg_stack symregs;
   ava_codegen_jprot_stack jprots;
 };
 
@@ -71,6 +75,8 @@ static ava_codegen_context* ava_codegen_context_alloc(
   this->last_src_filename = AVA_EMPTY_STRING;
   this->last_src_line = 0;
   this->next_label = 0;
+  SLIST_INIT(&this->symlabels);
+  SLIST_INIT(&this->symregs);
   SLIST_INIT(&this->jprots);
   return this;
 }
@@ -163,6 +169,60 @@ void ava_codegen_pop_jprot(ava_codegen_context* context) {
   SLIST_REMOVE_HEAD(&context->jprots, next);
 
   (*jprot->exit)(context, jprot->userdata);
+}
+
+void ava_codegen_push_symlabel(
+  ava_codegen_symlabel* symlabel,
+  ava_codegen_context* context,
+  const ava_codegen_symlabel_name* name,
+  ava_uint label
+) {
+  symlabel->name = name;
+  symlabel->label = label;
+  SLIST_INSERT_HEAD(&context->symlabels, symlabel, next);
+}
+
+void ava_codegen_pop_symlabel(ava_codegen_context* context) {
+  SLIST_REMOVE_HEAD(&context->symlabels, next);
+}
+
+ava_uint ava_codegen_get_symlabel(const ava_codegen_context* context,
+                                  const ava_codegen_symlabel_name* name) {
+  const ava_codegen_symlabel* symlabel;
+
+  SLIST_FOREACH(symlabel, &context->symlabels, next)
+    if (name == symlabel->name)
+      return symlabel->label;
+
+  return AVA_LABEL_NONE;
+}
+
+void ava_codegen_push_symreg(
+  ava_codegen_symreg* elt,
+  ava_codegen_context* context,
+  const ava_codegen_symreg_name* name,
+  ava_pcode_register reg
+) {
+  elt->name = name;
+  elt->reg = reg;
+  SLIST_INSERT_HEAD(&context->symregs, elt, next);
+}
+
+void ava_codegen_pop_symreg(ava_codegen_context* context) {
+  SLIST_REMOVE_HEAD(&context->symregs, next);
+}
+
+const ava_pcode_register* ava_codegen_get_symreg(
+  const ava_codegen_context* context,
+  const ava_codegen_symreg_name* name
+) {
+  const ava_codegen_symreg* symreg;
+
+  SLIST_FOREACH(symreg, &context->symregs, next)
+    if (name == symreg->name)
+      return &symreg->reg;
+
+  return NULL;
 }
 
 ava_uint ava_codegen_genlabel(ava_codegen_context* context) {

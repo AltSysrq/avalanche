@@ -1533,6 +1533,70 @@ set defs {
       else clause, the whole body must be surrounded in parentheses.
     }
   }
+
+  cerror C5094 bad_loopctl_flag {
+    {ava_string macro} {ava_string flag}
+  } {
+    msg "Unknown flag \"%flag\% to macro %macro%"
+    explanation {
+      All barewords beginning with a hyphen immediately after the "break" and
+      "continue" macros are reserved as flags; the indicated bareword looks
+      like such a flag, but is not a known flag.
+
+      The flag may have been misspelled. If the bareword is actually supposed
+      to be part of the expression, wrap the expression in parentheses.
+    }
+  }
+
+  cerror C5095 loopctl_expression_but_suppressed {} {
+    msg "Unexpected expression after \"-\" flag."
+    explanation {
+      The "-" flag was given to the loop control macro preceding the indicated
+      location, but it appears an expression follows anyway.
+
+      The "-" flag to the loop control macros indicates to suppress changing
+      any iteration or accumulation values, and so no expression would be
+      evaluated. Because of this, it is an error to include an expression
+      anyway.
+
+      If the "-" was supposed to be part of the expression, wrap the expression
+      as a whole in parentheses.
+    }
+  }
+
+  cerror C5096 loopctl_outside_of_loop {} {
+    msg "Loop control cannot be used outside of loop."
+    explanation {
+      The indicated loop control macro is not within a loop, and therefore
+      cannot do anything meaningful.
+
+      Note that loop control cannot cross functions, so this error will also be
+      produced if the loop control macro is used within a function or lambda
+      nested inside a loop, for example.
+    }
+  }
+
+  cerror C5097 loopctl_suppressed {} {
+    msg "Loop control cannot be used here."
+    explanation {
+      While the indicated loop control macro does occur within a loop, it is
+      not permitted to be used in the indicated location.
+    }
+  }
+
+  cerror C5098 loopctl_flag_more_than_once {
+    {ava_string macro} {ava_string flag}
+  } {
+    msg "Flag %flag% passed more than once to macro %macro%"
+    explanation {
+      The indicated flag occurs more than once in the invocation of the
+      preceding macro, but there is no defined meaning to passing that flag
+      more than once.
+
+      If the second flag was intended to be part of the following expression,
+      wrap the whole expression in parentheses.
+    }
+  }
 }
 
 proc ncode {code} {

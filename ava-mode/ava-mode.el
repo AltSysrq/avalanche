@@ -30,7 +30,7 @@
   (list
    (cons (regexp-opt (list
                       "alias" "Alias" "ALIAS"
-                      "collect" "collecting" "do" "each"
+                      "break" "collect" "collecting" "continue" "do" "each"
                       "else" "extern" "Extern" "EXTERN"
                       "for" "fun" "Fun" "FUN"
                       "in" "if" "import" "macro" "Macro" "MACRO" "namespace"

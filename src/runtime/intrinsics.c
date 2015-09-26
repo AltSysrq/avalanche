@@ -66,6 +66,8 @@ void ava_register_intrinsics(ava_macsub_context* context) {
   DEFINE("alias",       CTL,    PRIVATE,        alias);
   DEFINE("Alias",       CTL,    INTERNAL,       alias);
   DEFINE("ALIAS",       CTL,    PUBLIC,         alias);
+  DEFINE("break",       CTL,    NULL,           break);
+  DEFINE("continue",    CTL,    NULL,           continue);
   DEFINE("extern",      CTL,    PRIVATE,        extern);
   DEFINE("Extern",      CTL,    INTERNAL,       extern);
   DEFINE("EXTERN",      CTL,    PUBLIC,         extern);

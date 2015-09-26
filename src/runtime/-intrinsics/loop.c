@@ -102,6 +102,14 @@ typedef struct {
   ava_intr_loop_clause clauses[];
 } ava_intr_loop;
 
+static const ava_codegen_symlabel_name
+  ava_intr_loop_break_label = { "loop-break" },
+  ava_intr_loop_continue_label = { "loop-continue" };
+
+static const ava_codegen_symreg_name
+  ava_intr_loop_iterval_reg = { "loop-iterval" },
+  ava_intr_loop_accum_reg = { "loop-accum" };
+
 static ava_string ava_intr_loop_to_string(const ava_intr_loop* this);
 static void ava_intr_loop_postprocess(ava_intr_loop* this);
 static void ava_intr_loop_cg_evaluate(
@@ -509,7 +517,10 @@ static void ava_intr_loop_cg_evaluate(
 ) {
   size_t clause, i;
   ava_pcode_register accum, iterval;
-  ava_uint iterate_label, completion_label;
+  ava_uint iterate_label, completion_label, exit_label;
+  ava_codegen_symlabel suppress_break, suppress_continue;
+  ava_codegen_symlabel provide_break, provide_continue;
+  ava_codegen_symreg provide_iterval, provide_accum;
 
   accum.type = ava_prt_data;
   accum.index = ava_codegen_push_reg(context, ava_prt_data, 2);
@@ -517,6 +528,16 @@ static void ava_intr_loop_cg_evaluate(
   iterval.index = accum.index + 1;
   iterate_label = ava_codegen_genlabel(context);
   completion_label = ava_codegen_genlabel(context);
+  exit_label = ava_codegen_genlabel(context);
+
+  ava_codegen_push_symlabel(&suppress_break, context,
+                            &ava_intr_loop_break_label, AVA_LABEL_SUPPRESS);
+  ava_codegen_push_symlabel(&suppress_continue, context,
+                            &ava_intr_loop_continue_label, AVA_LABEL_SUPPRESS);
+  ava_codegen_push_symreg(&provide_iterval, context,
+                          &ava_intr_loop_iterval_reg, iterval);
+  ava_codegen_push_symreg(&provide_accum, context,
+                          &ava_intr_loop_accum_reg, accum);
 
   /* Allocate registers and generate labels */
   for (clause = 0; clause < loop->num_clauses; ++clause) {
@@ -585,7 +606,7 @@ static void ava_intr_loop_cg_evaluate(
       /* if (index >= length) goto completion; */
       AVA_PCXB(icmp, cmp, loop->clauses[clause].v.each.reg_index,
                loop->clauses[clause].v.each.reg_length);
-      AVA_PCXB(branch, cmp, -1, ava_true, completion_label);
+      ava_codegen_branch(context, cmp, -1, ava_true, completion_label);
       ava_codegen_pop_reg(context, ava_prt_int, 1);
 
       for (i = 0; i < loop->clauses[clause].v.each.num_lvalues; ++i) {
@@ -618,7 +639,7 @@ static void ava_intr_loop_cg_evaluate(
       ava_ast_node_cg_evaluate(
         loop->clauses[clause].v.vor.cond, &tmp, context);
       AVA_PCXB(ld_reg, condres, tmp);
-      AVA_PCXB(branch, condres, 0, ava_false, completion_label);
+      ava_codegen_branch(context, condres, 0, ava_false, completion_label);
 
       ava_codegen_pop_reg(context, ava_prt_data, 1);
       ava_codegen_pop_reg(context, ava_prt_int, 1);
@@ -635,20 +656,30 @@ static void ava_intr_loop_cg_evaluate(
       ava_ast_node_cg_evaluate(
         loop->clauses[clause].v.vhile.cond, &tmp, context);
       AVA_PCXB(ld_reg, condres, tmp);
-      AVA_PCXB(branch, condres, 0, loop->clauses[clause].v.vhile.invert,
-               completion_label);
+      ava_codegen_branch(context, condres, 0,
+                         loop->clauses[clause].v.vhile.invert,
+                         completion_label);
 
       ava_codegen_pop_reg(context, ava_prt_data, 1);
       ava_codegen_pop_reg(context, ava_prt_int, 1);
     } break;
 
     case ava_ilct_do: {
+      ava_codegen_push_symlabel(&provide_break, context,
+                                &ava_intr_loop_break_label, exit_label);
+      ava_codegen_push_symlabel(&provide_continue, context,
+                                &ava_intr_loop_continue_label,
+                                loop->clauses[clause].update_start_label);
+
       if (loop->clauses[clause].v.doo.is_expression)
         ava_ast_node_cg_evaluate(
           loop->clauses[clause].v.doo.body, &iterval, context);
       else
         ava_ast_node_cg_discard(
           loop->clauses[clause].v.doo.body, context);
+
+      ava_codegen_pop_symlabel(context);
+      ava_codegen_pop_symlabel(context);
     } break;
 
     case ava_ilct_collect: {
@@ -692,7 +723,7 @@ static void ava_intr_loop_cg_evaluate(
       break;
     }
   }
-  AVA_PCXB(goto, iterate_label);
+  ava_codegen_goto(context, iterate_label);
 
   /* Completion phase */
   AVA_PCXB(label, completion_label);
@@ -702,6 +733,11 @@ static void ava_intr_loop_cg_evaluate(
     else
       ava_ast_node_cg_discard(loop->else_clause, context);
   }
+
+  ava_codegen_pop_symreg(context);
+  ava_codegen_pop_symreg(context);
+  ava_codegen_pop_symlabel(context);
+  ava_codegen_pop_symlabel(context);
 
   /* Deallocate registers */
   for (clause = loop->num_clauses - 1; clause < loop->num_clauses; --clause) {
@@ -718,6 +754,8 @@ static void ava_intr_loop_cg_evaluate(
       break;
     }
   }
+
+  AVA_PCXB(label, exit_label);
 
   if (dst)
     AVA_PCXB(ld_reg, *dst, accum);
@@ -742,4 +780,170 @@ static void ava_intr_leach_pnode_cg_evaluate(
   const ava_intr_loop* loop = (const ava_intr_loop*)
     ((char*)node - offsetof(ava_intr_loop, each_pnode));
   AVA_PCXB(ld_reg, *dst, loop->each_data_reg);
+}
+
+typedef struct {
+  ava_ast_node header;
+
+  ava_bool is_break;
+  ava_bool suppress_write_back;
+  ava_ast_node* expression;
+} ava_intr_loopctl;
+
+static ava_string ava_intr_loopctl_to_string(const ava_intr_loopctl* node);
+static void ava_intr_loopctl_postprocess(ava_intr_loopctl* node);
+static void ava_intr_loopctl_cg_discard(
+  ava_intr_loopctl* node, ava_codegen_context* context);
+
+static const ava_ast_node_vtable ava_intr_loopctl_vtable = {
+  .name = "break or continue",
+  .to_string = (ava_ast_node_to_string_f)ava_intr_loopctl_to_string,
+  .postprocess = (ava_ast_node_postprocess_f)ava_intr_loopctl_postprocess,
+  .cg_discard = (ava_ast_node_cg_discard_f)ava_intr_loopctl_cg_discard,
+};
+
+static ava_macro_subst_result ava_intr_loopctl_subst(
+  const struct ava_symbol_s* self,
+  ava_macsub_context* context,
+  const ava_parse_statement* statement,
+  const ava_parse_unit* provoker,
+  ava_bool* consumed_other_statements,
+  ava_bool is_break
+) {
+  ava_intr_loopctl* this;
+  const ava_parse_unit* unit;
+
+  this = AVA_NEW(ava_intr_loopctl);
+  this->header.v = &ava_intr_loopctl_vtable;
+  this->header.location = provoker->location;
+  this->header.context = context;
+  this->is_break = is_break;
+  this->suppress_write_back = ava_false;
+  this->expression = NULL;
+
+  for (unit = TAILQ_NEXT(provoker, next); unit;
+       unit = TAILQ_NEXT(unit, next)) {
+    if (ava_put_bareword != unit->type ||
+        ava_string_is_empty(unit->v.string) ||
+        '-' != ava_string_index(unit->v.string, 0))
+      /* Not a flag */
+      break;
+
+    switch (ava_string_to_ascii9(unit->v.string)) {
+    case AVA_ASCII9('-'):
+      if (this->suppress_write_back)
+        return ava_macsub_error_result(
+          context, ava_error_loopctl_flag_more_than_once(
+            &unit->location, self->full_name, unit->v.string));
+      this->suppress_write_back = ava_true;
+      break;
+
+    default:
+      return ava_macsub_error_result(
+        context, ava_error_bad_loopctl_flag(
+          &unit->location, self->full_name, unit->v.string));
+    }
+  }
+
+  if (unit) {
+    if (this->suppress_write_back)
+      return ava_macsub_error_result(
+        context, ava_error_loopctl_expression_but_suppressed(
+          &unit->location));
+
+    this->expression = ava_macsub_run_units(
+      context, unit, TAILQ_LAST(&statement->units, ava_parse_unit_list_s));
+  }
+
+  return (ava_macro_subst_result) {
+    .status = ava_mss_done,
+    .v = { .node = (ava_ast_node*)this },
+  };
+}
+
+ava_macro_subst_result ava_intr_break_subst(
+  const struct ava_symbol_s* self,
+  ava_macsub_context* context,
+  const ava_parse_statement* statement,
+  const ava_parse_unit* provoker,
+  ava_bool* consumed_other_statements
+) {
+  return ava_intr_loopctl_subst(
+    self, context, statement, provoker,
+    consumed_other_statements, ava_true);
+}
+
+ava_macro_subst_result ava_intr_continue_subst(
+  const struct ava_symbol_s* self,
+  ava_macsub_context* context,
+  const ava_parse_statement* statement,
+  const ava_parse_unit* provoker,
+  ava_bool* consumed_other_statements
+) {
+  return ava_intr_loopctl_subst(
+    self, context, statement, provoker,
+    consumed_other_statements, ava_false);
+}
+
+static ava_string ava_intr_loopctl_to_string(const ava_intr_loopctl* this) {
+  ava_string accum;
+
+  if (this->is_break)
+    accum = AVA_ASCII9_STRING("break");
+  else
+    accum = AVA_ASCII9_STRING("continue");
+
+  if (this->suppress_write_back)
+    accum = ava_string_concat(accum, AVA_ASCII9_STRING(" -"));
+
+  if (this->expression) {
+    accum = ava_string_concat(accum, AVA_ASCII9_STRING(" "));
+    accum = ava_string_concat(accum, ava_ast_node_to_string(this->expression));
+  }
+
+  return accum;
+}
+
+static void ava_intr_loopctl_postprocess(ava_intr_loopctl* this) {
+  if (this->expression)
+    ava_ast_node_postprocess(this->expression);
+}
+
+static void ava_intr_loopctl_cg_discard(
+  ava_intr_loopctl* this, ava_codegen_context* context
+) {
+  ava_uint jump_target;
+  ava_pcode_register dst_reg;
+  const ava_pcode_register* dst_reg_ptr;
+
+  jump_target = ava_codegen_get_symlabel(
+    context,
+    this->is_break? &ava_intr_loop_break_label :
+                    &ava_intr_loop_continue_label);
+  if (AVA_LABEL_NONE == jump_target) {
+    ava_codegen_error(
+      context, (ava_ast_node*)this,
+      ava_error_loopctl_outside_of_loop(&this->header.location));
+  } else if (AVA_LABEL_SUPPRESS == jump_target) {
+    ava_codegen_error(
+      context, (ava_ast_node*)this,
+      ava_error_loopctl_suppressed(&this->header.location));
+  } else {
+    if (!this->suppress_write_back) {
+      dst_reg_ptr = ava_codegen_get_symreg(
+        context,
+        this->is_break? &ava_intr_loop_accum_reg :
+        &ava_intr_loop_iterval_reg);
+      assert(dst_reg_ptr);
+
+      dst_reg = *dst_reg_ptr;
+
+      if (this->expression)
+        ava_ast_node_cg_evaluate(this->expression, &dst_reg, context);
+      else
+        AVA_PCXB(ld_imm_vd, dst_reg, AVA_EMPTY_STRING);
+    }
+
+    ava_codegen_goto(context, jump_target);
+  }
 }

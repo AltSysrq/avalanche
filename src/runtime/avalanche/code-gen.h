@@ -55,6 +55,17 @@
 struct ava_symbol_s;
 
 /**
+ * Sentinal value used for symbolic labels indicating that the symbolic label
+ * is not defined in the current context.
+ */
+#define AVA_LABEL_NONE ((ava_uint)0xFFFFFFFF)
+/**
+ * Sentinal value used for symbolic labels indicating that the symbolic label,
+ * while defined in the current context, may not currently be used.
+ */
+#define AVA_LABEL_SUPPRESS ((ava_uint)0xFFFFFFFE)
+
+/**
  * State container for code generation within a single function.
  *
  * Each function gets its own code generation context. There is no context for
@@ -64,7 +75,7 @@ struct ava_symbol_s;
 typedef struct ava_codegen_context_s ava_codegen_context;
 
 /**
- * Function type for use with ava_codegen_jump_protect().
+ * Function type for use with ava_codegen_push_jprot().
  *
  * Called for any code-path which would transfer control outside a
  * jump-protected section. Generates any code necessary for the jump
@@ -76,12 +87,12 @@ typedef struct ava_codegen_context_s ava_codegen_context;
  * infinite recursion.
  *
  * @param context The calling codegen context.
- * @param userdata The userdata passed into ava_codegen_jump_protect().
+ * @param userdata The userdata passed into ava_codegen_push_jprot().
  */
 typedef void (*ava_codegen_jprot_exit_f)(
   ava_codegen_context* context, void* userdata);
 /**
- * Context data used by ava_codegen_jump_protect().
+ * Context data used by ava_codegen_push_jprot().
  *
  * This is usually stack-allocated.
  */
@@ -107,6 +118,50 @@ typedef struct ava_codegen_jprot_s {
 
   SLIST_ENTRY(ava_codegen_jprot_s) next;
 } ava_codegen_jprot;
+
+/**
+ * Identifies a type of symlabel.
+ *
+ * Two symlabel names are equal only if they share the same memory address. The
+ * embedded string is used for debugging.
+ */
+typedef struct {
+  const char* name;
+} ava_codegen_symlabel_name;
+
+/**
+ * Context data used by ava_codegen_push_symlabel().
+ *
+ * This is usually stack-allocated.
+ */
+typedef struct ava_codegen_symlabel_s {
+  const ava_codegen_symlabel_name* name;
+  ava_uint label;
+
+  SLIST_ENTRY(ava_codegen_symlabel_s) next;
+} ava_codegen_symlabel;
+
+/**
+ * Identifies a type of symreg.
+ *
+ * Two symreg names are equal only if the share the same memory address. The
+ * embedded string is used for debugging.
+ */
+typedef struct {
+  const char* name;
+} ava_codegen_symreg_name;
+
+/**
+ * Context data used by ava_codegen_push_symreg().
+ *
+ * This is usually stack-allocated.
+ */
+typedef struct ava_codegen_symreg_s {
+  const ava_codegen_symreg_name* name;
+  ava_pcode_register reg;
+
+  SLIST_ENTRY(ava_codegen_symreg_s) next;
+} ava_codegen_symreg;
 
 /**
  * Creates a new code generation context for the given function code builder.
@@ -191,6 +246,76 @@ void ava_codegen_push_jprot(ava_codegen_jprot* elt,
  * itself has been popped from the protection stack.
  */
 void ava_codegen_pop_jprot(ava_codegen_context* context);
+
+/**
+ * Pushes a new symbolic label onto the symbolic label stack of the given
+ * context, such that calls to ava_codegen_get_symlabel() with the given name
+ * will return the current label.
+ *
+ * Symbolic labels are used for resolving references to fixed symbolic
+ * locations defined by containing structures, such as where to jump upon a
+ * "continue" statement.
+ *
+ * This call must be balanced with a call to ava_codegen_pop_symlabel().
+ */
+void ava_codegen_push_symlabel(ava_codegen_symlabel* elt,
+                               ava_codegen_context* context,
+                               const ava_codegen_symlabel_name* name,
+                               ava_uint label);
+
+/**
+ * Pops a symbolic label off the stack.
+ *
+ * Balances a call to ava_codegen_push_symlabel().
+ */
+void ava_codegen_pop_symlabel(ava_codegen_context* context);
+
+/**
+ * Looks a symbolic label up by name.
+ *
+ * @param context The context to search.
+ * @param name The name of the symbolic label to find.
+ * @return The symbolic label, or AVA_LABEL_NONE if no symbolic label with that
+ * name exists.
+ */
+ava_uint ava_codegen_get_symlabel(const ava_codegen_context* context,
+                                  const ava_codegen_symlabel_name* name);
+
+/**
+ * Pushes a new symbolic register onto the symbolic register stack of the given
+ * context, such that that register will be returned from calls to
+ * ava_codegen_get_symreg() with that name.
+ *
+ * Symbolic registers are used for providing access to registers used by
+ * enclosing contexts, such as the loop accumulator which can be set by the
+ * "break" macro.
+ *
+ * This call must be balanced with a call to ava_codegen_pop_symreg().
+ */
+void ava_codegen_push_symreg(ava_codegen_symreg* elt,
+                             ava_codegen_context* context,
+                             const ava_codegen_symreg_name* name,
+                             ava_pcode_register reg);
+
+/**
+ * Pops a symbolic label off the stack.
+ *
+ * Balances a call to ava_codegen_pop_symreg().
+ */
+void ava_codegen_pop_symreg(ava_codegen_context* context);
+
+/**
+ * Looks a symbolic register up by name.
+ *
+ * @param context The context to search.
+ * @param name The name of the symbolic register to find.
+ * @return A pointer to the matched register, or NULL if the given name is
+ * unbound in the context. The pointer is only valid until the next call to an
+ * ava_codegen_*_symreg() function.
+ */
+const ava_pcode_register* ava_codegen_get_symreg(
+  const ava_codegen_context* context,
+  const ava_codegen_symreg_name* name);
 
 /**
  * Generates a label id unique to the function being generated by the given

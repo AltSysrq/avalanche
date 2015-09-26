@@ -105,8 +105,72 @@
  *
  * The macro userdata for this function is a C string indicating the implicit
  * first token.
+ *
+ * The "break" and "continue" macros may be used within the body of a "do"
+ * clause to control the immediately-enclosing loop. In other clauses of the
+ * loop, they are unavailable, even if there is another enclosing loop where
+ * they would be available.
  */
 ava_macro_subst_result ava_intr_loop_subst(
+  const struct ava_symbol_s* self,
+  ava_macsub_context* context,
+  const ava_parse_statement* statement,
+  const ava_parse_unit* provoker,
+  ava_bool* consumed_other_statements);
+
+/**
+ * The `break` control macro.
+ *
+ * Syntax:
+ *   break flag* expression...
+ *
+ * Each flag is a bareword beginning with "-", and all consecutive barewords
+ * beginning with "-" immediately following the macro name are treated as
+ * flags, an error being raised if an unrecognised flag is encountered.
+ *
+ * expression may be empty.
+ *
+ * Flags:
+ *   -  Suppresses resetting the loop accumulator. If given, expression must be
+ *      empty.
+ *
+ * Semantics:
+ *
+ * expression is evaluated. Its result is written back into the accumulator of
+ * the immediately enclosing loop, unless the "-" flag is used to suppress
+ * this. The loop then exits, skipping all remaining stages, including the
+ * completion stage.
+ */
+ava_macro_subst_result ava_intr_break_subst(
+  const struct ava_symbol_s* self,
+  ava_macsub_context* context,
+  const ava_parse_statement* statement,
+  const ava_parse_unit* provoker,
+  ava_bool* consumed_other_statements);
+
+/**
+ * The `continue` control macro.
+ *
+ * Syntax:
+ *   continue flag* expression...
+ *
+ * Each flag is a bareword beginning with "-", and all consecutive barewords
+ * beginning with "-" immediately following the macro name are treated as
+ * flags, an error being raised if an unrecognised flag is encountered.
+ *
+ * expression may be empty.
+ *
+ * Flags:
+ *   -  Suppresses resetting the loop iteration value. If given, expression
+ *      must be empty.
+ *
+ * Semantics:
+ *
+ * expression is evaluated. Its result is written back into the iteration value
+ * of the immediately enclosing loop, unless the "-" flag is used to suppress
+ * this. The loop transitions to the update stage.
+ */
+ava_macro_subst_result ava_intr_continue_subst(
   const struct ava_symbol_s* self,
   ava_macsub_context* context,
   const ava_parse_statement* statement,
