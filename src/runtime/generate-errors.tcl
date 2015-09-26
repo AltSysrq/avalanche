@@ -873,6 +873,14 @@ set defs {
     }
   }
 
+  cerror C5099 assignment_to_other {{ava_string name} {ava_string type}} {
+    msg "Assigment to symbol %name% of type %type%"
+    explanation {
+      The indicated location appears to assign a new value to something that is
+      not a variable.
+    }
+  }
+
   # cerror C5032 ambiguous_var is group with the other ambiguous_* errors
 
   cerror C5033 no_such_var {{ava_string name}} {
@@ -889,6 +897,14 @@ set defs {
     explanation {
       The name in the indicated variable read refers to a macro rather than an
       actual variable or function.
+    }
+  }
+
+  cerror C5100 use_of_other_as_var {{ava_string name} {ava_string type}} {
+    msg "Variable read refers to non-variable %name% of type %type%"
+    explanation {
+      The name in the indicated variable read refers to something that is not a
+      variable or function.
     }
   }
 
@@ -1597,6 +1613,9 @@ set defs {
       wrap the whole expression in parentheses.
     }
   }
+
+  # cerror C5099 assignment_to_other with other assignment_to errors
+  # cerror C5100 use_of_other_as_var with other use_of_*_as_var errors
 }
 
 proc ncode {code} {

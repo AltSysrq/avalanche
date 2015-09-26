@@ -79,8 +79,26 @@ typedef enum {
    * statement with more than one token. Function macros are expanded after all
    * other macros in the same statement.
    */
-  ava_st_function_macro
+  ava_st_function_macro,
+  /**
+   * A symbol which is some "other" type.
+   *
+   * "Other" symbols have their type identified by the open
+   * ava_symbol_other_type structure, and are typically used by a very limited
+   * scope, such as the labels used by the `pasta` and `goto` control macros.
+   */
+  ava_st_other
 } ava_symbol_type;
+
+/**
+ * Identifies the actual type of an "other" symbol.
+ *
+ * Two "other" types are equal only if their addresses are equal. The contained
+ * string is used for debugging and diagnostics.
+ */
+typedef struct {
+  const char* name;
+} ava_symbol_other_type;
 
 /**
  * Defines the visiblity of a symbol.
@@ -202,6 +220,21 @@ struct ava_symbol_s {
        */
       const void* userdata;
     } macro;
+
+    /**
+     * Information about "other" symbols.
+     */
+    struct {
+      /**
+       * The identity of the actual type of this symbol.
+       */
+      const ava_symbol_other_type* type;
+      /**
+       * Arbitrary data associated with this symbol. The meaning of this field
+       * is highly dependent on the type.
+       */
+      const void* userdata;
+    } other;
   } v;
 };
 
