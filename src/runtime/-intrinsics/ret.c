@@ -94,6 +94,6 @@ static void ava_intr_ret_cg_discard(
   reg.type = ava_prt_data;
   reg.index = ava_codegen_push_reg(context, ava_prt_data, 1);
   ava_ast_node_cg_evaluate(node->value, &reg, context);
-  ava_codegen_ret(context, reg);
+  ava_codegen_ret(context, &node->header.location, reg);
   ava_codegen_pop_reg(context, ava_prt_data, 1);
 }

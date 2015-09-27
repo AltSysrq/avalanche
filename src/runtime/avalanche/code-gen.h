@@ -87,10 +87,15 @@ typedef struct ava_codegen_context_s ava_codegen_context;
  * infinite recursion.
  *
  * @param context The calling codegen context.
+ * @param location The location of the jump crossing this jump protector. NULL
+ * if the jump protector is being run because it's region is being terminated
+ * with ava_codegen_pop_jprot().
  * @param userdata The userdata passed into ava_codegen_push_jprot().
  */
 typedef void (*ava_codegen_jprot_exit_f)(
-  ava_codegen_context* context, void* userdata);
+  ava_codegen_context* context,
+  const ava_compile_location* location,
+  void* userdata);
 /**
  * Context data used by ava_codegen_push_jprot().
  *
@@ -331,9 +336,10 @@ ava_uint ava_codegen_genlabel(ava_codegen_context* context);
  * path. This must therefore be used instead of the lower-level builder
  * function.
  *
- * All arguments as per ava_pcxb_branch().
+ * All arguments beyond location as per ava_pcxb_branch().
  */
 void ava_codegen_branch(ava_codegen_context* context,
+                        const ava_compile_location* location,
                         ava_pcode_register key,
                         ava_integer value,
                         ava_bool invert,
@@ -345,9 +351,10 @@ void ava_codegen_branch(ava_codegen_context* context,
  * occurs. This must therefore be used instead of the lower-level builder
  * function.
  *
- * All arguments as per ava_pcxb_goto().
+ * All arguments beyond location as per ava_pcxb_goto().
  */
 void ava_codegen_goto(ava_codegen_context* context,
+                      const ava_compile_location* location,
                       ava_uint target);
 /**
  * Emits an ava_pcxt_ret instruction to the current context.
@@ -356,9 +363,11 @@ void ava_codegen_goto(ava_codegen_context* context,
  * instruction occurs. This must therefore be used instead of the lower-level
  * builder function.
  *
- * All arguments as per ava_pcxb_ret().
+ * All arguments beyond location as per ava_pcxb_ret().
  */
-void ava_codegen_ret(ava_codegen_context* context, ava_pcode_register value);
+void ava_codegen_ret(ava_codegen_context* context,
+                     const ava_compile_location* location,
+                     ava_pcode_register value);
 
 /**
  * Sets the current source location within the P-Code for the context's

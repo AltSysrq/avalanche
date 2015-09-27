@@ -224,7 +224,8 @@ static void ava_intr_if_cg_common(
       ava_ast_node_cg_evaluate(this->clauses[i].condition, &dreg, context);
       AVA_PCXB(ld_reg, creg, dreg);
       AVA_PCXB(bool, creg, creg);
-      ava_codegen_branch(context, creg, 0, ava_false, elselbl);
+      ava_codegen_branch(context, &this->header.location,
+                         creg, 0, ava_false, elselbl);
     }
 
     if (this->expression_form)
@@ -232,7 +233,7 @@ static void ava_intr_if_cg_common(
     else
       ava_ast_node_cg_discard(this->clauses[i].result, context);
 
-    ava_codegen_goto(context, endlbl);
+    ava_codegen_goto(context, &this->header.location, endlbl);
 
     if (this->clauses[i].condition)
       AVA_PCXB(label, elselbl);

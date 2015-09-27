@@ -606,7 +606,8 @@ static void ava_intr_loop_cg_evaluate(
       /* if (index >= length) goto completion; */
       AVA_PCXB(icmp, cmp, loop->clauses[clause].v.each.reg_index,
                loop->clauses[clause].v.each.reg_length);
-      ava_codegen_branch(context, cmp, -1, ava_true, completion_label);
+      ava_codegen_branch(context, &loop->header.location,
+                         cmp, -1, ava_true, completion_label);
       ava_codegen_pop_reg(context, ava_prt_int, 1);
 
       for (i = 0; i < loop->clauses[clause].v.each.num_lvalues; ++i) {
@@ -639,7 +640,8 @@ static void ava_intr_loop_cg_evaluate(
       ava_ast_node_cg_evaluate(
         loop->clauses[clause].v.vor.cond, &tmp, context);
       AVA_PCXB(ld_reg, condres, tmp);
-      ava_codegen_branch(context, condres, 0, ava_false, completion_label);
+      ava_codegen_branch(context, &loop->header.location,
+                         condres, 0, ava_false, completion_label);
 
       ava_codegen_pop_reg(context, ava_prt_data, 1);
       ava_codegen_pop_reg(context, ava_prt_int, 1);
@@ -656,7 +658,8 @@ static void ava_intr_loop_cg_evaluate(
       ava_ast_node_cg_evaluate(
         loop->clauses[clause].v.vhile.cond, &tmp, context);
       AVA_PCXB(ld_reg, condres, tmp);
-      ava_codegen_branch(context, condres, 0,
+      ava_codegen_branch(context, &loop->header.location,
+                         condres, 0,
                          loop->clauses[clause].v.vhile.invert,
                          completion_label);
 
@@ -735,7 +738,7 @@ static void ava_intr_loop_cg_evaluate(
     } break;
     }
   }
-  ava_codegen_goto(context, iterate_label);
+  ava_codegen_goto(context, &loop->header.location, iterate_label);
 
   /* Completion phase */
   AVA_PCXB(label, completion_label);
@@ -956,6 +959,6 @@ static void ava_intr_loopctl_cg_discard(
         AVA_PCXB(ld_imm_vd, dst_reg, AVA_EMPTY_STRING);
     }
 
-    ava_codegen_goto(context, jump_target);
+    ava_codegen_goto(context, &this->header.location, jump_target);
   }
 }

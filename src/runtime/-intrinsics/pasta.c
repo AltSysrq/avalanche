@@ -315,6 +315,7 @@ static void ava_intr_goto_cg_discard(
       context, (ava_ast_node*)this,
       ava_error_use_of_inaccessible_label(&this->target_location));
   } else {
-    ava_codegen_goto(context, *(const ava_uint*)this->target->v.other.userdata);
+    ava_codegen_goto(context, &this->header.location,
+                     *(const ava_uint*)this->target->v.other.userdata);
   }
 }

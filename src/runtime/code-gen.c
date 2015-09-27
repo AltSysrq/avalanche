@@ -168,7 +168,7 @@ void ava_codegen_pop_jprot(ava_codegen_context* context) {
   jprot = SLIST_FIRST(&context->jprots);
   SLIST_REMOVE_HEAD(&context->jprots, next);
 
-  (*jprot->exit)(context, jprot->userdata);
+  (*jprot->exit)(context, NULL, jprot->userdata);
 }
 
 void ava_codegen_push_symlabel(
@@ -237,6 +237,7 @@ static ava_bool ava_codegen_crosses_jprot(
 }
 
 void ava_codegen_branch(ava_codegen_context* context,
+                        const ava_compile_location* location,
                         ava_pcode_register key,
                         ava_integer value,
                         ava_bool invert,
@@ -246,8 +247,8 @@ void ava_codegen_branch(ava_codegen_context* context,
   if (ava_codegen_crosses_jprot(context, target)) {
     tmplbl = ava_codegen_genlabel(context);
     /* Need to run protector exits. Direct the non-taken path around them. */
-    ava_codegen_branch(context, key, value, !invert, tmplbl);
-    ava_codegen_goto(context, target);
+    ava_codegen_branch(context, location, key, value, !invert, tmplbl);
+    ava_codegen_goto(context, location, target);
     AVA_PCXB(label, tmplbl);
   } else {
     AVA_PCXB(branch, key, value, invert, target);
@@ -255,6 +256,7 @@ void ava_codegen_branch(ava_codegen_context* context,
 }
 
 void ava_codegen_goto(ava_codegen_context* context,
+                      const ava_compile_location* location,
                       ava_uint target) {
   ava_codegen_jprot* jprot;
 
@@ -264,18 +266,20 @@ void ava_codegen_goto(ava_codegen_context* context,
      */
     jprot = SLIST_FIRST(&context->jprots);
     SLIST_REMOVE_HEAD(&context->jprots, next);
-    (*jprot->exit)(context, jprot->userdata);
+    (*jprot->exit)(context, location, jprot->userdata);
     /* Invoke any other exits needed; otherwise, just jump to the label
      * directly.
      */
-    ava_codegen_goto(context, target);
+    ava_codegen_goto(context, location, target);
     SLIST_INSERT_HEAD(&context->jprots, jprot, next);
   } else {
     AVA_PCXB(goto, target);
   }
 }
 
-void ava_codegen_ret(ava_codegen_context* context, ava_pcode_register value) {
+void ava_codegen_ret(ava_codegen_context* context,
+                     const ava_compile_location* location,
+                     ava_pcode_register value) {
   ava_codegen_jprot* jprot;
 
   if (SLIST_EMPTY(&context->jprots)) {
@@ -286,8 +290,8 @@ void ava_codegen_ret(ava_codegen_context* context, ava_pcode_register value) {
      */
     jprot = SLIST_FIRST(&context->jprots);
     SLIST_REMOVE_HEAD(&context->jprots, next);
-    (*jprot->exit)(context, jprot->userdata);
-    ava_codegen_ret(context, value);
+    (*jprot->exit)(context, location, jprot->userdata);
+    ava_codegen_ret(context, location, value);
     SLIST_INSERT_HEAD(&context->jprots, jprot, next);
   }
 }
