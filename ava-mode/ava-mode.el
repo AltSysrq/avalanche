@@ -29,11 +29,12 @@
 (defconst ava-font-lock-keywords
   (list
    (cons (regexp-opt (list
-                      "extern" "Extern" "EXTERN"
-                      "fun" "Fun" "FUN"
-                      "macro" "Macro" "MACRO"
-                      "namespace" "import"
-                      "alias" "Alias" "ALIAS")
+                      "alias" "Alias" "ALIAS"
+                      "break" "collect" "collecting" "continue" "do" "each"
+                      "else" "extern" "Extern" "EXTERN"
+                      "for" "fun" "Fun" "FUN" "goto"
+                      "in" "if" "import" "macro" "Macro" "MACRO" "namespace"
+                      "pasta" "ret" "until" "while")
                      'symbols)
          'font-lock-keyword-face)
    (cons "\\$\\(\\s_\\|\\w\\)+\\$?" 'font-lock-variable-name-face)))

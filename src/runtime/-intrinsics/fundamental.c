@@ -228,7 +228,11 @@ static void ava_intr_seq_cg_common(
     AVA_PCXB(ld_imm_vd, *dst, AVA_EMPTY_STRING);
   }
 
-  if (STAILQ_EMPTY(&seq->children) && !dst) {
+  /* If the return policy is not "last", a single empty statement is really
+   * nothing and all and was probably intended to be discarded.
+   */
+  if (STAILQ_EMPTY(&seq->children) && !dst &&
+      ava_isrp_last == seq->return_policy) {
     ava_codegen_error(
       context, (ava_ast_node*)seq, ava_error_is_pure_but_would_discard(
         &seq->header.location, empty_expression));

@@ -357,6 +357,43 @@ static ava_value ava_interp_run_function(
       lists[lf->dst.index] = ava_list_proj_flatten(lists[lf->src.index]);
     } break;
 
+    case ava_pcxt_lindex: {
+      const ava_pcx_lindex* li = (const ava_pcx_lindex*)instr;
+      ava_integer ix = ints[li->ix.index];
+      ava_value val;
+
+      if (ix < 0 || ix >= (ava_integer)ava_list_length(lists[li->src.index]))
+        ava_throw_uex(&ava_error_exception, li->extype, li->exmessage);
+
+      val = ava_list_index(lists[li->src.index], ix);
+
+      switch (li->dst.type) {
+      case ava_prt_var:  vars[li->dst.index] = val; break;
+      case ava_prt_data: data[li->dst.index] = val; break;
+      default: abort();
+      }
+    } break;
+
+    case ava_pcxt_llength: {
+      const ava_pcx_llength* ll = (const ava_pcx_llength*)instr;
+
+      ints[ll->dst.index] = ava_list_length(lists[ll->src.index]);
+    } break;
+
+    case ava_pcxt_iadd_imm: {
+      const ava_pcx_iadd_imm* i = (const ava_pcx_iadd_imm*)instr;
+
+      ints[i->dst.index] = ints[i->src.index] + i->incr;
+    } break;
+
+    case ava_pcxt_icmp: {
+      const ava_pcx_icmp* i = (const ava_pcx_icmp*)instr;
+
+      ints[i->dst.index] =
+        (ints[i->left.index] > ints[i->right.index]) -
+        (ints[i->left.index] < ints[i->right.index]);
+    } break;
+
     case ava_pcxt_aaempty: {
     } break;
 
@@ -447,10 +484,19 @@ static ava_value ava_interp_run_function(
     case ava_pcxt_branch: {
       const ava_pcx_branch* br = (const ava_pcx_branch*)instr;
 
-      if (br->value == ints[br->key.index])
+      if ((br->value == ints[br->key.index]) ^ br->invert)
         TAILQ_FOREACH(instr, body, next)
           if (ava_pcxt_label == instr->type &&
               br->target == ((const ava_pcx_label*)instr)->name)
+            break;
+    } break;
+
+    case ava_pcxt_goto: {
+      const ava_pcx_goto* br = (const ava_pcx_goto*)instr;
+
+      TAILQ_FOREACH(instr, body, next)
+        if (ava_pcxt_label == instr->type &&
+            br->target == ((const ava_pcx_label*)instr)->name)
             break;
     } break;
 

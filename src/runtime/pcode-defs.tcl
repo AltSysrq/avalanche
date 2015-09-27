@@ -462,6 +462,67 @@ struct exe x {
     }
   }
 
+  # Accesses a single element in a list.
+  #
+  # Semantics: dst is set to the ixth element (from 0) in src. If ix is
+  # negative or is greater than or equal to the length of src, an
+  # error_exception whose user type and message is given by extype and
+  # exmessage is thrown.
+  elt lindex {
+    register dv dst {
+      prop reg-write
+    }
+    register l src {
+      prop reg-read
+    }
+    register i ix {
+      prop reg-read
+    }
+    str extype
+    str exmessage
+  }
+
+  # Determines the length of a list.
+  #
+  # Semantics: dst is set to the number of elements contained by src.
+  elt llength {
+    register i dst {
+      prop reg-write
+    }
+    register l src {
+      prop reg-read
+    }
+  }
+
+  # Adds a fixed value to an I-register.
+  #
+  # Semantics: dst is set to src+incr. The result of overflow is undefined.
+  elt iadd-imm {
+    register i dst {
+      prop reg-write
+    }
+    register i src {
+      prop reg-read
+    }
+    int incr
+  }
+
+  # Compares two I-registers.
+  #
+  # Semantics: If left==right, dst is set to 0. If left<right, dst is set to
+  # -1. Otherwise, if left>right, dst is set to +1.
+  elt icmp {
+    register i dst {
+      prop reg-write
+    }
+    register i left {
+      prop reg-read
+    }
+    register i right {
+      prop reg-write
+    }
+  }
+
   # Asserts that a value (an argument, presumably) is the empty string.
   #
   # Semantics: The given V-register is read. If it is the empty string, this
@@ -624,9 +685,10 @@ struct exe x {
 
   # Branches to another location within the function.
   #
-  # Semantics: The key I-register is read. If it is equal to value, control
-  # jumps to the label whose name matches target. Otherwise, control continues
-  # to the next instruction.
+  # Semantics: The key I-register is read. If it is equal to value and invert
+  # is false, or is not equal to value and invert is true, control jumps to the
+  # label whose name matches target. Otherwise, control continues to the next
+  # instruction.
   #
   # The P-Code is considered invalid if target references a nonexistent label.
   elt branch {
@@ -634,6 +696,16 @@ struct exe x {
       prop reg-read
     }
     int value
+    bool invert
+    int target
+  }
+
+  # Unconditionally branches to another location within the function.
+  #
+  # Semantics: Control jumps to the label whes name matches the given target.
+  #
+  # The P-Code is considered invalid if target references a nonexistent label.
+  elt goto {
     int target
   }
 

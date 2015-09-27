@@ -375,6 +375,22 @@ set defs {
     }
   }
 
+  serror R0036 bad_list_multiplicity {} {
+    msg "Bad list element multiplicity."
+    explanation {
+      An "each" clause of a loop expected a list whose length was an even
+      multiple of some integer, but it was not and the end of the list was
+      reached.
+
+      For example, the clause
+        each a b c in $list
+      requires $list to be a list whose length is an even multiple of 3. If it
+      is not, upon reaching the end of the list, there will not be sufficient
+      elements to assign to c and possibly b, and this exception will be
+      thrown.
+    }
+  }
+
   serror L4001 unclosed_string_literal {} {
     msg "Unclosed string literal."
     explanation {
@@ -523,6 +539,17 @@ set defs {
     }
   }
 
+  cerror C5102 ambiguous_label {{ava_string name}} {
+    msg "Label reference is ambiguous: %name%"
+    explanation {
+      The given name used as a label reference could refer to more than one
+      symbol.
+
+      Labels occupy the same namespace as other symbols, so the conflicting
+      symbols are not necessarily labels.
+    }
+  }
+
   cerror C5003 no_such_function {{ava_string name}} {
     msg "No such function: %name%"
     explanation {
@@ -661,7 +688,23 @@ set defs {
     msg "Not a block, for argument %name%"
     explanation {
       The indicated argument is required to be a brace-enclosed block, but
-      something else was given.
+      something else was found.
+    }
+  }
+
+  cerror C5072 macro_arg_must_be_substitution {{ava_string name}} {
+    msg "Not a substitution, for argument %name%"
+    explanation {
+      The indicated argument is required to be a parenthesis-enclosed
+      substitution, but something else was found.
+    }
+  }
+
+  cerror C5075 macro_arg_must_be_substitution_or_block {{ava_string name}} {
+    msg "Not a substitution or block, for argument %name%"
+    explanation {
+      The indicated argument is required to be a parenthesis-enclosed
+      substitution or a brace-enclosed block, but something else was found.
     }
   }
 
@@ -841,6 +884,14 @@ set defs {
     }
   }
 
+  cerror C5099 assignment_to_other {{ava_string name} {ava_string type}} {
+    msg "Assigment to symbol %name% of type %type%"
+    explanation {
+      The indicated location appears to assign a new value to something that is
+      not a variable.
+    }
+  }
+
   # cerror C5032 ambiguous_var is group with the other ambiguous_* errors
 
   cerror C5033 no_such_var {{ava_string name}} {
@@ -857,6 +908,14 @@ set defs {
     explanation {
       The name in the indicated variable read refers to a macro rather than an
       actual variable or function.
+    }
+  }
+
+  cerror C5100 use_of_other_as_var {{ava_string name} {ava_string type}} {
+    msg "Variable read refers to non-variable %name% of type %type%"
+    explanation {
+      The name in the indicated variable read refers to something that is not a
+      variable or function.
     }
   }
 
@@ -1267,6 +1326,349 @@ set defs {
       variadic argument) cannot occur anywhere after a variadic argument in a
       function's argument list, as this could make the binding of parameters to
       arguments ambiguous.
+    }
+  }
+
+  cerror C5071 ret_at_global_scope {} {
+    msg "\"ret\" at global scope."
+    explanation {
+      A "ret" (return) statement cannot be used at global scope, since there is
+      no containing function from which to return.
+    }
+  }
+
+  # C5072 macro_arg_must_be_substitution group with other must-be errors
+
+  cerror C5073 if_required_else_omitted {} {
+    msg "\"else\" required before this point."
+    explanation {
+      Uses of the "if" macro require the "else" keyword before the final result
+      for the sake of clarity whenever the statement has more than one
+      conditional clause or when using statement form (i.e., with blocks
+      enclosed in braces).
+    }
+  }
+
+  cerror C5074 if_inconsistent_result_form {} {
+    msg "Inconsistent expression/statement-form results in if."
+    explanation {
+      All result arguments for an "if" usage must be blocks (brace-enclosed, no
+      value returned) or substitutions (parenthesis-enclosed, result returned).
+      The expected form for a single "if" usage is decided by the first result
+      argument; this error is raised if another result block differs from the
+      first result argument.
+    }
+  }
+
+  # cerror C5075 macro_arg_must_be_substitution_or_block with other must-bes
+
+  cerror C5076 statement_form_does_not_produce_a_value {} {
+    msg "Statement-form construct does not produce a value."
+    explanation {
+      Control structures generally come in two forms: statement-form and
+      expression-form, identified by result bodies being brace-enclosed blocks
+      or parenthesis-enclosed substitutions, respectively. The indicated
+      construct is in statement form, and thus cannot be used as an expression.
+
+      For example, the following is invalid due to this error:
+        foo = if ($answer) { 42 } else { 56 }
+      The above would be correctly written
+        foo = if ($answer) (42) (56)
+    }
+  }
+
+  cerror C5077 expression_form_discarded {} {
+    msg "Statement-form construct does not produce a value."
+    explanation {
+      Control structures generally come in two forms: statement-form and
+      expression-form, identified by result bodies being brace-enclosed blocks
+      or parenthesis-enclosed substitutions, respectively. The indicated
+      construct is in expression form, but its result is discarded. This is
+      almost certainly unintended, at the very least indicating disaggreement
+      between implied intent and actuality.
+
+      For example, the following is invalid due to this error:
+        if ($control) (do-something ())
+      The above would be correctly written
+        if ($control) { do-something () }
+    }
+  }
+
+  cerror C5078 loop_each_without_in {} {
+    msg "\"each\" clause of loop missing \"in\" keyword."
+    explanation {
+      At the indicated location, the end of the containing statement had been
+      encountered before the requisite "in" word.
+
+      The general syntax for the "each" loop clause is
+
+        each lvalue ... in value
+
+      If "in" occurs on a separate line, it may be necessary to escape the line
+      separators with a backslash or to surround the expression in parentheses.
+    }
+  }
+
+  cerror C5079 loop_each_without_lvalues {} {
+    msg "\"each\" clause has no lvalues."
+    explanation {
+      The "in" keyword was found immediately after the start of an "each"
+      clause within a loop.
+
+      This would imply iteratively taking zero elements from the list, which is
+      not a useful operation.
+    }
+  }
+
+  cerror C5080 loop_each_without_list {} {
+    msg "Missing value after \"in\" of \"each\" loop clause."
+    explanation {
+      The "in" keyword was found at the end of the containing statement of an
+      "each" clause within a loop.
+
+      If the expression for the list occurs on a separate line, it may be
+      necessary to escape the line separators with a backslash ,to surround
+      the loop as a whole with parentheses, or to place the opening parenthesis
+      for the list expression on the same line as "in".
+    }
+  }
+
+  cerror C5081 loop_for_without_init {} {
+    msg "Missing initialiser block for \"for\" loop clause."
+    explanation {
+      The "for" keyword was found at the end of the statement containing a
+      "loop" macro.
+    }
+  }
+
+  cerror C5082 loop_for_init_not_block {} {
+    msg "Unexpected non-block for \"for\" clause initialiser."
+    explanation {
+      The initialiser clause of a "for" clause in a loop must be a
+      brace-surrounded block.
+    }
+  }
+
+  cerror C5083 loop_for_without_cond {} {
+    msg "Missing conditional expression for \"for\" loop clause."
+    explanation {
+      The condition expression (second argument) of a "for" clause of a loop
+      was not found.
+
+      If the condition is on another line, the line separators may need to be
+      escaped with backslashes, or the whole loop enclosed in parentheses.
+    }
+  }
+
+  cerror C5084 loop_for_cond_not_subst {} {
+    msg "Unexpected non-substitution for \"for\" clause condition."
+    explanation {
+      The condition expresison of a "for" clause must be a
+      parenthesis-surrounded substitution.
+    }
+  }
+
+  cerror C5085 loop_for_without_update {} {
+    msg "Missing update block for \"for\" loop clause."
+    explanation {
+      The update block (third argument) of a "for" clause of a loop was not
+      found.
+
+      If the update is on another line, the line separators may need to be
+      escaped with backslashes, or the whole loop enclosed in parentheses.
+    }
+  }
+
+  cerror C5086 loop_for_update_not_block {} {
+    msg "Unexpected non-block for \"for\" clause update."
+    explanation {
+      The update block of a "for" clause bust be a brace-enclosed block.
+    }
+  }
+
+  cerror C5087 loop_while_without_cond {{ava_string name}} {
+    msg "Missing condition expression for \"%name%\" loop clause."
+    explanation {
+      The "while" and "until" loop clauses must be followed by a single
+      expression providing the loop condition.
+    }
+  }
+
+  cerror C5088 loop_while_cond_not_subst {{ava_string name}} {
+    msg "Unexpected non-substitution for \"%name%\" clause condition."
+    explanation {
+      The condition of a "while" or "until" clause must be a single
+      parentheses-enclosed expression.
+    }
+  }
+
+  cerror C5089 loop_do_without_body {{ava_string type}} {
+    msg "Missing body block for \"%type%\" loop clause."
+    explanation {
+      The specified loop clause must be followed by a single block providing
+      the loop body.
+    }
+  }
+
+  cerror C5090 loop_do_body_not_block_or_subst {{ava_string type}} {
+    msg "Invalid body of \"%type%\" clause."
+    explanation {
+      The body of the specified clause must be a single brace-enclosed block or
+      parenthesis-enclosed expression.
+    }
+  }
+
+  cerror C5091 loop_collect_without_value {} {
+    msg "Missing value expression for \"collect\" loop clause."
+    explanation {
+      The "collect" loop clause must be followed by a single expression
+      providing the collection value.
+
+      See also "collecting", which takes no arguments and operates on the
+      implicit loop value.
+    }
+  }
+
+  cerror C5092 bad_loop_clause_id {{ava_string id}} {
+    msg "Invalid loop clause type: %id%"
+    explanation {
+      The indicated bareword appears where a loop clause type was expected, but
+      it is not a known type of loop clause.
+
+      Quick reference:
+        each lvalue... in list
+        for {init} (condition) {update}
+        while (condition)
+        until (condition)
+        do { body }
+        do (body)
+        { body }
+        collect value
+        collecting
+        else { body }
+        else (body)
+    }
+  }
+
+  cerror C5093 loop_garbage_after_else {} {
+    msg "Unexpected tokens after \"else\" loop clause."
+    explanation {
+      The "else" clause of a loop must be the final clause, but something was
+      found beyond it.
+
+      If the indicated item was intended to be part of the body of the loop's
+      else clause, the whole body must be surrounded in parentheses.
+    }
+  }
+
+  cerror C5094 bad_loopctl_flag {
+    {ava_string macro} {ava_string flag}
+  } {
+    msg "Unknown flag \"%flag\% to macro %macro%"
+    explanation {
+      All barewords beginning with a hyphen immediately after the "break" and
+      "continue" macros are reserved as flags; the indicated bareword looks
+      like such a flag, but is not a known flag.
+
+      The flag may have been misspelled. If the bareword is actually supposed
+      to be part of the expression, wrap the expression in parentheses.
+    }
+  }
+
+  cerror C5095 loopctl_expression_but_suppressed {} {
+    msg "Unexpected expression after \"-\" flag."
+    explanation {
+      The "-" flag was given to the loop control macro preceding the indicated
+      location, but it appears an expression follows anyway.
+
+      The "-" flag to the loop control macros indicates to suppress changing
+      any iteration or accumulation values, and so no expression would be
+      evaluated. Because of this, it is an error to include an expression
+      anyway.
+
+      If the "-" was supposed to be part of the expression, wrap the expression
+      as a whole in parentheses.
+    }
+  }
+
+  cerror C5096 loopctl_outside_of_loop {} {
+    msg "Loop control cannot be used outside of loop."
+    explanation {
+      The indicated loop control macro is not within a loop, and therefore
+      cannot do anything meaningful.
+
+      Note that loop control cannot cross functions, so this error will also be
+      produced if the loop control macro is used within a function or lambda
+      nested inside a loop, for example.
+    }
+  }
+
+  cerror C5097 loopctl_suppressed {} {
+    msg "Loop control cannot be used here."
+    explanation {
+      While the indicated loop control macro does occur within a loop, it is
+      not permitted to be used in the indicated location.
+    }
+  }
+
+  cerror C5098 loopctl_flag_more_than_once {
+    {ava_string macro} {ava_string flag}
+  } {
+    msg "Flag %flag% passed more than once to macro %macro%"
+    explanation {
+      The indicated flag occurs more than once in the invocation of the
+      preceding macro, but there is no defined meaning to passing that flag
+      more than once.
+
+      If the second flag was intended to be part of the following expression,
+      wrap the whole expression in parentheses.
+    }
+  }
+
+  # cerror C5099 assignment_to_other with other assignment_to errors
+  # cerror C5100 use_of_other_as_var with other use_of_*_as_var errors
+
+  cerror C5101 no_such_label {{ava_string name}} {
+    msg "No such label: %name%"
+    explanation {
+      The given goto target does not match any label visible in the current
+      scope.
+
+      Presumably either this reference or its definition was mispelled.
+    }
+  }
+
+  # cerror C5102 ambiguous_label with other ambiguous errors
+
+  cerror C5103 use_of_other_as_label {
+    {ava_string name} {ava_string type}
+  } {
+    msg "Use of %type% %name% as label."
+    explanation {
+      The given bareword was expected to resolve to a reference to a label, but
+      something else was found instead.
+    }
+  }
+
+  cerror C5104 use_of_label_in_enclosing_scope {} {
+    msg "Use of label from enclosing scope."
+    explanation {
+      The referenced label is defined in an outer function but used from an
+      inner function.
+
+      Labels cannot be used for non-local (i.e., cross-function) control flow.
+      Use exception handling for that.
+    }
+  }
+
+  cerror C5105 use_of_inaccessible_label {} {
+    msg "Label is not accessible from this point."
+    explanation {
+      While the given label is defined in the same scope as this reference, it
+      is not legal to reference it from the indicated location.
+
+      Label references may only occur within the structure that defines them,
+      even though their symbols follow normal rules of lexical visibility.
     }
   }
 }

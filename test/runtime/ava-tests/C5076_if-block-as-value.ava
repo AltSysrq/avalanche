@@ -1,0 +1,4 @@
+fun bar () = $baz
+fun baz () = $bar
+
+#set# foo (if (1) { bar () } else { baz () })

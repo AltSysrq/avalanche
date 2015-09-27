@@ -28,7 +28,11 @@
 #include "avalanche/symtab.h"
 #include "-intrinsics/defun.h"
 #include "-intrinsics/extern.h"
+#include "-intrinsics/if.h"
+#include "-intrinsics/loop.h"
 #include "-intrinsics/namespace.h"
+#include "-intrinsics/pasta.h"
+#include "-intrinsics/ret.h"
 #include "-intrinsics/user-macro.h"
 #include "-intrinsics/variable.h"
 
@@ -60,6 +64,11 @@ void ava_register_intrinsics(ava_macsub_context* context) {
 
   ava_symtab* symtab = ava_macsub_get_symtab(context);
 
+  DEFINE("alias",       CTL,    PRIVATE,        alias);
+  DEFINE("Alias",       CTL,    INTERNAL,       alias);
+  DEFINE("ALIAS",       CTL,    PUBLIC,         alias);
+  DEFINE("break",       CTL,    NULL,           break);
+  DEFINE("continue",    CTL,    NULL,           continue);
   DEFINE("extern",      CTL,    PRIVATE,        extern);
   DEFINE("Extern",      CTL,    INTERNAL,       extern);
   DEFINE("EXTERN",      CTL,    PUBLIC,         extern);
@@ -69,11 +78,17 @@ void ava_register_intrinsics(ava_macsub_context* context) {
   DEFINE("macro",       CTL,    PRIVATE,        user_macro);
   DEFINE("Macro",       CTL,    INTERNAL,       user_macro);
   DEFINE("MACRO",       CTL,    PUBLIC,         user_macro);
+  DEFINE("goto",        CTL,    NULL,           goto);
+  DEFINE("if",          CTL,    NULL,           if);
+  DEFINE("each",        CTL,    "each",         loop);
+  DEFINE("for",         CTL,    "for",          loop);
+  DEFINE("while",       CTL,    "while",        loop);
+  DEFINE("until",       CTL,    "until",        loop);
+  DEFINE("do",          CTL,    "do",           loop);
   DEFINE("import",      CTL,    NULL,           import);
   DEFINE("namespace",   CTL,    NULL,           namespace);
-  DEFINE("alias",       CTL,    PRIVATE,        alias);
-  DEFINE("Alias",       CTL,    INTERNAL,       alias);
-  DEFINE("ALIAS",       CTL,    PUBLIC,         alias);
+  DEFINE("pasta",       CTL,    NULL,           pasta);
+  DEFINE("ret",         CTL,    NULL,           ret);
   DEFINE("#var#",       CTL,    NULL,           var);
   DEFINE("#set#",       CTL,    NULL,           set);
   /* Weak absolute imports of the intrinsics and standard library */
