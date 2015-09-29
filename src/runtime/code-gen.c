@@ -40,8 +40,7 @@ typedef SLIST_HEAD(,ava_codegen_symreg_s) ava_codegen_symreg_stack;
 struct ava_codegen_context_s {
   ava_compile_error_list* errors;
   ava_pcx_builder* builder;
-  ava_string last_src_filename;
-  ava_integer last_src_line;
+  ava_compile_location last_location;
 
   ava_pcode_register_index register_stacks[ava_prt_function+1];
 
@@ -72,8 +71,12 @@ static ava_codegen_context* ava_codegen_context_alloc(
   this = AVA_NEW(ava_codegen_context);
   this->builder = builder;
   this->errors = errors;
-  this->last_src_filename = AVA_EMPTY_STRING;
-  this->last_src_line = 0;
+  this->last_location.filename = AVA_EMPTY_STRING;
+  this->last_location.line_offset = 0;
+  this->last_location.start_line = 0;
+  this->last_location.end_line = 0;
+  this->last_location.start_column = 0;
+  this->last_location.end_column = 0;
   this->next_label = 0;
   SLIST_INIT(&this->symlabels);
   SLIST_INIT(&this->symregs);
@@ -116,14 +119,17 @@ void ava_codegen_set_location(
   ava_codegen_context* context,
   const ava_compile_location* location
 ) {
-  if (ava_strcmp(context->last_src_filename, location->filename)) {
-    ava_pcxb_src_file(context->builder, location->filename);
-    context->last_src_filename = location->filename;
-  }
-
-  if (context->last_src_line != location->start_line) {
-    ava_pcxb_src_line(context->builder, location->start_line);
-    context->last_src_line = location->start_line;
+  if (ava_strcmp(context->last_location.filename, location->filename) ||
+      context->last_location.line_offset != location->line_offset ||
+      context->last_location.start_line != location->start_line ||
+      context->last_location.end_line != location->end_line ||
+      context->last_location.start_column != location->start_column ||
+      context->last_location.end_column != location->end_column) {
+    ava_pcxb_src_pos(context->builder, location->filename,
+                     location->line_offset,
+                     location->start_line, location->end_line,
+                     location->start_column, location->end_column);
+    context->last_location = *location;
   }
 }
 
@@ -133,8 +139,10 @@ void ava_codegen_set_global_location(
 ) {
   ava_pcg_builder* builder = ava_pcx_builder_get_parent(context->builder);
 
-  ava_pcgb_src_file(builder, location->filename);
-  ava_pcgb_src_line(builder, location->start_line);
+  ava_pcgb_src_pos(builder, location->filename,
+                   location->line_offset,
+                   location->start_line, location->end_line,
+                   location->start_column, location->end_column);
 }
 
 void ava_codegen_export(
@@ -315,8 +323,10 @@ ava_pcode_global_list* ava_codegen_run(
   init_vars = ava_list_of_values(
     (ava_value[]) { ava_empty_list().v }, 1);
 
-  ava_pcgb_src_file(global_builder, root->location.filename);
-  ava_pcgb_src_line(global_builder, root->location.start_line);
+  ava_pcgb_src_pos(global_builder, root->location.filename,
+                   root->location.line_offset,
+                   root->location.start_line, root->location.end_line,
+                   root->location.start_column, root->location.end_column);
   init_function = ava_pcgb_fun(
     global_builder,
     ava_false, init_name, init_prototype, init_vars,

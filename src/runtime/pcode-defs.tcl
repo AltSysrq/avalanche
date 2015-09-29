@@ -35,17 +35,25 @@ struct global g {
   prop int global-ref
   prop int global-fun-ref
 
-  # Records the source filename in effect until the next declaration indicating
+  # Records the source location in effect until the next declaration indicating
   # otherwise.
-  elt src-file {
+  elt src-pos {
     str filename
+    int line-offset
+    int start-line
+    int end-line
+    int start-column
+    int end-column
+
+    constraint {
+      @.line_offset >= 0 &&
+      @.start_line >= 0 &&
+      @.end_line >= @.start_line &&
+      @.start_column >= 0 &&
+      @.end_column >= @.start_column
+    }
   }
 
-  # Records the source line number in effect until the next declaration
-  # indicating otherwise.
-  elt src-line {
-    int line
-  }
 
   # Raw C code block.
   #
@@ -217,20 +225,25 @@ struct exe x {
   prop int global-ref
   prop int global-fun-ref
 
-  # Records the source filename in effect until the next declaration indicating
+  # Records the source position in effect until the next declaration indicating
   # otherwise.
   #
-  # This is independent of the global src-file.
-  elt src-file {
+  # This is independent of the global src-pos.
+  elt src-pos {
     str filename
-  }
+    int line-offset
+    int start-line
+    int end-line
+    int start-column
+    int end-column
 
-  # Records the source line number in effect until the next declaration
-  # indicating otherwise.
-  #
-  # This is independent of the global src-line.
-  elt src-line {
-    int line
+    constraint {
+      @.line_offset >= 0 &&
+      @.start_line >= 0 &&
+      @.end_line >= @.start_line &&
+      @.start_column >= 0 &&
+      @.end_column >= @.start_column
+    }
   }
 
   # Creates one or more registers of the chosen type at the top of the stack.
