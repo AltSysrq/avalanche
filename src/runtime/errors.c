@@ -62,8 +62,16 @@ static void position_caret(char* dst, size_t limit,
 }
 
 static ava_string extract_source_line(const ava_compile_location* loc) {
-  const char* str = ava_string_to_cstring(loc->source);
-  size_t begin = loc->line_offset, strlen = ava_string_length(loc->source), end;
+  const char* str;
+  size_t begin, strlen, end;
+
+  if (!ava_string_is_present(loc->source))
+    return AVA_ABSENT_STRING;
+
+  begin = loc->line_offset;
+  strlen = ava_string_length(loc->source);
+  if (begin >= strlen) return AVA_ABSENT_STRING;
+  str = ava_string_to_cstring(loc->source);
 
   for (end = begin; end < strlen && '\n' != str[end]; ++end);
 
@@ -72,9 +80,15 @@ static ava_string extract_source_line(const ava_compile_location* loc) {
 
 static ava_bool is_printable(ava_string str) {
   ava_str_tmpbuff tmp;
-  const char* raw = ava_string_to_cstring_buff(tmp, str);
+  const char* raw;
   char ch;
-  size_t strlen = ava_string_length(str), i;
+  size_t strlen, i;
+
+  if (!ava_string_is_present(str))
+    return ava_false;
+
+  raw = ava_string_to_cstring_buff(tmp, str);
+  strlen = ava_string_length(str);
 
   for (i = 0; i < strlen; ++i) {
     ch = raw[i];

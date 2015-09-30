@@ -55,6 +55,8 @@ typedef struct {
   ava_string filename;
   /**
    * The full source of the file containing this entity.
+   *
+   * This is absent if the source is unavailable.
    */
   ava_string source;
   /**
