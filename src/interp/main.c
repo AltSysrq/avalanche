@@ -85,6 +85,17 @@ static ava_value run(void* filename) {
           ava_string_to_cstring(
             ava_pcode_global_list_to_string(pcode, 0)));
 
+  (void)ava_xcode_from_pcode(
+    pcode, &errors,
+    ava_map_add(ava_empty_map(),
+                ava_value_of_string(ava_string_of_cstring(filename)),
+                ava_value_of_string(source)));
+  if (!TAILQ_EMPTY(&errors)) {
+    warnx("P-Code validation failed.\n%s", ava_string_to_cstring(
+            ava_error_list_to_string(&errors, 50, ava_true)));
+    return ret;
+  }
+
   fprintf(stderr, "--- Program output ---\n");
   ava_interp_exec(pcode);
 

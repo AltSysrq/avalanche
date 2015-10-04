@@ -57,15 +57,16 @@ deftest(build_single_statement) {
   const ava_pcode_global_list* pcode;
   ava_pcg_builder* builder = ava_pcg_builder_new();
 
-  ava_pcgb_src_file(builder, AVA_ASCII9_STRING("foo"));
+  ava_pcgb_src_pos(builder, AVA_ASCII9_STRING("foo"),
+                   42, 1, 2, 10, 20);
   pcode = ava_pcg_builder_get(builder);
 
-  test_to_string("\\{src-file foo\\}\n", pcode);
+  test_to_string("\\{src-pos foo 42 1 2 10 20\\}\n", pcode);
 }
 
 deftest(to_string_correct_escaping) {
-  test_round_trip("\\{src-file \"foo bar\"\\}\n");
-  test_round_trip("\\{src-file \\{\"\\}\\}\n");
+  test_round_trip("\\{src-pos \"foo bar\" 42 1 2 10 20\\}\n");
+  test_round_trip("\\{src-pos \\{\"\\} 42 1 2 10 20\\}\n");
 }
 
 deftest(function_definition) {

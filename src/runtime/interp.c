@@ -142,8 +142,7 @@ static ava_value ava_interp_run_function(
 
   TAILQ_FOREACH(instr, body, next) {
     switch (instr->type) {
-    case ava_pcxt_src_file: break;
-    case ava_pcxt_src_line: break;
+    case ava_pcxt_src_pos: break;
     case ava_pcxt_push: break;
     case ava_pcxt_pop: break;
 

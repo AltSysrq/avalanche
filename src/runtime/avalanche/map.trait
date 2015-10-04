@@ -85,7 +85,7 @@ trait ava map {
   method ava_value get {ava_map_cursor cursor} AVA_PURE
 
   doc {
-    Returns the kye bound to the element at the given cursor.
+    Returns the key bound to the element at the given cursor.
 
     Behaviour is undefined if the cursor was not produced by a call to find()
     or next() on this map, or if the value is AVA_MAP_CURSOR_NONE.

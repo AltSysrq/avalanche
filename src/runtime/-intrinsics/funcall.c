@@ -357,7 +357,8 @@ static void ava_intr_funcall_cg_evaluate(
     }
 
     AVA_PCXB(invoke_ss, *dst, funcall->static_function->pcode_index,
-             arg_base, funcall->static_function->v.var.fun.num_args);
+             arg_base,
+             funcall->static_function->v.var.fun.num_args + num_captures);
 
     ava_codegen_pop_reg(
       context, ava_prt_data,
@@ -483,7 +484,7 @@ static void ava_intr_funcall_cg_evaluate(
              preg_base + normal_parm_offset - extra_parm,
              funcall->num_parms - normal_parm_offset + extra_parm);
 
-    ava_codegen_pop_reg(context, ava_prt_parm, funcall->num_parms - 1);
+    ava_codegen_pop_reg(context, ava_prt_parm, funcall->num_parms);
     ava_codegen_pop_reg(context, ava_prt_function, 1);
   } break;
   }

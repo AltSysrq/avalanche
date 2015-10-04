@@ -1671,6 +1671,153 @@ set defs {
       even though their symbols follow normal rules of lexical visibility.
     }
   }
+
+  cerror X9000 xcode_dupe_label {{ava_value label}} {
+    msg "P-Code label present in function more than once: %label%"
+    explanation {
+      P-Code failed validation because a label was defined more than once in
+      a function near the given source location.
+
+      This is indicative of a bug in P-Code generation, rather than in the
+      source program.
+    }
+  }
+
+  cerror X9001 xcode_reg_underflow {} {
+    msg "P-Code register underflow."
+    explanation {
+      A pop instruction near the given source location in generated P-Code pops
+      away more registers of a given type than currently exist.
+
+      This is indicative of a bug in P-Code generation, rather than in the
+      source program.
+    }
+  }
+
+  cerror X9002 xcode_reg_nxaccess {} {
+    msg "P-Code references non-existent register."
+    explanation {
+      An instruction near the given source location in generated P-Code
+      accesses a register which does not exist at that location.
+
+      This is indicative of a bug in P-Code generation, rather than in the
+      source program.
+    }
+  }
+
+  cerror X9003 xcode_jump_nxlabel {{ava_value label}} {
+    msg "P-Code jumps to non-existent label %label%."
+    explanation {
+      An instruction near the given source location in generated P-Code jumps
+      to a label which does not exist within the function.
+
+      This is indicative of a bug in P-Code generation, rather than in the
+      source program.
+    }
+  }
+
+  cerror X9004 xcode_uninit_reg {{ava_string name}} {
+    msg "P-Code register %name% may be used uninitialised."
+    explanation {
+      An instruction near the given source location in generated P-Code uses a
+      register which is not guaranteed to have been initialised.
+
+      This is indicative of a bug in P-Code generation, rather than in the
+      source program.
+    }
+  }
+
+  cerror X9005 xcode_uninit_var {{ava_string name}} {
+    msg "Variable %name% might be used before it is initialised."
+    explanation {
+      The given variable at the given source location may be used without
+      having been initialised.
+
+      Most commonly this is due to forgetting to assign something to the
+      variable earlier in the function.
+
+      Note that checks for definite initialisation does not attempt to perform
+      any form of symbolic interpretation to eliminate certain paths; any
+      nominally conditional branch is assumed to be able to go both ways at any
+      point. For example, the program
+
+        each x in [42] { y = $x }
+        z = $y
+
+      will in fact always initialise variable y at runtime since the loop
+      always executes once, but the read of the variable on the secnod line
+      will be flagged with this this error because the compiler assumes that
+      the loop could execute zero times.
+
+      The solution in these uncommon cases is to add a dummy initialisation of
+      the variable before its actual initialisation, eg
+
+        y = ()
+        each x in [42] { y = $x }
+        z = $y
+
+      Also note that referencing any function or lambda expression which
+      captures local variables necessarily reads those variables at the
+      point where the function or lambda expression is referenced. Errors
+      arising from such references are flagged to at the location of the
+      function or lambda reference rather than the variable reference within.
+      For example, in the code
+
+        fun doit () { ret $x }
+        doit ()
+        x = 42
+
+      the use of the uninitialised variable x is flagged on the second line
+      rather than the first.
+    }
+  }
+
+  cerror X9006 xcode_unbalanced_push {{ava_string expected}} {
+    msg "P-Code register stack unbalanced; expected pop %expected%"
+    explanation {
+      The end of the containing function was reached without all P-Code
+      registers having been popped.
+
+      This is indicative of a bug in P-Code generation, rather than in the
+      source program.
+    }
+  }
+
+  cerror X9007 xcode_oob_global {{ava_integer ix}} {
+    msg "P-Code references out-of-bounds global index %ix%"
+    explanation {
+      A global reference within generated P-Code has a global reference index
+      which is either negative or greater than the maximum index of any element
+      in the P-Code.
+
+      This is indicative of a bug in P-Code generation, rather than in the
+      source program.
+    }
+  }
+
+  cerror X9008 xcode_bad_xref {{ava_integer ix}} {
+    msg "P-Code element makes bad reference to global index %ix%"
+    explanation {
+      A global reference within generated P-Code has a global reference which
+      points to an element type not permitted for that reference.
+
+      This is indicative of a bug in P-Code generation, rather than in the
+      source program.
+    }
+  }
+
+  cerror X9009 xcode_wrong_arg_count {
+    {ava_integer expected} {ava_integer given}
+  } {
+    msg "P-Code statically calls %expected%-argument function with %given% arguments."
+    explanation {
+      A static invocation instruction within generated P-Code passes the wrong
+      argument count to a function.
+
+      This is indicative of a bug in P-Code generation, rather than in the
+      source program.
+    }
+  }
 }
 
 proc ncode {code} {

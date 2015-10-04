@@ -32,20 +32,31 @@
 struct global g {
   attr var
   attr fun
-  prop int global-ref
+  attr entity
+  attr needs-special-validation
+  prop int global-entity-ref
   prop int global-fun-ref
+  prop function prototype
 
-  # Records the source filename in effect until the next declaration indicating
+  # Records the source location in effect until the next declaration indicating
   # otherwise.
-  elt src-file {
+  elt src-pos {
     str filename
+    int line-offset
+    int start-line
+    int end-line
+    int start-column
+    int end-column
+
+    constraint {
+      @.line_offset >= 0 &&
+      @.start_line >= 0 &&
+      @.end_line >= @.start_line &&
+      @.start_column >= 0 &&
+      @.end_column >= @.start_column
+    }
   }
 
-  # Records the source line number in effect until the next declaration
-  # indicating otherwise.
-  elt src-line {
-    int line
-  }
 
   # Raw C code block.
   #
@@ -77,6 +88,7 @@ struct global g {
   # This resolution may occur before the program is executed.
   elt ext-var {
     attr var
+    attr entity
     demangled-name name
   }
 
@@ -87,8 +99,11 @@ struct global g {
   elt ext-fun {
     attr var
     attr fun
+    attr entity
     demangled-name name
-    function prototype
+    function prototype {
+      prop prototype
+    }
   }
 
   # Declares a global variable defined by this P-Code unit.
@@ -107,6 +122,7 @@ struct global g {
   # global index.
   elt var {
     attr var
+    attr entity
     bool publish
     demangled-name name
   }
@@ -118,9 +134,12 @@ struct global g {
   elt fun {
     attr var
     attr fun
+    attr entity
     bool publish
     demangled-name name
-    function prototype
+    function prototype {
+      prop prototype
+    }
     # A list of variable names used by this function.
     #
     # Function arguments are bound to the first n entries of this list (which
@@ -137,6 +156,9 @@ struct global g {
     constraint {
       ava_list_length(@.vars) >= @.prototype->num_args
     }
+    constraint {
+      ava_cc_ava == @.prototype->calling_convention
+    }
   }
 
   # Exports a symbol visible to Avalanche code referencing a global in this
@@ -144,7 +166,7 @@ struct global g {
   elt export {
     # The global which is being exported.
     int global {
-      prop global-ref
+      prop global-entity-ref
     }
     # If true, any P-Code unit created as a composite including this one
     # (ie, linkage of modules into a package) includes this export statement. A
@@ -201,6 +223,7 @@ struct global g {
   # in the order given. The function referenced by each is invoked with one
   # parameter equal to the empty string.
   elt init {
+    attr needs-special-validation
     int fun {
       prop global-fun-ref
     }
@@ -211,26 +234,38 @@ struct global g {
 struct exe x {
   parent global g
 
+  attr terminal
+  attr terminal-no-fallthrough
+  attr special-reg-read-d
+  attr special-reg-read-p
   prop register reg-read
   prop register reg-write
-  prop str jump-target
-  prop int global-ref
+  prop int jump-target
+  prop int global-var-ref
   prop int global-fun-ref
+  prop int reg-read-base
+  prop int reg-read-count
+  prop int static-arg-count
 
-  # Records the source filename in effect until the next declaration indicating
+  # Records the source position in effect until the next declaration indicating
   # otherwise.
   #
-  # This is independent of the global src-file.
-  elt src-file {
+  # This is independent of the global src-pos.
+  elt src-pos {
     str filename
-  }
+    int line-offset
+    int start-line
+    int end-line
+    int start-column
+    int end-column
 
-  # Records the source line number in effect until the next declaration
-  # indicating otherwise.
-  #
-  # This is independent of the global src-line.
-  elt src-line {
-    int line
+    constraint {
+      @.line_offset >= 0 &&
+      @.start_line >= 0 &&
+      @.end_line >= @.start_line &&
+      @.start_column >= 0 &&
+      @.end_column >= @.start_column
+    }
   }
 
   # Creates one or more registers of the chosen type at the top of the stack.
@@ -304,7 +339,7 @@ struct exe x {
       prop reg-write
     }
     int src {
-      prop global-ref
+      prop global-var-ref
     }
   }
 
@@ -373,7 +408,7 @@ struct exe x {
   # of execution other than the one initialising the module that contains it.
   elt set-glob {
     int dst {
-      prop global-ref
+      prop global-var-ref
     }
     register dv src {
       prop reg-read
@@ -553,15 +588,21 @@ struct exe x {
   # The number of arguments given must exactly match the number of arguments
   # taken by the function.
   elt invoke-ss {
+    attr special-reg-read-d
+
     register dv dst {
       prop reg-write
     }
     int fun {
-      prop global-ref
       prop global-fun-ref
     }
-    int base
-    int nargs
+    int base {
+      prop reg-read-base
+    }
+    int nargs {
+      prop reg-read-count
+      prop static-arg-count
+    }
 
     constraint {
       @.base >= 0 && @.nargs > 0
@@ -583,16 +624,21 @@ struct exe x {
   #
   # Any exceptions resulting from marshalling the function call propagate.
   elt invoke-sd {
+    attr special-reg-read-p
+
     register dv dst {
       prop reg-write
     }
     int fun {
-      prop global-ref
       prop global-fun-ref
     }
 
-    int base
-    int nparms
+    int base {
+      prop reg-read-base
+    }
+    int nparms {
+      prop reg-read-count
+    }
 
     constraint {
       @.base >= 0 && @.nparms > 0
@@ -614,6 +660,8 @@ struct exe x {
   #
   # Any exceptions resulting from marshalling the function call propagate.
   elt invoke-dd {
+    attr special-reg-read-p
+
     register dv dst {
       prop reg-write
     }
@@ -621,8 +669,12 @@ struct exe x {
       prop reg-read
     }
 
-    int base
-    int nparms
+    int base {
+      prop reg-read-base
+    }
+    int nparms {
+      prop reg-read-count
+    }
 
     constraint {
       @.base >= 0 && @.nparms > 0
@@ -645,15 +697,21 @@ struct exe x {
   # rebinds, and thus does not behave the way one might intend if it binds over
   # non-pos arguments.
   elt partial {
+    attr special-reg-read-d
+
     register f dst {
       prop reg-write
     }
     register f src {
-      prop reg-write
+      prop reg-read
     }
 
-    int base
-    int nargs
+    int base {
+      prop reg-read-base
+    }
+    int nargs {
+      prop reg-read-count
+    }
 
     constraint {
       @.base >= 0 && @.nargs > 0
@@ -665,6 +723,8 @@ struct exe x {
   # Semantics: The current function immediately terminates execution, producing
   # the chosen register's value as its return value.
   elt ret {
+    attr terminal
+    attr terminal-no-fallthrough
     register dv return-value {
       prop reg-read
     }
@@ -692,12 +752,15 @@ struct exe x {
   #
   # The P-Code is considered invalid if target references a nonexistent label.
   elt branch {
+    attr terminal
     register i key {
       prop reg-read
     }
     int value
     bool invert
-    int target
+    int target {
+      prop jump-target
+    }
   }
 
   # Unconditionally branches to another location within the function.
@@ -706,7 +769,11 @@ struct exe x {
   #
   # The P-Code is considered invalid if target references a nonexistent label.
   elt goto {
-    int target
+    attr terminal
+    attr terminal-no-fallthrough
+    int target {
+      prop jump-target
+    }
   }
 
   # Labels a point in the instruction sequence.

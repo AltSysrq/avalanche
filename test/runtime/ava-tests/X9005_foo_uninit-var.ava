@@ -1,0 +1,6 @@
+fun doit x {
+  if ($x) {
+    #set# foo 42
+  }
+  ret $foo
+}
