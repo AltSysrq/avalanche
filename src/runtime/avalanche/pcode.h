@@ -175,7 +175,7 @@ typedef enum {
 /**
  * Type used for indexing registers.
  */
-typedef ava_ushort ava_pcode_register_index;
+typedef ava_uint ava_pcode_register_index;
 
 /**
  * Fully identifies a P-Code register.

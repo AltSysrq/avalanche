@@ -110,6 +110,14 @@ ava_compile_error* ava_compile_error_new(
   ava_string message, const ava_compile_location* location);
 
 /**
+ * Constructs an error with ava_compile_error_new() and adds it to the end of
+ * the given error list.
+ */
+void ava_compile_error_add(
+  ava_compile_error_list* dst,
+  ava_string message, const ava_compile_location* location);
+
+/**
  * Generates a string describing the given error list.
  *
  * The string is intended for human consumption, and the original error list

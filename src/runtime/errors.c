@@ -39,6 +39,16 @@ ava_compile_error* ava_compile_error_new(
   return error;
 }
 
+void ava_compile_error_add(
+  ava_compile_error_list* dst,
+  ava_string message, const ava_compile_location* location
+) {
+  ava_compile_error* error;
+
+  error = ava_compile_error_new(message, location);
+  TAILQ_INSERT_TAIL(dst, error, next);
+}
+
 static void position_caret(char* dst, size_t limit,
                            unsigned begin, unsigned end) {
   unsigned i;

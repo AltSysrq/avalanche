@@ -153,6 +153,7 @@ static ava_value run_test_impl(void* arg) {
   unsigned ix = *(int*)arg;
   FILE* infile;
   ava_string source;
+  ava_map_value sources;
   char buff[4096];
   size_t nread;
   ava_compile_error_list errors;
@@ -176,6 +177,11 @@ static ava_value run_test_impl(void* arg) {
   } while (nread == sizeof(buff));
   fclose(infile);
 
+  sources = ava_map_add(ava_empty_map(),
+                        ava_value_of_string(
+                          AVA_ASCII9_STRING("testinput")),
+                        ava_value_of_string(source));
+
   if (!ava_parse(&parse_root, &errors, source,
                  /* Don't use the actual filename so that expected errors
                   * aren't found trivially.
@@ -194,6 +200,9 @@ static ava_value run_test_impl(void* arg) {
   if (!TAILQ_EMPTY(&errors)) goto done;
 
   pcode = ava_codegen_run(root_node, &errors);
+  if (!TAILQ_EMPTY(&errors)) goto done;
+
+  (void)ava_xcode_from_pcode(pcode, &errors, sources);
   if (!TAILQ_EMPTY(&errors)) goto done;
 
   test_passed = ava_false;

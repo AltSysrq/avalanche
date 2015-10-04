@@ -344,6 +344,10 @@ proc gen-header {} {
           TYPE* dst,
           const ava_pcode_NAME* elt,
           ava_uint index\);
+        ava_pcode_NAME* ava_pcode_NAME_with_PROP\(
+          const ava_pcode_NAME* elt,
+          ava_uint index,
+          TYPE value\);
       } NAME $sname PROP $pname TYPE [ctype-field $ptype]
     }
   }
@@ -526,6 +530,45 @@ proc gen-impl {} {
       }
       putm {
           default: /* unreachable */ abort();
+          \}
+        \}
+      }
+
+      putm {
+        ava_pcode_NAME* ava_pcode_NAME_with_PROP\(
+          const ava_pcode_NAME* elt,
+          ava_uint index,
+          TYPE value
+        \) \{
+          switch (elt->type) \{
+      } NAME $sname PROP $pname TYPE [ctype-field $ptype]
+
+      dict for {ename elt} [dict get $struct elts] {
+        putm {
+          case ava_pcMNEt_ELT: \{
+            ava_pcMNE_ELT* new;
+            new = ava_clone(elt, sizeof(*new));
+            switch (index) \{
+        } MNE $smne ELT $ename
+        set ix 0
+        foreach field [dict get $elt fields] {
+          if {$pname in [dict get $field props]} {
+            putm {
+            case IX: new->FIELD = value; break;
+            } IX $ix FIELD [dict get $field name]
+            incr ix
+          }
+        }
+        putm {
+            default: abort();
+            \}
+            return (ava_pcode_NAME*)new;
+          \}
+        } NAME $sname
+      }
+
+      putm {
+          default: abort();
           \}
         \}
       }
