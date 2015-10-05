@@ -28,9 +28,6 @@ static ava_value run(void* filename) {
   char buff[4096];
   size_t nread;
   ava_compile_error_list errors;
-  ava_parse_unit parse_root;
-  ava_macsub_context* macsub_context;
-  ava_ast_node* root_node;
   ava_pcode_global_list* pcode;
   ava_value ret = ava_empty_list().v;
 
@@ -50,48 +47,19 @@ static ava_value run(void* filename) {
   fprintf(stderr, "--- Read source from %s ---\n%s\n\n",
           (const char*)filename, ava_string_to_cstring(source));
 
-  if (!ava_parse(&parse_root, &errors, source,
-                 ava_string_of_cstring(filename))) {
-    warnx("Parse failed.\n%s", ava_string_to_cstring(
-            ava_error_list_to_string(&errors, 50, ava_true)));
-    return ret;
+  ava_compile_file(&pcode, NULL, &errors,
+                   AVA_ASCII9_STRING("input:"),
+                   ava_string_of_cstring(filename),
+                   source);
+  if (pcode) {
+    fprintf(stderr, "--- Generated P-Code ---\n%s\n\n",
+            ava_string_to_cstring(
+              ava_pcode_global_list_to_string(pcode, 0)));
   }
 
-  macsub_context = ava_macsub_context_new(
-    ava_symtab_new(NULL), &errors,
-    AVA_ASCII9_STRING("input:"));
-  ava_register_intrinsics(macsub_context);
-  root_node = ava_macsub_run(macsub_context, &parse_root.location,
-                             &parse_root.v.statements,
-                             ava_isrp_void);
-  ava_ast_node_postprocess(root_node);
   if (!TAILQ_EMPTY(&errors)) {
-    warnx("Macro substitution failed.\n%s", ava_string_to_cstring(
-            ava_error_list_to_string(&errors, 50, ava_true)));
-    return ret;
-  }
-
-  fprintf(stderr, "--- Macro substitution result ---\n%s\n\n",
-          ava_string_to_cstring(ava_ast_node_to_string(root_node)));
-
-  pcode = ava_codegen_run(root_node, &errors);
-  if (!TAILQ_EMPTY(&errors)) {
-    warnx("P-Code generation failed.\n%s", ava_string_to_cstring(
-            ava_error_list_to_string(&errors, 50, ava_true)));
-    return ret;
-  }
-
-  fprintf(stderr, "--- Generated P-Code ---\n%s\n\n",
+    warnx("Compilation failed.\n%s",
           ava_string_to_cstring(
-            ava_pcode_global_list_to_string(pcode, 0)));
-
-  (void)ava_xcode_from_pcode(
-    pcode, &errors,
-    ava_map_add(ava_empty_map(),
-                ava_value_of_string(ava_string_of_cstring(filename)),
-                ava_value_of_string(source)));
-  if (!TAILQ_EMPTY(&errors)) {
-    warnx("P-Code validation failed.\n%s", ava_string_to_cstring(
             ava_error_list_to_string(&errors, 50, ava_true)));
     return ret;
   }

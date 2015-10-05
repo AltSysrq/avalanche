@@ -4,6 +4,8 @@ AUTOMAKE_OPTIONS = subdir-objects
 include_HEADERS = avalanche.h \
 avalanche/ava-config.h \
 avalanche/alloc.h \
+avalanche/code-gen.h \
+avalanche/compile-frontend.h \
 avalanche/context.h \
 avalanche/defs.h \
 avalanche/errors.h \

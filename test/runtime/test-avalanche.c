@@ -153,13 +153,9 @@ static ava_value run_test_impl(void* arg) {
   unsigned ix = *(int*)arg;
   FILE* infile;
   ava_string source;
-  ava_map_value sources;
   char buff[4096];
   size_t nread;
   ava_compile_error_list errors;
-  ava_parse_unit parse_root;
-  ava_macsub_context* macsub_context;
-  ava_ast_node* root_node;
   ava_pcode_global_list* pcode;
   const char* underscore, * name, * error_str;
   char expected_error[64];
@@ -177,33 +173,14 @@ static ava_value run_test_impl(void* arg) {
   } while (nread == sizeof(buff));
   fclose(infile);
 
-  sources = ava_map_add(ava_empty_map(),
-                        ava_value_of_string(
-                          AVA_ASCII9_STRING("testinput")),
-                        ava_value_of_string(source));
-
-  if (!ava_parse(&parse_root, &errors, source,
-                 /* Don't use the actual filename so that expected errors
-                  * aren't found trivially.
-                  */
-                 AVA_ASCII9_STRING("testinput")))
+  if (!ava_compile_file(&pcode, NULL, &errors,
+                        AVA_ASCII9_STRING("input:"),
+                        /* Don't use the actual filename so that expected
+                         * errors aren't found trivially.
+                         */
+                        AVA_ASCII9_STRING("testinput"),
+                        source))
     goto done;
-
-  macsub_context = ava_macsub_context_new(
-    ava_symtab_new(NULL), &errors,
-    AVA_ASCII9_STRING("input:"));
-  ava_register_intrinsics(macsub_context);
-  root_node = ava_macsub_run(macsub_context, &parse_root.location,
-                             &parse_root.v.statements,
-                             ava_isrp_void);
-  ava_ast_node_postprocess(root_node);
-  if (!TAILQ_EMPTY(&errors)) goto done;
-
-  pcode = ava_codegen_run(root_node, &errors);
-  if (!TAILQ_EMPTY(&errors)) goto done;
-
-  (void)ava_xcode_from_pcode(pcode, &errors, sources);
-  if (!TAILQ_EMPTY(&errors)) goto done;
 
   test_passed = ava_false;
   ava_interp_exec(pcode);

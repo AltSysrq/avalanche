@@ -48,6 +48,7 @@ AVA_BEGIN_DECLS
 #include "avalanche/varscope.h"
 #include "avalanche/code-gen.h"
 #include "avalanche/interp.h"
+#include "avalanche/compile-frontend.h"
 
 /**
  * Initialises the avalanche runtime.
