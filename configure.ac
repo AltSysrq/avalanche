@@ -78,5 +78,65 @@ AC_CHECK_DECLS([FFI_THISCALL, FFI_STDCALL], [], [], [
 #include <ffi.h>
 ])
 
+# Instead of using something standard, like pkg-config or well-known include
+# paths, llvm puts everything in versioned directories that Autoconf doesn't
+# seem to provide a scalable way of searching.
+#
+# There is this llvm-config thing, but it too is versioned. There's also the
+# issue that it dumps *all the flags the llvm library was compiled with* if you
+# use the recommended approach, which includes things like *disabling asserts*.
+#
+# https://llvm.org/bugs/show_bug.cgi?id=8220
+# https://bugs.debian.org/cgi-bin/bugreport.cgi?bug=697755
+#
+# It also appears the versioning is like `llvm-config35` on FreeBSD and
+# `llim-config-3.5` on Debian.
+#
+# So basically check for every possible llvm-config from 3.5 through 4.9, as
+# well as unversioned since that appears to be a thing too, and hope it works
+# out. We'll also be assembling the *FLAGS by hand to avoid the ridiculous
+# stuff the recommended approach adds.
+#
+# (Regarding the choice of 4.9, 5.0 seems far enough into the future that we
+# don't need to worry about it yet, just as y2k will never be upon us.)
+#
+# It may end up being better to just vendor llvm into the Avalanche build
+# system, but that would make clean builds take painfully longer.
+AC_CHECK_PROGS([LLVM_CONFIG],
+               [llvm-config35 llvm-config-3.5 \
+                llvm-config36 llvm-config-3.6 \
+                llvm-config37 llvm-config-3.7 \
+                llvm-config38 llvm-config-3.8 \
+                llvm-config39 llvm-config-3.9 \
+                llvm-config40 llvm-config-4.0 \
+                llvm-config41 llvm-config-4.1 \
+                llvm-config42 llvm-config-4.2 \
+                llvm-config43 llvm-config-4.3 \
+                llvm-config44 llvm-config-4.4 \
+                llvm-config45 llvm-config-4.5 \
+                llvm-config46 llvm-config-4.6 \
+                llvm-config47 llvm-config-4.7 \
+                llvm-config48 llvm-config-4.8 \
+                llvm-config49 llvm-config-4.9 \
+                llvm-config])
+AS_IF([test -z "$LLVM_CONFIG"],
+      [AC_MSG_ERROR([could not find any version of llvm-config])])
+
+# --cppflags is a bunch of defines we definitely don't want plus an addition to
+# the include path.
+AC_MSG_CHECKING([flags for LLVM])
+LLVM_CPPFLAGS="-I`$LLVM_CONFIG --includedir`"
+AC_SUBST([LLVM_CPPFLAGS])
+# --cxxflags is all the cruft from --cppflags plus some warnings, an
+# *optimisation level*, a forcing of the dialect to c++11, -fPIC, warnings, and
+# some -f*-sections flags.  We don't want any of it.
+LLVM_CXXFLAGS=""
+AC_SUBST([LLVM_CXXFLAGS])
+# For the exact opposite of the above, --ldflags doesn't actually include any
+# of the -ls, but only the -L, so we need to put both of them together.
+LLVM_LIBS="`$LLVM_CONFIG --ldflags` `$LLVM_CONFIG --libs`"
+AC_SUBST([LLVM_LIBS])
+AC_MSG_RESULT([done])
+
 AC_CONFIG_FILES([Makefile src/Makefile src/runtime/Makefile test/Makefile])
 AC_OUTPUT
