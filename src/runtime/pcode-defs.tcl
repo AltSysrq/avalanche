@@ -57,29 +57,6 @@ struct global g {
     }
   }
 
-
-  # Raw C code block.
-  #
-  # Defines C code to be inserted when transpiling to C. If visibility is
-  # public, the code is inserted into all modules that directly load this
-  # P-Code; if private, the code is only inserted into the transpilation of the
-  # containing P-Code itself. There is no internal visiblity for this type. If
-  # mandatory is true, execution of the P-Code is considered impossible if the
-  # code cannot be meaningfully inserted, making interpretation impossible.
-  #
-  # Naturally, use of this declaration type is inherently unsafe, since it is
-  # impossible to reason about what it may do.
-  elt c {
-    # Whether this C block is mandatory for the P-Code to be valid.
-    bool mandatory
-    # Whether all client code of this P-Code has this block inserted.
-    bool is-public
-    # The raw C code to insert.
-    #
-    # No checks are performed on the contents of this code.
-    str text
-  }
-
   # Declares a global variable defined by a different P-Code unit.
   #
   # Semantics: At any point before this P-Code unit's initialisation
