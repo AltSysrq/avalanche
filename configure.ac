@@ -133,8 +133,10 @@ AC_SUBST([LLVM_CPPFLAGS])
 LLVM_CXXFLAGS=""
 AC_SUBST([LLVM_CXXFLAGS])
 # For the exact opposite of the above, --ldflags doesn't actually include any
-# of the -ls, but only the -L, so we need to put both of them together.
+# of the -ls, but only the -L, so we need to put both of them together. There's
+# also --system-libs that needs to go in too.
 LLVM_LIBS="`$LLVM_CONFIG --ldflags` `$LLVM_CONFIG --libs`"
+LLVM_LIBS="$LLVM_LIBS `$LLVM_CONFIG --system-libs`"
 AC_SUBST([LLVM_LIBS])
 AC_MSG_RESULT([done])
 

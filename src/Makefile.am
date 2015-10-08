@@ -5,6 +5,9 @@ SUBDIRS = runtime .
 EXTRA_CFLAGS =
 AM_CFLAGS = $(LIBUNWIND_CFLAGS) $(LIBFFI_CFLAGS) \
             $(EXTRA_CFLAGS) -funwind-tables
+AM_CXXFLAGS = $(LIBUNWIND_CFLAGS) $(LIBFFI_CFLAGS) \
+              $(EXTRA_CFLAGS) $(LLVM_CPPFLAGS) $(LLVM_CXXFLAGS) \
+              -std=c++11
 
 # Use -b instead of -g if $(CC) doesn't support label pointers
 RE2C_FLAGS = -g
@@ -63,9 +66,10 @@ runtime/-intrinsics/namespace.c \
 runtime/-intrinsics/pasta.c \
 runtime/-intrinsics/ret.c \
 runtime/-intrinsics/user-macro.c \
-runtime/-intrinsics/variable.c
+runtime/-intrinsics/variable.c \
+runtime/test-llvm.cxx
 
-libavart_la_LIBADD = $(LIBUNWIND_LIBS) $(LIBFFI_LIBS)
+libavart_la_LIBADD = $(LIBUNWIND_LIBS) $(LIBFFI_LIBS) $(LLVM_LIBS)
 simple_interp_SOURCES = interp/main.c
 simple_interp_LDADD = libavart.la
 
