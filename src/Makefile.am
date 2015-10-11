@@ -12,8 +12,11 @@ AM_CXXFLAGS = $(LIBUNWIND_CFLAGS) $(LIBFFI_CFLAGS) \
 # Use -b instead of -g if $(CC) doesn't support label pointers
 RE2C_FLAGS = -g
 
+AVA_DRIVERS = runtime/-llvm-support/drivers/isa-unchecked.bc
+
 lib_LTLIBRARIES = libavart.la
-noinst_PROGRAMS = simple-interp
+noinst_PROGRAMS = simple-interp llvm-ir-dump.t
+noinst_DATA =  $(AVA_DRIVERS)
 libavart_la_SOURCES = \
 runtime/alloc.c \
 runtime/array-list.c \
@@ -67,11 +70,16 @@ runtime/-intrinsics/pasta.c \
 runtime/-intrinsics/ret.c \
 runtime/-intrinsics/user-macro.c \
 runtime/-intrinsics/variable.c \
-runtime/test-llvm.cxx
+runtime/-llvm-support/ir-types.cxx \
+runtime/-llvm-support/translation.cxx \
+runtime/-llvm-support/drivers/gen-isa-unchecked.c
 
 libavart_la_LIBADD = $(LIBUNWIND_LIBS) $(LIBFFI_LIBS) $(LLVM_LIBS)
 simple_interp_SOURCES = interp/main.c
 simple_interp_LDADD = libavart.la
+
+llvm_ir_dump_t_SOURCES = llvm-ir-dump.cxx
+llvm_ir_dump_t_LDADD = libavart.la
 
 runtime/gen-lex.c: runtime/lex.c
 	$(AM_V_GEN)$(RE2C) --input custom -c $(RE2C_FLAGS) \
@@ -95,3 +103,18 @@ runtime/gen-pcode.c: runtime/generate-pcode.tcl runtime/pcode-defs.tcl
 runtime/gen-errors.c: runtime/generate-errors.tcl
 	$(AM_V_GEN)$(TCLSH) runtime/generate-errors.tcl impl \
 		>runtime/gen-errors.c
+
+runtime/-llvm-support/drivers/isa-unchecked.bc: \
+	runtime/-llvm-support/drivers/isa.c \
+	runtime/avalanche.h \
+	runtime/avalanche/*.h
+	$(AM_V_GEN)$(CLANG) -emit-llvm -c -O3 -DNDEBUG \
+		-o runtime/-llvm-support/drivers/isa-unchecked.bc \
+		runtime/-llvm-support/drivers/isa.c
+
+runtime/-llvm-support/drivers/gen-isa-unchecked.c: \
+	runtime/-llvm-support/drivers/isa-unchecked.bc \
+	dat2c.tcl
+	$(AM_V_GEN)$(TCLSH) dat2c.tcl ava_driver_isa_unchecked \
+		<runtime/-llvm-support/drivers/isa-unchecked.bc \
+		>runtime/-llvm-support/drivers/gen-isa-unchecked.c

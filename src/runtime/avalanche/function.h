@@ -275,7 +275,7 @@ typedef enum {
    * function. In the latter case, the array is considered clobbered by the
    * call. The function returns ava_value.
    */
-  ava_cc_ava,
+  ava_cc_ava = 0,
   /**
    * The C calling convention. Values are passed to and returned from the
    * function using C pritive types.
@@ -391,7 +391,7 @@ typedef enum {
    * The argument implicitly uses the value in the binding, and never consumes
    * a parameter.
    */
-  ava_abt_implicit,
+  ava_abt_implicit = 0,
   /**
    * The argument binds to exactly one parameter by position.
    */
@@ -587,7 +587,7 @@ typedef enum {
    * The parameter is passed as a single value, and that value is known at the
    * time of binding.
    */
-  ava_fpt_static,
+  ava_fpt_static = 0,
   /**
    * The parameter is passed as a single value, but that value is not known at
    * the time of binding.

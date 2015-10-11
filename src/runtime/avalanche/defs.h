@@ -92,6 +92,9 @@
 #ifdef __cplusplus
 #define AVA_BEGIN_DECLS extern "C" {
 #define AVA_END_DECLS }
+/* So indentation works as desired */
+#define AVA_BEGIN_FILE_PRIVATE namespace {
+#define AVA_END_FILE_PRIVATE }
 #else
 #define AVA_BEGIN_DECLS
 #define AVA_END_DECLS

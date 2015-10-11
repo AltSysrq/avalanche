@@ -16,6 +16,7 @@ AM_PROG_CC_C_O
 AC_PROG_CXX
 AC_CHECK_PROG([RE2C], [re2c], [re2c], [])
 AC_CHECK_PROGS([TCLSH], [tclsh8.6 tclsh8.5 tclsh])
+AC_CHECK_PROGS([CLANG], [clang])
 AC_PROG_SED
 
 # Checks for libraries.

@@ -1,0 +1,42 @@
+This directory contains the entirety of Avalanche's direct interface with LLVM.
+As such, it is the only directory whose sources are in C++ instead of C.
+
+GENERAL DESIGN
+
+Abstractly, this portion of the runtime is responsible for three things:
+
+- Translating X-Code into LLVM IR.
+- Invoking LLVM to perform optimisations on the generated IR.
+- Outputting or installing the generated code into the target environment.
+
+CODE TRANSLATION
+
+X-Code is translated to LLVM IR in four sections:
+
+First come drivers, collections of code (initially in LLVM IR bitcode) which
+are concatenated at the beginning of the translation output, with all functions
+defined within whose name is not "main" changed to private inline functions.
+Drivers provide the actual implementation of most of the P-Code instructions
+and performance-critical portions of the standard library. This provides a
+simple, high-level mechanism for adding instrumentation to generated code and
+for adding new low-level constructs. Drivers are typically generated from C
+code.
+
+Any global declarations needed by the generated code come next. Functions
+defined by drivers are not redeclared.
+
+Next is the module initialisation function. This is a void no-args function
+which is basically a direct, threaded translation of the global P-Code calling
+functions assumed to be provided by a driver. The name of the initialisation
+function is the package namespace prefix, a semicolon, and the name of the file
+containing the module for the translation unit (mangled in the ava scheme). If
+a driver defines a function named "main", this function is instead named
+"\program-entry" (with no prefix) in the ava scheme.
+
+Each function in the P-Code is compiled to a single LLVM function; each basic
+block within becomes one LLVM basic block. Most instructions are implemented by
+loading inputs into LLVM values, invoking a driver function, and writing its
+return value into the destination (if any), though a number of instructions,
+particularly control flow and invoke-ss, have their implementation provided by
+the code generator itself, with driver functions being called only for
+instrumentation.
