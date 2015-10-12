@@ -50,13 +50,6 @@ AVA_BEGIN_DECLS
 #include "avalanche/interp.h"
 #include "avalanche/compile-frontend.h"
 
-/**
- * Initialises the avalanche runtime.
- *
- * This should be called exactly once at process startup.
- */
-void ava_init(void);
-
 AVA_END_DECLS
 
 #undef AVA__INTERNAL_INCLUDE

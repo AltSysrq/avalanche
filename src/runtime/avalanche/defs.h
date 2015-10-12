@@ -22,6 +22,7 @@
 
 #include "ava-config.h"
 
+
 #include <stdlib.h>
 #include <setjmp.h>
 #ifdef AVA_HAVE_STDINT_H
@@ -173,5 +174,14 @@ typedef double ava_real;
  * The namespace used by intrinsics provided by the runtime.
  */
 #define AVA_AVAST_INTRINSIC AVA_AVAST_PACKAGE ":intrinsic"
+
+AVA_BEGIN_DECLS
+/**
+ * Initialises the avalanche runtime.
+ *
+ * This should be called exactly once at process startup.
+ */
+void ava_init(void);
+AVA_END_DECLS
 
 #endif /* AVA_RUNTIME_DEFS_H_ */

@@ -1110,13 +1110,15 @@ ava_value ava_function_invoke(const ava_function* fun,
 }
 
 #define MAX_STACK_TEMPORARIES 32
-ava_value ava_function_bind_invoke(
+void ava_function_force_bind(
+  ava_value arguments[],
   const ava_function* fun,
   size_t num_parms,
   const ava_function_parameter parms[]
 ) {
+  AVA_STATIC_STRING(bad_arguments, "bad-arguments");
+
   ava_function_bind_status bind_status;
-  ava_value arguments[fun->num_args];
   ava_function_bound_argument bound_args[fun->num_args];
   ava_string message;
   /* If reasonable, use stack space for temporary data */
@@ -1144,11 +1146,20 @@ ava_value ava_function_bind_invoke(
     goto tail_call;
 
   case ava_fbs_impossible:
-    ava_throw_str(&ava_error_exception, message);
+    ava_throw_uex(&ava_error_exception, bad_arguments, message);
   }
 
   ava_function_apply_bind(fun->num_args, arguments,
                           parms, bound_args, variadic_collection);
+}
+
+ava_value ava_function_bind_invoke(
+  const ava_function* fun,
+  size_t num_parms,
+  const ava_function_parameter parms[]
+) {
+  ava_value arguments[fun->num_args];
+  ava_function_force_bind(arguments, fun, num_parms, parms);
   return ava_function_invoke(fun, arguments);
 }
 
@@ -1190,6 +1201,25 @@ static void ava_function_explode(size_t* num_parms_p,
 
   *num_parms_p = exploded_count;
   *parms_p = exploded;
+}
+
+void ava_function_partial(ava_argument_spec*restrict argspecs,
+                          size_t function_num_args,
+                          size_t input_num_args,
+                          const ava_value*restrict args) {
+  size_t i;
+
+  for (i = 0; i < function_num_args && input_num_args; ++i) {
+    if (ava_abt_implicit != argspecs[i].binding.type) {
+      argspecs[i].binding.type = ava_abt_implicit;
+      argspecs[i].binding.value = *args++;
+      --input_num_args;
+    }
+  }
+
+  if (input_num_args)
+    ava_throw_str(&ava_internal_exception,
+                  ava_error_partial_function_apply_too_many_args());
 }
 
 static ava_list_value ava_function_list_slice(ava_list_value l,

@@ -391,6 +391,19 @@ set defs {
     }
   }
 
+  serror R0037 partial_function_apply_too_many_args {} {
+    msg "Partial function application has more arguments than function."
+    explanation {
+      An invocation of ava_function_partial() attempted to partially apply more
+      arguments to a function than the function has unbound arguments.
+
+      Partial function application in this form is not directly exposed to
+      Avalanche code, so this error always indicates a problem in a P-Code
+      generator, native code calling the runtime function directly, or in the
+      runtime itself.
+    }
+  }
+
   serror L4001 unclosed_string_literal {} {
     msg "Unclosed string literal."
     explanation {

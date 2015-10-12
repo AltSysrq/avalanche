@@ -13,30 +13,36 @@
  * OF  CONTRACT, NEGLIGENCE  OR OTHER  TORTIOUS ACTION,  ARISING OUT  OF OR  IN
  * CONNECTION WITH THE USE OR PERFORMANCE OF THIS SOFTWARE.
  */
+#ifdef HAVE_CONFIG_H
+#include <config.h>
+#endif
 
+/**
+ * @file
+ *
+ * Provides the main() function for statically-compiled Avalanche programs. It
+ * initialises the Avalanche runtime, then calls into the codegen-provided
+ * \program-entry() function.
+ */
 
-#include "test.h"
+#define AVA__INTERNAL_INCLUDE 1
+#include "../../avalanche/defs.h"
+#include "../../avalanche/string.h"
+#include "../../avalanche/value.h"
+#include "../../avalanche/context.h"
 
-const char* suite_names[1024];
-void (*suite_impls[1024])(Suite*);
-unsigned suite_num;
+/* Provided by codegen */
+extern void a$$5Cprogram_entry(void);
+
+static ava_value ava_main_impl$(void* ignored);
 
 int main(void) {
-  unsigned failures = 0;
-  Suite* suite;
-  SRunner* sr;
-  unsigned i;
-
   ava_init();
+  (void)ava_invoke_in_context(ava_main_impl$, 0);
+  return 0;
+}
 
-  for (i = 0; i < suite_num; ++i) {
-    suite = suite_create(suite_names[i]);
-    (*suite_impls[i])(suite);
-    sr = srunner_create(suite);
-    srunner_run_all(sr, CK_VERBOSE);
-    failures += srunner_ntests_failed(sr);
-    srunner_free(sr);
-  }
-
-  return (failures < 255? failures : 255);
+ava_value ava_main_impl$(void* ignored) {
+  a$$5Cprogram_entry();
+  return ava_value_of_string(AVA_EMPTY_STRING);
 }

@@ -70,9 +70,10 @@ runtime/-intrinsics/pasta.c \
 runtime/-intrinsics/ret.c \
 runtime/-intrinsics/user-macro.c \
 runtime/-intrinsics/variable.c \
+runtime/-llvm-support/drivers/gen-isa-unchecked.c \
+runtime/-llvm-support/drivers/gen-main.c \
 runtime/-llvm-support/ir-types.cxx \
-runtime/-llvm-support/translation.cxx \
-runtime/-llvm-support/drivers/gen-isa-unchecked.c
+runtime/-llvm-support/translation.cxx
 
 libavart_la_LIBADD = $(LIBUNWIND_LIBS) $(LIBFFI_LIBS) $(LLVM_LIBS)
 simple_interp_SOURCES = interp/main.c
@@ -108,7 +109,7 @@ runtime/-llvm-support/drivers/isa-unchecked.bc: \
 	runtime/-llvm-support/drivers/isa.c \
 	runtime/avalanche.h \
 	runtime/avalanche/*.h
-	$(AM_V_GEN)$(CLANG) -emit-llvm -c -O3 -DNDEBUG \
+	$(AM_V_GEN)$(CLANG) -emit-llvm -c -O3 -DNDEBUG -Wall \
 		-o runtime/-llvm-support/drivers/isa-unchecked.bc \
 		runtime/-llvm-support/drivers/isa.c
 
@@ -118,3 +119,17 @@ runtime/-llvm-support/drivers/gen-isa-unchecked.c: \
 	$(AM_V_GEN)$(TCLSH) dat2c.tcl ava_driver_isa_unchecked \
 		<runtime/-llvm-support/drivers/isa-unchecked.bc \
 		>runtime/-llvm-support/drivers/gen-isa-unchecked.c
+
+runtime/-llvm-support/drivers/main.bc: \
+	runtime/-llvm-support/drivers/main.c \
+	runtime/avalanche/*.h
+	$(AM_V_GEN)$(CLANG) -emit-llvm -c -O3 -DNDEBUG -Wall \
+		-o runtime/-llvm-support/drivers/main.bc \
+		runtime/-llvm-support/drivers/main.c
+
+runtime/-llvm-support/drivers/gen-main.c: \
+	runtime/-llvm-support/drivers/main.bc \
+	dat2c.tcl
+	$(AM_V_GEN)$(TCLSH) dat2c.tcl ava_driver_main \
+		<runtime/-llvm-support/drivers/main.bc \
+		>runtime/-llvm-support/drivers/gen-main.c

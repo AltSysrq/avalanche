@@ -60,6 +60,7 @@ static ava_value run(void* filename) {
 
   xlator.add_driver(ava_driver_isa_unchecked_data,
                     ava_driver_isa_unchecked_size);
+  xlator.add_driver(ava_driver_main_data, ava_driver_main_size);
   std::unique_ptr<llvm::Module> output = xlator.translate(
     xcode, "input", llvm_context, error);
   if (!output.get()) {

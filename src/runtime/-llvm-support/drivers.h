@@ -20,7 +20,8 @@
  * @file
  *
  * Declares symbols defined by drivers and similar blobs compiled into the
- * runtime library.
+ * runtime library. These blobs are specific to the target for which this
+ * runtime library is built.
  */
 
 #include <stdlib.h>
@@ -36,6 +37,15 @@ extern const size_t ava_driver_isa_unchecked_size;
  * have undefined behaviour really has undefined behaviour.
  */
 extern const char*const ava_driver_isa_unchecked_data;
+
+/**
+ * The number of bytes in ava_driver_main_data.
+ */
+extern const size_t ava_driver_main_size;
+/**
+ * Driver providing the main() function for compiled programs.
+ */
+extern const char*const ava_driver_main_data;
 
 AVA_END_DECLS
 

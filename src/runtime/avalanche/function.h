@@ -719,6 +719,24 @@ ava_value ava_function_invoke(
   ava_value arguments[/* fun->num_args */]);
 
 /**
+ * Binds all parameters in the given function to arguments. No arguments may
+ * have dynamic type. The parameters are unpacked if necessary. If binding
+ * fails, an exception is thrown.
+ *
+ * @param arguments Array to which final arguments are written.
+ * @param fun The function to bind.
+ * @param num_parameters The number of parameters being passed to the function.
+ * @param parms An array of length num_parameters containing the parameters
+ * being passed. All values must be known.
+ * @throw ava_error_exception if the parameters cannot be bound to the function.
+ */
+void ava_function_force_bind(
+  ava_value arguments[ /* fun->num_args */],
+  const ava_function* fun,
+  size_t num_parameters,
+  const ava_function_parameter parms[/* num_parameters */]);
+
+/**
  * Dynamically binds and invokes the given function on the given list of
  * logical parameters.
  *
@@ -736,5 +754,29 @@ ava_value ava_function_bind_invoke(
   const ava_function* fun,
   size_t num_parameters,
   const ava_function_parameter parms[/*num_parameters*/]);
+
+/**
+ * Performs in-place partial function application on the given function.
+ *
+ * The first num_args non-implicit arguments of fun are changed to implict
+ * arguments whose values are derived from successive values in args.
+ *
+ * This is used by the `partial` P-Code instruction, which itself is used to
+ * implement closures. The semantics of this function are not very useful in
+ * general, since parameter binding is bypassed.
+ *
+ * @param argspecs The argspecs of the function to partially apply.
+ * @param function_num_args The number of physical arguments taken by the
+ * function.
+ * @param input_num_args The number of arguments in the partial application.
+ * @param args The array of arguments to partially apply.
+ * @throws ava_internal_exception if fun does not have num_args non-implicit
+ * arguments.
+ */
+void ava_function_partial(
+  ava_argument_spec*restrict argspecs,
+  size_t function_num_args,
+  size_t input_num_args,
+  const ava_value*restrict args);
 
 #endif /* AVA_RUNTIME_FUNCTION_H_ */

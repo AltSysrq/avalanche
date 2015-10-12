@@ -661,13 +661,13 @@ struct exe x {
   # Performs partial application of a function.
   #
   # Semantics: Starting from the first non-implicit argument in the function in
-  # src, each argument in the function is changed to an implicit argument whose
-  # value is read from successive D-registers starting at d$base. $nargs
-  # arguments are rebound this way. The result is written into dst.
+  # src, each non-implicit argument in the function is changed to an implicit
+  # argument whose value is read from successive D-registers starting at
+  # d$base. $nargs arguments are rebound this way. The result is written into
+  # dst.
   #
   # The behaviour of this function is undefined if the function in src does not
-  # have at least $nargs arguments following the first non-implicit argument,
-  # or if it has no non-implicit arguments at all.
+  # have at least $nargs non-implicit arguments.
   #
   # This instruction is intended for the construction of closures. It is
   # important to note that it ignores the actual binding type of arguments it
