@@ -8,6 +8,9 @@ AM_CFLAGS = $(LIBUNWIND_CFLAGS) $(LIBFFI_CFLAGS) \
 AM_CXXFLAGS = $(LIBUNWIND_CFLAGS) $(LIBFFI_CFLAGS) \
               $(EXTRA_CFLAGS) $(LLVM_CPPFLAGS) $(LLVM_CXXFLAGS) \
               -std=c++11
+EMIT_LLVM_CFLAGS= -O3 -fno-caret-diagnostics -fno-diagnostics-fixit-info \
+                  -fno-color-diagnostics -c -emit-llvm \
+		  -DNDEBUG -DHAVE_CONFIG_H -Wall $(DEFAULT_INCLUDES)
 
 # Use -b instead of -g if $(CC) doesn't support label pointers
 RE2C_FLAGS = -g
@@ -109,7 +112,7 @@ runtime/-llvm-support/drivers/isa-unchecked.bc: \
 	runtime/-llvm-support/drivers/isa.c \
 	runtime/avalanche.h \
 	runtime/avalanche/*.h
-	$(AM_V_GEN)$(CLANG) -emit-llvm -c -O3 -DNDEBUG -Wall \
+	$(AM_V_GEN)$(CLANG) $(EMIT_LLVM_CFLAGS) \
 		-o runtime/-llvm-support/drivers/isa-unchecked.bc \
 		runtime/-llvm-support/drivers/isa.c
 
@@ -123,7 +126,7 @@ runtime/-llvm-support/drivers/gen-isa-unchecked.c: \
 runtime/-llvm-support/drivers/main.bc: \
 	runtime/-llvm-support/drivers/main.c \
 	runtime/avalanche/*.h
-	$(AM_V_GEN)$(CLANG) -emit-llvm -c -O3 -DNDEBUG -Wall \
+	$(AM_V_GEN)$(CLANG) $(EMIT_LLVM_CFLAGS) \
 		-o runtime/-llvm-support/drivers/main.bc \
 		runtime/-llvm-support/drivers/main.c
 
