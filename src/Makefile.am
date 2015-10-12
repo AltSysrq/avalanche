@@ -11,6 +11,8 @@ AM_CXXFLAGS = $(LIBUNWIND_CFLAGS) $(LIBFFI_CFLAGS) \
 EMIT_LLVM_CFLAGS= -O3 -fno-caret-diagnostics -fno-diagnostics-fixit-info \
                   -fno-color-diagnostics -c -emit-llvm \
 		  -DNDEBUG -DHAVE_CONFIG_H -Wall $(DEFAULT_INCLUDES)
+EMIT_LLVM = $(AM_V_GEN)$(CLANG) $(EMIT_LLVM_CFLAGS) -o $@
+DAT2C = $(AM_V_GEN)$(TCLSH) dat2c.tcl >$@
 
 # Use -b instead of -g if $(CC) doesn't support label pointers
 RE2C_FLAGS = -g
@@ -112,27 +114,21 @@ runtime/-llvm-support/drivers/isa-unchecked.bc: \
 	runtime/-llvm-support/drivers/isa.c \
 	runtime/avalanche.h \
 	runtime/avalanche/*.h
-	$(AM_V_GEN)$(CLANG) $(EMIT_LLVM_CFLAGS) \
-		-o runtime/-llvm-support/drivers/isa-unchecked.bc \
-		runtime/-llvm-support/drivers/isa.c
+	$(EMIT_LLVM) runtime/-llvm-support/drivers/isa.c
 
 runtime/-llvm-support/drivers/gen-isa-unchecked.c: \
 	runtime/-llvm-support/drivers/isa-unchecked.bc \
 	dat2c.tcl
-	$(AM_V_GEN)$(TCLSH) dat2c.tcl ava_driver_isa_unchecked \
-		<runtime/-llvm-support/drivers/isa-unchecked.bc \
-		>runtime/-llvm-support/drivers/gen-isa-unchecked.c
+	$(DAT2C) ava_driver_isa_unchecked \
+		<runtime/-llvm-support/drivers/isa-unchecked.bc
 
 runtime/-llvm-support/drivers/main.bc: \
 	runtime/-llvm-support/drivers/main.c \
 	runtime/avalanche/*.h
-	$(AM_V_GEN)$(CLANG) $(EMIT_LLVM_CFLAGS) \
-		-o runtime/-llvm-support/drivers/main.bc \
-		runtime/-llvm-support/drivers/main.c
+	$(EMIT_LLVM) runtime/-llvm-support/drivers/main.c
 
 runtime/-llvm-support/drivers/gen-main.c: \
 	runtime/-llvm-support/drivers/main.bc \
 	dat2c.tcl
-	$(AM_V_GEN)$(TCLSH) dat2c.tcl ava_driver_main \
-		<runtime/-llvm-support/drivers/main.bc \
-		>runtime/-llvm-support/drivers/gen-main.c
+	$(DAT2C) ava_driver_main \
+		<runtime/-llvm-support/drivers/main.bc
