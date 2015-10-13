@@ -7,7 +7,7 @@ AM_CFLAGS = $(LIBUNWIND_CFLAGS) $(LIBFFI_CFLAGS) \
             $(EXTRA_CFLAGS) -funwind-tables
 AM_CXXFLAGS = $(LIBUNWIND_CFLAGS) $(LIBFFI_CFLAGS) \
               $(EXTRA_CFLAGS) $(LLVM_CPPFLAGS) $(LLVM_CXXFLAGS) \
-              -std=c++11
+              -std=c++11 -D__STDC_LIMIT_MACROS -D__STDC_CONSTANT_MACROS
 EMIT_LLVM_CFLAGS= -O3 -fno-caret-diagnostics -fno-diagnostics-fixit-info \
                   -fno-color-diagnostics -c -emit-llvm \
 		  -DNDEBUG -DHAVE_CONFIG_H -Wall $(DEFAULT_INCLUDES)
