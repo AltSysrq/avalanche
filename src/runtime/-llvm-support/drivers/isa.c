@@ -174,6 +174,10 @@ ava_value ava_isa_x_conv_vl$(const ava_fat_list_value* l) {
   return l->c.v;
 }
 
+void ava_isa_x_conv_lv$(ava_fat_list_value* dst, ava_value src) {
+  *dst = ava_fat_list_value_of(src);
+}
+
 void ava_isa_x_lempty$(ava_fat_list_value* dst) {
   *dst = ava_fat_list_value_of(ava_empty_list().v);
 }

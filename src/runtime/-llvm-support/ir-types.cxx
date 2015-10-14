@@ -36,7 +36,7 @@ noexcept {
   enum { abi_char = 0, abi_short, abi_int, abi_long,
          abi_llong, abi_size, abi_ldouble,
          abi_abool, abi_fpt, abi_fun, abi_argspec,
-         abi_twine, abi_str, abi_parm };
+         abi_twine, abi_str, abi_parm, abi_fat_list };
 
   abi_info_function = module.getFunction("ava_c_abi_info_get$");
   assert(abi_info_function);
@@ -72,6 +72,9 @@ noexcept {
     ava_twine->getElementType(tf_tail));
   ava_twine_tail_other = llvm::cast<llvm::StructType>(
     ava_twine_tail->getElementType(ttf_other));
+  ava_fat_list_value = llvm::cast<llvm::StructType>(
+    abi_info->getElementType(abi_fat_list));
+
   ava_function_parameter_type =
     llvm::cast<llvm::IntegerType>(abi_info->getElementType(abi_fpt));
   ava_function_parameter = llvm::cast<llvm::StructType>(

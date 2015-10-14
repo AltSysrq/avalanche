@@ -40,6 +40,16 @@ namespace ava {
    */
   class xcode_to_ir_translator {
   public:
+    xcode_to_ir_translator(void);
+
+    /**
+     * Whether full debug information should be written. If false, only line
+     * numbers are written.
+     *
+     * Defaults to true.
+     */
+    bool full_debug;
+
     /**
      * Adds the given driver to this translator's list of drivers.
      *
@@ -54,14 +64,19 @@ namespace ava {
      * Translates the given X-Code into LLVM IR.
      *
      * @param xcode The input code to translate.
-     * @param module_name The module name / identifier to pass into LLVM.
+     * @param file_name The name of the input file. May be absent, in which
+     * case the first src-pos filename is used, or "<unknown>" as fallback.
+     * @param module_name The module name / identifier to pass into LLVM. This
+     * is also used as the unmangled name of the module initialisation function
+     * if there is no driver providing a main function.
      * @param llvm_context The LLVM context to use for generation.
      * @param error If an error occurs, set to a description of the error.
      * @return The generated module, or a NULL pointer if an error occurs.
      */
     std::unique_ptr<llvm::Module> translate(
       const struct ava_xcode_global_list_s* xcode,
-      const char* module_name,
+      ava_string file_name,
+      ava_string module_name,
       llvm::LLVMContext& llvm_context,
       std::string& error) const noexcept;
 

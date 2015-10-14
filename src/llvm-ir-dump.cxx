@@ -62,7 +62,8 @@ static ava_value run(void* filename) {
                     ava_driver_isa_unchecked_size);
   xlator.add_driver(ava_driver_main_data, ava_driver_main_size);
   std::unique_ptr<llvm::Module> output = xlator.translate(
-    xcode, "input", llvm_context, error);
+    xcode, ava_string_of_cstring((const char*)filename),
+    AVA_ASCII9_STRING("input"), llvm_context, error);
   if (!output.get()) {
     warnx("Translation failed: %s", error.c_str());
     return ret;

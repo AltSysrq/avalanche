@@ -8,7 +8,7 @@ AM_CFLAGS = $(LIBUNWIND_CFLAGS) $(LIBFFI_CFLAGS) \
 AM_CXXFLAGS = $(LIBUNWIND_CFLAGS) $(LIBFFI_CFLAGS) \
               $(EXTRA_CFLAGS) $(LLVM_CPPFLAGS) $(LLVM_CXXFLAGS) \
               -std=c++11 -D__STDC_LIMIT_MACROS -D__STDC_CONSTANT_MACROS
-EMIT_LLVM_CFLAGS= -O3 -fno-caret-diagnostics -fno-diagnostics-fixit-info \
+EMIT_LLVM_CFLAGS= -O3 -g0 -fno-caret-diagnostics -fno-diagnostics-fixit-info \
                   -fno-color-diagnostics -c -emit-llvm \
 		  -DNDEBUG -DHAVE_CONFIG_H -Wall $(DEFAULT_INCLUDES)
 EMIT_LLVM = $(AM_V_GEN)$(CLANG) $(EMIT_LLVM_CFLAGS) -o $@
@@ -77,6 +77,7 @@ runtime/-intrinsics/user-macro.c \
 runtime/-intrinsics/variable.c \
 runtime/-llvm-support/drivers/gen-isa-unchecked.c \
 runtime/-llvm-support/drivers/gen-main.c \
+runtime/-llvm-support/driver-iface.cxx \
 runtime/-llvm-support/ir-types.cxx \
 runtime/-llvm-support/translation.cxx
 

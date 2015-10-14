@@ -61,6 +61,7 @@ namespace ava {
     llvm::StructType* ava_function_parameter;
     llvm::StructType* ava_attribute;
     llvm::StructType* ava_attribute_tag;
+    llvm::StructType* ava_fat_list_value;
 
     llvm::StructType* ava_function;
     llvm::StructType* ava_argument_spec;

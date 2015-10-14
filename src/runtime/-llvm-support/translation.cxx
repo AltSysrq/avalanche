@@ -18,6 +18,7 @@
 #endif
 
 #include <cstdlib>
+#include <cstring>
 #include <list>
 #include <vector>
 #include <memory>
@@ -31,10 +32,12 @@
 #include <llvm/IR/GlobalValue.h>
 #include <llvm/IR/LLVMContext.h>
 #include <llvm/IR/Module.h>
+#include <llvm/IR/DIBuilder.h>
 #include <llvm/Linker/Linker.h>
 #include <llvm/IRReader/IRReader.h>
 #include <llvm/ADT/StringRef.h>
 #include <llvm/ADT/StringRef.h>
+#include <llvm/Support/Dwarf.h>
 #include <llvm/Support/MemoryBuffer.h>
 #include <llvm/Support/SourceMgr.h>
 
@@ -50,23 +53,36 @@ AVA_BEGIN_DECLS
 #include "../avalanche/name-mangle.h"
 AVA_END_DECLS
 
+#include "driver-iface.hxx"
 #include "ir-types.hxx"
 #include "translation.hxx"
 
 AVA_BEGIN_FILE_PRIVATE
 
 struct ava_xcode_translation_context {
-  ava_xcode_translation_context(llvm::LLVMContext& llvm_context,
-                                llvm::Module& module);
+  ava_xcode_translation_context(
+    llvm::LLVMContext& llvm_context,
+    llvm::Module& module,
+    ava_string filename, bool full_debug);
 
   llvm::LLVMContext& llvm_context;
   llvm::Module& module;
+  llvm::DIBuilder dib;
   const ava::ir_types types;
+  const ava::driver_iface di;
+
   llvm::GlobalVariable* string_type;
   llvm::GlobalVariable* pointer_pointer_impl;
   llvm::GlobalVariable* pointer_prototype_tag;
   llvm::Constant* empty_string, * empty_string_value;
   llvm::Constant* pointer_prototype_header;
+
+  llvm::DIFile di_file;
+  llvm::DICompileUnit di_compile_unit;
+  llvm::DIBasicType di_size, di_ava_ulong, di_ava_integer;
+  llvm::DICompositeType di_ava_value;
+  llvm::DIDerivedType di_ava_function_ptr;
+  llvm::DICompositeType di_ava_function_parameter, di_ava_fat_list_value;
 
   std::map<size_t,llvm::GlobalVariable*> global_vars;
   std::map<size_t,llvm::Function*> global_funs;
@@ -121,6 +137,10 @@ static llvm::Constant* get_marshal_value(
 
 AVA_END_FILE_PRIVATE
 
+ava::xcode_to_ir_translator::xcode_to_ir_translator(void)
+: full_debug(true)
+{ }
+
 void ava::xcode_to_ir_translator::add_driver(
   const char* data, size_t size)
 noexcept {
@@ -129,12 +149,13 @@ noexcept {
 
 std::unique_ptr<llvm::Module> ava::xcode_to_ir_translator::translate(
   const ava_xcode_global_list* xcode,
-  const char* module_name,
+  ava_string filename,
+  ava_string module_name,
   llvm::LLVMContext& llvm_context,
   std::string& error)
 const noexcept {
   std::unique_ptr<llvm::Module> module(
-    new llvm::Module(llvm::StringRef(module_name),
+    new llvm::Module(llvm::StringRef(ava_string_to_cstring(module_name)),
                      llvm_context));
   std::unique_ptr<llvm::Module> error_ret(nullptr);
   std::set<std::string> declared_symbols;
@@ -147,8 +168,20 @@ const noexcept {
     }
   }
 
+  for (size_t i = 0; !ava_string_is_present(filename) && i < xcode->length; ++i)
+    if (ava_pcgt_src_pos == xcode->elts[i].pc->type)
+      filename = ((const ava_pcg_src_pos*)xcode->elts[i].pc)->filename;
+
+  if (!ava_string_is_present(filename))
+    filename = AVA_ASCII9_STRING("<unknown>");
+
   ava_xcode_handle_driver_functions(*module, declared_symbols);
-  ava_xcode_translation_context context(llvm_context, *module);
+  ava_xcode_translation_context context(
+    llvm_context, *module, filename, full_debug);
+  if (!context.di.error.empty()) {
+    error = context.di.error;
+    return error_ret;
+  }
 
   for (size_t i = 0; i < xcode->length; ++i) {
     if (!ava_xcode_to_ir_declare_global(
@@ -279,12 +312,34 @@ noexcept {
   return true;
 }
 
+static const char* extract_basename(ava_string filename) {
+  const char* cstr = ava_string_to_cstring(filename);
+  const char* slash = std::strchr(cstr, '/');
+  if (slash)
+    return slash + 1;
+  else
+    return cstr;
+}
+
+static const char* extract_dirname(ava_string filename) {
+  const char* cstr = ava_string_to_cstring(filename);
+  const char* slash = std::strchr(cstr, '/');
+  if (slash)
+    return ava_string_to_cstring(
+      ava_string_slice(filename, 0, slash - cstr));
+  else
+    return "";
+}
+
 ava_xcode_translation_context::ava_xcode_translation_context(
   llvm::LLVMContext& llvm_context_,
-  llvm::Module& module_)
+  llvm::Module& module_,
+  ava_string filename, bool full_debug)
 : llvm_context(llvm_context_),
   module(module_),
-  types(llvm_context_, module_)
+  dib(module_),
+  types(llvm_context_, module_),
+  di(module_)
 {
   string_type = new llvm::GlobalVariable(
     module,
@@ -308,6 +363,76 @@ ava_xcode_translation_context::ava_xcode_translation_context(
     llvm::ConstantExpr::getBitCast(
       pointer_pointer_impl, types.ava_attribute->getElementType(1)),
     nullptr);
+
+  const llvm::DataLayout* dl = module.getDataLayout();
+  const char* basename = extract_basename(filename);
+  const char* dirname = extract_dirname(filename);
+  di_compile_unit = dib.createCompileUnit(
+    /* *(const unsigned short*)"AV" | 0x8000
+     * Ie, something in the DW_LANG_*_user range
+     */
+    0xD541, basename, dirname,
+    PACKAGE_STRING,
+    true, "", 0, llvm::StringRef(),
+    full_debug? llvm::DIBuilder::FullDebug : llvm::DIBuilder::LineTablesOnly,
+    true);
+  di_file = dib.createFile(basename, dirname);
+  di_size = dib.createBasicType(
+    "size_t", dl->getTypeSizeInBits(types.c_size),
+    dl->getABITypeAlignment(types.c_size),
+    llvm::dwarf::DW_ATE_unsigned);
+  di_ava_integer = dib.createBasicType(
+    "ava_integer", dl->getTypeSizeInBits(types.ava_integer),
+    dl->getABITypeAlignment(types.ava_integer),
+    llvm::dwarf::DW_ATE_signed);
+  di_ava_ulong = dib.createBasicType(
+    "ava_ulong", dl->getTypeSizeInBits(types.ava_long),
+    dl->getABITypeAlignment(types.ava_long),
+    llvm::dwarf::DW_ATE_unsigned);
+  llvm::Value* ava_value_subscript = dib.getOrCreateSubrange(
+    0, types.ava_value->getNumElements());
+  llvm::DIArray ava_value_subscript_array = dib.getOrCreateArray(
+    ava_value_subscript);
+  di_ava_value = dib.createVectorType(
+    dl->getTypeSizeInBits(types.ava_value),
+    dl->getABITypeAlignment(types.ava_value),
+    di_ava_ulong, ava_value_subscript_array);
+  di_ava_function_ptr = dib.createPointerType(
+    dib.createUnspecifiedType("ava_function"),
+    dl->getPointerSizeInBits(),
+    dl->getPointerABIAlignment());
+  di_ava_fat_list_value = dib.createStructType(
+    /* Not actually defined here, but there's no real reason to track it as
+     * such.
+     */
+    di_compile_unit, "ava_fat_list_value", di_file, 0,
+    dl->getTypeSizeInBits(types.ava_fat_list_value),
+    dl->getABITypeAlignment(types.ava_fat_list_value),
+    0, llvm::DIType(),
+    dib.getOrCreateArray({
+      dib.createPointerType(dib.createUnspecifiedType("ava_list_trait"),
+                            dl->getPointerSizeInBits(),
+                            dl->getPointerABIAlignment()),
+      di_ava_value
+    }));
+  llvm::DICompositeType di_ava_function_parameter_type =
+    dib.createEnumerationType(
+      di_compile_unit, "ava_function_parameter_type", di_file, 0,
+      dl->getTypeSizeInBits(types.c_int),
+      dl->getABITypeAlignment(types.c_int),
+      dib.getOrCreateArray(
+        { dib.createEnumerator("ava_fpt_static", ava_fpt_static),
+          dib.createEnumerator("ava_fpt_dynamic", ava_fpt_dynamic),
+          dib.createEnumerator("ava_fpt_spread", ava_fpt_spread) }),
+      dib.createBasicType("int", dl->getTypeSizeInBits(types.c_int),
+                          dl->getABITypeAlignment(types.c_int),
+                          llvm::dwarf::DW_ATE_unsigned));
+  di_ava_function_parameter = dib.createStructType(
+    di_compile_unit, "ava_function_parameter", di_file, 0,
+    dl->getTypeSizeInBits(types.ava_function_parameter),
+    dl->getABITypeAlignment(types.ava_function_parameter),
+    0, llvm::DIType(),
+    dib.getOrCreateArray({ di_ava_function_parameter_type, di_ava_value }));
 }
 
 static bool ava_xcode_to_ir_declare_fun(
