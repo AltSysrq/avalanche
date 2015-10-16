@@ -210,7 +210,7 @@ static inline void static_assert_ao_t_can_hold_pointer(void) {
  */
 typedef struct { void* p; } pointer;
 
-#define sizeof_ptr(x) (sizeof(x) / sizeof(pointer))
+#define sizeof_ptr(x) ((sizeof(x) + sizeof(pointer) - 1) / sizeof(pointer))
 
 typedef struct {
   /* Constant configuration */
@@ -440,7 +440,7 @@ static ava_esba_array* ava_esba_array_new(
     sizeof(ava_esba_array) +
     initial_capacity * element_size * sizeof(pointer) +
     /* Always ensure there's space for at least one undead element */
-    sizeof_ptr(ava_esba_undead_element));
+    (sizeof_ptr(ava_esba_undead_element) + element_size) * sizeof(pointer));
 
   array->element_size = element_size;
   array->allocator = allocator;
