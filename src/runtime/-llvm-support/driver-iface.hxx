@@ -57,7 +57,7 @@ namespace ava {
     /**
      * Implements runtime semantics of the ext-var global type.
      *
-     * Signature: void (const ava_value* src)
+     * Signature: void (const ava_value* src, ava_string name)
      *
      * src is a pointer to the global variable; name is its mangled name.
      */

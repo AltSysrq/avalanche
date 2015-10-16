@@ -26,17 +26,20 @@
 #include <set>
 #include <string>
 
+#include <llvm/ADT/StringRef.h>
+#include <llvm/ADT/StringRef.h>
 #include <llvm/IR/Attributes.h>
+#include <llvm/IR/BasicBlock.h>
 #include <llvm/IR/Constants.h>
+#include <llvm/IR/DebugLoc.h>
+#include <llvm/IR/DIBuilder.h>
 #include <llvm/IR/Function.h>
 #include <llvm/IR/GlobalValue.h>
+#include <llvm/IR/IRBuilder.h>
 #include <llvm/IR/LLVMContext.h>
 #include <llvm/IR/Module.h>
-#include <llvm/IR/DIBuilder.h>
-#include <llvm/Linker/Linker.h>
 #include <llvm/IRReader/IRReader.h>
-#include <llvm/ADT/StringRef.h>
-#include <llvm/ADT/StringRef.h>
+#include <llvm/Linker/Linker.h>
 #include <llvm/Support/Dwarf.h>
 #include <llvm/Support/MemoryBuffer.h>
 #include <llvm/Support/SourceMgr.h>
@@ -63,10 +66,13 @@ struct ava_xcode_translation_context {
   ava_xcode_translation_context(
     llvm::LLVMContext& llvm_context,
     llvm::Module& module,
-    ava_string filename, bool full_debug);
+    ava_string filename,
+    ava_string module_name,
+    bool full_debug);
 
   llvm::LLVMContext& llvm_context;
   llvm::Module& module;
+  std::string module_name;
   llvm::DIBuilder dib;
   const ava::ir_types types;
   const ava::driver_iface di;
@@ -78,14 +84,20 @@ struct ava_xcode_translation_context {
   llvm::Constant* pointer_prototype_header;
 
   llvm::DIFile di_file;
+  std::map<std::string,llvm::DIFile> di_files;
   llvm::DICompileUnit di_compile_unit;
   llvm::DIBasicType di_size, di_ava_ulong, di_ava_integer;
   llvm::DICompositeType di_ava_value;
   llvm::DIDerivedType di_ava_function_ptr;
   llvm::DICompositeType di_ava_function_parameter, di_ava_fat_list_value;
+  std::vector<llvm::DebugLoc> di_global_location;
+  std::vector<llvm::DIFile> di_global_files;
+  std::vector<unsigned> di_global_lines;
 
   std::map<size_t,llvm::GlobalVariable*> global_vars;
   std::map<size_t,llvm::Function*> global_funs;
+
+  llvm::DIFile get_di_file(const std::string& name) noexcept;
 };
 
 static bool ava_xcode_to_ir_load_driver(
@@ -98,6 +110,10 @@ static bool ava_xcode_to_ir_load_driver(
 static void ava_xcode_handle_driver_functions(
   llvm::Module& module,
   std::set<std::string>& declared_symbols) noexcept;
+
+static void make_global_locations(
+  ava_xcode_translation_context& context,
+  const ava_xcode_global_list* xcode) noexcept;
 
 static bool ava_xcode_to_ir_declare_global(
   ava_xcode_translation_context& context,
@@ -134,6 +150,14 @@ static llvm::Constant* get_ava_value_constant(
 static llvm::Constant* get_marshal_value(
   const ava_xcode_translation_context& context,
   const ava_c_marshalling_type& type) noexcept;
+
+static llvm::Function* create_init_function(
+  ava_xcode_translation_context& context) noexcept;
+
+static void build_init_function(
+  ava_xcode_translation_context& context,
+  llvm::Function* init_function,
+  const ava_xcode_global_list* xcode) noexcept;
 
 AVA_END_FILE_PRIVATE
 
@@ -177,11 +201,13 @@ const noexcept {
 
   ava_xcode_handle_driver_functions(*module, declared_symbols);
   ava_xcode_translation_context context(
-    llvm_context, *module, filename, full_debug);
+    llvm_context, *module, filename, module_name, full_debug);
   if (!context.di.error.empty()) {
     error = context.di.error;
     return error_ret;
   }
+
+  make_global_locations(context, xcode);
 
   for (size_t i = 0; i < xcode->length; ++i) {
     if (!ava_xcode_to_ir_declare_global(
@@ -189,6 +215,11 @@ const noexcept {
       return error_ret;
     }
   }
+
+  llvm::Function* module_init_function = create_init_function(context);
+  build_init_function(context, module_init_function, xcode);
+
+  context.dib.finalize();
 
   return std::move(module);
 }
@@ -243,6 +274,27 @@ noexcept {
   }
 }
 
+static void make_global_locations(
+  ava_xcode_translation_context& context,
+  const ava_xcode_global_list* xcode)
+noexcept {
+  llvm::DebugLoc dl = llvm::DebugLoc::get(0, 0, context.di_file);
+  llvm::DIFile file = context.di_file;
+  unsigned line = 0;
+
+  for (size_t i = 0; i < xcode->length; ++i) {
+    if (ava_pcgt_src_pos == xcode->elts[i].pc->type) {
+      const ava_pcg_src_pos* pos = (const ava_pcg_src_pos*)xcode->elts[i].pc;
+      file = context.get_di_file(ava_string_to_cstring(pos->filename));
+      dl = llvm::DebugLoc::get(
+        pos->start_line, pos->start_column, file);
+    }
+    context.di_global_location.push_back(dl);
+    context.di_global_files.push_back(file);
+    context.di_global_lines.push_back(line);
+  }
+}
+
 static bool ava_xcode_to_ir_declare_global(
   ava_xcode_translation_context& context,
   std::set<std::string>& declared_symbols,
@@ -250,6 +302,9 @@ static bool ava_xcode_to_ir_declare_global(
   size_t ix,
   std::string& error)
 noexcept {
+  llvm::DIFile di_file = context.di_global_files[ix];
+  unsigned di_line = context.di_global_lines[ix];
+
   switch (pcode->type) {
   case ava_pcgt_ext_var: {
     const ava_pcg_ext_var* v = (ava_pcg_ext_var*)pcode;
@@ -258,6 +313,10 @@ noexcept {
       true, llvm::GlobalValue::ExternalLinkage,
       nullptr, ava_string_to_cstring(ava_name_mangle(v->name)));
     context.global_vars[ix] = var;
+    context.dib.createGlobalVariable(
+      ava_string_to_cstring(v->name.name),
+      var->getName(), di_file, di_line,
+      context.di_ava_value, false, var);
   } break;
 
   case ava_pcgt_var: {
@@ -270,6 +329,10 @@ noexcept {
       context.empty_string_value,
       ava_string_to_cstring(ava_name_mangle(v->name)));
     context.global_vars[ix] = var;
+    context.dib.createGlobalVariable(
+      ava_string_to_cstring(v->name.name),
+      var->getName(), di_file, di_line,
+      context.di_ava_value, !v->publish, var);
   } break;
 
   case ava_pcgt_ext_fun: {
@@ -312,31 +375,13 @@ noexcept {
   return true;
 }
 
-static const char* extract_basename(ava_string filename) {
-  const char* cstr = ava_string_to_cstring(filename);
-  const char* slash = std::strchr(cstr, '/');
-  if (slash)
-    return slash + 1;
-  else
-    return cstr;
-}
-
-static const char* extract_dirname(ava_string filename) {
-  const char* cstr = ava_string_to_cstring(filename);
-  const char* slash = std::strchr(cstr, '/');
-  if (slash)
-    return ava_string_to_cstring(
-      ava_string_slice(filename, 0, slash - cstr));
-  else
-    return "";
-}
-
 ava_xcode_translation_context::ava_xcode_translation_context(
   llvm::LLVMContext& llvm_context_,
   llvm::Module& module_,
-  ava_string filename, bool full_debug)
+  ava_string filename, ava_string module_name, bool full_debug)
 : llvm_context(llvm_context_),
   module(module_),
+  module_name(ava_string_to_cstring(module_name)),
   dib(module_),
   types(llvm_context_, module_),
   di(module_)
@@ -348,7 +393,7 @@ ava_xcode_translation_context::ava_xcode_translation_context(
 
   empty_string = llvm::ConstantInt::get(types.ava_string, 1);
   empty_string_value = llvm::ConstantVector::get(
-    { llvm::ConstantExpr::getPtrToInt(string_type, types.ava_attribute),
+    { llvm::ConstantExpr::getPtrToInt(string_type, types.ava_long),
       empty_string });
 
   pointer_prototype_tag = new llvm::GlobalVariable(
@@ -365,8 +410,9 @@ ava_xcode_translation_context::ava_xcode_translation_context(
     nullptr);
 
   const llvm::DataLayout* dl = module.getDataLayout();
-  const char* basename = extract_basename(filename);
-  const char* dirname = extract_dirname(filename);
+  const char* basename = ava_string_to_cstring(filename);
+  /* TODO Get the actual dirname */
+  const char* dirname = ".";
   di_compile_unit = dib.createCompileUnit(
     /* *(const unsigned short*)"AV" | 0x8000
      * Ie, something in the DW_LANG_*_user range
@@ -377,6 +423,7 @@ ava_xcode_translation_context::ava_xcode_translation_context(
     full_debug? llvm::DIBuilder::FullDebug : llvm::DIBuilder::LineTablesOnly,
     true);
   di_file = dib.createFile(basename, dirname);
+  di_files[basename] = di_file;
   di_size = dib.createBasicType(
     "size_t", dl->getTypeSizeInBits(types.c_size),
     dl->getABITypeAlignment(types.c_size),
@@ -433,6 +480,16 @@ ava_xcode_translation_context::ava_xcode_translation_context(
     dl->getABITypeAlignment(types.ava_function_parameter),
     0, llvm::DIType(),
     dib.getOrCreateArray({ di_ava_function_parameter_type, di_ava_value }));
+}
+
+llvm::DIFile ava_xcode_translation_context::get_di_file(
+  const std::string& filename)
+noexcept {
+  auto it = di_files.find(filename);
+  if (di_files.end() != it)
+    return it->second;
+
+  return di_files[filename] = dib.createFile(filename, ".");
 }
 
 static bool ava_xcode_to_ir_declare_fun(
@@ -665,17 +722,20 @@ noexcept {
     strglob->setUnnamedAddr(true);
     strglob->setAlignment(AVA_STRING_ALIGNMENT);
 
-    llvm::Constant* twineconst = llvm::ConstantStruct::get(
-      context.types.ava_twine,
-      strglob,
-      ava_string_length(string),
+    llvm::Constant* twinetailconst =
       /* TODO: String constants of length 0 to 15 can be crammed into this
        * space.
        */
       llvm::ConstantStruct::get(
         context.types.ava_twine_tail,
-        0, llvm::ConstantInt::get(context.types.ava_string, 0),
-        nullptr),
+        llvm::ConstantInt::get(context.types.c_size, 0),
+        llvm::ConstantInt::get(context.types.ava_string, 0),
+        nullptr);
+    llvm::Constant* twineconst = llvm::ConstantStruct::get(
+      context.types.ava_twine,
+      strglob,
+      llvm::ConstantInt::get(context.types.c_size, ava_string_length(string)),
+      twinetailconst,
       nullptr);
     llvm::GlobalVariable* ret = new llvm::GlobalVariable(
       context.module, context.types.ava_string, true,
@@ -683,7 +743,7 @@ noexcept {
       llvm::ConstantExpr::getPtrToInt(twineconst, context.types.ava_string));
     ret->setUnnamedAddr(true);
 
-    return ret;
+    return llvm::ConstantExpr::getBitCast(ret, context.types.ava_string);
   }
 }
 
@@ -705,6 +765,100 @@ noexcept {
     return llvm::ConstantVector::get(
       llvm::ArrayRef<llvm::Constant*>(vals, 2));
   }
+}
+
+static llvm::Function* create_init_function(
+  ava_xcode_translation_context& context) noexcept
+{
+  if (context.di.program_entry) {
+    context.di.program_entry->setLinkage(
+      llvm::GlobalValue::InternalLinkage);
+    return context.di.program_entry;
+  } else {
+    return llvm::Function::Create(
+      llvm::FunctionType::get(
+        llvm::Type::getVoidTy(context.llvm_context), false),
+      llvm::GlobalValue::ExternalLinkage,
+      context.module_name, &context.module);
+  }
+}
+
+static void build_init_function(
+  ava_xcode_translation_context& context,
+  llvm::Function* init_function,
+  const ava_xcode_global_list* xcode)
+noexcept {
+  llvm::BasicBlock* block = llvm::BasicBlock::Create(
+    context.llvm_context, "", init_function);
+  llvm::IRBuilder<true> irb(block);
+  context.dib.createFunction(
+    context.di_compile_unit,
+    context.module_name,
+    init_function->getName(),
+    context.di_file, 0,
+    context.dib.createSubroutineType(context.di_file,
+                                     context.dib.getOrCreateArray({})),
+    false, true, 0, 0, true, init_function);
+
+  for (size_t i = 0; i < xcode->length; ++i) {
+    irb.SetCurrentDebugLocation(context.di_global_location[i]);
+
+    switch (xcode->elts[i].pc->type) {
+    case ava_pcgt_ext_var: {
+      const ava_pcg_ext_var* v = (const ava_pcg_ext_var*)xcode->elts[i].pc;
+      ava_string mangled_name = ava_name_mangle(v->name);
+      mangled_name = ava_string_concat(mangled_name,
+                                       AVA_ASCII9_STRING("_"));
+
+      irb.CreateCall2(context.di.g_ext_var, context.global_vars[i],
+                      get_ava_string_constant(
+                        context, mangled_name));
+    } break;
+
+    case ava_pcgt_ext_fun: {
+      const ava_pcg_ext_fun* f = (const ava_pcg_ext_fun*)xcode->elts[i].pc;
+      ava_string mangled_name = ava_name_mangle(f->name);
+
+      irb.CreateCall2(
+        ava_cc_ava == f->prototype->calling_convention?
+        context.di.g_ext_fun_ava : context.di.g_ext_fun_other,
+        context.global_vars[i],
+        get_ava_string_constant(context, mangled_name));
+    } break;
+
+    case ava_pcgt_var: {
+      const ava_pcg_var* v = (const ava_pcg_var*)xcode->elts[i].pc;
+      ava_string mangled_name = ava_name_mangle(v->name);
+
+      irb.CreateCall3(
+        context.di.g_var,
+        context.global_vars[i],
+        get_ava_string_constant(context, mangled_name),
+        llvm::ConstantInt::get(context.types.ava_bool, v->publish));
+    } break;
+
+    case ava_pcgt_fun: {
+      const ava_pcg_fun* f = (const ava_pcg_fun*)xcode->elts[i].pc;
+      ava_string mangled_name = ava_name_mangle(f->name);
+
+      irb.CreateCall3(
+        context.di.g_fun_ava,
+        context.global_vars[i],
+        get_ava_string_constant(context, mangled_name),
+        llvm::ConstantInt::get(context.types.ava_bool, f->publish));
+    } break;
+
+    case ava_pcgt_src_pos:
+    case ava_pcgt_export:
+    case ava_pcgt_macro:
+    case ava_pcgt_load_pkg:
+    case ava_pcgt_load_mod:
+    case ava_pcgt_init:
+      break;
+    }
+  }
+
+  irb.CreateRetVoid();
 }
 
 AVA_END_FILE_PRIVATE

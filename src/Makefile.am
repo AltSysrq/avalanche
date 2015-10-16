@@ -86,7 +86,7 @@ simple_interp_SOURCES = interp/main.c
 simple_interp_LDADD = libavart.la
 
 llvm_ir_dump_t_SOURCES = llvm-ir-dump.cxx
-llvm_ir_dump_t_LDADD = libavart.la
+llvm_ir_dump_t_LDADD = libavart.la $(LLVM_LIBS)
 
 runtime/gen-lex.c: runtime/lex.c
 	$(AM_V_GEN)$(RE2C) --input custom -c $(RE2C_FLAGS) \

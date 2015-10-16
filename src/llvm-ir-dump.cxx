@@ -11,9 +11,13 @@
 #include <stdio.h>
 #include <memory>
 #include <string>
+#include <iostream>
 
 #include <llvm/IR/Module.h>
 #include <llvm/IR/LLVMContext.h>
+#include <llvm/IR/Verifier.h>
+#include <llvm/Support/raw_ostream.h>
+#include <llvm/Support/FileSystem.h>
 
 #include "runtime/avalanche.h"
 #include "bsd.h"
@@ -70,6 +74,13 @@ static ava_value run(void* filename) {
   }
 
   output->dump();
+
+  std::string dont_care;
+  llvm::raw_fd_ostream stderr("/dev/stderr", dont_care,
+                              llvm::sys::fs::F_Text);
+  if (!llvm::verifyModule(*output, &stderr))
+    errx(EX_SOFTWARE, "Invalid IR generated");
+
   return ret;
 }
 
