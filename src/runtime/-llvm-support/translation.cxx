@@ -259,6 +259,17 @@ const noexcept {
     }
   }
 
+  /* If we don't add this, llc and friends "helpfully" decide it's version 0
+   * and "upgrade" the debug info by discarding all of it.
+   */
+  module->addModuleFlag(llvm::Module::Warning, "Debug Info Version",
+                        /* Not relevant here, but it's of interest that this
+                         * constant is in an *enumeration*, despite not
+                         * enumerating anything.
+                         */
+                        llvm::DEBUG_METADATA_VERSION);
+
+
   for (size_t i = 0; !ava_string_is_present(filename) && i < xcode->length; ++i)
     if (ava_pcgt_src_pos == xcode->elts[i].pc->type)
       filename = ((const ava_pcg_src_pos*)xcode->elts[i].pc)->filename;
