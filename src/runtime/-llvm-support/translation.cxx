@@ -910,6 +910,9 @@ noexcept {
                                      context.dib.getOrCreateArray({NULL})),
     false, true, 0, 0, true, init_function);
 
+  /* TODO: Initialise other packages / modules */
+
+  /* Initialise all globals */
   for (size_t i = 0; i < xcode->length; ++i) {
     irb.SetCurrentDebugLocation(context.di_global_location[i]);
 
@@ -963,6 +966,14 @@ noexcept {
     case ava_pcgt_load_mod:
     case ava_pcgt_init:
       break;
+    }
+  }
+
+  for (size_t i = 0; i < xcode->length; ++i) {
+    if (ava_pcgt_init == xcode->elts[i].pc->type) {
+      const ava_pcg_init* init = (const ava_pcg_init*)xcode->elts[i].pc;
+      irb.CreateCall(
+        context.global_funs[init->fun], context.empty_string_value);
     }
   }
 
