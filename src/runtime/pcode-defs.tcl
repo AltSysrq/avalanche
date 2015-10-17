@@ -535,6 +535,19 @@ struct exe x {
     }
   }
 
+  # Normalises a boolean integer to be 0 or 1.
+  #
+  # Semantics: The src I-register is read. If it is 0, 0 is written to the dst
+  # I-register. Otherwise, 1 is written to the dst I-register.
+  elt bool {
+    register i dst {
+      prop reg-write
+    }
+    register i src {
+      prop reg-read
+    }
+  }
+
   # Asserts that a value (an argument, presumably) is the empty string.
   #
   # Semantics: The given V-register is read. If it is the empty string, this
@@ -703,19 +716,6 @@ struct exe x {
     attr terminal
     attr terminal-no-fallthrough
     register dv return-value {
-      prop reg-read
-    }
-  }
-
-  # Normalises a boolean integer to be 0 or 1.
-  #
-  # Semantics: The src I-register is read. If it is 0, 0 is written to the dst
-  # I-register. Otherwise, 1 is written to the dst I-register.
-  elt bool {
-    register i dst {
-      prop reg-write
-    }
-    register i src {
       prop reg-read
     }
   }

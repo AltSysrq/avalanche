@@ -64,6 +64,7 @@ namespace ava {
     llvm::StructType* ava_fat_list_value;
 
     llvm::StructType* ava_function;
+    llvm::PointerType* ava_function_ptr;
     llvm::StructType* ava_argument_spec;
     llvm::StructType* ava_argument_binding;
     llvm::StructType* ava_c_marshalling_type;

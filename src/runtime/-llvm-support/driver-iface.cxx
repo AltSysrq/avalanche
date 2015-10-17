@@ -22,6 +22,9 @@
 #include <llvm/IR/Function.h>
 #include <llvm/IR/Module.h>
 
+#define AVA__INTERNAL_INCLUDE 1
+#include "../avalanche/defs.h"
+#include "../avalanche/function.h"
 #include "driver-iface.hxx"
 
 ava::driver_iface::driver_iface(const llvm::Module& module) noexcept {
@@ -63,6 +66,7 @@ ava::driver_iface::driver_iface(const llvm::Module& module) noexcept {
   ISA(x_lbehead);
   ISA(x_lflatten);
   ISA(x_lindex);
+  ISA(x_llength);
   ISA(x_iadd);
   ISA(x_icmp);
   ISA(x_aaempty);
@@ -73,6 +77,43 @@ ava::driver_iface::driver_iface(const llvm::Module& module) noexcept {
   ISA(x_partial);
   ISA(x_bool);
 #undef ISA
+
+#define MAR(type) do {                                            \
+    if (!(marshal_to[ava_cmpt_##type] = module.getFunction(       \
+            "ava_isa_m_to_" #type "$"))) {                        \
+      error = "ABI function ava_isa_m_to_" #type "$ not found";   \
+    }                                                             \
+    if (!(marshal_from[ava_cmpt_##type] = module.getFunction(     \
+            "ava_isa_m_from_" #type "$"))) {                      \
+      error = "ABI function ava_isa_m_from_" #type "$ not found"; \
+    }                                                             \
+  } while (0)
+  MAR(void);
+  MAR(byte);
+  MAR(short);
+  MAR(int);
+  MAR(long);
+  MAR(llong);
+  MAR(ubyte);
+  MAR(ushort);
+  MAR(uint);
+  MAR(ulong);
+  MAR(ullong);
+  MAR(ava_sbyte);
+  MAR(ava_sshort);
+  MAR(ava_sint);
+  MAR(ava_slong);
+  MAR(ava_ubyte);
+  MAR(ava_ushort);
+  MAR(ava_ulong);
+  MAR(ava_integer);
+  MAR(size);
+  MAR(float);
+  MAR(double);
+  MAR(ldouble);
+  MAR(ava_real);
+  MAR(string);
+  MAR(pointer);
 
   program_entry = module.getFunction("a$$5Cprogram_entry");
 }

@@ -290,3 +290,81 @@ const ava_function* ava_isa_x_partial$(
 ava_integer ava_isa_x_bool$(ava_integer i) {
   return !!i;
 }
+
+void ava_isa_m_to_void$(ava_value v) {
+  if (!ava_string_is_empty(ava_to_string(v)))
+    ava_throw_str(&ava_format_exception,
+                  ava_error_non_empty_string_to_void_arg());
+}
+
+ava_value ava_isa_m_from_void$(void) {
+  return ava_value_of_string(AVA_EMPTY_STRING);
+}
+
+#define MAR_INT(type,small_type,long_type)              \
+  small_type ava_isa_m_to_##type##$(ava_value v) {      \
+    return (small_type)ava_integer_of_value(v, 0);      \
+  }                                                     \
+  ava_value ava_isa_m_from_##type##$(small_type v) {    \
+    return ava_value_of_integer((long_type)v);          \
+  }
+
+MAR_INT(byte,           signed char,            ava_slong)
+MAR_INT(short,          signed short,           ava_slong)
+MAR_INT(int,            signed int,             ava_slong)
+MAR_INT(long,           signed long,            ava_slong)
+MAR_INT(llong,          signed long long,       ava_slong)
+MAR_INT(ubyte,          unsigned char,          ava_ulong)
+MAR_INT(ushort,         unsigned short,         ava_ulong)
+MAR_INT(uint,           unsigned int,           ava_ulong)
+MAR_INT(ulong,          unsigned long,          ava_ulong)
+MAR_INT(ullong,         unsigned long long,     ava_ulong)
+MAR_INT(ava_sbyte,      ava_sbyte,              ava_slong)
+MAR_INT(ava_sshort,     ava_sshort,             ava_slong)
+MAR_INT(ava_sint,       ava_sint,               ava_slong)
+MAR_INT(ava_slong,      ava_slong,              ava_slong)
+MAR_INT(ava_ubyte,      ava_ubyte,              ava_ulong)
+MAR_INT(ava_ushort,     ava_ushort,             ava_ulong)
+MAR_INT(ava_uint,       ava_uint,               ava_ulong)
+MAR_INT(ava_ulong,      ava_ulong,              ava_ulong)
+MAR_INT(ava_integer,    ava_integer,            ava_integer)
+MAR_INT(size,           size_t,                 ava_ulong)
+
+#undef MAR_INT
+
+#define MAR_FLT(type, ctype)                    \
+  ctype ava_isa_m_to_##type##$(ava_value v) {   \
+    return (ctype)ava_real_of_value(v, 0.0);    \
+  }                                             \
+  ava_value ava_isa_m_from_##type##$(ctype v) { \
+    return ava_value_of_real((ava_real)v);      \
+  }
+
+MAR_FLT(float,          float)
+MAR_FLT(double,         double)
+MAR_FLT(ldouble,        long double)
+MAR_FLT(ava_real,       ava_real)
+
+#undef MAR_FLT
+
+const char* ava_isa_m_to_string$(ava_value v) {
+  return ava_string_to_cstring(ava_to_string(v));
+}
+
+ava_value ava_isa_m_from_string$(const char* v) {
+  return ava_value_of_string(ava_string_of_cstring(v));
+}
+
+void* ava_isa_m_to_pointer$(ava_value v, const ava_pointer_prototype* proto) {
+  if (proto->is_const) {
+    return (void*)ava_pointer_get_const(v, proto->tag);
+  } else {
+    return ava_pointer_get_mutable(v, proto->tag);
+  }
+}
+
+ava_value ava_isa_m_from_pointer$(
+  const void* v, const ava_pointer_prototype* proto
+) {
+  return ava_pointer_of_proto(proto, v).v;
+}

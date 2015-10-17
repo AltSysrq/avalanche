@@ -82,6 +82,7 @@ noexcept {
 
   ava_function = llvm::cast<llvm::StructType>(
     abi_info->getElementType(abi_fun));
+  ava_function_ptr = llvm::PointerType::getUnqual(ava_function);
   ava_argument_spec = llvm::cast<llvm::StructType>(
     abi_info->getElementType(abi_argspec));
   ava_argument_binding = llvm::cast<llvm::StructType>(

@@ -13,9 +13,11 @@
 #include <string>
 #include <iostream>
 
+#include <llvm/Bitcode/BitcodeWriterPass.h>
 #include <llvm/IR/Module.h>
 #include <llvm/IR/LLVMContext.h>
 #include <llvm/IR/Verifier.h>
+#include <llvm/IR/PassManager.h>
 #include <llvm/Support/raw_ostream.h>
 #include <llvm/Support/FileSystem.h>
 
@@ -74,12 +76,26 @@ static ava_value run(void* filename) {
   }
 
   output->dump();
+  std::cerr.flush();
 
-  std::string dont_care;
-  llvm::raw_fd_ostream stderr("/dev/stderr", dont_care,
-                              llvm::sys::fs::F_Text);
-  if (!llvm::verifyModule(*output, &stderr))
-    errx(EX_SOFTWARE, "Invalid IR generated");
+  {
+    std::string dont_care;
+    llvm::raw_fd_ostream stderr("/dev/stderr", dont_care,
+                                llvm::sys::fs::F_Text);
+    if (llvm::verifyModule(*output, &stderr)) {
+      stderr.flush();
+      errx(EX_SOFTWARE, "Invalid IR generated");
+    }
+  }
+
+  {
+    std::string dont_care;
+    llvm::raw_fd_ostream bcout("bitcode.bc", dont_care, llvm::sys::fs::F_None);
+    llvm::ModulePassManager passManager;
+    passManager.addPass(llvm::BitcodeWriterPass(bcout));
+    passManager.run(output.get());
+    std::printf("Bitcode written to bitcode.bc\n");
+  }
 
   return ret;
 }

@@ -19,6 +19,7 @@
 
 #include <cstdlib>
 #include <cstring>
+#include <cstdio>
 #include <list>
 #include <vector>
 #include <memory>
@@ -90,6 +91,8 @@ struct ava_xcode_translation_context {
   llvm::DICompositeType di_ava_value;
   llvm::DIDerivedType di_ava_function_ptr;
   llvm::DICompositeType di_ava_function_parameter, di_ava_fat_list_value;
+  llvm::DICompositeType di_subroutine_inline_args[AVA_CC_AVA_MAX_INLINE_ARGS+1];
+  llvm::DICompositeType di_subroutine_array_args;
   std::vector<llvm::DebugLoc> di_global_location;
   std::vector<llvm::DIFile> di_global_files;
   std::vector<unsigned> di_global_lines;
@@ -159,6 +162,66 @@ static void build_init_function(
   llvm::Function* init_function,
   const ava_xcode_global_list* xcode) noexcept;
 
+static void build_user_function(
+  ava_xcode_translation_context& context,
+  llvm::Function* dst,
+  const ava_xcode_global* xcode,
+  const ava_xcode_global_list* xcode_list,
+  llvm::DebugLoc init_loc,
+  llvm::DIFile in_file) noexcept;
+
+static void explicitly_deinitialise_registers(
+  llvm::IRBuilder<true>& irb,
+  const ava_xcode_function* xfun,
+  const ava_ulong* phi,
+  llvm::Value*const* regs) noexcept;
+
+static bool translate_instruction(
+  ava_xcode_translation_context& context,
+  llvm::IRBuilder<true>& irb,
+  const ava_pcode_exe* exe,
+  const ava_xcode_global* container,
+  const ava_xcode_global_list* xcode,
+  llvm::BasicBlock*const* basic_blocks,
+  size_t this_basic_block,
+  llvm::Value*const* regs,
+  llvm::Value*const* tmplists,
+  llvm::Value* data_array_base,
+  llvm::DISubprogram scope) noexcept;
+
+static void store_register(
+  ava_xcode_translation_context& context,
+  llvm::IRBuilder<true>& irb,
+  ava_pcode_register dst,
+  llvm::Value* src,
+  const ava_pcg_fun* pcfun,
+  llvm::Value*const* regs) noexcept;
+
+static llvm::Value* load_register(
+  ava_xcode_translation_context& context,
+  llvm::IRBuilder<true>& irb,
+  ava_pcode_register src,
+  const ava_pcg_fun* pcfun,
+  llvm::Value*const* regs,
+  llvm::Value* tmplist) noexcept;
+
+static llvm::Value* convert_register(
+  ava_xcode_translation_context& context,
+  llvm::IRBuilder<true>& irb,
+  llvm::Value* src,
+  ava_pcode_register_type dst_type,
+  ava_pcode_register_type src_type,
+  llvm::Value* tmplist) noexcept;
+
+static llvm::Value* invoke_s(
+  ava_xcode_translation_context& context,
+  llvm::IRBuilder<true>& irb,
+  const ava_xcode_global* xfun,
+  size_t fun_ix,
+  llvm::Value*const* args,
+  llvm::Value* data_array_base,
+  bool args_in_data_array) noexcept;
+
 AVA_END_FILE_PRIVATE
 
 ava::xcode_to_ir_translator::xcode_to_ir_translator(void)
@@ -218,6 +281,14 @@ const noexcept {
 
   llvm::Function* module_init_function = create_init_function(context);
   build_init_function(context, module_init_function, xcode);
+
+  for (size_t i = 0; i < xcode->length; ++i) {
+    if (ava_pcgt_fun == xcode->elts[i].pc->type) {
+      build_user_function(
+        context, context.global_funs[i], xcode->elts + i, xcode,
+        context.di_global_location[i], context.di_global_files[i]);
+    }
+  }
 
   context.dib.finalize();
 
@@ -419,7 +490,7 @@ ava_xcode_translation_context::ava_xcode_translation_context(
      */
     0xD541, basename, dirname,
     PACKAGE_STRING,
-    true, "", 0, llvm::StringRef(),
+    true, "", 1, llvm::StringRef(),
     full_debug? llvm::DIBuilder::FullDebug : llvm::DIBuilder::LineTablesOnly,
     true);
   di_file = dib.createFile(basename, dirname);
@@ -480,6 +551,20 @@ ava_xcode_translation_context::ava_xcode_translation_context(
     dl->getABITypeAlignment(types.ava_function_parameter),
     0, llvm::DIType(),
     dib.getOrCreateArray({ di_ava_function_parameter_type, di_ava_value }));
+
+  llvm::Value* di_inline_args[AVA_CC_AVA_MAX_INLINE_ARGS+1] = {
+    di_ava_value,
+    di_ava_value, di_ava_value, di_ava_value, di_ava_value,
+    di_ava_value, di_ava_value, di_ava_value, di_ava_value,
+  };
+  for (unsigned i = 0; i <= AVA_CC_AVA_MAX_INLINE_ARGS; ++i)
+    di_subroutine_inline_args[i] = dib.createSubroutineType(
+      di_file, dib.getOrCreateArray(
+        llvm::ArrayRef<llvm::Value*>(di_inline_args, i + 1)));
+  di_subroutine_array_args = dib.createSubroutineType(
+    di_file, dib.getOrCreateArray(
+      { di_ava_value, di_size, dib.createPointerType(
+          di_ava_value, dl->getPointerSizeInBits()) }));
 }
 
 llvm::DIFile ava_xcode_translation_context::get_di_file(
@@ -737,10 +822,14 @@ noexcept {
       llvm::ConstantInt::get(context.types.c_size, ava_string_length(string)),
       twinetailconst,
       nullptr);
+    llvm::GlobalVariable* twinevar = new llvm::GlobalVariable(
+      context.module, context.types.ava_twine, true,
+      llvm::GlobalVariable::LinkOnceODRLinkage,
+      twineconst);
     llvm::GlobalVariable* ret = new llvm::GlobalVariable(
       context.module, context.types.ava_string, true,
       llvm::GlobalVariable::LinkOnceODRLinkage,
-      llvm::ConstantExpr::getPtrToInt(twineconst, context.types.ava_string));
+      llvm::ConstantExpr::getPtrToInt(twinevar, context.types.ava_string));
     ret->setUnnamedAddr(true);
 
     return llvm::ConstantExpr::getBitCast(ret, context.types.ava_string);
@@ -797,7 +886,7 @@ noexcept {
     init_function->getName(),
     context.di_file, 0,
     context.dib.createSubroutineType(context.di_file,
-                                     context.dib.getOrCreateArray({})),
+                                     context.dib.getOrCreateArray({NULL})),
     false, true, 0, 0, true, init_function);
 
   for (size_t i = 0; i < xcode->length; ++i) {
@@ -807,8 +896,6 @@ noexcept {
     case ava_pcgt_ext_var: {
       const ava_pcg_ext_var* v = (const ava_pcg_ext_var*)xcode->elts[i].pc;
       ava_string mangled_name = ava_name_mangle(v->name);
-      mangled_name = ava_string_concat(mangled_name,
-                                       AVA_ASCII9_STRING("_"));
 
       irb.CreateCall2(context.di.g_ext_var, context.global_vars[i],
                       get_ava_string_constant(
@@ -859,6 +946,783 @@ noexcept {
   }
 
   irb.CreateRetVoid();
+}
+
+static llvm::Argument* get_argument(llvm::Function* fun,
+                                    size_t ix) {
+  for (llvm::Argument& arg: fun->getArgumentList())
+    if (!ix--)
+      return &arg;
+
+  abort();
+}
+
+static void build_user_function(
+  ava_xcode_translation_context& context,
+  llvm::Function* dst,
+  const ava_xcode_global* xcode,
+  const ava_xcode_global_list* xcode_list,
+  llvm::DebugLoc init_loc,
+  llvm::DIFile in_file)
+noexcept {
+  const ava_pcg_fun* pcfun = (const ava_pcg_fun*)xcode->pc;
+  const ava_xcode_function* xfun = xcode->fun;
+  llvm::DICompositeType subroutine_type =
+    pcfun->prototype->num_args <= AVA_CC_AVA_MAX_INLINE_ARGS?
+    context.di_subroutine_inline_args[pcfun->prototype->num_args] :
+    context.di_subroutine_array_args;
+  llvm::DISubprogram di_fun = context.dib.createFunction(
+    in_file, ava_string_to_cstring(pcfun->name.name),
+    dst->getName(), in_file, init_loc.getLine(),
+    subroutine_type, !pcfun->publish, true, init_loc.getLine(),
+    0, true, dst);
+
+  llvm::BasicBlock* init_block, * basic_blocks[xfun->num_blocks];
+  llvm::Value* regs[xfun->reg_type_off[ava_prt_function+1]];
+  /* Since ava_fat_list_value isn't first-class in the C ABI, we need some
+   * temporary space we can make pointers to.
+   */
+  llvm::Value* tmplists[3];
+  char reg_name[16];
+  const char* reg_names[xfun->reg_type_off[ava_prt_function+1]];
+
+  init_block = llvm::BasicBlock::Create(context.llvm_context, "init", dst);
+  for (size_t i = 0; i < xfun->num_blocks; ++i)
+    basic_blocks[i] = llvm::BasicBlock::Create(context.llvm_context, "", dst);
+
+  llvm::IRBuilder<true> irb(init_block);
+  irb.SetCurrentDebugLocation(init_loc);
+  /* Allocate all registers.
+   * P-Registers are never accessed individually, so allocate them all with one
+   * alloca. For others, we want separate allocas so that alias analysis
+   * doesn't think that passing a pointer to one somewhere could invalidate
+   * others.
+   */
+  for (size_t i = xfun->reg_type_off[ava_prt_var];
+       i < xfun->reg_type_off[ava_prt_var+1]; ++i) {
+    reg_names[i] = ava_string_to_cstring(
+      ava_to_string(ava_list_index_f(pcfun->vars, i)));
+    regs[i] = irb.CreateAlloca(context.types.ava_value, nullptr, reg_names[i]);
+    /* Initialise from argument if applicable */
+    if (i < pcfun->prototype->num_args) {
+      if (pcfun->prototype->num_args <= AVA_CC_AVA_MAX_INLINE_ARGS) {
+        irb.CreateStore(get_argument(dst, i), regs[i]);
+      } else {
+        irb.CreateStore(
+          irb.CreateLoad(irb.CreateConstGEP1_32(get_argument(dst, 1), i)),
+          regs[i]);
+      }
+    }
+
+    llvm::DIVariable di_var = context.dib.createLocalVariable(
+      llvm::dwarf::DW_TAG_auto_variable, di_fun,
+      reg_names[i],
+      in_file, init_loc.getLine(), context.di_ava_value, true);
+    context.dib.insertDeclare(regs[i], di_var, init_block);
+  }
+#define DEFREG(prefix, i, reg_type, llvm_type, debug_type) do {         \
+    std::snprintf(reg_name, sizeof(reg_name), "(" #prefix "%d)", (int)i); \
+    reg_names[i] = strdup(reg_name);                                    \
+    regs[i] = irb.CreateAlloca(                                         \
+      context.types.llvm_type, nullptr, reg_names[i]);                  \
+    llvm::DIVariable di_var = context.dib.createLocalVariable(          \
+      llvm::dwarf::DW_TAG_auto_variable, di_fun,                        \
+      reg_names[i], in_file, init_loc.getLine(), context.debug_type,    \
+      false);                                                           \
+    context.dib.insertDeclare(regs[i], di_var, init_block);             \
+  } while (0)
+#define DEFREGS(prefix, reg_type, llvm_type, debug_type) do {    \
+    for (size_t i = xfun->reg_type_off[reg_type];                \
+         i < xfun->reg_type_off[reg_type+1]; ++i) {              \
+      DEFREG(prefix, i, reg_type, llvm_type, debug_type);        \
+    }                                                            \
+  } while (0)
+  DEFREGS(d, ava_prt_data, ava_value, di_ava_value);
+  DEFREGS(i, ava_prt_int, ava_integer, di_ava_integer);
+  DEFREGS(l, ava_prt_list, ava_fat_list_value, di_ava_fat_list_value);
+  DEFREGS(f, ava_prt_function, ava_function_ptr, di_ava_function_ptr);
+#undef DEFREGS
+#undef DEFREG
+
+  if (xfun->reg_type_off[ava_prt_parm+1] > xfun->reg_type_off[ava_prt_parm]) {
+    llvm::AllocaInst* parm_reg_base = irb.CreateAlloca(
+      context.types.ava_function_parameter,
+      llvm::ConstantInt::get(
+        context.types.c_size,
+        xfun->reg_type_off[ava_prt_parm+1] - xfun->reg_type_off[ava_prt_parm]),
+      "(p*)");
+    for (size_t i = xfun->reg_type_off[ava_prt_parm];
+         i < xfun->reg_type_off[ava_prt_parm+1]; ++i) {
+      std::snprintf(reg_name, sizeof(reg_name), "(p%d)", (int)i);
+      regs[i] = irb.CreateConstGEP1_32(
+        parm_reg_base, i - xfun->reg_type_off[ava_prt_parm]);
+      llvm::DIVariable di_var = context.dib.createLocalVariable(
+        llvm::dwarf::DW_TAG_auto_variable, di_fun,
+        reg_names[i], in_file, init_loc.getLine(),
+        context.di_ava_function_parameter, false);
+      context.dib.insertDeclare(regs[i], di_var, init_block);
+    }
+  }
+
+  /* Allocate temporary list slots */
+  for (size_t i = 0; i < 3; ++i)
+    tmplists[i] = irb.CreateAlloca(context.types.ava_fat_list_value);
+
+  /* Some instructions require us to supply an array of data registers
+   * somewhere. Find the largest such array we may need, allocate it once, and
+   * just copy things there whenever it may be necessary.
+   */
+  size_t max_data_array_length = 0;
+  for (size_t block_ix = 0; block_ix < xfun->num_blocks; ++block_ix) {
+    const ava_xcode_basic_block* block = xfun->blocks[block_ix];
+    for (size_t instr_ix = 0; instr_ix < block->length; ++instr_ix) {
+      const ava_pcode_exe* instr = block->elts[instr_ix];
+      if (ava_pcode_exe_is_special_reg_read_d(instr)) {
+        ava_integer count;
+        if (!ava_pcode_exe_get_reg_read_count(&count, instr, 0))
+          abort();
+
+        if ((size_t)count > max_data_array_length)
+          max_data_array_length = count;
+      }
+    }
+  }
+  llvm::AllocaInst* data_array_base = max_data_array_length == 0?
+    nullptr :
+    irb.CreateAlloca(context.types.ava_value,
+                     llvm::ConstantInt::get(context.types.c_size,
+                                            max_data_array_length),
+                     "(d*)");
+
+  /* Fall through to the first block, or off the end of the function if it's
+   * empty.
+   */
+  if (xfun->num_blocks > 0) {
+    irb.CreateBr(basic_blocks[0]);
+  } else {
+    irb.CreateRet(context.empty_string_value);
+  }
+
+  for (size_t block_ix = 0; block_ix < xfun->num_blocks; ++block_ix) {
+    const ava_xcode_basic_block* block = xfun->blocks[block_ix];
+    irb.SetInsertPoint(basic_blocks[block_ix]);
+    /* Explicitly tell the backend that particular registers do not have any
+     * particular value upon entry/exit to basic blocks.
+     *
+     * The optimiser could probably figure this out on its own, given how
+     * simple our definite initialisation checks are, but it doesn't hurt to
+     * add this.
+     */
+    explicitly_deinitialise_registers(irb, xfun, block->phi_iinit, regs);
+
+    bool has_terminal = false;
+    for (size_t instr_ix = 0; instr_ix < block->length; ++instr_ix) {
+      const ava_pcode_exe* exe = block->elts[instr_ix];
+      has_terminal |= translate_instruction(
+        context, irb, exe, xcode, xcode_list, basic_blocks, block_ix,
+        regs, tmplists, data_array_base, di_fun);
+    }
+
+    if (!has_terminal) {
+      /* Fell off the end of the block */
+      explicitly_deinitialise_registers(irb, xfun, block->phi_oinit, regs);
+      if (block_ix + 1 < xfun->num_blocks)
+        irb.CreateBr(basic_blocks[block_ix + 1]);
+      else
+        irb.CreateRet(context.empty_string_value);
+    }
+  }
+}
+
+static void explicitly_deinitialise_registers(
+  llvm::IRBuilder<true>& irb,
+  const ava_xcode_function* xfun,
+  const ava_ulong* phi,
+  llvm::Value*const* regs)
+noexcept {
+  for (size_t i = 0; i < xfun->reg_type_off[ava_prt_function+1]; ++i) {
+    if (!ava_xcode_phi_get(phi, i)) {
+      llvm::PointerType* reg_type =
+        llvm::cast<llvm::PointerType>(regs[i]->getType());
+      irb.CreateStore(
+        llvm::UndefValue::get(reg_type->getElementType()), regs[i]);
+    }
+  }
+}
+
+static ava_string to_ava_string(llvm::StringRef ref) {
+  return ava_string_of_bytes(ref.data(), ref.size());
+}
+
+static bool translate_instruction(
+  ava_xcode_translation_context& context,
+  llvm::IRBuilder<true>& irb,
+  const ava_pcode_exe* exe,
+  const ava_xcode_global* container,
+  const ava_xcode_global_list* xcode,
+  llvm::BasicBlock*const* basic_blocks,
+  size_t this_basic_block,
+  llvm::Value*const* regs,
+  llvm::Value*const* tmplists,
+  llvm::Value* data_array_base,
+  llvm::DISubprogram scope)
+noexcept {
+  const ava_xcode_function* xfun = container->fun;
+  const ava_pcg_fun* pcfun = (const ava_pcg_fun*)container->pc;
+
+  switch (exe->type) {
+  case ava_pcxt_src_pos: {
+    const ava_pcx_src_pos* p = (const ava_pcx_src_pos*)exe;
+    /* Assume in the same file */
+    irb.SetCurrentDebugLocation(
+      llvm::DebugLoc::get(p->start_line, p->start_column, scope));
+  } return false;
+
+  case ava_pcxt_push:
+  case ava_pcxt_pop:
+  case ava_pcxt_label:
+    return false;
+
+  case ava_pcxt_ld_imm_vd: {
+    const ava_pcx_ld_imm_vd* p = (const ava_pcx_ld_imm_vd*)exe;
+
+    llvm::Value* src = get_ava_value_constant(
+      context, ava_value_of_string(p->src));
+    store_register(context, irb, p->dst, src, pcfun, regs);
+  } return false;
+
+  case ava_pcxt_ld_imm_i: {
+    const ava_pcx_ld_imm_i* p = (const ava_pcx_ld_imm_i*)exe;
+
+    llvm::Value* src = llvm::ConstantInt::get(
+      context.types.ava_integer, p->src);
+    store_register(context, irb, p->dst, src, pcfun, regs);
+  } return false;
+
+  case ava_pcxt_ld_glob: {
+    const ava_pcx_ld_glob* p = (const ava_pcx_ld_glob*)exe;
+
+    llvm::Value* src = irb.CreateCall2(
+      ava_pcode_global_is_fun(xcode->elts[p->src].pc)?
+      context.di.x_load_glob_fun : context.di.x_load_glob_var,
+      context.global_vars[p->src],
+      get_ava_string_constant(
+        context, to_ava_string(
+          context.global_vars[p->src]->getName())));
+    store_register(context, irb, p->dst, src, pcfun, regs);
+  } return false;
+
+  case ava_pcxt_ld_reg: {
+    const ava_pcx_ld_reg* p = (const ava_pcx_ld_reg*)exe;
+
+    llvm::Value* raw_src = load_register(
+      context, irb, p->src, pcfun, regs, tmplists[0]);
+    llvm::Value* src = convert_register(
+      context, irb, raw_src, p->dst.type, p->src.type, tmplists[0]);
+    store_register(context, irb, p->dst, src, pcfun, regs);
+  } return false;
+
+  case ava_pcxt_ld_parm: {
+    const ava_pcx_ld_parm* p = (const ava_pcx_ld_parm*)exe;
+
+    llvm::Value* src = load_register(
+      context, irb, p->src, pcfun, regs, nullptr);
+    irb.CreateCall4(
+      context.di.x_store_p,
+      regs[p->dst.index], src,
+      llvm::ConstantInt::get(context.types.ava_function_parameter_type,
+                             p->spread? ava_fpt_spread : ava_fpt_static),
+      llvm::ConstantInt::get(context.types.c_size, p->dst.index));
+  } return false;
+
+  case ava_pcxt_set_glob: {
+    const ava_pcx_set_glob* p = (const ava_pcx_set_glob*)exe;
+
+    llvm::Value* src = load_register(
+      context, irb, p->src, pcfun, regs, nullptr);
+    irb.CreateCall3(
+      context.di.x_store_glob_var,
+      context.global_vars[p->dst],
+      src, get_ava_string_constant(
+        context,
+        to_ava_string(context.global_vars[p->dst]->getName())));
+  } return false;
+
+  case ava_pcxt_lempty: {
+    const ava_pcx_lempty* p = (const ava_pcx_lempty*)exe;
+
+    irb.CreateCall(context.di.x_lempty, tmplists[0]);
+    store_register(context, irb, p->dst, tmplists[0], pcfun, regs);
+  } return false;
+
+  case ava_pcxt_lappend: {
+    const ava_pcx_lappend* p = (const ava_pcx_lappend*)exe;
+
+    llvm::Value* lsrc = load_register(
+      context, irb, p->lsrc, pcfun, regs, tmplists[0]);
+    llvm::Value* esrc = load_register(
+      context, irb, p->esrc, pcfun, regs, nullptr);
+    irb.CreateCall3(
+      context.di.x_lappend,
+      tmplists[1], lsrc, esrc);
+    store_register(context, irb, p->dst, tmplists[1], pcfun, regs);
+  } return false;
+
+  case ava_pcxt_lcat: {
+    const ava_pcx_lcat* p = (const ava_pcx_lcat*)exe;
+
+    llvm::Value* left = load_register(
+      context, irb, p->left, pcfun, regs, tmplists[0]);
+    llvm::Value* right = load_register(
+      context, irb, p->right, pcfun, regs, tmplists[1]);
+    irb.CreateCall3(
+      context.di.x_lcat,
+      tmplists[2], left, right);
+    store_register(context, irb, p->dst, tmplists[2], pcfun, regs);
+  } return false;
+
+  case ava_pcxt_lhead: {
+    const ava_pcx_lhead* p = (const ava_pcx_lhead*)exe;
+
+    llvm::Value* src = load_register(
+      context, irb, p->src, pcfun, regs, tmplists[0]);
+    llvm::Value* val = irb.CreateCall(context.di.x_lhead, src);
+    store_register(context, irb, p->dst, val, pcfun, regs);
+  } return false;
+
+  case ava_pcxt_lbehead: {
+    const ava_pcx_lbehead* p = (const ava_pcx_lbehead*)exe;
+
+    llvm::Value* src = load_register(
+      context, irb, p->src, pcfun, regs, tmplists[0]);
+    irb.CreateCall2(context.di.x_lbehead, tmplists[1], src);
+    store_register(context, irb, p->dst, tmplists[1], pcfun, regs);
+  } return false;
+
+  case ava_pcxt_lflatten: {
+    const ava_pcx_lflatten* p = (const ava_pcx_lflatten*)exe;
+
+    llvm::Value* src = load_register(
+      context, irb, p->src, pcfun, regs, tmplists[0]);
+    irb.CreateCall2(context.di.x_lflatten, tmplists[1], src);
+    store_register(context, irb, p->dst, tmplists[1], pcfun, regs);
+  } return false;
+
+  case ava_pcxt_lindex: {
+    const ava_pcx_lindex* p = (const ava_pcx_lindex*)exe;
+
+    llvm::Value* src = load_register(
+      context, irb, p->src, pcfun, regs, tmplists[0]);
+    llvm::Value* ix = load_register(
+      context, irb, p->ix, pcfun, regs, nullptr);
+    llvm::Value* val = irb.CreateCall4(
+      context.di.x_lindex, src, ix,
+      get_ava_string_constant(context, p->extype),
+      get_ava_string_constant(context, p->exmessage));
+    store_register(context, irb, p->dst, val, pcfun, regs);
+  } return false;
+
+  case ava_pcxt_llength: {
+    const ava_pcx_llength* p = (const ava_pcx_llength*)exe;
+
+    llvm::Value* src = load_register(
+      context, irb, p->src, pcfun, regs, tmplists[0]);
+    llvm::Value* val = irb.CreateCall(context.di.x_llength, src);
+    store_register(context, irb, p->dst, val, pcfun, regs);
+  } return false;
+
+  case ava_pcxt_iadd_imm: {
+    const ava_pcx_iadd_imm* p = (const ava_pcx_iadd_imm*)exe;
+
+    llvm::Value* left = load_register(
+      context, irb, p->src, pcfun, regs, nullptr);
+    llvm::Value* right = llvm::ConstantInt::get(
+      context.types.ava_integer, p->incr);
+    llvm::Value* val = irb.CreateCall2(context.di.x_iadd, left, right);
+    store_register(context, irb, p->dst, val, pcfun, regs);
+  } return false;
+
+  case ava_pcxt_icmp: {
+    const ava_pcx_icmp* p = (const ava_pcx_icmp*)exe;
+
+    llvm::Value* left = load_register(
+      context, irb, p->left, pcfun, regs, nullptr);
+    llvm::Value* right = load_register(
+      context, irb, p->right, pcfun, regs, nullptr);
+    llvm::Value* val = irb.CreateCall2(context.di.x_icmp, left, right);
+    store_register(context, irb, p->dst, val, pcfun, regs);
+  } return false;
+
+  case ava_pcxt_bool: {
+    const ava_pcx_bool* p = (const ava_pcx_bool*)exe;
+
+    llvm::Value* src = load_register(
+      context, irb, p->src, pcfun, regs, nullptr);
+    llvm::Value* val = irb.CreateCall(context.di.x_bool, src);
+
+    store_register(context, irb, p->dst, val, pcfun, regs);
+  } return false;
+
+  case ava_pcxt_aaempty: {
+    const ava_pcx_aaempty* p = (const ava_pcx_aaempty*)exe;
+
+    llvm::Value* src = load_register(
+      context, irb, p->src, pcfun, regs, nullptr);
+    irb.CreateCall(context.di.x_aaempty, src);
+  } return false;
+
+  case ava_pcxt_invoke_ss: {
+    const ava_pcx_invoke_ss* p = (const ava_pcx_invoke_ss*)exe;
+
+    llvm::Value* args[p->nargs];
+    for (size_t i = 0; i < (size_t)p->nargs; ++i) {
+      ava_pcode_register reg;
+      reg.type = ava_prt_data;
+      reg.index = p->base + i;
+      args[i] = load_register(context, irb, reg, pcfun, regs, nullptr);
+    }
+
+    llvm::Value* ret = invoke_s(
+      context, irb, xcode->elts + p->fun, p->fun,
+      args, data_array_base, false);
+
+    store_register(context, irb, p->dst, ret, pcfun, regs);
+  } return false;
+
+  case ava_pcxt_invoke_sd: {
+    const ava_pcx_invoke_sd* p = (const ava_pcx_invoke_sd*)exe;
+
+    irb.CreateCall4(
+      context.di.x_invoke_sd_bind,
+      data_array_base, context.global_vars[p->fun],
+      regs[p->base],
+      llvm::ConstantInt::get(context.types.c_size, p->nparms));
+
+    const ava_pcode_global* target = xcode->elts[p->fun].pc;
+    const ava_function* prototype;
+    if (!ava_pcode_global_get_prototype(&prototype, target, 0))
+      abort();
+    size_t nargs = prototype->num_args;
+
+    llvm::Value* args[nargs];
+    for (size_t i = 0; i < nargs; ++i)
+      args[i] = irb.CreateLoad(irb.CreateConstGEP1_32(data_array_base, i));
+
+    llvm::Value* ret = invoke_s(
+      context, irb, xcode->elts + p->fun, p->fun,
+      args, data_array_base, true);
+
+    store_register(context, irb, p->dst, ret, pcfun, regs);
+  } return false;
+
+  case ava_pcxt_invoke_dd: {
+    const ava_pcx_invoke_dd* p = (const ava_pcx_invoke_dd*)exe;
+
+    llvm::Value* target = load_register(
+      context, irb, p->fun, pcfun, regs, nullptr);
+    llvm::Value* ret = irb.CreateCall3(
+      context.di.x_invoke_dd,
+      target, regs[p->base],
+      llvm::ConstantInt::get(context.types.c_size, p->nparms));
+
+    store_register(context, irb, p->dst, ret, pcfun, regs);
+  } return false;
+
+  case ava_pcxt_partial: {
+    const ava_pcx_partial* p = (const ava_pcx_partial*)exe;
+
+    llvm::Value* src = load_register(
+      context, irb, p->src, pcfun, regs, nullptr);
+    llvm::Value* val = irb.CreateCall3(
+      context.di.x_partial,
+      src, regs[p->base],
+      llvm::ConstantInt::get(context.types.c_size, p->nargs));
+
+    store_register(context, irb, p->dst, val, pcfun, regs);
+  } return false;
+
+  case ava_pcxt_ret: {
+    const ava_pcx_ret* p = (const ava_pcx_ret*)exe;
+
+    llvm::Value* src = load_register(
+      context, irb, p->return_value, pcfun, regs, nullptr);
+    explicitly_deinitialise_registers(
+      irb, xfun, xfun->blocks[this_basic_block]->phi_oinit, regs);
+    irb.CreateRet(src);
+  } return true;
+
+  case ava_pcxt_branch: {
+    const ava_pcx_branch* p = (const ava_pcx_branch*)exe;
+
+    llvm::Value* key = load_register(
+      context, irb, p->key, pcfun, regs, nullptr);
+    llvm::Value* value = llvm::ConstantInt::get(
+      context.types.ava_integer, p->value);
+    llvm::Value* test;
+    if (p->invert)
+      test = irb.CreateICmpNE(key, value);
+    else
+      test = irb.CreateICmpEQ(key, value);
+
+    explicitly_deinitialise_registers(
+      irb, xfun, xfun->blocks[this_basic_block]->phi_oinit, regs);
+
+    llvm::BasicBlock* subsequent;
+    if (this_basic_block + 1 < xfun->num_blocks) {
+      subsequent = basic_blocks[this_basic_block + 1];
+    } else {
+      /* Conditional branch which falls off the end of the function if not
+       * taken.
+       *
+       * Need to create an extra BasicBlock for it to fall into.
+       */
+      subsequent = llvm::BasicBlock::Create(
+        context.llvm_context, "branch-fall-off", basic_blocks[0]->getParent());
+      llvm::IRBuilder<true> sirb(subsequent);
+      sirb.CreateRet(context.empty_string_value);
+    }
+
+    irb.CreateCondBr(test, basic_blocks[p->target], subsequent);
+  } return true;
+
+  case ava_pcxt_goto: {
+    const ava_pcx_goto* p = (const ava_pcx_goto*)exe;
+
+    explicitly_deinitialise_registers(
+      irb, xfun, xfun->blocks[this_basic_block]->phi_oinit, regs);
+
+    irb.CreateBr(basic_blocks[p->target]);
+  } return true;
+  }
+}
+
+
+static void store_register(
+  ava_xcode_translation_context& context,
+  llvm::IRBuilder<true>& irb,
+  ava_pcode_register dst,
+  llvm::Value* src,
+  const ava_pcg_fun* pcfun,
+  llvm::Value*const* regs)
+noexcept {
+  switch (dst.type) {
+  case ava_prt_var:
+    irb.CreateCall3(
+      context.di.x_store_v, regs[dst.index], src,
+      get_ava_string_constant(
+        context, ava_to_string(ava_list_index_f(pcfun->vars, dst.index))));
+    break;
+
+  case ava_prt_data:
+    irb.CreateCall3(
+      context.di.x_store_d, regs[dst.index], src,
+      llvm::ConstantInt::get(context.types.c_size, dst.index));
+    break;
+
+  case ava_prt_int:
+    irb.CreateCall3(
+      context.di.x_store_i, regs[dst.index], src,
+      llvm::ConstantInt::get(context.types.c_size, dst.index));
+    break;
+
+  case ava_prt_list:
+    irb.CreateCall3(
+      context.di.x_store_l, regs[dst.index], src,
+      llvm::ConstantInt::get(context.types.c_size, dst.index));
+    break;
+
+  case ava_prt_function:
+    irb.CreateCall3(
+      context.di.x_store_f, regs[dst.index], src,
+      llvm::ConstantInt::get(context.types.c_size, dst.index));
+    break;
+
+  case ava_prt_parm: abort();
+  }
+}
+
+static llvm::Value* load_register(
+  ava_xcode_translation_context& context,
+  llvm::IRBuilder<true>& irb,
+  ava_pcode_register src,
+  const ava_pcg_fun* pcfun,
+  llvm::Value*const* regs,
+  llvm::Value* tmplist)
+noexcept {
+  switch (src.type) {
+  case ava_prt_var:
+    return irb.CreateCall2(
+      context.di.x_load_v, regs[src.index],
+      get_ava_string_constant(
+        context, ava_to_string(
+          ava_list_index_f(pcfun->vars, src.index))));
+
+  case ava_prt_data:
+    return irb.CreateCall2(
+      context.di.x_load_d, regs[src.index],
+      llvm::ConstantInt::get(context.types.c_size, src.index));
+
+  case ava_prt_int:
+    return irb.CreateCall2(
+      context.di.x_load_i, regs[src.index],
+      llvm::ConstantInt::get(context.types.c_size, src.index));
+
+  case ava_prt_function:
+    return irb.CreateCall2(
+      context.di.x_load_f, regs[src.index],
+      llvm::ConstantInt::get(context.types.c_size, src.index));
+
+  case ava_prt_list:
+    irb.CreateCall3(
+      context.di.x_load_l, tmplist, regs[src.index],
+      llvm::ConstantInt::get(context.types.c_size, src.index));
+    return tmplist;
+
+  case ava_prt_parm: abort();
+  }
+}
+
+static llvm::Value* convert_register(
+  ava_xcode_translation_context& context,
+  llvm::IRBuilder<true>& irb,
+  llvm::Value* src,
+  ava_pcode_register_type dst_type,
+  ava_pcode_register_type src_type,
+  llvm::Value* tmplist)
+noexcept {
+  if (dst_type == ava_prt_data || dst_type == ava_prt_var) {
+    switch (src_type) {
+    case ava_prt_data:
+    case ava_prt_var:
+      return src;
+
+    case ava_prt_int:
+      return irb.CreateCall(context.di.x_conv_vi, src);
+
+    case ava_prt_list:
+      return irb.CreateCall(context.di.x_conv_vl, src);
+
+    case ava_prt_function:
+      return irb.CreateCall(context.di.x_conv_vf, src);
+
+    case ava_prt_parm: abort();
+    }
+  } else if (src_type == dst_type) {
+    return src;
+  } else {
+    assert(ava_prt_data == src_type || ava_prt_var == src_type);
+
+    switch (dst_type) {
+    case ava_prt_data:
+    case ava_prt_var:
+      /* unreachable */
+      abort();
+
+    case ava_prt_int:
+      return irb.CreateCall(context.di.x_conv_iv, src);
+
+    case ava_prt_function:
+      return irb.CreateCall(context.di.x_conv_fv, src);
+
+    case ava_prt_list:
+      irb.CreateCall2(context.di.x_conv_lv, tmplist, src);
+      return tmplist;
+
+    case ava_prt_parm: abort();
+    }
+  }
+}
+
+static llvm::Value* invoke_s(
+  ava_xcode_translation_context& context,
+  llvm::IRBuilder<true>& irb,
+  const ava_xcode_global* xfun,
+  size_t fun_ix,
+  llvm::Value*const* args,
+  llvm::Value* data_array_base,
+  bool args_in_data_array)
+noexcept {
+  llvm::Value* ret;
+  const ava_function* prot;
+  llvm::Value* fun_mangled_name = get_ava_string_constant(
+    context, to_ava_string(context.global_funs[fun_ix]->getName()));
+
+  if (!ava_pcode_global_get_prototype(&prot, xfun->pc, 0))
+    abort();
+
+  if (ava_cc_ava == prot->calling_convention) {
+    irb.CreateCall2(context.di.x_pre_invoke_s,
+                    context.global_vars[fun_ix],
+                    fun_mangled_name);
+    if (prot->num_args <= AVA_CC_AVA_MAX_INLINE_ARGS) {
+      ret = irb.CreateCall(context.global_funs[fun_ix],
+                           llvm::ArrayRef<llvm::Value*>(args, prot->num_args));
+    } else {
+      if (!args_in_data_array) {
+        for (size_t i = 0; i < prot->num_args; ++i) {
+          irb.CreateStore(args[i], irb.CreateConstGEP1_32(data_array_base, i));
+        }
+      }
+      ret = irb.CreateCall2(
+        context.global_funs[fun_ix],
+        llvm::ConstantInt::get(context.types.c_size, prot->num_args),
+        data_array_base);
+    }
+  } else {
+    llvm::Value* actual_args[prot->num_args];
+    size_t actual_nargs = 0;
+
+    for (size_t i = 0; i < prot->num_args; ++i) {
+      switch (prot->args[i].marshal.primitive_type) {
+      case ava_cmpt_void:
+        irb.CreateCall(context.di.marshal_to[ava_cmpt_void], args[i]);
+        break;
+
+      case ava_cmpt_pointer:
+        actual_args[actual_nargs++] = irb.CreateCall2(
+          context.di.marshal_to[ava_cmpt_pointer],
+          args[i], get_pointer_prototype_constant(
+            context, prot->args[i].marshal.pointer_proto));
+        break;
+
+      default:
+        actual_args[actual_nargs++] = irb.CreateCall(
+          context.di.marshal_to[prot->args[i].marshal.primitive_type],
+          args[i]);
+        break;
+      }
+    }
+
+    llvm::Value* native_return = irb.CreateCall(
+      context.global_funs[fun_ix],
+      llvm::ArrayRef<llvm::Value*>(actual_args, actual_nargs));
+
+    switch (prot->c_return_type.primitive_type) {
+    case ava_cmpt_void:
+      ret = irb.CreateCall(context.di.marshal_from[ava_cmpt_void]);
+      break;
+
+    case ava_cmpt_pointer:
+      ret = irb.CreateCall2(
+        context.di.marshal_from[ava_cmpt_pointer],
+        native_return,
+        get_pointer_prototype_constant(
+          context, prot->c_return_type.pointer_proto));
+      break;
+
+    default:
+      ret = irb.CreateCall(
+        context.di.marshal_from[prot->c_return_type.primitive_type],
+        native_return);
+      break;
+    }
+  }
+
+  irb.CreateCall3(context.di.x_post_invoke_s,
+                  context.global_vars[fun_ix],
+                  fun_mangled_name, ret);
+
+  return ret;
 }
 
 AVA_END_FILE_PRIVATE

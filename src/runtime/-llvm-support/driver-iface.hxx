@@ -366,9 +366,12 @@ namespace ava {
     /**
      * Implements the lindex P-Code exe.
      *
-     * Signature: ava_value (const ava_fat_list_value* list, ava_integer ix)
+     * Signature: ava_value (const ava_fat_list_value* list, ava_integer ix,
+     *                       ava_string extype, ava_string exmessage)
      *
-     * The ixth value in *list is returned, barring exceptional cases.
+     * The ixth value in *list is returned, barring exceptional cases. If ix is
+     * out of bounds, throw an ava_error_exception with type extype and message
+     * exmessage.
      */
     F x_lindex;
     /**
@@ -475,6 +478,23 @@ namespace ava {
      * Returns !!i
      */
     F x_bool;
+
+    /**
+     * Marshalling functions, for invoke-ss and invoke-sd.
+     *
+     * All have one of the following two prototypes:
+     *   $type (ava_value)
+     *   ava_value ($type)
+     * except for pointer, which also gets a const ava_pointer_prototype*.
+     *   $type* (ava_value, const ava_pointer_prototype*)
+     *   ava_value ($type*, const ava_pointer_prototype*)
+     *
+     * Names are ava_isa_m_$direction_$type$ (ie, m_to_int, m_from_string$).
+     *
+     * @see ava_c_marshalling_primitive_type
+     */
+    F marshal_to[ava_cmpt_pointer+1];
+    F marshal_from[ava_cmpt_pointer+1];
 
     /**
      * If the module defines a `\program-entry`, a pointer to that function;
