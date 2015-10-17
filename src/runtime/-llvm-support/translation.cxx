@@ -268,7 +268,7 @@ const noexcept {
                          * enumerating anything.
                          */
                         llvm::DEBUG_METADATA_VERSION);
-
+  module->addModuleFlag(llvm::Module::Warning, "Dwarf Version", 4);
 
   for (size_t i = 0; !ava_string_is_present(filename) && i < xcode->length; ++i)
     if (ava_pcgt_src_pos == xcode->elts[i].pc->type)
@@ -1057,7 +1057,8 @@ noexcept {
       llvm::dwarf::DW_TAG_auto_variable, di_fun,
       reg_names[i],
       in_file, init_loc.getLine(), context.di_ava_value, true);
-    context.dib.insertDeclare(regs[i], di_var, init_block);
+    context.dib.insertDeclare(regs[i], di_var, init_block)
+      ->setDebugLoc(init_loc);
   }
 #define DEFREG(prefix, i, reg_type, llvm_type, debug_type) do {         \
     std::snprintf(reg_name, sizeof(reg_name), "(" #prefix "%d)", (int)i); \
@@ -1068,7 +1069,8 @@ noexcept {
       llvm::dwarf::DW_TAG_auto_variable, di_fun,                        \
       reg_names[i], in_file, init_loc.getLine(), context.debug_type,    \
       false);                                                           \
-    context.dib.insertDeclare(regs[i], di_var, init_block);             \
+    context.dib.insertDeclare(regs[i], di_var, init_block)              \
+      ->setDebugLoc(init_loc);                                          \
   } while (0)
 #define DEFREGS(prefix, reg_type, llvm_type, debug_type) do {    \
     for (size_t i = xfun->reg_type_off[reg_type];                \
@@ -1099,7 +1101,8 @@ noexcept {
         llvm::dwarf::DW_TAG_auto_variable, di_fun,
         reg_names[i], in_file, init_loc.getLine(),
         context.di_ava_function_parameter, false);
-      context.dib.insertDeclare(regs[i], di_var, init_block);
+      context.dib.insertDeclare(regs[i], di_var, init_block)
+        ->setDebugLoc(init_loc);
     }
   }
 
