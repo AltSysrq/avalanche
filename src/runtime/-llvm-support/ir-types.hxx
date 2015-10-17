@@ -52,7 +52,16 @@ namespace ava {
     llvm::IntegerType* ava_long;
     llvm::IntegerType* ava_integer;
     llvm::Type* ava_real;
+    /**
+     * The way ava_string appears in most places.
+     */
     llvm::Type* ava_string;
+    /**
+     * The way ava_string appears as a struct member.
+     *
+     * For some reason this is different than ava_string.
+     */
+    llvm::StructType* ava_string_wrapped;
     llvm::StructType* ava_twine;
     llvm::StructType* ava_twine_tail;
     llvm::StructType* ava_twine_tail_other;

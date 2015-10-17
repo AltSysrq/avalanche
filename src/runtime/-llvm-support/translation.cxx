@@ -142,6 +142,10 @@ static llvm::Constant* get_pointer_prototype_constant(
   const ava_xcode_translation_context& context,
   const ava_pointer_prototype* prototype) noexcept;
 
+static llvm::Constant* wrap_ava_string(
+  const ava_xcode_translation_context& context,
+  llvm::Constant* bare_string) noexcept;
+
 static llvm::Constant* get_ava_string_constant(
   const ava_xcode_translation_context& context,
   ava_string string) noexcept;
@@ -667,7 +671,9 @@ noexcept {
       context.types.ava_argument_binding,
       llvm::ConstantInt::get(context.types.c_int,
                              prototype->args[i].binding.type),
-      get_ava_string_constant(context, prototype->args[i].binding.name),
+      wrap_ava_string(
+        context,
+        get_ava_string_constant(context, prototype->args[i].binding.name)),
       get_ava_value_constant(context, prototype->args[i].binding.value),
       nullptr);
     argspecs[i] = llvm::ConstantStruct::get(
@@ -692,7 +698,10 @@ noexcept {
     llvm::ConstantInt::get(context.types.c_int, prototype->calling_convention),
     get_marshal_value(context, prototype->c_return_type),
     llvm::ConstantInt::get(context.types.c_size, prototype->num_args),
-    argspecs_var,
+    /* Bitcast the arrayness away */
+    llvm::ConstantExpr::getBitCast(
+      argspecs_var, context.types.ava_function->getElementType(
+        ava::ir_types::ff_args)),
     llvm::ConstantAggregateZero::get(
       context.types.ava_function->getElementType(
         ava::ir_types::ff_ffi)),
@@ -769,7 +778,8 @@ noexcept {
     llvm::Constant* val = llvm::ConstantStruct::get(
       context.types.ava_pointer_prototype,
       context.pointer_prototype_header,
-      get_ava_string_constant(context, prototype->tag),
+      wrap_ava_string(
+        context, get_ava_string_constant(context, prototype->tag)),
       llvm::ConstantInt::get(context.types.ava_bool, prototype->is_const),
       nullptr);
     llvm::GlobalVariable* var = new llvm::GlobalVariable(
@@ -818,7 +828,9 @@ noexcept {
         nullptr);
     llvm::Constant* twineconst = llvm::ConstantStruct::get(
       context.types.ava_twine,
-      strglob,
+      /* Bitcast arrayness away */
+      llvm::ConstantExpr::getBitCast(
+        strglob, context.types.ava_twine->getElementType(0)),
       llvm::ConstantInt::get(context.types.c_size, ava_string_length(string)),
       twinetailconst,
       nullptr);
@@ -832,8 +844,17 @@ noexcept {
       llvm::ConstantExpr::getPtrToInt(twinevar, context.types.ava_string));
     ret->setUnnamedAddr(true);
 
-    return llvm::ConstantExpr::getBitCast(ret, context.types.ava_string);
+    return llvm::ConstantExpr::getPtrToInt(ret, context.types.ava_string);
   }
+}
+
+static llvm::Constant* wrap_ava_string(
+  const ava_xcode_translation_context& context,
+  llvm::Constant* bare_string)
+noexcept {
+  return llvm::ConstantStruct::get(
+    context.types.ava_string_wrapped,
+    bare_string, nullptr);
 }
 
 static llvm::Constant* get_ava_value_constant(

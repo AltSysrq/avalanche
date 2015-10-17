@@ -67,6 +67,8 @@ noexcept {
    * pointer.
    */
   ava_string = ava_long;
+  ava_string_wrapped = llvm::cast<llvm::StructType>(
+    abi_info->getElementType(abi_str));
   ava_twine = llvm::cast<llvm::StructType>(abi_info->getElementType(abi_twine));
   ava_twine_tail = llvm::cast<llvm::StructType>(
     ava_twine->getElementType(tf_tail));

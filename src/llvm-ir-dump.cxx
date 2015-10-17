@@ -94,7 +94,6 @@ static ava_value run(void* filename) {
     llvm::ModulePassManager passManager;
     passManager.addPass(llvm::BitcodeWriterPass(bcout));
     passManager.run(output.get());
-    std::printf("Bitcode written to bitcode.bc\n");
   }
 
   return ret;
