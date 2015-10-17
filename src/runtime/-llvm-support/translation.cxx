@@ -838,13 +838,9 @@ noexcept {
       context.module, context.types.ava_twine, true,
       llvm::GlobalVariable::LinkOnceODRLinkage,
       twineconst);
-    llvm::GlobalVariable* ret = new llvm::GlobalVariable(
-      context.module, context.types.ava_string, true,
-      llvm::GlobalVariable::LinkOnceODRLinkage,
-      llvm::ConstantExpr::getPtrToInt(twinevar, context.types.ava_string));
-    ret->setUnnamedAddr(true);
+    twinevar->setUnnamedAddr(true);
 
-    return llvm::ConstantExpr::getPtrToInt(ret, context.types.ava_string);
+    return llvm::ConstantExpr::getPtrToInt(twinevar, context.types.ava_string);
   }
 }
 
