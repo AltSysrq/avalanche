@@ -1,0 +1,23 @@
+#! /bin/sh
+
+# Hacky script to compile Avalanche code to native executables.
+# Usage:
+#   avac source.ava [options]
+#
+# options are passed to gcc/clang at the end of the pipeline which assembles
+# the final executable.
+
+SRCDIR=`dirname "$0"`
+CC=`which gcc5 || which gcc || which clang35 || which clang-3.5 || which cc`
+LLC=`which llc35 || which llc-3.5`
+INFILE="$1"
+shift
+
+if test -d /usr/include/bsd; then
+    LIBS="-lavart -lbsd"
+else
+    LIBS="-lavart"
+fi
+
+"$SRCDIR"/llvm-ir-dump.t "$INFILE" | $LLC | \
+    $CC -pipe -x assembler - -L "$SRCDIR/.libs" $LIBS "$@"

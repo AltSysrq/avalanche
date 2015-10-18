@@ -1,6 +1,6 @@
 /*
   Simple test program which compiles stdin to LLVM IR and dumps the resulting
-  module to stdout.
+  module (in bitcode) to stdout.
  */
 
 #ifdef HAVE_CONFIG_H
@@ -74,12 +74,9 @@ static ava_value run(void* filename) {
     return ret;
   }
 
-  output->dump();
-  std::cerr.flush();
-
   {
     std::string dont_care;
-    llvm::raw_fd_ostream bcout("bitcode.bc", dont_care, llvm::sys::fs::F_None);
+    llvm::raw_fd_ostream bcout("/dev/stdout", dont_care, llvm::sys::fs::F_None);
     llvm::ModulePassManager passManager;
     passManager.addPass(llvm::BitcodeWriterPass(bcout));
     passManager.run(output.get());
