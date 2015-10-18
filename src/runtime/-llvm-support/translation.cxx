@@ -1114,6 +1114,7 @@ noexcept {
     for (size_t i = xfun->reg_type_off[ava_prt_parm];
          i < xfun->reg_type_off[ava_prt_parm+1]; ++i) {
       std::snprintf(reg_name, sizeof(reg_name), "(p%d)", (int)i);
+      reg_names[i] = strdup(reg_name);
       regs[i] = irb.CreateConstGEP1_32(
         parm_reg_base, i - xfun->reg_type_off[ava_prt_parm]);
       llvm::DIVariable di_var = context.dib.createLocalVariable(
@@ -1145,6 +1146,19 @@ noexcept {
 
         if ((size_t)count > max_data_array_length)
           max_data_array_length = count;
+      }
+
+      /* invoke-sd needs space for its bound arguments */
+      if (ava_pcxt_invoke_sd == instr->type) {
+        const ava_pcx_invoke_sd* isd = (const ava_pcx_invoke_sd*)instr;
+        const ava_pcode_global* callee = xcode_list->elts[isd->fun].pc;
+        const ava_function* prototype;
+
+        if (!ava_pcode_global_get_prototype(&prototype, callee, 0))
+          abort();
+
+        if (prototype->num_args > max_data_array_length)
+          max_data_array_length = prototype->num_args;
       }
     }
   }
@@ -1494,9 +1508,19 @@ noexcept {
 
     llvm::Value* src = load_register(
       context, irb, p->src, pcfun, regs, nullptr);
+    for (size_t i = 0; i < (size_t)p->nargs; ++i) {
+      ava_pcode_register reg;
+      reg.type = ava_prt_data;
+      reg.index = p->base + i;
+      llvm::Value* val = load_register(
+        context, irb, reg, pcfun, regs, nullptr);
+      irb.CreateStore(
+        val, irb.CreateConstGEP1_32(data_array_base, i));
+    }
+
     llvm::Value* val = irb.CreateCall3(
       context.di.x_partial,
-      src, regs[p->base],
+      src, data_array_base,
       llvm::ConstantInt::get(context.types.c_size, p->nargs));
 
     store_register(context, irb, p->dst, val, pcfun, regs);

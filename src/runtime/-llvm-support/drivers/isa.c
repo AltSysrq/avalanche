@@ -186,7 +186,7 @@ void ava_isa_x_lappend$(ava_fat_list_value* dst,
                         const ava_fat_list_value* src,
                         ava_value val) {
   *dst = ava_fat_list_value_of(
-    (*src->v->append)(dst->c, val).v);
+    (*src->v->append)(src->c, val).v);
 }
 
 void ava_isa_x_lcat$(ava_fat_list_value* dst,
