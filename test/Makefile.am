@@ -11,7 +11,6 @@ runtime/test-exception.t \
 runtime/test-function.t \
 runtime/test-hash-map.t \
 runtime/test-integer.t \
-runtime/test-interp.t \
 runtime/test-intrinsics-fundamental.t \
 runtime/test-lex.t \
 runtime/test-list-map.t \

@@ -13,7 +13,6 @@ avalanche/gen-errors.h \
 avalanche/exception.h \
 avalanche/function.h \
 avalanche/integer.h \
-avalanche/interp.h \
 avalanche/intrinsics.h \
 avalanche/jit.h \
 avalanche/lex.h \
