@@ -49,6 +49,7 @@ AVA_BEGIN_DECLS
 #include "avalanche/code-gen.h"
 #include "avalanche/interp.h"
 #include "avalanche/compile-frontend.h"
+#include "avalanche/jit.h"
 
 AVA_END_DECLS
 
