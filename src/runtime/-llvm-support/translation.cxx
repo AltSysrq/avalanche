@@ -505,7 +505,7 @@ ava_xcode_translation_context::ava_xcode_translation_context(
      */
     0xD541, basename, dirname,
     PACKAGE_STRING,
-    true, "", 1, llvm::StringRef(),
+    true, "", 0, llvm::StringRef(),
     full_debug? llvm::DIBuilder::FullDebug : llvm::DIBuilder::LineTablesOnly,
     true);
   di_file = dib.createFile(basename, dirname);
