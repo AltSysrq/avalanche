@@ -1057,9 +1057,12 @@ noexcept {
     }
 
     llvm::DIVariable di_var = context.dib.createLocalVariable(
-      llvm::dwarf::DW_TAG_auto_variable, di_fun,
-      reg_names[i],
-      in_file, init_loc.getLine(), context.di_ava_value, true);
+      i < pcfun->prototype->num_args?
+      llvm::dwarf::DW_TAG_arg_variable :
+      llvm::dwarf::DW_TAG_auto_variable,
+      di_fun, reg_names[i],
+      in_file, init_loc.getLine(), context.di_ava_value, true,
+      0, i < pcfun->prototype->num_args? i + 1 : 0);
     context.dib.insertDeclare(regs[i], di_var, init_block)
       ->setDebugLoc(init_loc);
   }
