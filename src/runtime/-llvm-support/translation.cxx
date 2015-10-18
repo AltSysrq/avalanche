@@ -1041,6 +1041,9 @@ noexcept {
        i < xfun->reg_type_off[ava_prt_var+1]; ++i) {
     reg_names[i] = ava_string_to_cstring(
       ava_to_string(ava_list_index_f(pcfun->vars, i)));
+    if (0 == strlen(reg_names[i]))
+      reg_names[i] = "(anonymous)";
+
     regs[i] = irb.CreateAlloca(context.types.ava_value, nullptr, reg_names[i]);
     /* Initialise from argument if applicable */
     if (i < pcfun->prototype->num_args) {
