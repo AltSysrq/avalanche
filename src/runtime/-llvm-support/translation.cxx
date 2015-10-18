@@ -39,11 +39,13 @@
 #include <llvm/IR/IRBuilder.h>
 #include <llvm/IR/LLVMContext.h>
 #include <llvm/IR/Module.h>
+#include <llvm/IR/Verifier.h>
 #include <llvm/IRReader/IRReader.h>
 #include <llvm/Linker/Linker.h>
 #include <llvm/Support/Dwarf.h>
 #include <llvm/Support/MemoryBuffer.h>
 #include <llvm/Support/SourceMgr.h>
+#include <llvm/Support/raw_ostream.h>
 
 #define AVA__INTERNAL_INCLUDE 1
 #include "../avalanche/defs.h"
@@ -56,6 +58,7 @@ AVA_BEGIN_DECLS
 #include "../avalanche/errors.h"
 #include "../avalanche/name-mangle.h"
 AVA_END_DECLS
+#include "../../bsd.h"
 
 #include "driver-iface.hxx"
 #include "ir-types.hxx"
@@ -306,6 +309,16 @@ const noexcept {
   }
 
   context.dib.finalize();
+
+  {
+    std::string errors;
+    llvm::raw_string_ostream error_stream(errors);
+    /* returns *true* on "not valid" */
+    if (llvm::verifyModule(*module, &error_stream)) {
+      module->dump();
+      errx(EX_SOFTWARE, "Generated invalid IR: %s", errors.c_str());
+    }
+  }
 
   return std::move(module);
 }
