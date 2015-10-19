@@ -48,6 +48,7 @@ typedef struct {
    * found.
    */
   ava_uint update_start_label;
+  const ava_compile_location* location;
 
   union {
     struct {
@@ -214,6 +215,7 @@ ava_macro_subst_result ava_intr_loop_subst(
         return ava_macsub_error_result(
           context, ava_error_loop_each_without_list(&in_unit->location));
 
+      this->clauses[num_clauses].location = &clause_id_unit->location;
       this->clauses[num_clauses].type = ava_ilct_each;
       this->clauses[num_clauses].v.each.num_lvalues = num_lvalues;
       this->clauses[num_clauses].v.each.lvalues =
@@ -263,6 +265,7 @@ ava_macro_subst_result ava_intr_loop_subst(
         return ava_macsub_error_result(
           context, ava_error_loop_for_update_not_block(&update_unit->location));
 
+      this->clauses[num_clauses].location = &clause_id_unit->location;
       this->clauses[num_clauses].type = ava_ilct_for;
       this->clauses[num_clauses].v.vor.init = ava_macsub_run_contents(
         context, init_unit);
@@ -294,6 +297,7 @@ ava_macro_subst_result ava_intr_loop_subst(
           context, ava_error_loop_while_cond_not_subst(
             &unit->location, clause_id));
 
+      this->clauses[num_clauses].location = &clause_id_unit->location;
       this->clauses[num_clauses].type = ava_ilct_while;
       this->clauses[num_clauses].v.vhile.cond =
         ava_macsub_run_units(context, unit, unit);
@@ -315,6 +319,7 @@ ava_macro_subst_result ava_intr_loop_subst(
             &unit->location, clause_id));
 
     add_do_clause:
+      this->clauses[num_clauses].location = &clause_id_unit->location;
       this->clauses[num_clauses].type = ava_ilct_do;
       this->clauses[num_clauses].v.doo.is_expression =
         ava_put_substitution == unit->type;
@@ -329,6 +334,7 @@ ava_macro_subst_result ava_intr_loop_subst(
           context, ava_error_loop_collect_without_value(
             &clause_id_unit->location));
 
+      this->clauses[num_clauses].location = &clause_id_unit->location;
       this->clauses[num_clauses].type = ava_ilct_collect;
       this->clauses[num_clauses].v.collect.expression =
         ava_macsub_run_units(context, unit, unit);
@@ -338,6 +344,7 @@ ava_macro_subst_result ava_intr_loop_subst(
 
     default: {
       if (0 == ava_strcmp(collecting_str, clause_id)) {
+        this->clauses[num_clauses].location = &clause_id_unit->location;
         this->clauses[num_clauses].type = ava_ilct_collect;
         this->clauses[num_clauses].v.collect.expression = NULL;
         unit = clause_id_unit;
@@ -566,6 +573,7 @@ static void ava_intr_loop_cg_evaluate(
   /* Initialisation phase */
   AVA_PCXB(ld_imm_vd, accum, AVA_EMPTY_STRING);
   for (clause = 0; clause < loop->num_clauses; ++clause) {
+    ava_codegen_set_location(context, loop->clauses[clause].location);
     switch (loop->clauses[clause].type) {
     case ava_ilct_each: {
       ava_pcode_register tmp;
@@ -596,6 +604,7 @@ static void ava_intr_loop_cg_evaluate(
   AVA_PCXB(label, iterate_label);
   AVA_PCXB(ld_imm_vd, iterval, AVA_EMPTY_STRING);
   for (clause = 0; clause < loop->num_clauses; ++clause) {
+    ava_codegen_set_location(context, loop->clauses[clause].location);
     switch (loop->clauses[clause].type) {
     case ava_ilct_each: {
       AVA_STATIC_STRING(exception_type, "bad-list-multiplicity");
@@ -693,6 +702,7 @@ static void ava_intr_loop_cg_evaluate(
   /* Update phase */
   for (clause = loop->num_clauses - 1; clause < loop->num_clauses; --clause) {
     AVA_PCXB(label, loop->clauses[clause].update_start_label);
+    ava_codegen_set_location(context, loop->clauses[clause].location);
     switch (loop->clauses[clause].type) {
     case ava_ilct_each:
       break;
