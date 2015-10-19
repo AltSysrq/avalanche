@@ -24,6 +24,7 @@
 #include "bsd.h"
 #define AVA__INTERNAL_INCLUDE 1
 #include "runtime/-llvm-support/translation.hxx"
+#include "runtime/-llvm-support/optimisation.hxx"
 #include "runtime/-llvm-support/drivers.h"
 
 static ava_value run(void* filename) {
@@ -73,6 +74,8 @@ static ava_value run(void* filename) {
     warnx("Translation failed: %s", error.c_str());
     return ret;
   }
+
+  ava::optimise_module(*output, 3);
 
   {
     std::string dont_care;

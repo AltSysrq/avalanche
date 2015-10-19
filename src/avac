@@ -19,5 +19,5 @@ else
     LIBS="-lavart"
 fi
 
-"$SRCDIR"/llvm-ir-dump.t "$INFILE" | $LLC | \
+"$SRCDIR"/llvm-ir-dump.t "$INFILE" | $LLC -O3 | \
     $CC -pipe -x assembler - -L "$SRCDIR/.libs" $LIBS "$@"

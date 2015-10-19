@@ -79,6 +79,7 @@ runtime/-llvm-support/drivers/gen-main.c \
 runtime/-llvm-support/driver-iface.cxx \
 runtime/-llvm-support/ir-types.cxx \
 runtime/-llvm-support/jit-context.cxx \
+runtime/-llvm-support/optimisation.cxx \
 runtime/-llvm-support/translation.cxx
 
 libavart_la_LIBADD = $(LIBUNWIND_LIBS) $(LIBFFI_LIBS) $(LLVM_LIBS)
