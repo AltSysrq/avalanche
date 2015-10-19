@@ -65,6 +65,8 @@ void ava::optimise_module(llvm::Module& module, unsigned level) {
    * lots of local vars.
    */
   pass_manager.add(llvm::createAlwaysInlinerPass());
+  /* Separate clang-generated memcpy()s for ava_fat_list_values */
+  pass_manager.add(llvm::createMemCpyOptPass());
   /* Split fat_list_values and such up when possible, to produce better
    * register allocation.
    */
@@ -80,6 +82,9 @@ void ava::optimise_module(llvm::Module& module, unsigned level) {
     /* Improve instruction simplification */
     pass_manager.add(llvm::createRegionInfoPass());
   }
+  /* Allow splitting vectors when favourable */
+  pass_manager.add(llvm::createScalarizerPass());
+  pass_manager.add(llvm::createPromoteMemoryToRegisterPass());
   /* Trim fat within basic blocks */
   pass_manager.add(llvm::createDeadInstEliminationPass());
   pass_manager.add(llvm::createMergedLoadStoreMotionPass());
@@ -93,6 +98,7 @@ void ava::optimise_module(llvm::Module& module, unsigned level) {
      * ava_integer_of_value and so forth.
      */
     pass_manager.add(llvm::createEarlyCSEPass());
+    pass_manager.add(llvm::createCorrelatedValuePropagationPass());
   }
 
   if (level >= 2) {
