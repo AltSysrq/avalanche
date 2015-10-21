@@ -23,12 +23,11 @@
  * The `if` control macro.
  *
  * Syntax:
- *   if (condition result)+ [["else"] result]
+ *   if (condition result)+ ["else" result]
  *
  * Each condition is a substitution. Each result is either a substitution or a
  * block; all results in the same if statement must be of the same type. The
- * "else" is mandatory if there is more than one condition or if the results
- * are blocks.
+ * "else" is mandatory.
  *
  * Each condition is evaluated in sequence. Upon the first that produces a true
  * value, the corresponding result is evaluated and execution of the if
@@ -56,11 +55,6 @@
  * - The substitution and block forms are used as per Avalanche's general
  *   approach to being both statement- and expression-oriented without
  *   conflating the two.
- *
- * - The final else is required in almost all cases since it is, in a sense, a
- *   condition of its own. It is optional in the one-condition expression form
- *   so that `if` can be used as a lightweight ternary operator.
- *     if ($foo) ($bar) ($baz)
  *
  * - Parentheses are required around conditions so that no sentinal is needed
  *   to find the end of the condition, which would impose awkward constraints

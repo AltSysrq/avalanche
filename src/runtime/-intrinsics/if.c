@@ -119,13 +119,10 @@ ava_macro_subst_result ava_intr_if_subst(
         this->clauses[ix].condition = ava_macsub_run_units(context, cond, cond);
       }
     } else {
-      /* Implicit "else" condition */
-      if (num_clauses > 2 || !this->expression_form)
-        return ava_macsub_error_result(
-          context, ava_error_if_required_else_omitted(
-            &res->location));
-
-      this->clauses[ix].condition = NULL;
+      /* Missing "else" condition? */
+      return ava_macsub_error_result(
+        context, ava_error_if_required_else_omitted(
+          &res->location));
     }
 
     if (0 == ix) {

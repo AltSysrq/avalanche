@@ -1356,9 +1356,7 @@ set defs {
     msg "\"else\" required before this point."
     explanation {
       Uses of the "if" macro require the "else" keyword before the final result
-      for the sake of clarity whenever the statement has more than one
-      conditional clause or when using statement form (i.e., with blocks
-      enclosed in braces).
+      for the sake of clarity.
     }
   }
 
