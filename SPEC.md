@@ -73,9 +73,11 @@ described below.
 
 A Newline produces a Newline Token. A Backslash followed by any amount of
 Whitespace, a possible Comment, then a Newline suppresses the Newline Token
-that would result. A Backslash followed by one or more Whitespace characters
-itself results in a Newline Token otherwise. Such "synthetic" Newline Tokens
-must occur Independent.
+that would result. A Newline is also suppressed if it is followed by any number
+of Whitespace characters, a Backslash, and at least one Whitespace character. A
+Backslash followed by one or more Whitespace characters itself results in a
+Newline Token otherwise. Such "synthetic" Newline Tokens must occur
+Independent.
 
 ```
   logical line 1
@@ -83,6 +85,12 @@ must occur Independent.
   logical line 3 \ ; comment
   still logical line 3
   logical line 4 \ logical line 5
+  logical lnie 6
+  \ still logical line 6
+  \ ; Doesn't escape the NL following it because it is only preceded by
+    ; Whitespac
+  logical line 7
+  \*foo ; logical line 8, since the \ is not followed by Whitespace
 ```
 
 Any contiguous sequence of Word characters is a Bareword Token. Certain

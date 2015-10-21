@@ -432,6 +432,7 @@ ava_lex_status ava_lex_lex(ava_lex_result* dst, ava_lex_context* lex) {
       <Ground> WS+              {         IGNORE(); }
       <Ground> NL               {         ACCEPT(ava_lex_newline); }
       <Ground> BS WS* COM? NL   {         IGNORE(); }
+      <Ground> NL WS* BS WS+    {         IGNORE(); }
       <Ground> BS WS+           { IND();  ACCEPT(ava_lex_newline); }
       <Ground> COM              {         IGNORE(); }
       <Ground> BS '*'           { IND();  ACCEPT(ava_lex_spread); }

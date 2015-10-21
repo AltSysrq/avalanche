@@ -185,6 +185,33 @@ deftest(escape_newline_before_comment) {
   end();
 }
 
+deftest(escape_newline_at_bol) {
+  start("foo\n\\ bar");
+  lex(ava_ltt_bareword, "foo");
+  lex(ava_ltt_bareword, "bar");
+}
+
+deftest(escape_newline_at_bol_after_ws) {
+  start("foo\n  \\ bar");
+  lex(ava_ltt_bareword, "foo");
+  lex(ava_ltt_bareword, "bar");
+}
+
+deftest(spread_at_bol) {
+  start("foo\n\\*bar");
+  lex(ava_ltt_bareword, "foo");
+  lex(ava_ltt_newline, "\n");
+  lex(ava_ltt_spread, "\\*");
+  lex(ava_ltt_bareword, "bar");
+}
+
+deftest(line_with_only_backslash_not_removed) {
+  start("foo\n\\\nbar");
+  lex(ava_ltt_bareword, "foo");
+  lex(ava_ltt_newline, "\n");
+  lex(ava_ltt_bareword, "bar");
+}
+
 deftest(parentheses) {
   start(" ()() [][] {}{}");
   lex(ava_ltt_begin_substitution, "(");
