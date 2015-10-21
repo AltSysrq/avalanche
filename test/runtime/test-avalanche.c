@@ -25,6 +25,7 @@
 #include <glob.h>
 
 #include "runtime/avalanche.h"
+#include "runtime/-llvm-support/drivers.h"
 #include "bsd.h"
 
 /*
@@ -96,6 +97,7 @@ ava_value lnot(ava_value a) {
 static const char** inputs;
 static void run_test(int ix);
 static ava_value run_test_impl(void* arg);
+static void execute_xcode(const ava_xcode_global_list* xcode);
 
 static void nop(void) { }
 
@@ -157,6 +159,7 @@ static ava_value run_test_impl(void* arg) {
   size_t nread;
   ava_compile_error_list errors;
   ava_pcode_global_list* pcode;
+  ava_xcode_global_list* xcode;
   const char* underscore, * name, * error_str;
   char expected_error[64];
 
@@ -173,7 +176,7 @@ static ava_value run_test_impl(void* arg) {
   } while (nread == sizeof(buff));
   fclose(infile);
 
-  if (!ava_compile_file(&pcode, NULL, &errors,
+  if (!ava_compile_file(&pcode, &xcode, &errors,
                         AVA_ASCII9_STRING("input:"),
                         /* Don't use the actual filename so that expected
                          * errors aren't found trivially.
@@ -183,7 +186,7 @@ static ava_value run_test_impl(void* arg) {
     goto done;
 
   test_passed = ava_false;
-  ava_interp_exec(pcode);
+  execute_xcode(xcode);
 
   done:
   name = strrchr(inputs[ix], '/') + 1;
@@ -211,4 +214,22 @@ static ava_value run_test_impl(void* arg) {
   }
 
   return ava_empty_list().v;
+}
+
+static void execute_xcode(const ava_xcode_global_list* xcode) {
+  ava_string jit_error;
+  ava_jit_context* jit;
+
+  jit = ava_jit_context_new();
+  ava_jit_add_driver(jit, ava_driver_isa_unchecked_data,
+                     ava_driver_isa_unchecked_size);
+  jit_error = ava_jit_run_module(
+    jit, xcode,
+    AVA_ASCII9_STRING("testinput"),
+    AVA_ASCII9_STRING("input:main"));
+
+  if (ava_string_is_present(jit_error))
+    ck_abort_msg("JIT failed: %s", ava_string_to_cstring(jit_error));
+
+  ava_jit_context_delete(jit);
 }

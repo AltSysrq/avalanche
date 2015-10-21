@@ -47,15 +47,8 @@ AVA_BEGIN_DECLS
 #include "avalanche/pcode-validation.h"
 #include "avalanche/varscope.h"
 #include "avalanche/code-gen.h"
-#include "avalanche/interp.h"
 #include "avalanche/compile-frontend.h"
-
-/**
- * Initialises the avalanche runtime.
- *
- * This should be called exactly once at process startup.
- */
-void ava_init(void);
+#include "avalanche/jit.h"
 
 AVA_END_DECLS
 

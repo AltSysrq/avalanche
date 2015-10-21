@@ -13,15 +13,24 @@
  * OF  CONTRACT, NEGLIGENCE  OR OTHER  TORTIOUS ACTION,  ARISING OUT  OF OR  IN
  * CONNECTION WITH THE USE OR PERFORMANCE OF THIS SOFTWARE.
  */
-#ifndef AVA__INTERNAL_INCLUDE
-#error "Don't include avalanche/interp.h directly; just include avalanche.h"
-#endif
+#ifndef AVA_RUNTIME__LLVM_SUPPORT_OPTIMISATION_HXX_
+#define AVA_RUNTIME__LLVM_SUPPORT_OPTIMISATION_HXX_
 
-#ifndef AVA_RUNTIME_INTERP_H_
-#define AVA_RUNTIME_INTERP_H_
+#include <llvm/IR/Module.h>
 
-#include "pcode.h"
+namespace ava {
+  /**
+   * Applies optimisation passes to the given LLVM module in-place.
+   *
+   * The particular optimisation pass sequence is optimised for Avalanche (in
+   * particular, the way in which its IR codegen works) and probably not widely
+   * applicable to other languages.
+   *
+   * @param module The module to optimise.
+   * @param level The optimisation level. 0 makes the function a noop. 3 is
+   * currently the maximum useful optimisation level.
+   */
+  void optimise_module(llvm::Module& module, unsigned level);
+}
 
-void ava_interp_exec(const ava_pcode_global_list* pcode);
-
-#endif /* AVA_RUNTIME_INTERP_H_ */
+#endif /* AVA_RUNTIME__LLVM_SUPPORT_OPTIMISATION_HXX_ */

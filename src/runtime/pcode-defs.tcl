@@ -57,29 +57,6 @@ struct global g {
     }
   }
 
-
-  # Raw C code block.
-  #
-  # Defines C code to be inserted when transpiling to C. If visibility is
-  # public, the code is inserted into all modules that directly load this
-  # P-Code; if private, the code is only inserted into the transpilation of the
-  # containing P-Code itself. There is no internal visiblity for this type. If
-  # mandatory is true, execution of the P-Code is considered impossible if the
-  # code cannot be meaningfully inserted, making interpretation impossible.
-  #
-  # Naturally, use of this declaration type is inherently unsafe, since it is
-  # impossible to reason about what it may do.
-  elt c {
-    # Whether this C block is mandatory for the P-Code to be valid.
-    bool mandatory
-    # Whether all client code of this P-Code has this block inserted.
-    bool is-public
-    # The raw C code to insert.
-    #
-    # No checks are performed on the contents of this code.
-    str text
-  }
-
   # Declares a global variable defined by a different P-Code unit.
   #
   # Semantics: At any point before this P-Code unit's initialisation
@@ -558,6 +535,19 @@ struct exe x {
     }
   }
 
+  # Normalises a boolean integer to be 0 or 1.
+  #
+  # Semantics: The src I-register is read. If it is 0, 0 is written to the dst
+  # I-register. Otherwise, 1 is written to the dst I-register.
+  elt bool {
+    register i dst {
+      prop reg-write
+    }
+    register i src {
+      prop reg-read
+    }
+  }
+
   # Asserts that a value (an argument, presumably) is the empty string.
   #
   # Semantics: The given V-register is read. If it is the empty string, this
@@ -684,13 +674,13 @@ struct exe x {
   # Performs partial application of a function.
   #
   # Semantics: Starting from the first non-implicit argument in the function in
-  # src, each argument in the function is changed to an implicit argument whose
-  # value is read from successive D-registers starting at d$base. $nargs
-  # arguments are rebound this way. The result is written into dst.
+  # src, each non-implicit argument in the function is changed to an implicit
+  # argument whose value is read from successive D-registers starting at
+  # d$base. $nargs arguments are rebound this way. The result is written into
+  # dst.
   #
   # The behaviour of this function is undefined if the function in src does not
-  # have at least $nargs arguments following the first non-implicit argument,
-  # or if it has no non-implicit arguments at all.
+  # have at least $nargs non-implicit arguments.
   #
   # This instruction is intended for the construction of closures. It is
   # important to note that it ignores the actual binding type of arguments it
@@ -726,19 +716,6 @@ struct exe x {
     attr terminal
     attr terminal-no-fallthrough
     register dv return-value {
-      prop reg-read
-    }
-  }
-
-  # Normalises a boolean integer to be 0 or 1.
-  #
-  # Semantics: The src I-register is read. If it is 0, 0 is written to the dst
-  # I-register. Otherwise, 1 is written to the dst I-register.
-  elt bool {
-    register i dst {
-      prop reg-write
-    }
-    register i src {
       prop reg-read
     }
   }

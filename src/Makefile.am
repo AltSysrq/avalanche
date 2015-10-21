@@ -5,12 +5,23 @@ SUBDIRS = runtime .
 EXTRA_CFLAGS =
 AM_CFLAGS = $(LIBUNWIND_CFLAGS) $(LIBFFI_CFLAGS) \
             $(EXTRA_CFLAGS) -funwind-tables
+AM_CXXFLAGS = $(LIBUNWIND_CFLAGS) $(LIBFFI_CFLAGS) \
+              $(EXTRA_CFLAGS) $(LLVM_CPPFLAGS) $(LLVM_CXXFLAGS) \
+              -std=c++11 -D__STDC_LIMIT_MACROS -D__STDC_CONSTANT_MACROS
+EMIT_LLVM_CFLAGS= -O3 -g0 -fno-caret-diagnostics -fno-diagnostics-fixit-info \
+                  -fno-color-diagnostics -c -emit-llvm \
+		  -DNDEBUG -DHAVE_CONFIG_H -Wall $(DEFAULT_INCLUDES)
+EMIT_LLVM = $(AM_V_GEN)$(CLANG) $(EMIT_LLVM_CFLAGS) -o $@
+DAT2C = $(AM_V_GEN)$(TCLSH) dat2c.tcl >$@
 
 # Use -b instead of -g if $(CC) doesn't support label pointers
 RE2C_FLAGS = -g
 
+AVA_DRIVERS = runtime/-llvm-support/drivers/isa-unchecked.bc
+
 lib_LTLIBRARIES = libavart.la
-noinst_PROGRAMS = simple-interp
+noinst_PROGRAMS = simple-interp llvm-ir-dump.t
+noinst_DATA =  $(AVA_DRIVERS)
 libavart_la_SOURCES = \
 runtime/alloc.c \
 runtime/array-list.c \
@@ -36,7 +47,6 @@ runtime/hash-map-64.c \
 runtime/hexes.c \
 runtime/init.c \
 runtime/integer-fast-dec.c \
-runtime/interp.c \
 runtime/intrinsics.c \
 runtime/list.c \
 runtime/list-map.c \
@@ -63,11 +73,21 @@ runtime/-intrinsics/namespace.c \
 runtime/-intrinsics/pasta.c \
 runtime/-intrinsics/ret.c \
 runtime/-intrinsics/user-macro.c \
-runtime/-intrinsics/variable.c
+runtime/-intrinsics/variable.c \
+runtime/-llvm-support/drivers/gen-isa-unchecked.c \
+runtime/-llvm-support/drivers/gen-main.c \
+runtime/-llvm-support/driver-iface.cxx \
+runtime/-llvm-support/ir-types.cxx \
+runtime/-llvm-support/jit-context.cxx \
+runtime/-llvm-support/optimisation.cxx \
+runtime/-llvm-support/translation.cxx
 
-libavart_la_LIBADD = $(LIBUNWIND_LIBS) $(LIBFFI_LIBS)
+libavart_la_LIBADD = $(LIBUNWIND_LIBS) $(LIBFFI_LIBS) $(LLVM_LIBS)
 simple_interp_SOURCES = interp/main.c
 simple_interp_LDADD = libavart.la
+
+llvm_ir_dump_t_SOURCES = llvm-ir-dump.cxx
+llvm_ir_dump_t_LDADD = libavart.la $(LLVM_LIBS)
 
 runtime/gen-lex.c: runtime/lex.c
 	$(AM_V_GEN)$(RE2C) --input custom -c $(RE2C_FLAGS) \
@@ -91,3 +111,26 @@ runtime/gen-pcode.c: runtime/generate-pcode.tcl runtime/pcode-defs.tcl
 runtime/gen-errors.c: runtime/generate-errors.tcl
 	$(AM_V_GEN)$(TCLSH) runtime/generate-errors.tcl impl \
 		>runtime/gen-errors.c
+
+runtime/-llvm-support/drivers/isa-unchecked.bc: \
+	runtime/-llvm-support/drivers/isa.c \
+	runtime/avalanche.h \
+	runtime/avalanche/*.h
+	$(EMIT_LLVM) runtime/-llvm-support/drivers/isa.c
+
+runtime/-llvm-support/drivers/gen-isa-unchecked.c: \
+	runtime/-llvm-support/drivers/isa-unchecked.bc \
+	dat2c.tcl
+	$(DAT2C) ava_driver_isa_unchecked \
+		<runtime/-llvm-support/drivers/isa-unchecked.bc
+
+runtime/-llvm-support/drivers/main.bc: \
+	runtime/-llvm-support/drivers/main.c \
+	runtime/avalanche/*.h
+	$(EMIT_LLVM) runtime/-llvm-support/drivers/main.c
+
+runtime/-llvm-support/drivers/gen-main.c: \
+	runtime/-llvm-support/drivers/main.bc \
+	dat2c.tcl
+	$(DAT2C) ava_driver_main \
+		<runtime/-llvm-support/drivers/main.bc

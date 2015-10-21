@@ -150,7 +150,7 @@ typedef struct {
  * A global P-Code list, with associated X-Code functions and flattened into an
  * array for simpler access.
  */
-typedef struct {
+typedef struct ava_xcode_global_list_s {
   /**
    * The number of elements in this list.
    */

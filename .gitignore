@@ -34,3 +34,4 @@ gen-*
 ava-config.h
 *-trait.h
 *.class
+*.bc
