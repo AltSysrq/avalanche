@@ -385,6 +385,13 @@ signed ava_strcmp(ava_string a, ava_string b) AVA_PURE;
  * Returns whether small is a prefix of big.
  */
 ava_bool ava_string_starts_with(ava_string big, ava_string small) AVA_PURE;
+/**
+ * Returns whether the two given strings are equal.
+ *
+ * Essentially the same as testing whether ava_strcmp() is zero, but faster
+ * when the strings are not equal.
+ */
+ava_bool ava_string_equal(ava_string a, ava_string b) AVA_PURE;
 
 /**
  * Returns an ava_ascii9_string representing the given string if it is possible
