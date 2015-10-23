@@ -404,6 +404,38 @@ set defs {
     }
   }
 
+  serror R0038 list_unbalanced_close_bracket {{ava_integer index}} {
+    msg "No matching '[' for ']' in list, at index %index%."
+    explanation {
+      An attempt was made to treat a value like a list, but the value contains
+      a closing bracket with no corresponding opening character.
+    }
+  }
+
+  serror R0039 list_unbalanced_open_bracket {{ava_integer count}} {
+    msg "Unclosed '[' in list, expecting %count% more ']'s."
+    explanation {
+      An attempt was made to treat a value like a list, but the value contains
+      an opening bracket with no corresponding close bracket.
+    }
+  }
+
+  serror R0040 list_tagged_close_bracket {
+    {ava_string tagged} {ava_integer index}
+  } {
+    msg "']' appears to be tagged at index %index%: %tagged%"
+    explanation {
+      An attempt was made to treat a value like a list, but the value contains
+      a closing bracket with a tag. For example, the string "[foo]bar" has this
+      problem.
+
+      Literal tags imply the execution of some user-defined function to
+      post-process the list contents, and therefore are not supported during
+      list parsing, both for security and because there is no way to actually
+      associate a tag with the desired function anyway.
+    }
+  }
+
   serror L4001 unclosed_string_literal {} {
     msg "Unclosed string literal."
     explanation {

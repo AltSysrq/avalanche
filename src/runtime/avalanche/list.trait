@@ -15,9 +15,12 @@
 
 doc {
   A list is a string acceptable by the standard lexer. Only simple tokens (ie,
-  barewords, a-strings, and verbatims) and newline tokens are permitted. The
-  list is said to contain one element for each simple token it contains;
-  newline tokens are discarded.
+  barewords, a-strings, and verbatims), start-semiliteral, close-bracket, and
+  newline tokens are permitted. The list is said to contain one element for
+  each simple token it contains, except that elements within brackets are
+  treated as a single element whose value is a list comprised of those
+  elements. Newline tokens are discarded. It is an error if brackets are not
+  balanced.
 
   Normal form for a list is comprised of each element string escaped with
   ava_list_escape(), separated by exactly one space character.

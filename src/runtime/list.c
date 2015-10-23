@@ -24,6 +24,7 @@
 
 #define AVA__INTERNAL_INCLUDE 1
 #include "avalanche/defs.h"
+#include "avalanche/alloc.h"
 #include "avalanche/string.h"
 #include "avalanche/value.h"
 #include "avalanche/lex.h"
@@ -62,26 +63,74 @@ ava_fat_list_value ava_fat_list_value_of(ava_value value) {
 static ava_list_value ava_list_value_of_string(ava_string str) {
   ava_lex_context* lex = ava_lex_new(str);
   ava_lex_result result;
-  ava_list_value accum = ava_empty_list();
+  ava_list_value stack_stack[64];
+  ava_list_value* accum, * heap_stack;
+  size_t stack_h, stack_cap;
 
   ava_value buffer[64];
   unsigned buffer_ix = 0;
+
+  accum = stack_stack;
+  *accum = ava_empty_list();
+  stack_h = 0;
+  stack_cap = sizeof(stack_stack) / sizeof(stack_stack[0]);
+  heap_stack = NULL;
+
+#define FLUSH() do {                            \
+    if (buffer_ix > 0) {                        \
+      accum[stack_h] = ava_list_concat(         \
+        accum[stack_h], ava_array_list_of_raw(  \
+          buffer, buffer_ix));                  \
+      buffer_ix = 0;                            \
+    }                                           \
+  } while (0)
 
   for (;;) {
     switch (ava_lex_lex(&result, lex)) {
     case ava_ls_ok:
       if (ava_lex_token_type_is_simple(result.type)) {
         buffer[buffer_ix++] = ava_value_of_string(result.str);
-        if (buffer_ix == sizeof(buffer) / sizeof(buffer[0])) {
-          accum = ava_list_concat(
-            accum, ava_array_list_of_raw(buffer, buffer_ix));
-          buffer_ix = 0;
-        }
+        if (buffer_ix == sizeof(buffer) / sizeof(buffer[0]))
+          FLUSH();
       } else {
-        if (ava_ltt_newline != result.type) {
+        switch (result.type) {
+        case ava_ltt_newline: break; /* discard */
+        case ava_ltt_begin_semiliteral:
+          FLUSH();
+
+          if (stack_h + 1 >= stack_cap) {
+            /* Need to allocate more stack space */
+            stack_cap *= 2;
+            heap_stack = ava_alloc(sizeof(ava_value) * stack_cap);
+            memcpy(heap_stack, accum, sizeof(ava_value) * (stack_h + 1));
+            accum = heap_stack;
+          }
+
+          accum[++stack_h] = ava_empty_list();
+          break;
+
+        case ava_ltt_close_bracket:
+          FLUSH();
+
+          if (0 == stack_h)
+            ava_throw_str(&ava_format_exception,
+                          ava_error_list_unbalanced_close_bracket(
+                            result.index_start));
+
+          if (1 != ava_string_length(result.str))
+            ava_throw_str(&ava_format_exception,
+                          ava_error_list_tagged_close_bracket(
+                            result.str, result.index_start));
+
+          --stack_h;
+          accum[stack_h] = ava_list_append(accum[stack_h], accum[stack_h+1].v);
+          break;
+
+        default:
           ava_throw_str(&ava_format_exception,
                         ava_error_unexpected_token_parsing_list(
                           result.index_start, result.str));
+          break;
         }
       }
       break;
@@ -98,10 +147,13 @@ static ava_list_value ava_list_value_of_string(ava_string str) {
   }
 
   done:
-  if (buffer_ix)
-    accum = ava_list_concat(
-      accum, ava_array_list_of_raw(buffer, buffer_ix));
-  return accum;
+
+  if (stack_h > 0)
+    ava_throw_str(&ava_format_exception,
+                  ava_error_list_unbalanced_open_bracket(stack_h));
+
+  FLUSH();
+  return accum[0];
 }
 
 ava_fat_list_value ava_list_copy_of(ava_fat_list_value list, size_t begin, size_t end) {
