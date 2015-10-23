@@ -112,7 +112,11 @@ ava_value ava_value_of_cstring(const char* str) {
 }
 
 ava_bool ava_value_equal(ava_value a, ava_value b) {
-  return 0 == ava_value_strcmp(a, b);
+  if (ava_value_attr(a) == ava_value_attr(b) &&
+      ava_value_ulong(a) == ava_value_ulong(b))
+    return ava_true;
+
+  return ava_string_equal(ava_to_string(a), ava_to_string(b));
 }
 
 signed ava_value_strcmp(ava_value a, ava_value b) {

@@ -115,11 +115,17 @@ deftest(identical_string_values_equal) {
   AVA_STATIC_STRING(sfoo, "foo");
   ck_assert(ava_value_equal(ava_value_of_string(AVA_ASCII9_STRING("foo")),
                             ava_value_of_string(sfoo)));
+  ck_assert_int_eq(0, ava_value_strcmp(
+                     ava_value_of_string(AVA_ASCII9_STRING("foo")),
+                     ava_value_of_string(sfoo)));
 }
 
 deftest(values_of_different_type_but_same_string_rep_equal) {
   ck_assert(ava_value_equal(ava_value_of_integer(42),
                             ava_value_of_string(AVA_ASCII9_STRING("42"))));
+  ck_assert_int_eq(0, ava_value_strcmp(
+                     ava_value_of_integer(42),
+                     ava_value_of_string(AVA_ASCII9_STRING("42"))));
 }
 
 deftest(nonequal_values_ordered_lexicographically) {
