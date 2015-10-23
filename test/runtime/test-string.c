@@ -627,6 +627,59 @@ deftest(mixed_strcmp) {
   ck_assert_int_eq(0, ava_strcmp(a, b));
 }
 
+deftest(ascii9_equal_true) {
+  ck_assert(ava_string_equal(AVA_ASCII9_STRING("avalanche"),
+                             AVA_ASCII9_STRING("avalanche")));
+}
+
+deftest(ascii9_equal_false) {
+  ck_assert(!ava_string_equal(AVA_ASCII9_STRING("avalanche"),
+                              AVA_ASCII9_STRING("foo")));
+}
+
+deftest(twine_equal_true) {
+  AVA_STATIC_STRING(a, "avalanches");
+
+  ck_assert(ava_string_equal(a, a));
+}
+
+deftest(twine_equal_false_different_length) {
+  AVA_STATIC_STRING(a, "avalanches");
+  AVA_STATIC_STRING(b, "antidisestablishmentarianism");
+
+  ck_assert(!ava_string_equal(a, b));
+}
+
+deftest(twine_equal_false_same_length) {
+  AVA_STATIC_STRING(a, "avalanches");
+  AVA_STATIC_STRING(b, "comparison");
+
+  ck_assert(!ava_string_equal(a, b));
+}
+
+deftest(twine_equal_false_embedded_nul) {
+  static const char ab[] = "con\0temporary";
+  static const char bb[] = "con\0tinuities";
+
+  ck_assert(!ava_string_equal(
+              ava_string_of_bytes(ab, sizeof(ab)),
+              ava_string_of_bytes(bb, sizeof(bb))));
+}
+
+deftest(mixed_equal_true) {
+  AVA_STATIC_STRING(t, "avalanche");
+
+  ck_assert(ava_string_equal(AVA_ASCII9_STRING("avalanche"), t));
+  ck_assert(ava_string_equal(t, AVA_ASCII9_STRING("avalanche")));
+}
+
+deftest(mixed_equal_false) {
+  AVA_STATIC_STRING(t, "comparison");
+
+  ck_assert(!ava_string_equal(AVA_ASCII9_STRING("avalanche"), t));
+  ck_assert(!ava_string_equal(t, AVA_ASCII9_STRING("avalanche")));
+}
+
 deftest(empty_string_starts_with_empty_string) {
   ck_assert(ava_string_starts_with(AVA_EMPTY_STRING, AVA_EMPTY_STRING));
 }

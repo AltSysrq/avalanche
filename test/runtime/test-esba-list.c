@@ -148,7 +148,7 @@ deftest(strided_create_from_array) {
   ck_assert_int_eq(2, ava_list_length(first));
   ck_assert_str_eq("42 56", ava_string_to_cstring(
                      ava_to_string(first.v)));
-  ck_assert_str_eq("\"hello world\"", ava_string_to_cstring(
+  ck_assert_str_eq("[hello world]", ava_string_to_cstring(
                      ava_to_string(second.v)));
 }
 

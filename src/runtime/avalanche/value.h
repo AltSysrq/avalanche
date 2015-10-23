@@ -471,7 +471,8 @@ signed ava_value_strcmp(ava_value a, ava_value b) AVA_PURE;
  * Returns whether the two values are strictly equal, as defined by
  * ava_value_strcmp().
  *
- * This is essentially a convenience for (0==ava_value_strcmp(a,b)).
+ * This is essentially (0==ava_value_strcmp(a,b)), but faster when the values
+ * are not equal.
  *
  * @see ava_value_strcmp()
  */

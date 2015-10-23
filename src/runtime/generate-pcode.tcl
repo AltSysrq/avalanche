@@ -611,7 +611,8 @@ proc gen-impl {} {
               elt_string, AVA_ASCII9_STRING(" ")\);
             elt_string = ava_string_concat\(
               elt_string, ava_list_escape\(
-                ava_pcode_TYPE_to_string(elt->FIELD)\)\);
+                ava_value_of_string\(
+                  ava_pcode_TYPE_to_string(elt->FIELD)\)\)\);
           } TYPE $ftype FIELD [dict get $field name]
         }
       }

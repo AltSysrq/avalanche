@@ -496,6 +496,17 @@ signed ava_strcmp(ava_string a, ava_string b) {
   return (alen > blen) - (alen < blen);
 }
 
+ava_bool ava_string_equal(ava_string a, ava_string b) {
+  if (ava_string_is_ascii9(a) || ava_string_is_ascii9(b)) {
+    return ava_string_to_ascii9(a) == ava_string_to_ascii9(b);
+  } else {
+    size_t alen = ava_string_length(a), blen = ava_string_length(b);
+    return alen == blen &&
+      0 == memcmp(ava_twine_force(a.twine), ava_twine_force(b.twine),
+                  alen);
+  }
+}
+
 ava_bool ava_string_starts_with(ava_string big, ava_string small) {
   size_t big_len, small_len;
   ava_str_tmpbuff bigtmp, smalltmp;
