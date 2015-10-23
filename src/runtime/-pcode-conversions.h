@@ -201,8 +201,8 @@ static ava_string apply_indent(ava_string str, ava_uint indent) {
 
 static ava_string ava_pcode_elt_escape(ava_string elt_string) {
   return ava_string_concat(
-    AVA_ASCII9_STRING("\\{"),
+    AVA_ASCII9_STRING("["),
     ava_string_concat(
       elt_string,
-      AVA_ASCII9_STRING("\\}")));
+      AVA_ASCII9_STRING("]")));
 }

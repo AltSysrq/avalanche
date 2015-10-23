@@ -147,7 +147,7 @@ deftest(error_on_tagged_brackets) {
 }
 
 const char* escape(const char* str) {
-  return ava_string_to_cstring(ava_list_escape(ava_string_of_cstring(str)));
+  return ava_string_to_cstring(ava_list_escape(ava_value_of_cstring(str)));
 }
 
 deftest(simple_words_not_modified_by_escape) {
@@ -156,7 +156,7 @@ deftest(simple_words_not_modified_by_escape) {
 }
 
 deftest(strings_containing_quotables_escaped_by_quotes) {
-  ck_assert_str_eq("\"foo bar\"", escape("foo bar"));
+  ck_assert_str_eq("\"foo  bar\"", escape("foo  bar"));
   ck_assert_str_eq("\"foo;bar\"", escape("foo;bar"));
   ck_assert_str_eq("\"foo(\"", escape("foo("));
   ck_assert_str_eq("\")foo\"", escape(")foo"));
@@ -206,7 +206,10 @@ deftest(all_two_char_strings_escaped_reversibly) {
 
       in_str = ava_string_of_bytes(in, 2);
       parsed_list =
-        ava_fat_list_value_of(ava_value_of_string(ava_list_escape(in_str))).c.v;
+        ava_fat_list_value_of(
+          ava_value_of_string(
+            ava_list_escape(
+              ava_value_of_string(in_str)))).c.v;
       ck_assert_int_eq(1, ava_list_length(parsed_list));
       out_str = ava_to_string(ava_list_index(parsed_list, 0));
       ck_assert_int_eq(2, ava_string_length(out_str));
@@ -227,7 +230,7 @@ deftest(list_stringified_correctly) {
 
   ava_string str = ava_to_string(list);
 
-  ck_assert_str_eq("\"foo bar\" \\{xy\"zzy\\}",
+  ck_assert_str_eq("[foo bar] \\{xy\"zzy\\}",
                    ava_string_to_cstring(str));
 }
 

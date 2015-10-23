@@ -163,7 +163,7 @@ deftest(basic_group) {
   ava_list_value result = ava_list_proj_group(input, 3);
 
   ck_assert_int_eq(3, ava_list_length(result.v));
-  assert_looks_like("\"0 1 2\" \"3 4 5\" \"6 7\"", result);
+  assert_looks_like("[0 1 2] [3 4 5] [6 7]", result);
 }
 
 deftest(group_caches_members) {

@@ -65,7 +65,7 @@ deftest(simple_parse) {
 }
 
 deftest(parse_binding_pos_default) {
-  const ava_function* fun = of_cstring("42 ava \\{pos \"hello world\"\\}");
+  const ava_function* fun = of_cstring("42 ava [pos [hello world]]");
 
   ck_assert_int_eq(1, fun->num_args);
   ck_assert_int_eq(ava_abt_pos_default, fun->args[0].binding.type);
@@ -74,7 +74,7 @@ deftest(parse_binding_pos_default) {
 
 deftest(parse_binding_implicit) {
   const ava_function* fun = of_cstring(
-    "42 ava \\{implicit \"hello world\"\\} pos");
+    "42 ava [implicit [hello world]] pos");
 
   ck_assert_int_eq(2, fun->num_args);
   ck_assert_int_eq(ava_abt_implicit, fun->args[0].binding.type);
@@ -97,7 +97,7 @@ deftest(accepts_constshape_after_varargs) {
 }
 
 deftest(parse_binding_named) {
-  const ava_function* fun = of_cstring("42 ava \\{named -message\\}");
+  const ava_function* fun = of_cstring("42 ava [named -message]");
 
   ck_assert_int_eq(1, fun->num_args);
   ck_assert_int_eq(ava_abt_named, fun->args[0].binding.type);
@@ -107,7 +107,7 @@ deftest(parse_binding_named) {
 
 deftest(parse_binding_named_default) {
   const ava_function* fun = of_cstring(
-    "42 ava \\{named -message \"hello world\"\\}");
+    "42 ava [named -message [hello world]]");
 
   ck_assert_int_eq(1, fun->num_args);
   ck_assert_int_eq(ava_abt_named_default, fun->args[0].binding.type);
@@ -117,7 +117,7 @@ deftest(parse_binding_named_default) {
 }
 
 deftest(parse_binding_bool) {
-  const ava_function* fun = of_cstring("42 ava \\{bool -foo\\}");
+  const ava_function* fun = of_cstring("42 ava [bool -foo]");
 
   ck_assert_int_eq(1, fun->num_args);
   ck_assert_int_eq(ava_abt_bool, fun->args[0].binding.type);
@@ -127,7 +127,7 @@ deftest(parse_binding_bool) {
 
 deftest(parse_multiple_bindings) {
   const ava_function* fun = of_cstring(
-    "42 ava \\{implicit foo\\} pos \\{pos bar\\}");
+    "42 ava [implicit foo] pos [pos bar]");
 
   ck_assert_int_eq(3, fun->num_args);
   ck_assert_int_eq(ava_abt_implicit, fun->args[0].binding.type);
@@ -140,7 +140,7 @@ deftest(parse_multiple_bindings) {
 }
 
 deftest(parse_minimal_c_function) {
-  const ava_function* fun = of_cstring("42 c void \\{void pos\\}");
+  const ava_function* fun = of_cstring("42 c void [void pos]");
 
   ck_assert_int_eq(ava_cc_c, fun->calling_convention);
   ck_assert_int_eq(ava_cmpt_void, fun->c_return_type.primitive_type);
@@ -151,7 +151,7 @@ deftest(parse_minimal_c_function) {
 
 deftest(parse_c_multi_arg_with_compound_bindings) {
   const ava_function* fun = of_cstring(
-    "42 c void \\{int implicit 5\\} \\{float named -pi 3.14\\}");
+    "42 c void [int implicit 5] [float named -pi 3.14]");
 
   ck_assert_int_eq(ava_cc_c, fun->calling_convention);
   ck_assert_int_eq(ava_cmpt_void, fun->c_return_type.primitive_type);
@@ -167,20 +167,20 @@ deftest(parse_c_multi_arg_with_compound_bindings) {
 }
 
 deftest(accpts_msstd_cc) {
-  const ava_function* fun = of_cstring("42 msstd void \\{void pos\\}");
+  const ava_function* fun = of_cstring("42 msstd void [void pos]");
 
   ck_assert_int_eq(ava_cc_msstd, fun->calling_convention);
 }
 
 deftest(accepts_this_cc) {
-  const ava_function* fun = of_cstring("42 this void \\{void pos\\}");
+  const ava_function* fun = of_cstring("42 this void [void pos]");
 
   ck_assert_int_eq(ava_cc_this, fun->calling_convention);
 }
 
 deftest(understands_all_primitive_types) {
   unsigned i;
-#define PRIM(x) "\\{" #x " pos\\} "
+#define PRIM(x) "[" #x " pos] "
   const ava_function* fun = of_cstring(
     "42 this void "
     PRIM(void)
@@ -246,7 +246,7 @@ deftest(understands_all_primitive_types) {
 
 deftest(understands_pointer_types) {
   const ava_function* fun = of_cstring(
-    "42 c FILE* \\{* pos\\} \\{& pos\\} \\{foo& pos\\}");
+    "42 c FILE* [* pos] [& pos] [foo& pos]");
 
   ck_assert_int_eq(ava_cmpt_pointer, fun->c_return_type.primitive_type);
   ck_assert(!fun->c_return_type.pointer_proto->is_const);
@@ -276,12 +276,12 @@ deftest(rejects_truncated_lists) {
 }
 
 deftest(rejects_unknown_cc) {
-  assert_rejects("56 fortran int \\{int pos\\}");
+  assert_rejects("56 fortran int [int pos]");
 }
 
 deftest(rejects_unknown_marshal_types) {
-  assert_rejects("42 c foo \\{int pos\\}");
-  assert_rejects("42 c int \\{foo pos\\}");
+  assert_rejects("42 c foo [int pos]");
+  assert_rejects("42 c int [foo pos]");
 }
 
 deftest(rejects_invalid_argspecs) {

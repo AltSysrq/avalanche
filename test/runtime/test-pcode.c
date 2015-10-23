@@ -61,18 +61,18 @@ deftest(build_single_statement) {
                    42, 1, 2, 10, 20);
   pcode = ava_pcg_builder_get(builder);
 
-  test_to_string("\\{src-pos foo 42 1 2 10 20\\}\n", pcode);
+  test_to_string("[src-pos foo 42 1 2 10 20]\n", pcode);
 }
 
 deftest(to_string_correct_escaping) {
-  test_round_trip("\\{src-pos \"foo bar\" 42 1 2 10 20\\}\n");
-  test_round_trip("\\{src-pos \\{\"\\} 42 1 2 10 20\\}\n");
+  test_round_trip("[src-pos [foo bar] 42 1 2 10 20]\n");
+  test_round_trip("[src-pos \\{\"\\} 42 1 2 10 20]\n");
 }
 
 deftest(function_definition) {
-  test_round_trip("\\{fun true \"ava fum\" \"ava pos\" arg \\{\n"
-                  "\t\\{push d 42\\}\n"
-                  "\t\\{ld-imm-vd d0 \"\"\\}\n"
-                  "\t\\{ret d0\\}\n"
-                  "\\}\\}\n");
+  test_round_trip("[fun true [ava fum] [ava pos] arg \\{\n"
+                  "\t[push d 42]\n"
+                  "\t[ld-imm-vd d0 \"\"]\n"
+                  "\t[ret d0]\n"
+                  "\\}]\n");
 }

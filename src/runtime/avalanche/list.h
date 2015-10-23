@@ -58,10 +58,10 @@ ava_list_value ava_list_of_values(const ava_value*restrict values,
                                   size_t count);
 
 /**
- * Escapes the given string so that it can be used in a string representation
- * of a list.
+ * Escapes the given value so that it can be used in a string representation of
+ * a list.
  */
-ava_string ava_list_escape(ava_string);
+ava_string ava_list_escape(ava_value val) AVA_PURE;
 
 /**
  * The standard implementation of ava_value.string_chunk_iterator() for

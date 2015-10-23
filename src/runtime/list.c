@@ -38,11 +38,14 @@ const ava_attribute_tag ava_list_trait_tag = {
   .name = "list"
 };
 
-static ava_list_value ava_list_value_of_string(ava_string);
+static ava_list_value ava_list_value_of_string(
+  ava_string str, ava_bool return_empty_on_fail);
+static ava_bool ava_list_is_in_normal_list_form(
+  ava_value val, ava_string stringified);
 
 ava_list_value ava_list_value_of(ava_value value) {
   if (!ava_get_attribute(value, &ava_list_trait_tag))
-    return ava_list_value_of_string(ava_to_string(value));
+    return ava_list_value_of_string(ava_to_string(value), ava_false);
   else
     return (ava_list_value) { value };
 }
@@ -52,7 +55,7 @@ ava_fat_list_value ava_fat_list_value_of(ava_value value) {
     value, &ava_list_trait_tag);
 
   if (!trait) {
-    value = ava_list_value_of_string(ava_to_string(value)).v;
+    value = ava_list_value_of_string(ava_to_string(value), ava_false).v;
     trait = ava_get_attribute(value, &ava_list_trait_tag);
     assert(trait);
   }
@@ -60,7 +63,9 @@ ava_fat_list_value ava_fat_list_value_of(ava_value value) {
   return (ava_fat_list_value) { .v = trait, .c = { value } };
 }
 
-static ava_list_value ava_list_value_of_string(ava_string str) {
+static ava_list_value ava_list_value_of_string(
+  ava_string str, ava_bool return_empty_on_fail
+) {
   ava_lex_context* lex = ava_lex_new(str);
   ava_lex_result result;
   ava_list_value stack_stack[64];
@@ -112,24 +117,35 @@ static ava_list_value ava_list_value_of_string(ava_string str) {
         case ava_ltt_close_bracket:
           FLUSH();
 
-          if (0 == stack_h)
-            ava_throw_str(&ava_format_exception,
-                          ava_error_list_unbalanced_close_bracket(
-                            result.index_start));
+          if (0 == stack_h) {
+            if (return_empty_on_fail)
+              return ava_empty_list();
+            else
+              ava_throw_str(&ava_format_exception,
+                            ava_error_list_unbalanced_close_bracket(
+                              result.index_start));
+          }
 
-          if (1 != ava_string_length(result.str))
-            ava_throw_str(&ava_format_exception,
-                          ava_error_list_tagged_close_bracket(
-                            result.str, result.index_start));
+          if (1 != ava_string_length(result.str)) {
+            if (return_empty_on_fail)
+              return ava_empty_list();
+            else
+              ava_throw_str(&ava_format_exception,
+                            ava_error_list_tagged_close_bracket(
+                              result.str, result.index_start));
+          }
 
           --stack_h;
           accum[stack_h] = ava_list_append(accum[stack_h], accum[stack_h+1].v);
           break;
 
         default:
-          ava_throw_str(&ava_format_exception,
-                        ava_error_unexpected_token_parsing_list(
-                          result.index_start, result.str));
+          if (return_empty_on_fail)
+            return ava_empty_list();
+          else
+            ava_throw_str(&ava_format_exception,
+                          ava_error_unexpected_token_parsing_list(
+                            result.index_start, result.str));
           break;
         }
       }
@@ -139,18 +155,25 @@ static ava_list_value ava_list_value_of_string(ava_string str) {
       goto done;
 
     case ava_ls_error: {
-      ava_throw_str(&ava_format_exception,
-                    ava_error_invalid_list_syntax(
-                      result.index_start, result.str));
+      if (return_empty_on_fail)
+        return ava_empty_list();
+      else
+        ava_throw_str(&ava_format_exception,
+                      ava_error_invalid_list_syntax(
+                        result.index_start, result.str));
     } break;
     }
   }
 
   done:
 
-  if (stack_h > 0)
-    ava_throw_str(&ava_format_exception,
-                  ava_error_list_unbalanced_open_bracket(stack_h));
+  if (stack_h > 0) {
+    if (return_empty_on_fail)
+      return ava_empty_list();
+    else
+      ava_throw_str(&ava_format_exception,
+                    ava_error_list_unbalanced_open_bracket(stack_h));
+  }
 
   FLUSH();
   return accum[0];
@@ -177,14 +200,16 @@ ava_list_value ava_list_of_values(const ava_value*restrict values, size_t n) {
     return ava_esba_list_of_raw(values, n);
 }
 
-ava_string ava_list_escape(ava_string str) {
+ava_string ava_list_escape(ava_value val) {
   ava_bool contains_special = ava_false;
   ava_bool quote_with_verbatim = ava_false;
+  ava_string str;
 
   const char*restrict strdat;
   ava_str_tmpbuff tmpbuff;
   size_t strlen, i;
 
+  str = ava_to_string(val);
   strlen = ava_string_length(str);
 
   /* Special case: The empty string needs to be quoted, otherwise it will
@@ -223,6 +248,14 @@ ava_string ava_list_escape(ava_string str) {
   if (!contains_special)
     return str;
 
+  /* If the value is already in normalised list form, we can just put brackets
+   * around it and expect it to work.
+   */
+  if (ava_list_is_in_normal_list_form(val, str))
+    return ava_string_concat(
+      ava_string_concat(AVA_ASCII9_STRING("["), str),
+      AVA_ASCII9_STRING("]"));
+
   /* If surrounding it with double-quotes is sufficient to quote it, do that */
   if (!quote_with_verbatim)
     return ava_string_concat(
@@ -237,9 +270,6 @@ ava_string ava_list_escape(ava_string str) {
   for (i = 0; i < strlen; ++i) {
     if (preceded_by_bs) {
       switch (strdat[i]) {
-        /* TODO: It'd be best to only escape \{ and \} if they would be
-         * unbalanced otherwise.
-         */
       case '{':
       case ';':
       case '}':
@@ -289,6 +319,27 @@ ava_string ava_list_escape(ava_string str) {
   return escaped;
 }
 
+static ava_bool ava_list_is_in_normal_list_form(
+  ava_value val, ava_string stringified
+) {
+  ava_bool ret;
+
+  /* All lists are already in normal form */
+  if (ava_get_attribute(val, &ava_list_trait_tag))
+    return ava_true;
+
+  ret = ava_string_equal(
+    stringified, ava_to_string(
+      /* Convert to a list, but if it can't be parsed, return the empty list so
+       * we save the overhead of exceptions. (In such an error case, the
+       * comparison is guaranteed false, since the stringification of the error
+       * result is a valid list, whereas `stringified` is not.
+       */
+      ava_list_value_of_string(stringified, ava_true).v));
+
+  return ret;
+}
+
 ava_list_value ava_list_copy_slice(ava_list_value list,
                                    size_t begin, size_t end) {
   return ava_list_copy_of(ava_fat_list_value_of(list.v), begin, end).c;
@@ -336,16 +387,17 @@ ava_string ava_list_iterate_string_chunk(
   ava_datum*restrict it, ava_value list_val
 ) {
   ava_fat_list_value list = ava_fat_list_value_of(list_val);
-  ava_string elt;
+  ava_value elt;
+  ava_string eltstr;
 
   if (it->ulong >= list.v->length(list.c))
     return AVA_ABSENT_STRING;
 
-  elt = ava_to_string(list.v->index(list.c, it->ulong++));
-  elt = ava_list_escape(elt);
+  elt = list.v->index(list.c, it->ulong++);
+  eltstr = ava_list_escape(elt);
 
   if (it->ulong > 1)
-    return ava_string_concat(AVA_ASCII9_STRING(" "), elt);
+    return ava_string_concat(AVA_ASCII9_STRING(" "), eltstr);
   else
-    return elt;
+    return eltstr;
 }
