@@ -1,0 +1,22 @@
+; The somewhat odd/arbitrary structure of this file is a result of it being
+; reduced from an actual input file which interacted with the C stdio library.
+
+extern pass-test pass_test c void [int pos]
+
+fun four -mode -file = 42
+fun one x = $x
+fun two a b = $b
+fun eight -dst -size -nmemb -file = ()
+macro = op 1 (#set# (<) (>))
+
+fun doit () {
+  a = four -mode mode -file file
+  one x
+  two a b
+  c = 42
+  d = one x
+  e = eight -dst a -size b -nmemb c -file d
+  pass-test $a
+}
+
+doit ()

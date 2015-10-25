@@ -378,6 +378,7 @@ static void ava_intr_var_read_cg_evaluate(
     var_reg.type = ava_prt_var;
     var_reg.index = ava_varscope_get_index(
       ava_macsub_get_varscope(node->header.context), node->var);
+    ava_codegen_set_location(context, &node->header.location);
     AVA_PCXB(ld_reg, *dst, var_reg);
     break;
 
@@ -400,6 +401,7 @@ static void ava_intr_var_read_cg_evaluate(
       data_base = ava_codegen_push_reg(context, ava_prt_data, num_captures + 1);
 
       data_reg.index = data_base + num_captures;
+      ava_codegen_set_location(context, &node->header.location);
       AVA_PCXB(ld_glob, data_reg, node->var->pcode_index);
       AVA_PCXB(ld_reg, fun_reg, data_reg);
 

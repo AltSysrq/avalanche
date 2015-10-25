@@ -202,7 +202,7 @@ static inline ava_bool ava_xcode_phi_get(
 static inline void ava_xcode_phi_set(
   ava_ulong* phi, size_t ix, ava_bool val
 ) {
-  phi[ix / 64] &= ~(1 << (ix % 64));
+  phi[ix / 64] &= ~(1uLL << (ix % 64));
   phi[ix / 64] |= ((ava_ulong)val) << (ix % 64);
 }
 
