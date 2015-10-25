@@ -96,6 +96,31 @@ deftest(nested_sublists) {
   assert_value_equals_str("h", ava_list_index(list, 2));
 }
 
+deftest(deeply_nested_sublists) {
+  ava_value list = value_of_cstring(
+    /* Nested 256 deep */
+    "[[[[[[[[[[[[[[[[[[[[[[[[[[[[[[[[[[[[[[[[[[[[[[[[[[[[[[[[[[[[[[[["
+    "[[[[[[[[[[[[[[[[[[[[[[[[[[[[[[[[[[[[[[[[[[[[[[[[[[[[[[[[[[[[[[[["
+    "[[[[[[[[[[[[[[[[[[[[[[[[[[[[[[[[[[[[[[[[[[[[[[[[[[[[[[[[[[[[[[[["
+    "[[[[[[[[[[[[[[[[[[[[[[[[[[[[[[[[[[[[[[[[[[[[[[[[[[[[[[[[[[[[[[[["
+    "foo bar"
+    "]]]]]]]]]]]]]]]]]]]]]]]]]]]]]]]]]]]]]]]]]]]]]]]]]]]]]]]]]]]]]]]]"
+    "]]]]]]]]]]]]]]]]]]]]]]]]]]]]]]]]]]]]]]]]]]]]]]]]]]]]]]]]]]]]]]]]"
+    "]]]]]]]]]]]]]]]]]]]]]]]]]]]]]]]]]]]]]]]]]]]]]]]]]]]]]]]]]]]]]]]]"
+    "]]]]]]]]]]]]]]]]]]]]]]]]]]]]]]]]]]]]]]]]]]]]]]]]]]]]]]]]]]]]]]]]");
+  ava_value sub;
+  unsigned i;
+
+  for (i = 0, sub = list; i < 256; ++i) {
+    ck_assert_int_eq(1, ava_list_length(sub));
+    sub = ava_list_index(sub, 0);
+  }
+
+  ck_assert_int_eq(2, ava_list_length(sub));
+  assert_value_equals_str("foo", ava_list_index(sub, 0));
+  assert_value_equals_str("bar", ava_list_index(sub, 1));
+}
+
 deftest(empty_sublist) {
   ava_value list = value_of_cstring("[[]]");
 
