@@ -39,9 +39,7 @@
    loads another module or package.
 
    At top-level, a P-Code object consists of a series of global declarations,
-   which usually define some global name. Global name declarations carry the
-   same public/internal/private access modifiers as Avalanche code, but private
-   names must be globally unique. No executable code is found at global scope;
+   which may some global name. No executable code is found at global scope;
    rather, the code generator wraps the top-level code in the input file into
    its own function.
 
@@ -105,7 +103,22 @@
    which is itself an ava_list, where the first element identifies the type of
    declaration. The meaning and format of the other elements vary by type.
 
-   "visibility" is always one of "private", "internal", or "public".
+   P-Code objects may describe implementations or interfaces. In the former
+   case, they include function and global variable definitions and any
+   supporting declarations they need. Interfaces only declare what external
+   consumers of the module or package may need. Furthermore, a P-Code object
+   may represent a single module, a whole package, or even a whole application,
+   the larger forms created by linking (see ava_pcode_linker) one or more
+   P-Code objects of the immediately preceding form.
+
+   The following table shows the useful combinations of the above, and their
+   conventional names and file extensions:
+
+                Module                  Package         Application
+   Impl         .avam                   .avap           .avax
+                "Module"                "Fat Package"   "Application"
+   Iface        .avami                  .avapi          -
+                "[Module] Interface"    "Package"       -
 
  */
 

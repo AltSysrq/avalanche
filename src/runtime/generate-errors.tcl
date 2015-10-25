@@ -1861,6 +1861,18 @@ set defs {
       source program.
     }
   }
+
+  cerror X9010 linker_symbol_redefined {{ava_string name}} {
+    msg "Link-visible symbol defined more than once: %name%"
+    explanation {
+      The input file(s) produce two or more non-private global variables or
+      functions with the same linkage name.
+
+      Since modules do not constitute namespaces, all public and internal names
+      they define must be globally unique after applying any namespacing in
+      effect, even if usages of the conflicting symbols never overlap.
+    }
+  }
 }
 
 proc ncode {code} {

@@ -30,13 +30,48 @@
 # - All `ext-var` and `ext-fun` statements complete.
 # - All `init` statements are executed.
 struct global g {
+  # Whether this element is a valid target for global variable references.
   attr var
+  # Whether this element is a valid target for global function references.
   attr fun
+  # Whether this element is a valid target for global references that require
+  # some physical entity to exist.
   attr entity
+  # Whether the P-Code validator needs special handling for this element.
   attr needs-special-validation
+  # Whether this element always participates in linking, despite not having a
+  # "publish" property.
+  attr effectively-published
+  # Whether this element is a definition. Definitions participating in linkage
+  # take precedence over declarations, and only one definition for a given name
+  # may exist.
+  attr linkage-definition
+  # Property which is a reference, by absolute index, to an element with the
+  # entity attribute in the same P-Code object.
   prop int global-entity-ref
+  # Property which is a reference, by absolute index, to an element with the
+  # fun attribute in the same P-Code object.
   prop int global-fun-ref
+  # Property indicating that the element describes a function with the given
+  # prototype.
+  #
+  # Always singular.
   prop function prototype
+  # Property on elements with no semantics besides symbol exporting (ie, to the
+  # Avalanche compiler). If false, such entries do not survive linking.
+  #
+  # Always singular.
+  prop bool reexport
+  # Property on elements which may or may not participate in linking, depending
+  # on assigned visibility.
+  #
+  # Always singular.
+  prop bool publish
+  # Property on elements  which may participate in linking, indicating the name
+  # that is used for linkage purposes.
+  #
+  # Always singular.
+  prop demangled-name linkage-name
 
   # Records the source location in effect until the next declaration indicating
   # otherwise.
@@ -66,7 +101,10 @@ struct global g {
   elt ext-var {
     attr var
     attr entity
-    demangled-name name
+    attr effectively-published
+    demangled-name name {
+      prop linkage-name
+    }
   }
 
   # Declares a global function defined by a different P-Code unit.
@@ -77,6 +115,7 @@ struct global g {
     attr var
     attr fun
     attr entity
+    attr effectively-published
     demangled-name name
     function prototype {
       prop prototype
@@ -100,8 +139,13 @@ struct global g {
   elt var {
     attr var
     attr entity
-    bool publish
-    demangled-name name
+    attr linkage-definition
+    bool publish {
+      prop publish
+    }
+    demangled-name name {
+      prop linkage-name
+    }
   }
 
   # Declares a global function defined by this P-Code unit.
@@ -112,8 +156,13 @@ struct global g {
     attr var
     attr fun
     attr entity
-    bool publish
-    demangled-name name
+    attr linkage-definition
+    bool publish {
+      prop publish
+    }
+    demangled-name name {
+      prop linkage-name
+    }
     function prototype {
       prop prototype
     }
@@ -149,7 +198,9 @@ struct global g {
     # (ie, linkage of modules into a package) includes this export statement. A
     # value of true corresponds to public visibility; false to internal
     # visibility.
-    bool reexport
+    bool reexport {
+      prop reexport
+    }
     # The name by which this global is exposed to Avalanche code.
     str effective-name
   }
@@ -163,7 +214,9 @@ struct global g {
     # (ie, linkage of modules into a package) includes this macro statement. A
     # value of true corresponds to public visibility; false to internal
     # visibility.
-    bool reexport
+    bool reexport {
+      prop reexport
+    }
     # The name by which this macro is exposed to Avalanche code.
     str name
     # The body of this macro.
@@ -203,6 +256,7 @@ struct global g {
     attr needs-special-validation
     int fun {
       prop global-fun-ref
+      prop global-entity-ref
     }
   }
 }
@@ -220,6 +274,7 @@ struct exe x {
   prop int jump-target
   prop int global-var-ref
   prop int global-fun-ref
+  prop int global-ref
   prop int reg-read-base
   prop int reg-read-count
   prop int static-arg-count
@@ -317,6 +372,7 @@ struct exe x {
     }
     int src {
       prop global-var-ref
+      prop global-ref
     }
   }
 
@@ -386,6 +442,7 @@ struct exe x {
   elt set-glob {
     int dst {
       prop global-var-ref
+      prop global-ref
     }
     register dv src {
       prop reg-read
@@ -585,6 +642,7 @@ struct exe x {
     }
     int fun {
       prop global-fun-ref
+      prop global-ref
     }
     int base {
       prop reg-read-base
@@ -621,6 +679,7 @@ struct exe x {
     }
     int fun {
       prop global-fun-ref
+      prop global-ref
     }
 
     int base {

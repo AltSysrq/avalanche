@@ -56,6 +56,7 @@ runtime/macsub.c \
 runtime/map.c \
 runtime/name-mangle.c \
 runtime/parser.c \
+runtime/pcode-linker.c \
 runtime/pcode-validation.c \
 runtime/pointer.c \
 runtime/real.c \

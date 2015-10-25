@@ -99,7 +99,8 @@ typedef struct ava_compile_error_s {
   TAILQ_ENTRY(ava_compile_error_s) next;
 } ava_compile_error;
 
-typedef TAILQ_HEAD(, ava_compile_error_s) ava_compile_error_list;
+typedef TAILQ_HEAD(ava_compile_error_list_s, ava_compile_error_s)
+ava_compile_error_list;
 
 #include "gen-errors.h"
 

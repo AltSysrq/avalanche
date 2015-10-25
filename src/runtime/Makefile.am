@@ -26,6 +26,7 @@ avalanche/map-trait.h \
 avalanche/name-mangle.h \
 avalanche/parser.h \
 avalanche/pcode.h \
+avalanche/pcode-linker.h \
 avalanche/pcode-validation.h \
 avalanche/gen-pcode.h \
 avalanche/pointer.h \
