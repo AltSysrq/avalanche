@@ -628,7 +628,7 @@ proc gen-impl {} {
         putm {
             default: abort();
             \}
-          \}
+          \} break;
         } NAME $sname
       }
 

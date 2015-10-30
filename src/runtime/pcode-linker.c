@@ -135,13 +135,14 @@ ava_pcode_global_list* ava_pcode_to_interface(
    */
   src_ix = dst_ix = 0;
   TAILQ_FOREACH(src_elt, src, next) {
-    index_map[dst_ix++] = src_ix;
+    index_map[src_ix] = dst_ix;
     if (ava_pcode_keep_in_interface(src_elt, src_ix, exported)) {
       switch (src_elt->type) {
       case ava_pcgt_fun: {
         const ava_pcg_fun* sfun = (const ava_pcg_fun*)src_elt;
         ava_pcg_ext_fun* dfun = AVA_NEW(ava_pcg_ext_fun);
 
+        dfun->header.type = ava_pcgt_ext_fun;
         dfun->name = sfun->name;
         dfun->prototype = sfun->prototype;
         dst_elt = (ava_pcode_global*)dfun;
@@ -151,6 +152,7 @@ ava_pcode_global_list* ava_pcode_to_interface(
         const ava_pcg_var* svar = (const ava_pcg_var*)src_elt;
         ava_pcg_ext_var* dvar = AVA_NEW(ava_pcg_ext_var);
 
+        dvar->header.type = ava_pcgt_ext_var;
         dvar->name = svar->name;
         dst_elt = (ava_pcode_global*)dvar;
       } break;
@@ -163,6 +165,8 @@ ava_pcode_global_list* ava_pcode_to_interface(
       TAILQ_INSERT_TAIL(dst, dst_elt, next);
       ++dst_ix;
     }
+
+    ++src_ix;
   }
 
   /* Fix global references */
