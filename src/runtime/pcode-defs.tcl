@@ -116,7 +116,9 @@ struct global g {
     attr fun
     attr entity
     attr effectively-published
-    demangled-name name
+    demangled-name name {
+      prop linkage-name
+    }
     function prototype {
       prop prototype
     }

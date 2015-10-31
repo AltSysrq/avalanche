@@ -99,9 +99,8 @@ void ava_pcode_linker_add_package(
  * Non-external published globals replace published external globals of the
  * same name. load-mod globals which resolve to modules added to the linker are
  * eliminated. load-pkg globals which resolve to packages added to the linker
- * are eliminated. All init globals are preserved, in the correct order
- * assuming there are no cyclic dependencies. Exports not marked for re-export
- * are eliminated.
+ * are eliminated. All init globals are preserved, in the correct orde. Exports
+ * not marked for re-export are eliminated.
  *
  * On success, returns a non-NULL result object. On error, returns NULL, and
  * adds any error(s) encountered to the given error list.

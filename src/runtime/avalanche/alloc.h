@@ -68,6 +68,11 @@ void* ava_alloc_precise(size_t sz) AVA_MALLOC;
  */
 void* ava_alloc_atomic(size_t sz) AVA_MALLOC;
 /**
+ * Equivalent to ava_alloc_atomic() followed with a memset of the same size
+ * initialising all the memory to zero.
+ */
+void* ava_alloc_atomic_zero(size_t sz) AVA_MALLOC;
+/**
  * Allocates and returns a block of memory of at least the given size. The
  * memory is *not* initialised to zeroes; its contents are undefined.
  *
@@ -83,6 +88,11 @@ void* ava_alloc_atomic(size_t sz) AVA_MALLOC;
  * If memory allocation fails, the process is aborted.
  */
 void* ava_alloc_atomic_precise(size_t sz) AVA_MALLOC;
+/**
+ * Equivalent to ava_alloc_atomic_precise() followed with a memset of the same
+ * size initialising all the memory to zero.
+ */
+void* ava_alloc_atomic_precise_zero(size_t sz) AVA_MALLOC;
 /**
  * Allocates and returns a block of memory of at least the given size.
  *

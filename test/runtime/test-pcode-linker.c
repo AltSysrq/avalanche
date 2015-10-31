@@ -16,6 +16,8 @@
 
 #include "test.c"
 
+#include <stdarg.h>
+
 #include "runtime/avalanche/defs.h"
 #include "runtime/avalanche/string.h"
 #include "runtime/avalanche/map.h"
@@ -81,6 +83,41 @@ static ava_pcode_global_list* to_interface(const char* source) {
 static void to_interface_like(const char* expected, const char* input) {
   assert_pcode_equals(expected, to_interface(input));
 }
+
+static void link_modules_like_(
+  const char* expected, ava_bool link_as_packages,
+  ...
+) {
+  ava_compile_error_list errors;
+  ava_pcode_linker* linker;
+  ava_pcode_global_list* output;
+  const char* module_name, * module_source;
+  va_list args;
+
+  linker = ava_pcode_linker_new();
+  TAILQ_INIT(&errors);
+
+  va_start(args, link_as_packages);
+  while ((module_name = va_arg(args, const char*))) {
+    module_source = va_arg(args, const char*);
+    (link_as_packages?
+     ava_pcode_linker_add_package :
+     ava_pcode_linker_add_module)(
+       linker, ava_string_of_cstring(module_name),
+       parse_pcode(module_source));
+  }
+  va_end(args);
+
+  output = ava_pcode_linker_link(linker, &errors);
+  ck_assert_msg(TAILQ_EMPTY(&errors),
+                "Link failed.\n%s",
+                ava_string_to_cstring(
+                  ava_error_list_to_string(&errors, 50, ava_false)));
+  assert_pcode_valid(output);
+  assert_pcode_equals(expected, output);
+}
+
+#define link_modules_like(...) link_modules_like_(__VA_ARGS__, NULL)
 
 deftest(empty_pcode_to_interface) {
   ava_pcode_global_list* res;
@@ -180,4 +217,318 @@ deftest(interface_deletes_src_pos_at_eof) {
     "[macro true foo [die]]\n"
     "[src-pos source.ava 0 1 1 1 1]\n"
     "[var false [ava private]]\n");
+}
+
+deftest(linker_emits_error_on_module_conflict) {
+  ava_compile_error_list errors;
+  ava_pcode_linker* linker = ava_pcode_linker_new();
+  const ava_pcode_global_list* empty = parse_pcode("");
+
+  TAILQ_INIT(&errors);
+  ava_pcode_linker_add_module(linker, AVA_ASCII9_STRING("foo"), empty);
+  ava_pcode_linker_add_module(linker, AVA_ASCII9_STRING("foo"), empty);
+  (void)ava_pcode_linker_link(linker, &errors);
+
+  ck_assert(!TAILQ_EMPTY(&errors));
+}
+
+deftest(linker_emits_error_on_package_conflict) {
+  ava_compile_error_list errors;
+  ava_pcode_linker* linker = ava_pcode_linker_new();
+  const ava_pcode_global_list* empty = parse_pcode("");
+
+  TAILQ_INIT(&errors);
+  ava_pcode_linker_add_package(linker, AVA_ASCII9_STRING("foo"), empty);
+  ava_pcode_linker_add_package(linker, AVA_ASCII9_STRING("foo"), empty);
+  (void)ava_pcode_linker_link(linker, &errors);
+
+  ck_assert(!TAILQ_EMPTY(&errors));
+}
+
+deftest(linker_considers_packages_and_modules_separate_namespaces) {
+  ava_compile_error_list errors;
+  ava_pcode_linker* linker = ava_pcode_linker_new();
+  const ava_pcode_global_list* empty = parse_pcode("");
+
+  TAILQ_INIT(&errors);
+  ava_pcode_linker_add_module(linker, AVA_ASCII9_STRING("foo"), empty);
+  ava_pcode_linker_add_package(linker, AVA_ASCII9_STRING("foo"), empty);
+  (void)ava_pcode_linker_link(linker, &errors);
+
+  ck_assert(TAILQ_EMPTY(&errors));
+}
+
+deftest(empty_link) {
+  link_modules_like("", ava_false);
+}
+
+deftest(reexported_exports_kept) {
+  link_modules_like(
+    "[ext-var [ava bar]]\n"
+    "[export 0 true bar]\n"
+    "[macro true foo [die]]\n",
+    ava_false,
+
+    "module",
+    "[ext-var [ava bar]]\n"
+    "[export 0 true bar]\n"
+    "[macro true foo [die]]\n");
+}
+
+deftest(nonreexported_exports_deleted) {
+  link_modules_like(
+    "[ext-var [ava bar]]\n",
+    ava_false,
+
+    "module",
+    "[ext-var [ava bar]]\n"
+    "[export 0 false bar]\n"
+    "[macro false foo [die]]\n");
+}
+
+deftest(global_refs_relinked_after_export_deletions) {
+  link_modules_like(
+    "[ext-var [ava private]]\n"
+    "[ext-var [ava public]]\n"
+    "[export 1 true public]\n"
+    "[fun false [ava init] [ava pos] [\"\"] [\n"
+    "  [set-glob 0 v0]\n"
+    "  [set-glob 1 v0]\n"
+    "]]\n"
+    "[init 3]\n",
+    ava_false,
+
+    "module",
+    "[ext-var [ava private]]\n"
+    "[export 0 false private]\n"
+    "[ext-var [ava public]]\n"
+    "[export 2 true public]\n"
+    "[fun false [ava init] [ava pos] [\"\"] [\n"
+    "  [set-glob 0 v0]\n"
+    "  [set-glob 2 v0]\n"
+    "]]\n"
+    "[init 4]\n");
+}
+
+deftest(unpublished_globals_do_not_conflict) {
+  link_modules_like(
+    "[var false [ava private]]\n"
+    "[var false [ava private]]\n"
+    "[fun false [ava init] [ava pos] [\"\"] [\n"
+    "  [set-glob 0 v0]\n"
+    "  [set-glob 1 v0]\n"
+    "]]\n",
+    ava_false,
+
+    "module",
+    "[macro false macro [die]]\n"
+    "[var false [ava private]]\n"
+    "[var false [ava private]]\n"
+    "[fun false [ava init] [ava pos] [\"\"] [\n"
+    "  [set-glob 1 v0]\n"
+    "  [set-glob 2 v0]\n"
+    "]]\n");
+}
+
+deftest(redundant_externals_collapsed) {
+  link_modules_like(
+    "[ext-var [ava some-var]]\n"
+    "[ext-fun [ava bar] [ava pos pos]]\n",
+    ava_false,
+
+    "module",
+    "[ext-var [ava some-var]]\n"
+    "[ext-fun [ava bar] [ava pos pos]]\n"
+    "[ext-var [ava some-var]]\n"
+    "[ext-fun [ava bar] [ava pos pos]]\n");
+}
+
+deftest(external_collapsed_into_prior_local) {
+  link_modules_like(
+    "[var true [ava foo]]\n",
+    ava_false,
+
+    "module",
+    "[var true [ava foo]]\n"
+    "[ext-var [ava foo]]\n");
+}
+
+deftest(external_collapsed_into_later_local) {
+  link_modules_like(
+    "[var true [ava foo]]\n",
+    ava_false,
+
+    "module",
+    "[ext-var [ava foo]]\n"
+    "[var true [ava foo]]\n");
+}
+
+deftest(globals_refs_relinked_after_cannonicalisation) {
+  link_modules_like(
+    "[var true [ava foo]]\n"
+    "[fun false [ava init] [ava pos] [\"\"] [\n"
+    "  [set-glob 0 v0]\n"
+    "  [ld-glob v0 0]\n"
+    "  [push d 1]\n"
+    "  [ld-reg d0 v0]\n"
+    "  [invoke-ss d0 3 0 1]\n"
+    "  [pop d 1]\n"
+    "]]\n"
+    "[init 1]\n"
+    "[fun true [ava doit] [ava pos] [x] [\n"
+    "  [ret v0]\n"
+    "]]\n",
+    ava_false,
+
+    "module",
+    "[ext-var [ava foo]]\n"
+    "[var true [ava foo]]\n"
+    "[ext-fun [ava doit] [ava pos]]\n"
+    "[fun false [ava init] [ava pos] [\"\"] [\n"
+    "  [set-glob 1 v0]\n"
+    "  [ld-glob v0 0]\n"
+    "  [push d 1]\n"
+    "  [ld-reg d0 v0]\n"
+    "  [invoke-ss d0 2 0 1]\n"
+    "  [pop d 1]\n"
+    "]]\n"
+    "[init 3]\n"
+    "[fun true [ava doit] [ava pos] [x] [\n"
+    "  [ret v0]\n"
+    "]]\n");
+}
+
+deftest(nondependent_modules_concatenated) {
+  link_modules_like(
+    "[fun false [ava init] [ava pos] [\"\"] [\n"
+    "  [set-glob 2 v0]\n"
+    "]]\n"
+    "[init 0]\n"
+    "[var false [ava foo]]\n"
+    "[fun false [ava init] [ava pos] [\"\"] [\n"
+    "  [set-glob 5 v0]\n"
+    "]]\n"
+    "[init 3]\n"
+    "[var false [ava bar]]\n",
+    ava_false,
+
+    "module-a",
+    "[fun false [ava init] [ava pos] [\"\"] [\n"
+    "  [set-glob 2 v0]\n"
+    "]]\n"
+    "[init 0]\n"
+    "[var false [ava foo]]\n",
+
+    "module-b",
+    "[fun false [ava init] [ava pos] [\"\"] [\n"
+    "  [set-glob 2 v0]\n"
+    "]]\n"
+    "[init 0]\n"
+    "[var false [ava bar]]\n");
+}
+
+deftest(dependent_modules_concatenated_in_correct_order) {
+  link_modules_like(
+    "[fun false [ava init-b] [ava pos] [\"\"] [\n"
+    "  [set-glob 2 v0]\n"
+    "]]\n"
+    "[init 0]\n"
+    "[var false [ava from-module-b]]\n"
+    "[fun false [ava init-a] [ava pos] [\"\"] [\n"
+    "  [set-glob 5 v0]\n"
+    "]]\n"
+    "[init 3]\n"
+    "[var false [ava from-module-a]]\n",
+    ava_false,
+
+    "module-a",
+    "[fun false [ava init-a] [ava pos] [\"\"] [\n"
+    "  [set-glob 2 v0]\n"
+    "]]\n"
+    "[init 0]\n"
+    "[var false [ava from-module-a]]\n"
+    "[load-mod module-b]\n",
+
+    "module-b",
+    "[fun false [ava init-b] [ava pos] [\"\"] [\n"
+    "  [set-glob 2 v0]\n"
+    "]]\n"
+    "[init 0]\n"
+    "[var false [ava from-module-b]]\n");
+}
+
+deftest(dependent_packages_concatenated_in_correct_order) {
+  link_modules_like(
+    "[fun false [ava init-b] [ava pos] [\"\"] [\n"
+    "  [set-glob 2 v0]\n"
+    "]]\n"
+    "[init 0]\n"
+    "[var false [ava from-package-b]]\n"
+    "[fun false [ava init-a] [ava pos] [\"\"] [\n"
+    "  [set-glob 5 v0]\n"
+    "]]\n"
+    "[init 3]\n"
+    "[var false [ava from-package-a]]\n",
+    ava_true,
+
+    "package-a",
+    "[fun false [ava init-a] [ava pos] [\"\"] [\n"
+    "  [set-glob 2 v0]\n"
+    "]]\n"
+    "[init 0]\n"
+    "[var false [ava from-package-a]]\n"
+    "[load-pkg package-b]\n",
+
+    "package-b",
+    "[fun false [ava init-b] [ava pos] [\"\"] [\n"
+    "  [set-glob 2 v0]\n"
+    "]]\n"
+    "[init 0]\n"
+    "[var false [ava from-package-b]]\n");
+}
+
+deftest(unmatched_load_mod_or_pkg_kept_after_link) {
+  link_modules_like(
+    "[load-mod some-mod]\n"
+    "[load-pkg some-pkg]\n",
+    ava_false,
+
+    "module",
+    "[load-mod some-mod]\n"
+    "[load-pkg some-pkg]\n");
+}
+
+deftest(duplicated_published_symbol_results_in_error) {
+  ava_compile_error_list errors;
+  ava_pcode_linker* linker;
+
+  linker = ava_pcode_linker_new();
+  TAILQ_INIT(&errors);
+
+  ava_pcode_linker_add_module(
+    linker, AVA_ASCII9_STRING("module-a"),
+    parse_pcode("[var true [ava foo]]\n"));
+  ava_pcode_linker_add_module(
+    linker, AVA_ASCII9_STRING("module-b"),
+    parse_pcode("[var true [ava foo]]\n"));
+
+  (void)ava_pcode_linker_link(linker, &errors);
+
+  ck_assert(!TAILQ_EMPTY(&errors));
+}
+
+deftest(cyclic_dependency_results_in_error) {
+  ava_compile_error_list errors;
+  ava_pcode_linker* linker;
+
+  linker = ava_pcode_linker_new();
+  TAILQ_INIT(&errors);
+
+  ava_pcode_linker_add_module(
+    linker, AVA_ASCII9_STRING("module-a"),
+    parse_pcode("[load-mod module-a]\n"));
+
+  (void)ava_pcode_linker_link(linker, &errors);
+
+  ck_assert(!TAILQ_EMPTY(&errors));
 }

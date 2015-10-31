@@ -1873,6 +1873,30 @@ set defs {
       effect, even if usages of the conflicting symbols never overlap.
     }
   }
+
+  cerror X9011 linker_duplicate_module {{ava_string name}} {
+    msg "More than one input package or module has name %name%"
+    explanation {
+      More than one unit of P-Code was fed to the P-Code linker bearing the
+      indicated package or module name.
+
+      This error should not generally be possible; it likely is indicative of a
+      bug in the toolchain.
+    }
+  }
+
+  cerror X9012 linker_cyclic_dependency {{ava_string member}} {
+    msg "Link-time cyclic dependency involving package or module %member%"
+    explanation {
+      While linking multiple P-Code modules or packages, the linker discovered
+      a cycle in the depency graph between the objects, involving at least the
+      indicated module or package.
+
+      Avalanche normally prevents such cycles from being created at
+      compile-time, so this error can generally only occur if inputs are mixed
+      from different compile runs.
+    }
+  }
 }
 
 proc ncode {code} {

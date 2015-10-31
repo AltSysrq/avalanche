@@ -34,10 +34,16 @@
 #include "avalanche/pcode-linker.h"
 #include "../bsd.h"
 
+typedef enum {
+  ava_pcles_unconsumed,
+  ava_pcles_in_progress,
+  ava_pcles_consumed
+} ava_pcode_linker_entry_status;
+
 typedef struct ava_pcode_linker_entry_s {
   ava_string name;
   const ava_pcode_global_list* pcode;
-  ava_bool consumed;
+  ava_pcode_linker_entry_status status;
 
   RB_ENTRY(ava_pcode_linker_entry_s) map;
 } ava_pcode_linker_entry;
@@ -80,6 +86,10 @@ static void ava_pcode_linker_concat_object(
   ava_pcode_global** dst,
   ava_pcode_linker* this, const ava_pcode_global_list* src,
   size_t* offset, ava_compile_error_list* errors);
+static void ava_pcode_linker_concat_object_if_unconsumed(
+  ava_pcode_global** dst, ava_pcode_linker* this,
+  ava_pcode_linker_entry* entry,
+  size_t* offset, ava_compile_error_list* errors);
 static void ava_pcode_linker_clone_fun_body(
   ava_pcg_fun* fun, size_t object_base);
 static ava_map_value ava_pcode_linker_select_canonical(
@@ -116,7 +126,7 @@ ava_pcode_global_list* ava_pcode_to_interface(
   ava_pcode_global* dst_elt;
 
   index_map = ava_alloc_atomic(sizeof(size_t) * src_length);
-  exported = ava_alloc_atomic(src_length);
+  exported = ava_alloc_atomic_zero(src_length);
 
   /* Find out what elements have been exported */
   TAILQ_FOREACH(src_elt, src, next) {
@@ -257,7 +267,7 @@ void ava_pcode_linker_add_module(
 
   entry->name = module_name;
   entry->pcode = module;
-  entry->consumed = ava_false;
+  entry->status = ava_pcles_unconsumed;
 
   if (RB_INSERT(ava_pcode_linker_map, &this->modules, entry))
     this->duplicate_name = module_name;
@@ -272,7 +282,7 @@ void ava_pcode_linker_add_package(
 
   entry->name = package_name;
   entry->pcode = package;
-  entry->consumed = ava_false;
+  entry->status = ava_pcles_unconsumed;
 
   if (RB_INSERT(ava_pcode_linker_map, &this->packages, entry))
     this->duplicate_name = package_name;
@@ -282,9 +292,19 @@ ava_pcode_global_list* ava_pcode_linker_link(
   ava_pcode_linker* this,
   ava_compile_error_list* errors
 ) {
+  ava_compile_location location;
   ava_pcode_global** concatted;
   size_t concat_size;
   ava_map_value canonical_indices;
+
+  ava_pcode_linker_unknown_location(&location);
+  if (ava_string_is_present(this->duplicate_name)) {
+    TAILQ_INSERT_TAIL(
+      errors,
+      ava_error_linker_duplicate_module(&location, this->duplicate_name),
+      next);
+    return NULL;
+  }
 
   /* Dump everything into one bucket in dependency order */
   concatted = ava_pcode_linker_concat_all(&concat_size, this, errors);
@@ -345,6 +365,33 @@ static ava_pcode_global** ava_pcode_linker_concat_all(
   return dst;
 }
 
+static void ava_pcode_linker_concat_object_if_unconsumed(
+  ava_pcode_global** dst, ava_pcode_linker* this,
+  ava_pcode_linker_entry* entry,
+  size_t* offset, ava_compile_error_list* errors
+) {
+  ava_compile_location location;
+
+  switch (entry->status) {
+  case ava_pcles_consumed:
+    break;
+
+  case ava_pcles_unconsumed:
+    entry->status = ava_pcles_in_progress;
+    ava_pcode_linker_concat_object(dst, this, entry->pcode, offset, errors);
+    entry->status = ava_pcles_consumed;
+    break;
+
+  case ava_pcles_in_progress:
+    ava_pcode_linker_unknown_location(&location);
+    TAILQ_INSERT_TAIL(
+      errors,
+      ava_error_linker_cyclic_dependency(&location, entry->name),
+      next);
+    break;
+  }
+}
+
 static ava_bool ava_pcode_linker_concat_package(
   ava_pcode_global** dst,
   ava_pcode_linker* this, ava_string package_name,
@@ -354,10 +401,9 @@ static ava_bool ava_pcode_linker_concat_package(
 
   exemplar.name = package_name;
   found = RB_FIND(ava_pcode_linker_map, &this->packages, &exemplar);
-  if (found && !found->consumed) {
-    found->consumed = ava_true;
-    ava_pcode_linker_concat_object(dst, this, found->pcode, offset, errors);
-  }
+  if (found)
+    ava_pcode_linker_concat_object_if_unconsumed(
+      dst, this, found, offset, errors);
 
   return !!found;
 }
@@ -371,10 +417,9 @@ static ava_bool ava_pcode_linker_concat_module(
 
   exemplar.name = module_name;
   found = RB_FIND(ava_pcode_linker_map, &this->modules, &exemplar);
-  if (found && !found->consumed) {
-    found->consumed = ava_true;
-    ava_pcode_linker_concat_object(dst, this, found->pcode, offset, errors);
-  }
+  if (found)
+    ava_pcode_linker_concat_object_if_unconsumed(
+      dst, this, found, offset, errors);
 
   return !!found;
 }
@@ -392,7 +437,7 @@ static void ava_pcode_linker_concat_object(
   ava_pcode_global* dst_elt;
 
   srclen = ava_pcode_global_length(pcode);
-  discard = ava_alloc_atomic(srclen);
+  discard = ava_alloc_atomic_zero(srclen);
 
   /* Check for load-pkg and load-mod globals that resolve, and mark them as
    * discarded.
@@ -444,7 +489,7 @@ static void ava_pcode_linker_concat_object(
         ava_pcode_linker_clone_fun_body((ava_pcg_fun*)dst_elt, object_base);
     }
 
-    dst[*offset++] = dst_elt;
+    dst[(*offset)++] = dst_elt;
     ++ix;
   }
 }
@@ -462,7 +507,7 @@ static void ava_pcode_linker_clone_fun_body(
   TAILQ_INIT(dst);
 
   TAILQ_FOREACH(src_elt, fun->body, next) {
-    dst_elt = ava_pcode_exe_clone(dst_elt);
+    dst_elt = ava_pcode_exe_clone(src_elt);
     for (i = 0; ava_pcode_exe_get_global_ref(&global_ref, dst_elt, i); ++i)
       ava_pcode_exe_set_global_ref(dst_elt, i, global_ref + object_base);
 
