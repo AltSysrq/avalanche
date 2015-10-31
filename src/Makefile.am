@@ -19,7 +19,7 @@ RE2C_FLAGS = -g
 
 AVA_DRIVERS = runtime/-llvm-support/drivers/isa-unchecked.bc
 
-lib_LTLIBRARIES = libavart.la
+lib_LTLIBRARIES = libavart.la libavart-native.la
 noinst_PROGRAMS = simple-interp llvm-ir-dump.t
 noinst_DATA =  $(AVA_DRIVERS)
 libavart_la_SOURCES = \
@@ -74,7 +74,9 @@ runtime/-intrinsics/namespace.c \
 runtime/-intrinsics/pasta.c \
 runtime/-intrinsics/ret.c \
 runtime/-intrinsics/user-macro.c \
-runtime/-intrinsics/variable.c \
+runtime/-intrinsics/variable.c
+
+libavart_native_la_SOURCES = \
 runtime/-llvm-support/drivers/gen-isa-unchecked.c \
 runtime/-llvm-support/drivers/gen-main.c \
 runtime/-llvm-support/driver-iface.cxx \
@@ -83,12 +85,13 @@ runtime/-llvm-support/jit-context.cxx \
 runtime/-llvm-support/optimisation.cxx \
 runtime/-llvm-support/translation.cxx
 
-libavart_la_LIBADD = $(LIBUNWIND_LIBS) $(LIBFFI_LIBS) $(LLVM_LIBS)
+libavart_la_LIBADD = $(LIBUNWIND_LIBS) $(LIBFFI_LIBS)
+libavart_native_la_LIBADD = $(LLVM_LIBS)
 simple_interp_SOURCES = interp/main.c
-simple_interp_LDADD = libavart.la
+simple_interp_LDADD = libavart.la libavart-native.la
 
 llvm_ir_dump_t_SOURCES = llvm-ir-dump.cxx
-llvm_ir_dump_t_LDADD = libavart.la $(LLVM_LIBS)
+llvm_ir_dump_t_LDADD = libavart.la libavart-native.la
 
 runtime/gen-lex.c: runtime/lex.c
 	$(AM_V_GEN)$(RE2C) --input custom -c $(RE2C_FLAGS) \

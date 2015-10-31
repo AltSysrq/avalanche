@@ -37,7 +37,8 @@ BENCHMARKS = benchmarks/list/avalanche.t benchmarks/map/avalanche.t \
 EXTRA_CFLAGS =
 AM_CFLAGS = $(CHECK_CFLAGS) -I../src $(EXTRA_CFLAGS) -funwind-tables
 AM_CXXFLAGS = $(CHECK_CFLAGS) -I../src $(EXTRA_CFLAGS) -funwind-tables
-AM_LDFLAGS = -export-dynamic $(CHECK_LIBS) ../src/libavart.la
+AM_LDFLAGS = -export-dynamic $(CHECK_LIBS) \
+	../src/libavart.la ../src/libavart-native.la
 
 check_PROGRAMS = $(TESTS)
 noinst_PROGRAMS =  $(BENCHMARKS)
