@@ -44,6 +44,7 @@ AVA_BEGIN_DECLS
 #include "avalanche/intrinsics.h"
 #include "avalanche/macro-arg.h"
 #include "avalanche/pcode.h"
+#include "avalanche/pcode-linker.h"
 #include "avalanche/pcode-validation.h"
 #include "avalanche/varscope.h"
 #include "avalanche/code-gen.h"

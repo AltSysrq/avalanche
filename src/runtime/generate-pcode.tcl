@@ -277,6 +277,8 @@ proc gen-header {} {
         ava_uint indentation_level\);
       ava_pcode_NAME_list* ava_pcode_NAME_list_of_string\(
         ava_string str\);
+      ava_pcode_NAME* ava_pcode_NAME_clone\(
+        const ava_pcode_NAME* elt\);
     } MNE [dict get $struct mne] NAME [dict get $struct name]
 
     if {[dict exists $struct parent]} {
@@ -344,6 +346,10 @@ proc gen-header {} {
           TYPE* dst,
           const ava_pcode_NAME* elt,
           ava_uint index\);
+        void ava_pcode_NAME_set_PROP\(
+          ava_pcode_NAME* elt,
+          ava_uint index,
+          TYPE value\);
         ava_pcode_NAME* ava_pcode_NAME_with_PROP\(
           const ava_pcode_NAME* elt,
           ava_uint index,
@@ -475,6 +481,27 @@ proc gen-impl {} {
       } NAME $sname
     }
 
+    # The _clone() function
+    putm {
+      ava_pcode_NAME* ava_pcode_NAME_clone\(
+        const ava_pcode_NAME* elt
+      \) \{
+        switch (elt->type) \{
+    } NAME $sname
+
+    dict for {ename elt} [dict get $struct elts] {
+      putm {
+        case ava_pcSMNEt_ENAME:
+          return ava_clone(elt, sizeof(ava_pcSMNE_ENAME));
+      } SMNE $smne ENAME $ename
+    }
+
+    putm {
+        default: abort();
+        \}
+      \}
+    }
+
     # Attributes
     foreach attr [dict get $struct attrs] {
       putm {
@@ -572,7 +599,45 @@ proc gen-impl {} {
           \}
         \}
       }
-    }
+
+      putm {
+        void ava_pcode_NAME_set_PROP\(
+          ava_pcode_NAME* elt,
+          ava_uint index,
+          TYPE value
+        \) \{
+          switch (elt->type) \{
+      } NAME $sname PROP $pname TYPE [ctype-field $ptype]
+
+      dict for {ename elt} [dict get $struct elts] {
+        putm {
+          case ava_pcMNEt_ELT: \{
+            ava_pcMNE_ELT* celt AVA_UNUSED;
+            celt = (ava_pcMNE_ELT*)elt;
+            switch (index) \{
+        } MNE $smne ELT $ename
+        set ix 0
+        foreach field [dict get $elt fields] {
+          if {$pname in [dict get $field props]} {
+            putm {
+            case IX: celt->FIELD = value; break;
+            } IX $ix FIELD [dict get $field name]
+            incr ix
+          }
+        }
+        putm {
+            default: abort();
+            \}
+          \} break;
+        } NAME $sname
+      }
+
+      putm {
+          default: abort();
+          \}
+        \}
+      }
+    } ;# end properties
 
     # to_string
     putm {
