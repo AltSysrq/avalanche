@@ -89,11 +89,10 @@ ava_bool ava_compenv_compile_file(
   /* Occurs check */
   SLIST_FOREACH(other_pending, &env->pending_modules, next) {
     if (ava_string_equal(filename, other_pending->module_name)) {
-      TAILQ_INSERT_TAIL(
+      ava_compile_error_add(
         dst_errors,
         ava_error_compile_cyclic_dependency(
-          base_location, filename),
-        next);
+          base_location, filename));
       return ava_false;
     }
   }
@@ -102,11 +101,10 @@ ava_bool ava_compenv_compile_file(
   SLIST_INSERT_HEAD(&env->pending_modules, &this_pending, next);
 
   if (!(*env->read_source)(&sources, &error_message, filename, env)) {
-    TAILQ_INSERT_TAIL(
+    ava_compile_error_add(
       dst_errors,
       ava_error_cannot_read_module_source(
-        base_location, filename, error_message),
-      next);
+        base_location, filename, error_message));
     return ava_false;
   }
 
