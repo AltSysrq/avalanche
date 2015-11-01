@@ -1715,6 +1715,35 @@ set defs {
     }
   }
 
+  cerror C5106 cannot_read_module_source {
+    {ava_string filename} {ava_string message}
+  } {
+    msg "Error reading %filename%: %message%"
+    explanation {
+      Compilation needed to read a particular source file in order to proceed,
+      but reading that file failed.
+    }
+  }
+
+  cerror C5107 compile_cyclic_dependency {{ava_string member}} {
+    msg "Cyclic module dependency involving %member%"
+    explanation {
+      The indicated module directly or indirectly depends upon itself.
+
+      Dependencies between modules must be an acyclic graph, since it is
+      impossible to compile a module without first completely compiling its
+      dependencies.
+
+      In most cases, this caused by two or more modules each exposing utility
+      functions the other needs; the solution to this issue is to decompose one
+      or more module in the cycle into smaller pieces that do not result in a
+      dependency cycle.
+
+      If functions of two modules are mutually recursive, the two should be
+      combined into one module instead.
+    }
+  }
+
   cerror X9000 xcode_dupe_label {{ava_value label}} {
     msg "P-Code label present in function more than once: %label%"
     explanation {

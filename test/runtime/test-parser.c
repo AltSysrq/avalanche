@@ -35,7 +35,8 @@ static ava_parse_unit* parse_successfully(const char* source) {
   ava_parse_unit* dst = AVA_NEW(ava_parse_unit);
   ava_compile_error_list errors;
 
-  if (!ava_parse(dst, &errors, ava_string_of_cstring(source), filename)) {
+  if (!ava_parse(dst, &errors, ava_string_of_cstring(source),
+                 filename, ava_true)) {
     fputs(ava_string_to_cstring(ava_error_list_to_string(
                                   &errors, 50, ava_false)),
           stderr);
@@ -77,7 +78,8 @@ static void parse_failure(const char* source, const char* expected_error) {
   ava_compile_error_list errors;
   ava_compile_error* error;
 
-  if (ava_parse(&dst, &errors, ava_string_of_cstring(source), filename)) {
+  if (ava_parse(&dst, &errors, ava_string_of_cstring(source),
+                filename, ava_true)) {
     ck_abort_msg("Parse succeeded unexpectedly");
   }
 

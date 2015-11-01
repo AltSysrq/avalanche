@@ -49,7 +49,7 @@ AVA_BEGIN_DECLS
 #include "avalanche/varscope.h"
 #include "avalanche/code-gen.h"
 #include "avalanche/module-cache.h"
-#include "avalanche/compile-frontend.h"
+#include "avalanche/compenv.h"
 #include "avalanche/jit.h"
 
 AVA_END_DECLS

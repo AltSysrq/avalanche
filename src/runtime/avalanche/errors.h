@@ -48,7 +48,7 @@
 /**
  * Describes the location of an entity in source code.
  */
-typedef struct {
+typedef struct ava_compile_location_s {
   /**
    * The source filename.
    */

@@ -128,7 +128,7 @@ static void test_macsub(const char* expected, const char* input) {
   ava_ast_node* ast;
 
   ck_assert(ava_parse(&root, &errors, ava_string_of_cstring(input),
-                      AVA_ASCII9_STRING("<test>")));
+                      AVA_ASCII9_STRING("<test>"), ava_true));
   ast = ava_macsub_run(context, &root.location, &root.v.statements,
                        ava_isrp_void);
 
