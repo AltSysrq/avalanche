@@ -34,7 +34,8 @@ static ava_macsub_context* context;
 defsetup {
   TAILQ_INIT(&errors);
   symbol_table = ava_symtab_new(NULL);
-  context = ava_macsub_context_new(symbol_table, &errors, AVA_EMPTY_STRING);
+  context = ava_macsub_context_new(
+    symbol_table, NULL, &errors, AVA_EMPTY_STRING);
 }
 
 defteardown { }

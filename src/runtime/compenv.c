@@ -193,7 +193,7 @@ ava_macsub_context* ava_compenv_minimal_new_macsub(
   ava_macsub_context* context;
 
   context = ava_macsub_context_new(
-    ava_symtab_new(NULL), errors, compenv->package_prefix);
+    ava_symtab_new(NULL), compenv, errors, compenv->package_prefix);
   ava_register_intrinsics(context);
   return context;
 }

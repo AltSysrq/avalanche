@@ -35,6 +35,8 @@
 
 #define STRING_PSEUDOMACRO_PRECEDENCE 10
 
+typedef struct ava_compenv_s ava_compenv;
+
 typedef struct {
   ava_string last_seed;
   ava_string base_prefix;
@@ -44,6 +46,7 @@ typedef struct {
 
 struct ava_macsub_context_s {
   ava_symtab* symbol_table;
+  ava_compenv* compenv;
   ava_varscope* varscope;
   ava_compile_error_list* errors;
   ava_string symbol_prefix;
@@ -76,6 +79,7 @@ static ava_ast_node* ava_macsub_error_to_lvalue(
 
 ava_macsub_context* ava_macsub_context_new(
   ava_symtab* symbol_table,
+  ava_compenv* compenv,
   ava_compile_error_list* errors,
   ava_string symbol_prefix
 ) {
@@ -83,6 +87,7 @@ ava_macsub_context* ava_macsub_context_new(
 
   this = AVA_NEW(ava_macsub_context);
   this->symbol_table = symbol_table;
+  this->compenv = compenv;
   this->varscope = ava_varscope_new();
   this->errors = errors;
   this->symbol_prefix = symbol_prefix;
@@ -101,6 +106,12 @@ ava_symtab* ava_macsub_get_symtab(
   const ava_macsub_context* context
 ) {
   return context->symbol_table;
+}
+
+ava_compenv* ava_macsub_get_compenv(
+  const ava_macsub_context* context
+) {
+  return context->compenv;
 }
 
 ava_varscope* ava_macsub_get_varscope(
@@ -188,6 +199,7 @@ ava_macsub_context* ava_macsub_context_push_major(
 
   this = AVA_NEW(ava_macsub_context);
   this->symbol_table = ava_symtab_new(parent->symbol_table);
+  this->compenv = parent->compenv;
   this->varscope = ava_varscope_new();
   this->errors = parent->errors;
   this->symbol_prefix = ava_string_concat(parent->symbol_prefix, interfix);
@@ -205,6 +217,7 @@ ava_macsub_context* ava_macsub_context_push_minor(
 
   this = AVA_NEW(ava_macsub_context);
   this->symbol_table = parent->symbol_table;
+  this->compenv = parent->compenv;
   this->varscope = parent->varscope;
   this->errors = parent->errors;
   this->symbol_prefix = ava_string_concat(parent->symbol_prefix, interfix);
