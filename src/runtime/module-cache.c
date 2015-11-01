@@ -61,6 +61,7 @@ ava_module_cache_get(const ava_module_cache_stack* cache,
   ava_module_cache* elt;
   const ava_pcode_global_list* found;
 
+  *error = AVA_ABSENT_STRING;
   for (elt = LIST_FIRST(cache); elt; elt = LIST_NEXT(elt, next)) {
     *error = AVA_ABSENT_STRING;
     if (elt->get)

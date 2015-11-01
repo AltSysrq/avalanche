@@ -221,8 +221,27 @@ struct global g {
     }
     # The name by which this macro is exposed to Avalanche code.
     str name
+    # The type of this macro.
+    # One of ava_st_control_macro, ava_st_operator_macro, ava_st_function_macro
+    int type
+    # The precedence of this macro.
+    # Must be 0 if type != ava_st_operator_macro.
+    int precedence
     # The body of this macro.
     struct macro m body
+
+    constraint {
+      ava_st_control_macro == @.type ||
+      ava_st_operator_macro == @.type ||
+      ava_st_function_macro == @.type
+    }
+    constraint {
+      (ava_st_operator_macro == @.type &&
+       (@.precedence >= 1 &&
+        @.precedence <= AVA_MAX_OPERATOR_MACRO_PRECEDENCE)) ||
+      (ava_st_operator_macro != type &&
+       @.precedence == 0)
+    }
   }
 
   # Declares that this P-Code unit depends upon a given package.

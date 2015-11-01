@@ -42,4 +42,16 @@ ava_macro_subst_result ava_intr_user_macro_subst(
   const ava_parse_unit* provoker,
   ava_bool* consumed_other_statements);
 
+/**
+ * Substitution functions for user macros.
+ *
+ * The macro userdata is the ava_pcode_macro_list* which defines the macro.
+ */
+ava_macro_subst_result ava_intr_user_macro_eval(
+  const ava_symbol* self,
+  ava_macsub_context* context,
+  const ava_parse_statement* statement,
+  const ava_parse_unit* provoker,
+  ava_bool* consumed_other_statements);
+
 #endif /* AVA_RUNTIME__INTRINSICS_USER_MACRO_H_ */

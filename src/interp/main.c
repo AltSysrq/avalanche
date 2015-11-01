@@ -61,7 +61,8 @@ static ava_value run(void* filename) {
     ava_driver_isa_unchecked_size);
   jit_error = ava_jit_run_module(
     jit, xcode, ava_string_of_cstring(filename),
-    ava_string_of_cstring(filename));
+    ava_string_of_cstring(filename),
+    ava_string_of_cstring("input:"));
 
   if (ava_string_is_present(jit_error)) {
     warnx("JIT failed: %s", ava_string_to_cstring(jit_error));

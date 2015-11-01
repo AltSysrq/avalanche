@@ -72,11 +72,13 @@ struct ava_xcode_translation_context {
     llvm::Module& module,
     ava_string filename,
     ava_string module_name,
+    ava_string package_prefix,
     bool full_debug);
 
   llvm::LLVMContext& llvm_context;
   llvm::Module& module;
   std::string module_name;
+  std::string package_prefix;
   llvm::DIBuilder dib;
   const ava::ir_types types;
   const ava::driver_iface di;
@@ -231,6 +233,23 @@ static llvm::Value* invoke_s(
 
 AVA_END_FILE_PRIVATE
 
+std::string ava::get_init_fun_name(
+  const std::string& package, const std::string& module
+) {
+  ava_demangled_name n;
+
+  n.scheme = ava_nms_ava;
+  n.name = ava_string_of_cstring(
+    get_unmangled_init_fun_name(package, module).c_str());
+  return ava_string_to_cstring(ava_name_mangle(n));
+}
+
+std::string ava::get_unmangled_init_fun_name(
+  const std::string& package, const std::string& module
+) {
+  return package + module + "(init)";
+}
+
 ava::xcode_to_ir_translator::xcode_to_ir_translator(void)
 : full_debug(true)
 { }
@@ -245,11 +264,14 @@ std::unique_ptr<llvm::Module> ava::xcode_to_ir_translator::translate(
   const ava_xcode_global_list* xcode,
   ava_string filename,
   ava_string module_name,
+  ava_string package_prefix,
   llvm::LLVMContext& llvm_context,
   std::string& error)
 const noexcept {
+  ava_string full_module_name = ava_string_concat(package_prefix, module_name);
+
   std::unique_ptr<llvm::Module> module(
-    new llvm::Module(llvm::StringRef(ava_string_to_cstring(module_name)),
+    new llvm::Module(llvm::StringRef(ava_string_to_cstring(full_module_name)),
                      llvm_context));
   std::unique_ptr<llvm::Module> error_ret(nullptr);
   std::set<std::string> declared_symbols;
@@ -282,7 +304,7 @@ const noexcept {
 
   ava_xcode_handle_driver_functions(*module, declared_symbols);
   ava_xcode_translation_context context(
-    llvm_context, *module, filename, module_name, full_debug);
+    llvm_context, *module, filename, module_name, package_prefix, full_debug);
   if (!context.di.error.empty()) {
     error = context.di.error;
     return error_ret;
@@ -454,16 +476,8 @@ noexcept {
       true, ix, error);
   } break;
 
-  case ava_pcgt_load_pkg: {
-    /* TODO */
-    abort();
-  } break;
-
-  case ava_pcgt_load_mod: {
-    /* TODO */
-    abort();
-  } break;
-
+  case ava_pcgt_load_pkg:
+  case ava_pcgt_load_mod:
   case ava_pcgt_src_pos:
   case ava_pcgt_export:
   case ava_pcgt_macro:
@@ -477,10 +491,12 @@ noexcept {
 ava_xcode_translation_context::ava_xcode_translation_context(
   llvm::LLVMContext& llvm_context_,
   llvm::Module& module_,
-  ava_string filename, ava_string module_name, bool full_debug)
+  ava_string filename, ava_string module_name_, ava_string package_prefix_,
+  bool full_debug)
 : llvm_context(llvm_context_),
   module(module_),
-  module_name(ava_string_to_cstring(module_name)),
+  module_name(ava_string_to_cstring(module_name_)),
+  package_prefix(ava_string_to_cstring(package_prefix_)),
   dib(module_),
   types(llvm_context_, module_),
   di(module_)
@@ -909,7 +925,8 @@ static llvm::Function* create_init_function(
       llvm::FunctionType::get(
         llvm::Type::getVoidTy(context.llvm_context), false),
       llvm::GlobalValue::ExternalLinkage,
-      context.module_name, &context.module);
+      ava::get_init_fun_name(context.package_prefix, context.module_name),
+      &context.module);
   }
 }
 
@@ -918,19 +935,63 @@ static void build_init_function(
   llvm::Function* init_function,
   const ava_xcode_global_list* xcode)
 noexcept {
-  llvm::BasicBlock* block = llvm::BasicBlock::Create(
-    context.llvm_context, "", init_function);
-  llvm::IRBuilder<true> irb(block);
   context.dib.createFunction(
     context.di_compile_unit,
-    context.module_name,
+    ava::get_unmangled_init_fun_name(
+      context.package_prefix, context.module_name),
     init_function->getName(),
     context.di_file, 0,
     context.dib.createSubroutineType(context.di_file,
                                      context.dib.getOrCreateArray({NULL})),
     false, true, 0, 0, true, init_function);
 
-  /* TODO: Initialise other packages / modules */
+  llvm::BasicBlock* test_block = llvm::BasicBlock::Create(
+    context.llvm_context, "", init_function);
+  llvm::BasicBlock* already_init_block = llvm::BasicBlock::Create(
+    context.llvm_context, "", init_function);
+  llvm::BasicBlock* block = llvm::BasicBlock::Create(
+    context.llvm_context, "", init_function);
+  llvm::IRBuilder<true> irb(test_block);
+
+  llvm::GlobalVariable* module_already_init =
+    new llvm::GlobalVariable(
+      context.module, irb.getInt1Ty(), false,
+      llvm::GlobalValue::PrivateLinkage,
+      irb.getFalse());
+  irb.CreateCondBr(
+    irb.CreateLoad(module_already_init),
+    already_init_block, block);
+
+  irb.SetInsertPoint(already_init_block);
+  irb.CreateRetVoid();
+
+  irb.SetInsertPoint(block);
+  irb.CreateStore(irb.getTrue(), module_already_init);
+
+  /* Initialise other packages */
+  llvm::FunctionType* init_fun_type = llvm::FunctionType::get(
+    llvm::Type::getVoidTy(context.llvm_context), false);
+  for (size_t i = 0; i < xcode->length; ++i) {
+    if (ava_pcgt_load_pkg == xcode->elts[i].pc->type) {
+      const ava_pcg_load_pkg* v = (const ava_pcg_load_pkg*)xcode->elts[i].pc;
+      irb.CreateCall(
+        context.module.getOrInsertFunction(
+          ava::get_init_fun_name(
+            ava_string_to_cstring(v->name), ""),
+          init_fun_type));
+    }
+  }
+  for (size_t i = 0; i < xcode->length; ++i) {
+    if (ava_pcgt_load_mod == xcode->elts[i].pc->type) {
+      const ava_pcg_load_mod* v = (const ava_pcg_load_mod*)xcode->elts[i].pc;
+      irb.CreateCall(
+        context.module.getOrInsertFunction(
+          ava::get_init_fun_name(
+            context.package_prefix,
+            ava_string_to_cstring(v->name)),
+          init_fun_type));
+    }
+  }
 
   /* Initialise all globals */
   for (size_t i = 0; i < xcode->length; ++i) {

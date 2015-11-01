@@ -38,7 +38,7 @@ typedef enum {
    * A symbol which  references a variable or constant (but  not a function) at
    * global scope.
    */
-  ava_st_global_variable,
+  ava_st_global_variable = 0,
   /**
    * A symbol which references a function at global scope.
    *

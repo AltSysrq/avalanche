@@ -97,7 +97,8 @@ ava_value lnot(ava_value a) {
 static const char** inputs;
 static void run_test(int ix);
 static ava_value run_test_impl(void* arg);
-static void execute_xcode(const ava_xcode_global_list* xcode);
+static void execute_xcode(ava_compenv* compenv,
+                          const ava_xcode_global_list* xcode);
 
 static void nop(void) { }
 
@@ -189,7 +190,7 @@ static ava_value run_test_impl(void* arg) {
     goto done;
 
   test_passed = ava_false;
-  execute_xcode(xcode);
+  execute_xcode(compenv, xcode);
 
   done:
   name = strrchr(inputs[ix], '/') + 1;
@@ -219,17 +220,64 @@ static ava_value run_test_impl(void* arg) {
   return ava_empty_list().v;
 }
 
-static void execute_xcode(const ava_xcode_global_list* xcode) {
+static void add_dependent_modules(
+  ava_jit_context* jit,
+  ava_compenv* compenv,
+  const ava_xcode_global_list* xcode,
+  ava_map_value* loaded_modules
+) {
+  size_t i;
+  const ava_pcg_load_mod* lm;
+  ava_value mnv;
+  ava_map_cursor cursor;
+  ava_compile_error_list errors;
+  ava_xcode_global_list* submod;
+
+  for (i = 0; i < xcode->length; ++i) {
+    if (ava_pcgt_load_mod == xcode->elts[i].pc->type) {
+      lm = (const ava_pcg_load_mod*)xcode->elts[i].pc;
+      mnv = ava_value_of_string(lm->name);
+      cursor = ava_map_find(*loaded_modules, mnv);
+      if (AVA_MAP_CURSOR_NONE == cursor) {
+        TAILQ_INIT(&errors);
+        if (!ava_compenv_compile_file(
+              NULL, &submod, compenv,
+              ava_string_concat(lm->name, AVA_ASCII9_STRING(".ava")),
+              &errors, NULL)) {
+          ck_abort_msg("Compilation of submodule %s failed:\n%s",
+                       ava_string_to_cstring(lm->name),
+                       ava_string_to_cstring(
+                         ava_error_list_to_string(
+                           &errors, 50, ava_false)));
+        }
+
+        ava_jit_add_module(jit, submod, lm->name, lm->name,
+                           AVA_ASCII9_STRING("input:"));
+        *loaded_modules = ava_map_add(*loaded_modules,
+                                      mnv, ava_empty_map().v);
+        add_dependent_modules(jit, compenv, submod, loaded_modules);
+      }
+    }
+  }
+}
+
+static void execute_xcode(ava_compenv* compenv,
+                          const ava_xcode_global_list* xcode) {
   ava_string jit_error;
   ava_jit_context* jit;
+  ava_map_value loaded_modules;
+
+  loaded_modules = ava_empty_map();
 
   jit = ava_jit_context_new();
   ava_jit_add_driver(jit, ava_driver_isa_unchecked_data,
                      ava_driver_isa_unchecked_size);
+  add_dependent_modules(jit, compenv, xcode, &loaded_modules);
   jit_error = ava_jit_run_module(
     jit, xcode,
     AVA_ASCII9_STRING("testinput"),
-    AVA_ASCII9_STRING("input:main"));
+    AVA_ASCII9_STRING("main"),
+    AVA_ASCII9_STRING("input:"));
 
   if (ava_string_is_present(jit_error))
     ck_abort_msg("JIT failed: %s", ava_string_to_cstring(jit_error));

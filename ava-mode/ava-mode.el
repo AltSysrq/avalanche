@@ -34,7 +34,7 @@
                       "else" "extern" "Extern" "EXTERN"
                       "for" "fun" "Fun" "FUN" "goto"
                       "in" "if" "import" "macro" "Macro" "MACRO" "namespace"
-                      "pasta" "ret" "until" "while")
+                      "pasta" "reqmod" "reqpkg" "ret" "until" "while")
                      'symbols)
          'font-lock-keyword-face)
    (cons "\\$\\(\\s_\\|\\w\\)+\\$?" 'font-lock-variable-name-face)))

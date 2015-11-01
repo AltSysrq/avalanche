@@ -25,6 +25,7 @@
 #include <llvm/ExecutionEngine/MCJIT.h>
 #include <llvm/IR/LLVMContext.h>
 #include <llvm/IR/Module.h>
+#include <llvm/Linker/Linker.h>
 #include <llvm/Support/CodeGen.h>
 #include <llvm/Support/TargetSelect.h>
 
@@ -61,31 +62,58 @@ AVA_END_DECLS
  */
 
 ava::jit_context::jit_context(void) noexcept
-/* Awkwardly, we're not allowed to create the engine until we have an actual
- * module...
- */
-: engine(nullptr)
 { }
+
+bool ava::jit_context::add_module(
+  std::unique_ptr<llvm::Module> module,
+  std::string& error
+) {
+  modules.push_back(std::move(module));
+
+  return true;
+}
 
 bool ava::jit_context::run_module(
   std::unique_ptr<llvm::Module> module,
   ava_string module_name,
+  ava_string package_prefix,
   std::string& error
 ) {
+  llvm::LLVMContext& llvm_context(module->getContext());
+
+  if (!add_module(std::move(module), error)) return false;
+
+  std::unique_ptr<llvm::ExecutionEngine> engine;
+
   LLVMLinkInMCJIT();
   LLVMLinkInJIT();
   llvm::InitializeNativeTarget();
 
-  llvm::Module* borrowed_module = module.get();
+  /* Somehow, LLVM's JIT can't handle modules referring to each other.
+   *
+   * Not officially documented, but appears to be the case, and
+   * http://numba.pydata.org/llvm-py/doc/llvm_concepts.html concurs.
+   *
+   * For now, use the linker to toss everything into one Module when we run it.
+   * This of course defeats much of the benefit of using JIT, oh well.
+   */
+  std::unique_ptr<llvm::Module> linked_module(
+    new llvm::Module("jitstuff", llvm_context));
+  llvm::Linker linker(linked_module.get());
+  for (const std::unique_ptr<llvm::Module>& piece: modules) {
+    if (/* true on error*/linker.linkInModule(
+          piece.get(), llvm::Linker::PreserveSource, &error))
+      return false;
+  }
+
+  llvm::Module* borrowed_module = linked_module.get();
 
   if (!engine)
-    engine.reset(llvm::EngineBuilder(module.release())
+    engine.reset(llvm::EngineBuilder(linked_module.release())
                  .setEngineKind(llvm::EngineKind::JIT)
                  /*.setUseMCJIT(true)*/
                  .setErrorStr(&error_str)
                  .create());
-  else
-    engine->addModule(module.release());
 
   if (!engine) {
     error = error_str;
@@ -94,7 +122,8 @@ bool ava::jit_context::run_module(
 
   /* TODO: Ensure that the function actually looks like this */
   llvm::Function* init_fun = borrowed_module->getFunction(
-    ava_string_to_cstring(module_name));
+    ava::get_init_fun_name(ava_string_to_cstring(package_prefix),
+                           ava_string_to_cstring(module_name)));
   void (*init)(void) = reinterpret_cast<void(*)(void)>(
       init_fun? engine->getPointerToFunction(init_fun) : nullptr);
   if (init) {
@@ -135,21 +164,45 @@ extern "C" void ava_jit_add_driver(ava_jit_context* context,
   context->xlate.add_driver(data, size);
 }
 
+extern "C" ava_string ava_jit_add_module(
+  ava_jit_context* context,
+  const struct ava_xcode_global_list_s* xcode,
+  ava_string filename,
+  ava_string module_name,
+  ava_string package_prefix
+) {
+  std::string error;
+  std::unique_ptr<llvm::Module> llvm_module = context->xlate.translate(
+    xcode, filename, module_name, package_prefix,
+    context->llvm_context, error);
+
+  if (!llvm_module)
+    return ava_string_of_cstring(error.c_str());
+
+  if (!context->jit_context.add_module(
+        std::move(llvm_module), error))
+    return ava_string_of_cstring(error.c_str());
+
+  return AVA_ABSENT_STRING;
+}
+
 extern "C" ava_string ava_jit_run_module(
   ava_jit_context* context,
   const struct ava_xcode_global_list_s* xcode,
   ava_string filename,
-  ava_string module_name
+  ava_string module_name,
+  ava_string package_prefix
 ) {
   std::string error;
   std::unique_ptr<llvm::Module> llvm_module = context->xlate.translate(
-    xcode, filename, module_name, context->llvm_context, error);
+    xcode, filename, module_name, package_prefix,
+    context->llvm_context, error);
 
   if (!llvm_module)
     return ava_string_of_cstring(error.c_str());
 
   if (!context->jit_context.run_module(
-        std::move(llvm_module), module_name, error))
+        std::move(llvm_module), module_name, package_prefix, error))
     return ava_string_of_cstring(error.c_str());
 
   return AVA_ABSENT_STRING;

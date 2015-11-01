@@ -32,6 +32,7 @@
 #include "-intrinsics/loop.h"
 #include "-intrinsics/namespace.h"
 #include "-intrinsics/pasta.h"
+#include "-intrinsics/require.h"
 #include "-intrinsics/ret.h"
 #include "-intrinsics/user-macro.h"
 #include "-intrinsics/variable.h"
@@ -88,6 +89,8 @@ void ava_register_intrinsics(ava_macsub_context* context) {
   DEFINE("import",      CTL,    NULL,           import);
   DEFINE("namespace",   CTL,    NULL,           namespace);
   DEFINE("pasta",       CTL,    NULL,           pasta);
+  DEFINE("reqmod",      CTL,    NULL,           reqmod);
+  DEFINE("reqpkg",      CTL,    NULL,           reqpkg);
   DEFINE("ret",         CTL,    NULL,           ret);
   DEFINE("#var#",       CTL,    NULL,           var);
   DEFINE("#set#",       CTL,    NULL,           set);

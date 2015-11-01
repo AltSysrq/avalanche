@@ -620,4 +620,19 @@ ava_ast_node* ava_macsub_error(ava_macsub_context* context,
 ava_macro_subst_result ava_macsub_error_result(
   ava_macsub_context* context, ava_compile_error* error);
 
+/**
+ * Sets the panic flag on the given macro substitution context.
+ *
+ * When the panic flag is set, no further macro substitution occurs, any any
+ * attempts to evaluate input immediately return a silent error.
+ *
+ * The panic flag is shared between all contexts created from the same parent.
+ */
+void ava_macsub_panic(ava_macsub_context* context);
+
+/**
+ * Returns an error AST node without emitting any errors.
+ */
+ava_ast_node* ava_macsub_silent_error(const ava_compile_location* location);
+
 #endif /* AVA_RUNTIME_MACSUB_H_ */

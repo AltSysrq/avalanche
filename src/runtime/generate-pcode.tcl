@@ -378,6 +378,7 @@ proc gen-impl {} {
 #include "avalanche/list.h"
 #include "avalanche/exception.h"
 #include "avalanche/name-mangle.h"
+#include "avalanche/symbol.h"
 #include "avalanche/pcode.h"
 
 #include "-pcode-conversions.h"
