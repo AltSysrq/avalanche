@@ -54,6 +54,7 @@ runtime/list-proj.c \
 runtime/macro-arg.c \
 runtime/macsub.c \
 runtime/map.c \
+runtime/module-cache.c \
 runtime/name-mangle.c \
 runtime/parser.c \
 runtime/pcode-linker.c \

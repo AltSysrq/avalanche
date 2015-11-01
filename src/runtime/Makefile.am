@@ -23,6 +23,7 @@ avalanche/macro-arg.h \
 avalanche/macsub.h \
 avalanche/map.h \
 avalanche/map-trait.h \
+avalanche/module-cache.h \
 avalanche/name-mangle.h \
 avalanche/parser.h \
 avalanche/pcode.h \
