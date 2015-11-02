@@ -5,7 +5,7 @@ include_HEADERS = avalanche.h \
 avalanche/ava-config.h \
 avalanche/alloc.h \
 avalanche/code-gen.h \
-avalanche/compile-frontend.h \
+avalanche/compenv.h \
 avalanche/context.h \
 avalanche/defs.h \
 avalanche/errors.h \
@@ -23,6 +23,7 @@ avalanche/macro-arg.h \
 avalanche/macsub.h \
 avalanche/map.h \
 avalanche/map-trait.h \
+avalanche/module-cache.h \
 avalanche/name-mangle.h \
 avalanche/parser.h \
 avalanche/pcode.h \

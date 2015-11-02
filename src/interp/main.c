@@ -24,10 +24,7 @@
 #include "../bsd.h"
 
 static ava_value run(void* filename) {
-  FILE* infile;
-  ava_string source;
-  char buff[4096];
-  size_t nread;
+  ava_compenv* compenv;
   ava_compile_error_list errors;
   ava_string jit_error;
   ava_pcode_global_list* pcode;
@@ -37,24 +34,12 @@ static ava_value run(void* filename) {
 
   TAILQ_INIT(&errors);
 
-  infile = fopen(filename, "r");
-  if (!infile) err(EX_NOINPUT, "fopen");
-
-  source = AVA_EMPTY_STRING;
-  do {
-    nread = fread(buff, 1, sizeof(buff), infile);
-    source = ava_string_concat(
-      source, ava_string_of_bytes(buff, nread));
-  } while (nread == sizeof(buff));
-  fclose(infile);
-
-  fprintf(stderr, "--- Read source from %s ---\n%s\n\n",
-          (const char*)filename, ava_string_to_cstring(source));
-
-  ava_compile_file(&pcode, &xcode, &errors,
-                   AVA_ASCII9_STRING("input:"),
-                   ava_string_of_cstring(filename),
-                   source);
+  compenv = ava_compenv_new(AVA_ASCII9_STRING("input:"));
+  ava_compenv_use_simple_source_reader(compenv, AVA_EMPTY_STRING);
+  ava_compenv_use_minimal_macsub(compenv);
+  ava_compenv_compile_file(&pcode, &xcode, compenv,
+                           ava_string_of_cstring(filename),
+                           &errors, NULL);
   if (pcode) {
     fprintf(stderr, "--- Generated P-Code ---\n%s\n\n",
             ava_string_to_cstring(
@@ -76,7 +61,8 @@ static ava_value run(void* filename) {
     ava_driver_isa_unchecked_size);
   jit_error = ava_jit_run_module(
     jit, xcode, ava_string_of_cstring(filename),
-    ava_string_of_cstring(filename));
+    ava_string_of_cstring(filename),
+    ava_string_of_cstring("input:"));
 
   if (ava_string_is_present(jit_error)) {
     warnx("JIT failed: %s", ava_string_to_cstring(jit_error));

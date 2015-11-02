@@ -67,13 +67,6 @@ static void ava_intr_user_macro_body_translate_splice(
 static ava_bool ava_intr_user_macro_parse_offset(
   ava_uint* begin, ava_uint* end, ava_string tail);
 
-static ava_macro_subst_result ava_intr_user_macro_eval(
-  const ava_symbol* self,
-  ava_macsub_context* context,
-  const ava_parse_statement* statement,
-  const ava_parse_unit* provoker,
-  ava_bool* consumed_other_statements);
-
 static ava_parse_statement* ava_intr_user_macro_clone_units(
   const ava_parse_unit* begin_inclusive, const ava_parse_unit* end_exclusive);
 static ava_integer ava_intr_user_macro_statement_length(
@@ -560,7 +553,10 @@ static void ava_intr_user_macro_cg_define(
 
   node->symbol->pcode_index =
     AVA_PCGB(macro, ava_v_public == node->symbol->visibility,
-             node->symbol->full_name, &builder);
+             node->symbol->full_name,
+             node->symbol->type,
+             node->symbol->v.macro.precedence,
+             &builder);
   macro = (ava_pcg_macro*)
     TAILQ_LAST(ava_pcg_builder_get(
                  ava_pcx_builder_get_parent(
@@ -601,7 +597,7 @@ static ava_integer ava_intr_user_macro_statement_length(
   return count;
 }
 
-static ava_macro_subst_result ava_intr_user_macro_eval(
+ava_macro_subst_result ava_intr_user_macro_eval(
   const ava_symbol* self,
   ava_macsub_context* context,
   const ava_parse_statement* container,

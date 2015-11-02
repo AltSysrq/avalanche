@@ -34,7 +34,8 @@ static ava_macsub_context* context;
 defsetup {
   TAILQ_INIT(&errors);
   symbol_table = ava_symtab_new(NULL);
-  context = ava_macsub_context_new(symbol_table, &errors, AVA_EMPTY_STRING);
+  context = ava_macsub_context_new(
+    symbol_table, NULL, &errors, AVA_EMPTY_STRING);
 }
 
 defteardown { }
@@ -128,7 +129,7 @@ static void test_macsub(const char* expected, const char* input) {
   ava_ast_node* ast;
 
   ck_assert(ava_parse(&root, &errors, ava_string_of_cstring(input),
-                      AVA_ASCII9_STRING("<test>")));
+                      AVA_ASCII9_STRING("<test>"), ava_true));
   ast = ava_macsub_run(context, &root.location, &root.v.statements,
                        ava_isrp_void);
 

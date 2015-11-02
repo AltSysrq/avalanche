@@ -157,11 +157,15 @@ struct ava_parse_statement_s {
  * success, contents are undefined.
  * @param source The source code to parse.
  * @param filename The name of the file being parsed.
+ * @param init_root Whether to initialise dst. If false, *dst is assumed to
+ * already be a Block syntax unit. This permits concatenating the parse of
+ * multiple files into one tree.
  * @return Whether the parse succeeded.
  */
 ava_bool ava_parse(ava_parse_unit* dst,
                    ava_compile_error_list* errors,
-                   ava_string source, ava_string filename);
+                   ava_string source, ava_string filename,
+                   ava_bool init_root);
 
 /**
  * Constructs a parse unit which is a substitution containing only the given

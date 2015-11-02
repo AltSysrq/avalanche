@@ -40,6 +40,7 @@ struct ava_pcode_register_s;
 struct ava_symbol_s;
 struct ava_symtab_s;
 struct ava_varscope_s;
+struct ava_compenv_s;
 
 /**
  * An AST node after macro processing.
@@ -370,6 +371,7 @@ typedef enum {
  * Creates a new, global-level macro substitution context.
  *
  * @param root_symbol_table The symbol table representing global scope.
+ * @param compenv The compilation environment associated with the context.
  * @param errors List into which errors will be acumulated.
  * @param symbol_prefix The implicit prefix for all names defined within the
  * context.
@@ -377,6 +379,7 @@ typedef enum {
  */
 ava_macsub_context* ava_macsub_context_new(
   struct ava_symtab_s* root_symbol_table,
+  struct ava_compenv_s* compenv,
   ava_compile_error_list* errors,
   ava_string symbol_prefix);
 
@@ -384,6 +387,13 @@ ava_macsub_context* ava_macsub_context_new(
  * Returns the current, mutable symbol table of the given context.
  */
 struct ava_symtab_s* ava_macsub_get_symtab(
+  const ava_macsub_context* context);
+
+/**
+ * Returns the compilation environment controlling this macro substitution
+ * context.
+ */
+struct ava_compenv_s* ava_macsub_get_compenv(
   const ava_macsub_context* context);
 
 /**
@@ -609,5 +619,20 @@ ava_ast_node* ava_macsub_error(ava_macsub_context* context,
  */
 ava_macro_subst_result ava_macsub_error_result(
   ava_macsub_context* context, ava_compile_error* error);
+
+/**
+ * Sets the panic flag on the given macro substitution context.
+ *
+ * When the panic flag is set, no further macro substitution occurs, any any
+ * attempts to evaluate input immediately return a silent error.
+ *
+ * The panic flag is shared between all contexts created from the same parent.
+ */
+void ava_macsub_panic(ava_macsub_context* context);
+
+/**
+ * Returns an error AST node without emitting any errors.
+ */
+ava_ast_node* ava_macsub_silent_error(const ava_compile_location* location);
 
 #endif /* AVA_RUNTIME_MACSUB_H_ */

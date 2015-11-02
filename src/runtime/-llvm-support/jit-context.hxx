@@ -18,6 +18,7 @@
 
 #include <memory>
 #include <string>
+#include <vector>
 
 #include <llvm/ExecutionEngine/ExecutionEngine.h>
 #include <llvm/IR/Module.h>
@@ -29,14 +30,20 @@ AVA_END_DECLS
 
 namespace ava {
   /**
-   * Wrapper around LLVM's McJit engine.
+   * Wrapper around LLVM's JIT engine.
+   *
+   * Note that this is horribly inefficient right now. It only exists to test
+   * native code generation in-process for the time being.
    */
   class jit_context {
-    std::unique_ptr<llvm::ExecutionEngine> engine;
+    std::vector<std::unique_ptr<llvm::Module> > modules;
     std::string error_str;
 
   public:
     jit_context(void) noexcept;
+
+    bool add_module(std::unique_ptr<llvm::Module> module,
+                    std::string& error);
 
     /**
      * Adds the given LLVM module to the JIT, and runs its initialisation
@@ -46,6 +53,7 @@ namespace ava {
      * to the JIT.
      * @param module_name The Avalanche name of the module, dictating the name
      * of its initialisation function.
+     * @param package_prefix The package prefix used when compiling the module.
      * @error If an error occurs, set to the error message.
      * @return Whether loading and executing the module succeeded.
      * @throws * Any exception thrown by the module propagates out of this
@@ -54,6 +62,7 @@ namespace ava {
      */
     bool run_module(std::unique_ptr<llvm::Module> module,
                     ava_string module_name,
+                    ava_string package_prefix,
                     std::string& error);
   };
 }

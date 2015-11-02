@@ -1,0 +1,2 @@
+reqmod runtime/ava-tests/helpers/pass-test-on-load
+\      runtime/ava-tests/helpers/require-pass-test-on-load

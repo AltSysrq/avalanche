@@ -26,7 +26,7 @@ libavart_la_SOURCES = \
 runtime/alloc.c \
 runtime/array-list.c \
 runtime/code-gen.c \
-runtime/compile-frontend.c \
+runtime/compenv.c \
 runtime/context.c \
 runtime/dtoa.c \
 runtime/empty-list.c \
@@ -54,6 +54,7 @@ runtime/list-proj.c \
 runtime/macro-arg.c \
 runtime/macsub.c \
 runtime/map.c \
+runtime/module-cache.c \
 runtime/name-mangle.c \
 runtime/parser.c \
 runtime/pcode-linker.c \
@@ -72,6 +73,7 @@ runtime/-intrinsics/if.c \
 runtime/-intrinsics/loop.c \
 runtime/-intrinsics/namespace.c \
 runtime/-intrinsics/pasta.c \
+runtime/-intrinsics/require.c \
 runtime/-intrinsics/ret.c \
 runtime/-intrinsics/user-macro.c \
 runtime/-intrinsics/variable.c

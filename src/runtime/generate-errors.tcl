@@ -1715,6 +1715,108 @@ set defs {
     }
   }
 
+  cerror C5106 cannot_read_module_source {
+    {ava_string filename} {ava_string message}
+  } {
+    msg "Error reading %filename%: %message%"
+    explanation {
+      Compilation needed to read a particular source file in order to proceed,
+      but reading that file failed.
+    }
+  }
+
+  cerror C5107 compile_cyclic_dependency {{ava_string member}} {
+    msg "Cyclic module dependency involving %member%"
+    explanation {
+      The indicated module directly or indirectly depends upon itself.
+
+      Dependencies between modules must be an acyclic graph, since it is
+      impossible to compile a module without first completely compiling its
+      dependencies.
+
+      In most cases, this caused by two or more modules each exposing utility
+      functions the other needs; the solution to this issue is to decompose one
+      or more module in the cycle into smaller pieces that do not result in a
+      dependency cycle.
+
+      If functions of two modules are mutually recursive, the two should be
+      combined into one module instead.
+    }
+  }
+
+  cerror C5108 illegal_package_name {{ava_string name}} {
+    msg "Illegal package name: %name%"
+    explanation {
+      The indicated bareword does not conform to the constraints on reqpkg'able
+      package names.
+
+      Package names must consist of one or more non-empty words consisting of
+      alphanumeric ASCII characters and '_', each word separated by '-' or '.'.
+    }
+  }
+
+  cerror C5109 illegal_module_name {{ava_string name}} {
+    msg "Illegal module name: %name%"
+    explanation {
+      The indicated bareword does not conform to the constraints on reqpkg'able
+      module names.
+
+      Module names must consist of one or more non-empty words consisting of
+      alphanumeric ASCII characters and '_', each word separated by '-', '.',
+      or '/'.
+    }
+  }
+
+  cerror C5110 package_or_module_rerequired {{ava_string name}} {
+    msg "Package or module has already been required."
+    explanation {
+      The indicated package or module has already been required by another
+      reqpkg or reqmod statement, and its symbols are visible in the context of
+      the error.
+    }
+  }
+
+  cerror C5111 failed_reading_cached_module {
+    {ava_string name} {ava_string message}
+  } {
+    msg "Error reading cached package/module %name%: %message%"
+    explanation {
+      A package or module with the given name may have been found in an
+      interface cache, but an error occurred when attempting to retrieve it.
+    }
+  }
+
+  cerror C5112 package_not_found {{ava_string name}} {
+    msg "Package %name% not found."
+    explanation {
+      The indicated package could not be found.
+    }
+  }
+
+  cerror C5113 implicit_module_compile_failed {{ava_string name}} {
+    msg "Required module %name% could not be compiled."
+    explanation {
+      A module whose interface was not cached was referenced in a reqmod
+      statement. This triggered an automatic compilation of that module, but
+      compilation failed.
+    }
+  }
+
+  cerror C5114 require_symbol_clash {{ava_string name}} {
+    msg "Package or module exports conflicting symbol %name%"
+    explanation {
+      The given fully-qualified is defined both by the indicated package or
+      module and another.
+
+      The name may conflict with a private global in the current file. In this
+      case, the private global must be renamed so as to not conflict. It is
+      also possible that more than one module defines the same non-private
+      symbol. In this case, at least one of the names must be altered to be
+      unique, or building the code will fail at link-time even if this
+      particular error did not occur.
+    }
+  }
+
   cerror X9000 xcode_dupe_label {{ava_value label}} {
     msg "P-Code label present in function more than once: %label%"
     explanation {

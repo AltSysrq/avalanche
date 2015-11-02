@@ -299,10 +299,9 @@ ava_pcode_global_list* ava_pcode_linker_link(
 
   ava_pcode_linker_unknown_location(&location);
   if (ava_string_is_present(this->duplicate_name)) {
-    TAILQ_INSERT_TAIL(
+    ava_compile_error_add(
       errors,
-      ava_error_linker_duplicate_module(&location, this->duplicate_name),
-      next);
+      ava_error_linker_duplicate_module(&location, this->duplicate_name));
     return NULL;
   }
 
@@ -384,10 +383,9 @@ static void ava_pcode_linker_concat_object_if_unconsumed(
 
   case ava_pcles_in_progress:
     ava_pcode_linker_unknown_location(&location);
-    TAILQ_INSERT_TAIL(
+    ava_compile_error_add(
       errors,
-      ava_error_linker_cyclic_dependency(&location, entry->name),
-      next);
+      ava_error_linker_cyclic_dependency(&location, entry->name));
     break;
   }
 }
@@ -542,10 +540,9 @@ static ava_map_value ava_pcode_linker_select_canonical(
         cursor = ava_map_find(
           canonical_indices, ava_value_of_string(mangled_name));
         if (AVA_MAP_CURSOR_NONE != cursor) {
-          TAILQ_INSERT_TAIL(
+          ava_compile_error_add(
             errors, ava_error_linker_symbol_redefined(
-              &location, demangled_name.name),
-            next);
+              &location, demangled_name.name));
         } else {
           canonical_indices = ava_map_add(
             canonical_indices,

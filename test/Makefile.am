@@ -18,6 +18,7 @@ runtime/test-list-proj.t \
 runtime/test-list.t \
 runtime/test-macsub.t \
 runtime/test-map.t \
+runtime/test-module-cache.t \
 runtime/test-name-mangle.t \
 runtime/test-parser.t \
 runtime/test-pcode.t \

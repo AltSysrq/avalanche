@@ -68,7 +68,10 @@ namespace ava {
      * case the first src-pos filename is used, or "<unknown>" as fallback.
      * @param module_name The module name / identifier to pass into LLVM. This
      * is also used as the unmangled name of the module initialisation function
-     * if there is no driver providing a main function.
+     * if there is no driver providing a main function. This should be the
+     * empty string for a whole package.
+     * @param package_prefix The prefix to apply to any references to a module
+     * name, both via module_name above and for the load-mod instruction.
      * @param llvm_context The LLVM context to use for generation.
      * @param error If an error occurs, set to a description of the error.
      * @return The generated module, or a NULL pointer if an error occurs.
@@ -77,12 +80,26 @@ namespace ava {
       const struct ava_xcode_global_list_s* xcode,
       ava_string file_name,
       ava_string module_name,
+      ava_string package_prefix,
       llvm::LLVMContext& llvm_context,
       std::string& error) const noexcept;
 
   private:
     std::list<std::vector<char> > drivers;
   };
+
+  /**
+   * Returns the linkage name of the package or module initialiser identified
+   * by the given package/module name pair.
+   */
+  std::string get_init_fun_name(
+    const std::string& package, const std::string& module);
+
+  /**
+   * Returns the unmangled version of get_init_fun_name().
+   */
+  std::string get_unmangled_init_fun_name(
+    const std::string& package, const std::string& module);
 }
 
 #endif /* AVA_RUNTIME__LLVM_SUPPORT_TRANSLATION_HXX_ */

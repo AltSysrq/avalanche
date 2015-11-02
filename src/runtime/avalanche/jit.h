@@ -64,7 +64,17 @@ void ava_jit_context_delete(ava_jit_context* context);
 void ava_jit_add_driver(ava_jit_context* context,
                         const char* data, size_t size);
 /**
- * Translates the given X-Code moudle (assumed to be valid) into native code
+ * Like ava_jit_run_module(), but the module isn't actually executed. It will
+ * be accessible to other modules added to the same context.
+ */
+ava_string ava_jit_add_module(
+  ava_jit_context* context,
+  const struct ava_xcode_global_list_s* module,
+  ava_string filename,
+  ava_string module_name,
+  ava_string package_prefix);
+/**
+ * Translates the given X-Code module (assumed to be valid) into native code
  * and executes it. The generated code will remain in memory until the context
  * is destroyed.
  *
@@ -75,7 +85,10 @@ void ava_jit_add_driver(ava_jit_context* context,
  * @param module The module to load.
  * @param filename The input file name to use for debugging info.
  * @param module_name The logical name of this module, used to uniquely
- * identify its initialisation function, among other things.
+ * identify its initialisation function, among other things. This should be the
+ * empty string if the module is a whole package.
+ * @param package_prefix The package prefix to apply to module_name and all
+ * load-mod instructions.
  * @return The absent string if the module was loaded, linked, and executed
  * successfully. A present string to indicate an error in loading or linking
  * the module.
@@ -86,6 +99,7 @@ ava_string ava_jit_run_module(
   ava_jit_context* context,
   const struct ava_xcode_global_list_s* module,
   ava_string filename,
-  ava_string module_name);
+  ava_string module_name,
+  ava_string package_prefix);
 
 #endif /* AVA_RUNTIME_JIT_H_ */

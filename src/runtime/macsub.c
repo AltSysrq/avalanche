@@ -35,6 +35,8 @@
 
 #define STRING_PSEUDOMACRO_PRECEDENCE 10
 
+typedef struct ava_compenv_s ava_compenv;
+
 typedef struct {
   ava_string last_seed;
   ava_string base_prefix;
@@ -44,8 +46,10 @@ typedef struct {
 
 struct ava_macsub_context_s {
   ava_symtab* symbol_table;
+  ava_compenv* compenv;
   ava_varscope* varscope;
   ava_compile_error_list* errors;
+  ava_bool* panic;
   ava_string symbol_prefix;
   unsigned level;
 
@@ -76,6 +80,7 @@ static ava_ast_node* ava_macsub_error_to_lvalue(
 
 ava_macsub_context* ava_macsub_context_new(
   ava_symtab* symbol_table,
+  ava_compenv* compenv,
   ava_compile_error_list* errors,
   ava_string symbol_prefix
 ) {
@@ -83,9 +88,11 @@ ava_macsub_context* ava_macsub_context_new(
 
   this = AVA_NEW(ava_macsub_context);
   this->symbol_table = symbol_table;
+  this->compenv = compenv;
   this->varscope = ava_varscope_new();
   this->errors = errors;
   this->symbol_prefix = symbol_prefix;
+  this->panic = ava_alloc_atomic_zero(sizeof(ava_bool));
   this->level = 0;
   this->gensym = AVA_NEW(ava_macsub_gensym_status);
 
@@ -101,6 +108,12 @@ ava_symtab* ava_macsub_get_symtab(
   const ava_macsub_context* context
 ) {
   return context->symbol_table;
+}
+
+ava_compenv* ava_macsub_get_compenv(
+  const ava_macsub_context* context
+) {
+  return context->compenv;
 }
 
 ava_varscope* ava_macsub_get_varscope(
@@ -188,9 +201,11 @@ ava_macsub_context* ava_macsub_context_push_major(
 
   this = AVA_NEW(ava_macsub_context);
   this->symbol_table = ava_symtab_new(parent->symbol_table);
+  this->compenv = parent->compenv;
   this->varscope = ava_varscope_new();
   this->errors = parent->errors;
   this->symbol_prefix = ava_string_concat(parent->symbol_prefix, interfix);
+  this->panic = parent->panic;
   this->level = parent->level + 1;
   this->gensym = parent->gensym;
 
@@ -205,9 +220,11 @@ ava_macsub_context* ava_macsub_context_push_minor(
 
   this = AVA_NEW(ava_macsub_context);
   this->symbol_table = parent->symbol_table;
+  this->compenv = parent->compenv;
   this->varscope = parent->varscope;
   this->errors = parent->errors;
   this->symbol_prefix = ava_string_concat(parent->symbol_prefix, interfix);
+  this->panic = parent->panic;
   this->level = parent->level;
   this->gensym = parent->gensym;
 
@@ -339,6 +356,9 @@ static ava_ast_node* ava_macsub_run_one_nonempty_statement(
 
   unit = TAILQ_FIRST(&statement->units);
 
+  if (*context->panic)
+    return ava_macsub_silent_error(&unit->location);
+
   /* If there is only one unit, no macro substitution is performed, even if
    * that unit would reference a macro.
    */
@@ -469,6 +489,10 @@ static ava_macsub_resolve_macro_result ava_macsub_resolve_macro(
   return ava_mrmr_not_macro;
 }
 
+void ava_macsub_panic(ava_macsub_context* context) {
+  *context->panic = ava_true;
+}
+
 static const ava_ast_node_vtable ava_macsub_error_vtable = {
   .name = "<error>",
   .to_string = ava_macsub_error_to_string,
@@ -482,13 +506,16 @@ void ava_macsub_record_error(ava_macsub_context* context,
 
 ava_ast_node* ava_macsub_error(ava_macsub_context* context,
                                ava_compile_error* error) {
-  ava_ast_node* node;
-
   ava_macsub_record_error(context, error);
+  return ava_macsub_silent_error(&error->location);
+}
+
+ava_ast_node* ava_macsub_silent_error(const ava_compile_location* location) {
+  ava_ast_node* node;
 
   node = AVA_NEW(ava_ast_node);
   node->v = &ava_macsub_error_vtable;
-  node->location = error->location;
+  node->location = *location;
   return node;
 }
 

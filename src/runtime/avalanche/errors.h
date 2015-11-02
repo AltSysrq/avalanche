@@ -48,7 +48,7 @@
 /**
  * Describes the location of an entity in source code.
  */
-typedef struct {
+typedef struct ava_compile_location_s {
   /**
    * The source filename.
    */
@@ -111,12 +111,17 @@ ava_compile_error* ava_compile_error_new(
   ava_string message, const ava_compile_location* location);
 
 /**
- * Constructs an error with ava_compile_error_new() and adds it to the end of
- * the given error list.
+ * Adds the given error to the end of the given error list.
+ *
+ * This is a convenience to TAILQ_INSERT_TAIL() which guarantees single
+ * evaluation of the error.
  */
-void ava_compile_error_add(
+static inline void ava_compile_error_add(
   ava_compile_error_list* dst,
-  ava_string message, const ava_compile_location* location);
+  ava_compile_error* error
+) {
+  TAILQ_INSERT_TAIL(dst, error, next);
+}
 
 /**
  * Generates a string describing the given error list.

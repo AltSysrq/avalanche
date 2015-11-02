@@ -52,6 +52,7 @@ static ava_parse_unit_read_result ava_parse_block_content(
   ava_compile_error_list* errors,
   const ava_parse_context* context,
   ava_bool is_top_level,
+  ava_bool init_root,
   const ava_lex_result* first_token);
 
 static void ava_parse_simplify_group_tag(
@@ -169,7 +170,8 @@ static ava_parse_unit_read_result ava_parse_spread(
 
 ava_bool ava_parse(ava_parse_unit* dst,
                    ava_compile_error_list* errors,
-                   ava_string source, ava_string filename) {
+                   ava_string source, ava_string filename,
+                   ava_bool init_root) {
   ava_parse_context context = {
     .lex = ava_lex_new(source),
     .source = source,
@@ -187,7 +189,8 @@ ava_bool ava_parse(ava_parse_unit* dst,
 
   TAILQ_INIT(errors);
 
-  ava_parse_block_content(dst, errors, &context, ava_true, &pseudo_first_token);
+  ava_parse_block_content(dst, errors, &context, ava_true, init_root,
+                          &pseudo_first_token);
 
   return TAILQ_EMPTY(errors);
 }
@@ -262,6 +265,7 @@ static ava_parse_unit_read_result ava_parse_block_content(
   ava_compile_error_list* errors,
   const ava_parse_context* context,
   ava_bool is_top_level,
+  ava_bool init_root,
   const ava_lex_result* first_token
 ) {
   ava_bool beginning_of_statement = ava_true;
@@ -269,9 +273,11 @@ static ava_parse_unit_read_result ava_parse_block_content(
   ava_parse_statement* statement;
   ava_lex_result token;
 
-  dst->type = ava_put_block;
-  ava_parse_location_from_lex(&dst->location, context, first_token);
-  TAILQ_INIT(&dst->v.statements);
+  if (init_root) {
+    dst->type = ava_put_block;
+    ava_parse_location_from_lex(&dst->location, context, first_token);
+    TAILQ_INIT(&dst->v.statements);
+  }
 
   for (;;) {
     statement = TAILQ_LAST(&dst->v.statements, ava_parse_statement_list_s);
@@ -808,7 +814,7 @@ static ava_parse_unit_read_result ava_parse_block(
 
   unit = AVA_NEW(ava_parse_unit);
   result = ava_parse_block_content(
-    unit, errors, context, ava_false, first_token);
+    unit, errors, context, ava_false, ava_true, first_token);
 
   TAILQ_INSERT_TAIL(dst, unit, next);
   return result;

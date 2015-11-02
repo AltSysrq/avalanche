@@ -260,7 +260,7 @@ static ava_xcode_function* ava_xcode_structure_function(
   ava_bool next_instr_starts_block;
   size_t block_length, i;
 
-#define DIE(error) do { TAILQ_INSERT_TAIL(errors, error, next); \
+#define DIE(error) do { ava_compile_error_add(errors, error); \
                         return NULL; } while (0)
 
   /* First pass, determine how many registers there are total, determine basic
@@ -332,7 +332,7 @@ static ava_xcode_function* ava_xcode_structure_function(
 #undef DIE
 }
 
-#define DIE(error) do { TAILQ_INSERT_TAIL(errors, error, next); \
+#define DIE(error) do { ava_compile_error_add(errors, error); \
                         return ava_false; } while (0)
 static ava_bool ava_xcode_check_block_break(
   const ava_pcode_exe* instr,
@@ -769,18 +769,17 @@ static void ava_xcode_check_reg_init(
 ) {
   if (!ava_xcode_phi_get(init, reg.index)) {
     if (ava_prt_var == reg.type) {
-      TAILQ_INSERT_TAIL(
+      ava_compile_error_add(
         errors, ava_error_xcode_uninit_var(
           location,
-          ava_to_string(ava_list_index(vars, reg.index))), next);
+          ava_to_string(ava_list_index(vars, reg.index))));
     } else {
-      TAILQ_INSERT_TAIL(
+      ava_compile_error_add(
         errors, ava_error_xcode_uninit_reg(
           location,
           ava_string_concat(
             ava_string_of_char("vdilpf"[reg.type]),
-            ava_to_string(ava_value_of_integer(reg.index)))),
-        next);
+            ava_to_string(ava_value_of_integer(reg.index)))));
     }
   }
 }
