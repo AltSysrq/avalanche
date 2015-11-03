@@ -19,6 +19,8 @@
 #ifndef AVALANCHE_BSD_H_
 #define AVALANCHE_BSD_H_
 
+#include <stddef.h>
+
 #if HAVE_BSD_ERR_H
 #include <bsd/err.h>
 #elif HAVE_ERR_H
@@ -38,7 +40,7 @@
 /* In an older libbsd on Debian, we have the following comment in cdefs.h:
  *
  * * Linux headers define a struct with a member names __unused.
- * * Debian bugs: #522773 (linux), #522774 (libc).
+ * * Debian bugs:_ #522773 (linux), #522774 (libc).
  * * Disable for now.
  *
  * Following this is an #if 0 surrounding the definition of __unused, which
@@ -59,6 +61,49 @@
 #include <sys/tree.h>
 #else
 #error "No BSD tree.h could be found on your system. (See libbsd-dev on GNU.)"
+#endif
+
+/* Older BSDs (including libbsd on Debian Sid as of 2015-11-02) strangely lack
+ * LIST_PREV.
+ */
+#ifndef LIST_PREV
+#define LIST_PREV(elm, head, type, field)                               \
+        ((elm)->field.le_prev == &LIST_FIRST((head)) ? NULL :           \
+            __containerof((elm)->field.le_prev, struct type, field.le_next))
+#endif
+
+/* cdefs needed by LIST_PREV */
+
+#ifndef __GNUC_PREREQ__
+#if defined(__GNUC__) && !defined(__INTEL_COMPILER)
+#define __GNUC_PREREQ__(ma, mi) \
+        (__GNUC__ > (ma) || __GNUC__ == (ma) && __GNUC_MINOR__ >= (mi))
+#else
+#define __GNUC_PREREQ__(ma, mi) 0
+#endif
+#endif /* !defined(__GNUC_PREREQ__) */
+
+#ifndef __containerof
+#if __GNUC_PREREQ__(3, 1)
+#define __containerof(x, s, m) ({                                       \
+        const volatile __typeof(((s *)0)->m) *__x = (x);                \
+        __DEQUALIFY(s *, (const volatile char *)__x - __offsetof(s, m));\
+})
+#else
+#define __containerof(x, s, m)                                          \
+        __DEQUALIFY(s *, (const volatile char *)(x) - __offsetof(s, m))
+#endif
+#endif /* !defined(__containerof) */
+
+/* This definition differs from the FreeBSD source, as the original seems to
+ * confuse GCC (perhaps a missing definition somewhere else?).
+ */
+#ifndef __DEQUALIFY
+#define __DEQUALIFY(type, var)  ((type)(var))
+#endif
+
+#ifndef __offsetof
+#define __offsetof offsetof
 #endif
 
 #endif /* AVALANCHE_BSD_H_ */
