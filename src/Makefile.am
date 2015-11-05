@@ -25,6 +25,7 @@ noinst_DATA =  $(AVA_DRIVERS)
 libavart_la_SOURCES = \
 runtime/alloc.c \
 runtime/array-list.c \
+runtime/avast.c \
 runtime/code-gen.c \
 runtime/compenv.c \
 runtime/context.c \

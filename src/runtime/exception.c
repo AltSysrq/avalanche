@@ -176,4 +176,6 @@ const ava_exception_type ava_user_exception = {
   .uncaught_description = "internal error"
 }, ava_interrupt_exception = {
   .uncaught_description = "interruption"
+}, ava_undefined_behaviour_exception = {
+  .uncaught_description = "undefined behaviour error"
 };

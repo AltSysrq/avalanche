@@ -1,0 +1,110 @@
+;-
+; Copyright (c) 2015, Jason Lingle
+;
+; Permission to  use, copy,  modify, and/or distribute  this software  for any
+; purpose  with or  without fee  is hereby  granted, provided  that the  above
+; copyright notice and this permission notice appear in all copies.
+;
+; THE SOFTWARE  IS PROVIDED "AS  IS" AND  THE AUTHOR DISCLAIMS  ALL WARRANTIES
+; WITH  REGARD   TO  THIS  SOFTWARE   INCLUDING  ALL  IMPLIED   WARRANTIES  OF
+; MERCHANTABILITY AND FITNESS. IN NO EVENT  SHALL THE AUTHOR BE LIABLE FOR ANY
+; SPECIAL,  DIRECT,   INDIRECT,  OR  CONSEQUENTIAL  DAMAGES   OR  ANY  DAMAGES
+; WHATSOEVER RESULTING FROM LOSS OF USE, DATA OR PROFITS, WHETHER IN AN ACTION
+; OF  CONTRACT, NEGLIGENCE  OR OTHER  TORTIOUS ACTION,  ARISING OUT  OF OR  IN
+; CONNECTION WITH THE USE OR PERFORMANCE OF THIS SOFTWARE.
+
+; Core arithmetic operators.
+
+reqmod builtins
+import byte-string bs
+import integer i
+
+; OPERATOR NAMES
+;
+; Most operators use the same names as their C counterparts. Operators without
+; a type prefix implicitly apply to signed integers; types are notated as a
+; mnemonic before the operator, eg, ".+" for floating-point addition or "u+"
+; for unsigned (wrapping) addition.
+;
+; The modulus operator is %, since it's what most people want (see $i.mod vs
+; $i.rem). The truncating remainder is %%.
+;
+; All the bitwise operators have a ^ appended since they are not used
+; frequently enough to justify such short names. >>^ is logical shift, as it is
+; what's most commonly used in practise, and >>-^ is arithmetic shift.
+;
+; OPERATOR PRECEDENCE
+;
+; Generally, we want to maintain a relatively C-like operator precedence,
+; except for obvious mistakes like the bit-twiddling operators. Also, unary
+; operators cannot have different precedence from their binary counterparts.
+;
+; If we exactly cloned C, the table would be
+;
+;    ! ~^               Unary RTL
+;    * / % %%           LTR
+;    + -                LTR
+;    <<^ >>^ >>-^       LTR
+;    < <= > >=          LTR
+;    == !=              LTR
+;    &^                 LTR
+;    ^^                 LTR
+;    |^                 LTR
+;    &&                 LTR
+;    ||                 LTR
+;    =                  RTL
+;
+; Basically, the changes here are:
+;
+; - All the relational operators should be at the same level. Nobody ever
+;   writes ( a < b == c < d ) in C and expects it to be understood by a human.
+;
+; - All the binary bit-twiddling operators are at the same level, immediately
+;   above the relational operators.
+;
+; We also need to place the string-concatenation operators. It seems most
+; natural for these to be directly above the relational operators, since
+; embedding the results of comparisons in strings is not very common but
+; embedding the results of arithmetic is; conversely, arithmetic on
+; concatenated strings is unlikely to be common, but comparisons (b== in
+; particular) could be.
+;
+; This gives us
+;
+;   Examples                    Type            Precedence
+;   ! ~^                        Unary RTL       35
+;   * / % %%                    LTR             30
+;   + -                         LTR             20
+;   <<^ >>^ >>-^ &^ |^ ^^       LTR             14
+;   ``                          LTR             10 (fixed)
+;   < <= > >= == !=             LTR             8
+;   &&                          LTR             6
+;   ||                          LTR             4
+;   =                           RTL             1
+
+macro DEFUNARY control      %MACRO >0 !op >1 (>2 (!>))
+macro DEFBINARY-OPT control %MACRO >0 !op >1 (>2 (!<*) (!>))
+macro DEFBINARY control     %MACRO >0 !op >1 (>2 (!<) (!>))
+
+DEFUNARY        !       35      %i.lnot
+DEFUNARY        ~^      35      %i.not
+DEFUNARY        b#      35      %bs.length
+DEFBINARY       *       30      %i.mul
+DEFBINARY       /       30      %i.div
+DEFBINARY       %       30      %i.mod
+DEFBINARY       %%      30      %i.rem
+DEFBINARY-OPT   +       20      %i.add
+DEFBINARY-OPT   -       20      %i.sub
+DEFBINARY       <<^     14      %i.lsh
+DEFBINARY       >>^     14      %i.rsh
+DEFBINARY       >>-^    14      %i.ash
+DEFBINARY       &^      14      %i.and
+DEFBINARY       |^      14      %i.or
+DEFBINARY       ^^      14      %i.xor
+DEFBINARY       <       8       %i.slt
+DEFBINARY       <=      8       %i.leq
+DEFBINARY       ==      8       %i.equ
+DEFBINARY       !=      8       %i.neq
+DEFBINARY       >=      8       %i.geq
+DEFBINARY       >       8       %i.sgt
+DEFBINARY       =       1       #set#

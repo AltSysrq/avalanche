@@ -268,5 +268,12 @@ extern const ava_exception_type ava_internal_exception;
  * catcher are in direct cooperation.
  */
 extern const ava_exception_type ava_interrupt_exception;
+/**
+ * Exception type for undefined behaviour which was caught by a runtime check.
+ *
+ * This exception type has no defined semantics at all, since it is only thrown
+ * when undefined behaviour is invoked.
+ */
+extern const ava_exception_type ava_undefined_behaviour_exception;
 
 #endif /* AVA_RUNTIME_EXCEPTION_H_ */

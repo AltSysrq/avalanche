@@ -436,6 +436,31 @@ set defs {
     }
   }
 
+  serror U3000 undef_integer_overflow {
+    {ava_integer a} {ava_string op} {ava_integer b}
+  } {
+    msg "Integer overflow evaluating %a% %op% %b%"
+    explanation {
+      Signed integer operations have undefined behaviour on overflow to permit
+      better native optimisation in unchecked builds. In checked builds, this
+      condition is caught and results in this fatal exception instead.
+
+      If wrap-around is actually desired, use the wrapping arithmetic
+      operations instead (eg, u+ instead of just +).
+    }
+  }
+
+  serror U3001 undef_int_div_by_zero {
+    {ava_integer a} {ava_string op} {ava_integer b}
+  } {
+    msg "Divide-by-zero evaluating %a% %op% %b%"
+    explanation {
+      Division by zero has, in all cases, undefined behaviour. In checked
+      builds, this condition is caught and results in this fatal exception
+      instead.
+    }
+  }
+
   serror L4001 unclosed_string_literal {} {
     msg "Unclosed string literal."
     explanation {

@@ -1,0 +1,287 @@
+;-
+; Copyright (c) 2015, Jason Lingle
+;
+; Permission to  use, copy,  modify, and/or distribute  this software  for any
+; purpose  with or  without fee  is hereby  granted, provided  that the  above
+; copyright notice and this permission notice appear in all copies.
+;
+; THE SOFTWARE  IS PROVIDED "AS  IS" AND  THE AUTHOR DISCLAIMS  ALL WARRANTIES
+; WITH  REGARD   TO  THIS  SOFTWARE   INCLUDING  ALL  IMPLIED   WARRANTIES  OF
+; MERCHANTABILITY AND FITNESS. IN NO EVENT  SHALL THE AUTHOR BE LIABLE FOR ANY
+; SPECIAL,  DIRECT,   INDIRECT,  OR  CONSEQUENTIAL  DAMAGES   OR  ANY  DAMAGES
+; WHATSOEVER RESULTING FROM LOSS OF USE, DATA OR PROFITS, WHETHER IN AN ACTION
+; OF  CONTRACT, NEGLIGENCE  OR OTHER  TORTIOUS ACTION,  ARISING OUT  OF OR  IN
+; CONNECTION WITH THE USE OR PERFORMANCE OF THIS SOFTWARE.
+
+; Makes available the functions built in to the runtime library and made
+; available via the avast driver to natively-compiled code.
+
+namespace byte-string {
+  ; Concatenates two values.
+  ;
+  ; :return A value containing all the bytes of $a followed by all the bytes of
+  ; $b, in order.
+  EXTERN concat "" ava pos pos
+
+  ; Returns the number of bytes in a value.
+  ;
+  ; :arg val The value of which to get the length.
+  ;
+  ; :return The number of bytes in the bytestring of $val.
+  EXTERN length "" ava pos
+}
+
+; The #string-concat# special used by string concatenation operators.
+ALIAS #string-concat# = byte-string.concat
+
+namespace integer {
+  ; COMMON INTEGER ARITHMETIC NOTES
+  ;
+  ; The standard integer operations (other than those that do bit-twiddling)
+  ; have undefined behaviour when their result would overflow a signed integer.
+  ; This is for two reasons:
+  ;
+  ; - Signed wrap-around is rarely desired. Since "undefined behaviour" permits
+  ;   checked builds to throw when it occurs without needing unchecde builds to
+  ;   pay for the overhead of doing so, this allows us to both help the user
+  ;   find issues in their code and not slow down the language as a whole.
+  ;
+  ; - Some native optimisations work better when the optimiser can assume
+  ;   integers never overflow.
+  ;
+  ; "Unsigned" variants of the arithmetic functions exist which guarantee
+  ; normal wrapping, and they may be used whenever it is actually desired,
+  ; making this assumption explicit.
+  ;
+  ; The empty string values for operations are, whenever possible, the
+  ; "identity" input, ie, the one that returns the other side of a binary
+  ; operator. If there is no such identity, zero is used.
+
+  ; Sums two integers.
+  ;
+  ; When $lhs is omitted, this is effectively the unary + operator, which
+  ; returns the original value, except as a normalised integer.
+  ;
+  ; :arg lhs The left-hand side of the addition. Defaults to 0 if omitted. The
+  ; empty string is interpreted as 0.
+  ;
+  ; :arg rhs The right-hand side of the addition. The empty string is
+  ; interpreted as 0.
+  ;
+  ; :return A normalised integer equal to ($lhs + $rhs), both arguments being
+  ; interpreted as integers.
+  EXTERN add "" ava [pos 0] pos
+  ; Subtracts two integers.
+  ;
+  ; When $lhs is omitted, this is effectively the unary - operator, which
+  ; negates the input value.
+  ;
+  ; :arg lhs The left-hand side of the subtraction. Defaults to 0 if omitted.
+  ; The empty string is interpreted as 0.
+  ;
+  ; :arg rhs The right-hand side of the subtraction. The empty string is
+  ; interpreted as 0.
+  ;
+  ; :return A normalised integer equal to ($lhs - $rhs).
+  EXTERN sub "" ava [pos 0] pos
+  ; Multiplies two integers.
+  ;
+  ; :arg lhs The left-hand side; empty string is 1.
+  ;
+  ; :arg rhs The right-hand side; empty string is 1.
+  ;
+  ; :return A normalised integer equal to ($lhs * $rhs).
+  EXTERN mul "" ava pos pos
+  ; Divides two integers.
+  ;
+  ; This is truncating division, as in C99/Java/etc
+  ;
+  ;  (div +7 +3) == 2
+  ;  (div +7 -3) == -2
+  ;  (div -7 +3) == -2
+  ;  (div -7 -7) == 2
+  ;
+  ; Rationale: Other possible flavours of division include flooring (as used in
+  ; Python) and Euclidean. Both of these were rejected because
+  ;
+  ; - Most people coming from other languages expect truncating division.
+  ;
+  ; - Truncating division preserves the equalities
+  ;     (x / y) == ((- x ) / (- y)) ==
+  ;     - ((- x) / y) == - (x / (- y))
+  ;   whereas flooring and Euclidiean break at least one of them.
+  ;
+  ; - Truncating division is more efficiently implemented.
+  ;
+  ; Behaviour is undefined if $rhs is 0, or if $lhs is -0x8000000000000000 and
+  ; $rhs is -1.
+  ;
+  ; :arg lhs The left-hand side; empty string is 0.
+  ;
+  ; :arg rhs The right-hand side; empty string is 1.
+  ;
+  ; :return The truncated (rounded toward 0) result of ($lhs / $rhs).
+  EXTERN div "" ava pos pos
+  ; Calculates the Euclidiean modulus of two integers.
+  ;
+  ; Note that this is distinct from the near-useless signed modulus operator
+  ; from the C family; see $rem for that. This always returns a non-negative
+  ; integer between 0, inclusive, and (abs $rhs), exclusive.
+  ;
+  ;   (mod +7 +3) == 1
+  ;   (mod +7 -3) == 1
+  ;   (mod -7 +3) == 2
+  ;   (mod -7 -3) == 2
+  ;
+  ; Rationale: Virtually all use cases of the modulus operator want to reduce
+  ; the left-hand side to a non-negative range; finding the actual remainder
+  ; produced by the language's division operator is almost unheard of. The
+  ; latter is provided by $rem in case anyone actually wants it.
+  ;
+  ; Note that an $rhs of -0x8000000000000000 causes the function to simply
+  ; return $lhs with a clear sign bit.
+  ;
+  ; Behaviour is undefined if $rhs is 0.
+  ;
+  ; :arg lhs The left-hand side; empty string is 0.
+  ;
+  ; :arg rhs The right-hand side; empty string is -0x8000000000000000.
+  ;
+  ; :return The Euclidean remainder of ($lhs / $rhs).
+  EXTERN mod "" ava pos pos
+  ; Calculates the remainder of truncating division of two integers.
+  ;
+  ; Note that an $rhs of -0x8000000000000000 causes the function to simply
+  ; return $lhs.
+  ;
+  ; Behaviour is undefined if $rhs is 0.
+  ;
+  ; :arg lhs The left-hand side; empty string is 0.
+  ;
+  ; :arg rhs The right-hand side; empty string is -0x8000000000000000.
+  ;
+  ; :return The remainder of truncating division in ($lhs / $rhs).
+  ;
+  ; :see $mod
+  EXTERN rem "" ava pos pos
+  ; Calculates the bitwise AND of two integers.
+  ;
+  ; :arg lhs The left-hand side; empty string is 0xFFFFFFFFFFFFFFFF.
+  ;
+  ; :arg rhs The right-hand side; empty string is 0xFFFFFFFFFFFFFFFF.
+  ;
+  ; :return The bitwise ($lhs & $rhs).
+  EXTERN and "" ava pos pos
+  ; Calculates the bitwise inclusive OR of two integers.
+  ;
+  ; :arg lhs The left-hand side; empty string is 0.
+  ;
+  ; :arg rhs The right-hand side; empty string is 0.
+  ;
+  ; :return The bitwise ($lhs | $rhs).
+  EXTERN or  "" ava pos pos
+  ; Calculates the bitwise eXclusive OR of two integers.
+  ;
+  ; :arg lhs The left-hand side; empty string is 0.
+  ;
+  ; :arg rhs The right-hand side; empty string is 0.
+  ;
+  ; :return The bitwise ($lhs ^ $rhs).
+  EXTERN xor "" ava pos pos
+  ; Shifs an integer left a certain number of bits.
+  ;
+  ; :arg lhs The integer to shift; empty string is 0.
+  ;
+  ; :arg rhs The shift amount; empty string is 0. Values not in the range
+  ; [0..63] result in 0.
+  ;
+  ; :return $lhs left-shifted $rhs bits, zeros inserted at right.
+  EXTERN lsh "" ava pos pos
+  ; Shifts an integer right a certain number of bits.
+  ;
+  ; :arg lhs The integer to shift; empty string is 0.
+  ;
+  ; :arg rhs The shift amount; empty string is 0. Values not in the range
+  ; [0..63] result in 0.
+  ;
+  ; :return $lhs right-shifted $rhs bits, zeros inserted at left.
+  EXTERN rsh "" ava pos pos
+  ; Arithmatically shifts an integer a certain number of bits.
+  ;
+  ; :arg lhs The integer to shift; empty string is 0.
+  ;
+  ; :arg rhs The shift amount; empty string is 0. Values not in the range
+  ; [0..63] are treated as 63.
+  ;
+  ; :return $lhs right-shifted $rhs bits; bits at the left are duplicated from
+  ; the sign bit of $lhs.
+  EXTERN ash "" ava pos pos
+  ; Inverts an integer bitwise.
+  ;
+  ; :arg val The integer to invert; empty string is 0.
+  ;
+  ; :return An integer equal to $val with all bits inverted.
+  EXTERN not "" ava pos
+  ; Tests for integer equality.
+  ;
+  ; :arg lhs The left-hand side; empty string is 0.
+  ;
+  ; :arg rhs The right-hand side; empty string is 0.
+  ;
+  ; :return 1 if $lhs is an integer equal to $rhs, 0 if $lhs is an integer not
+  ; equal to $rhs.
+  EXTERN equ "" ava pos pos
+  ; Tests for integer inequality.
+  ;
+  ; :arg lhs The left-hand side; empty string is 0.
+  ;
+  ; :arg rhs The right-hand side; empty string is 0.
+  ;
+  ; :return 1 if $lhs is an integer not equal to $rhs, 0 if $lhs is an integer
+  ; equal to $rhs.
+  EXTERN neq "" ava pos pos
+  ; Tests for strict integer less-than.
+  ;
+  ; :arg lhs The left-hand side; empty string is 0x7FFFFFFFFFFFFFFF.
+  ;
+  ; :arg rhs The right-hand side; empty string is -0x8000000000000000.
+  ;
+  ; :return 1 if $lhs is an integer strictly less than $rhs, 0 if $lhs is an
+  ; integer greater than or equal to $rhs.
+  EXTERN slt "" ava pos pos
+  ; Tests for integer less-than-or-equals.
+  ;
+  ; :arg lhs The left-hand side; empty string is 0x7FFFFFFFFFFFFFFF.
+  ;
+  ; :arg rhs The right-hand side; empty string is -0x8000000000000000.
+  ;
+  ; :return 1 if $lhs is an integer less than or equal to $rhs, 0 if $lhs is an
+  ; integer greater than to $rhs.
+  EXTERN leq "" ava pos pos
+  ; Tests for strict integer greater-than.
+  ;
+  ; :arg lhs The left-hand side; empty string is -0x8000000000000000.
+  ;
+  ; :arg rhs The right-hand side; empty string is 0x7FFFFFFFFFFFFFFF.
+  ;
+  ; :return 1 if $lhs is an integer strictly greater than $rhs, 0 if $lhs is an
+  ; integer less than or equal to $rhs.
+  EXTERN sgt "" ava pos pos
+  ; Tests for integer greater-than-or-equals.
+  ;
+  ; :arg lhs The left-hand side; empty string is -0x8000000000000000.
+  ;
+  ; :arg rhs The right-hand side; empty string is 0x7FFFFFFFFFFFFFFF.
+  ;
+  ; :return 1 if $lhs is an integer greater than or equal to $rhs, 0 if $lhs is
+  ; an integer less than to $rhs.
+  EXTERN geq "" ava pos pos
+
+  ; Logically negates an integer.
+  ;
+  ; :arg val The value to negate.
+  ;
+  ; :return 1 if $val is an integer equal to 0, 0 if it is any other integer.
+  ; Empty string is 0.
+  EXTERN lnot "" ava pos
+}

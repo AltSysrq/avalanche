@@ -369,7 +369,7 @@ static void ava_intr_req_do_import(
       symbol = AVA_NEW(ava_symbol);
       symbol->type = m->type;
       symbol->level = 0;
-      symbol->visibility = ava_v_private;
+      symbol->visibility = m->reexport? ava_v_public : ava_v_internal;
       symbol->full_name = m->name;
       symbol->v.macro.precedence = m->precedence;
       symbol->v.macro.macro_subst = ava_intr_user_macro_eval;
@@ -402,7 +402,7 @@ static void ava_intr_req_do_import(
       default: abort();
       }
       symbol->level = 0;
-      symbol->visibility = ava_v_private;
+      symbol->visibility = x->reexport? ava_v_public : ava_v_internal;
       symbol->full_name = x->effective_name;
       symbol->v.var.is_mutable = ava_false;
 
