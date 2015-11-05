@@ -42,8 +42,8 @@ namespace integer {
   ; This is for two reasons:
   ;
   ; - Signed wrap-around is rarely desired. Since "undefined behaviour" permits
-  ;   checked builds to throw when it occurs without needing unchecde builds to
-  ;   pay for the overhead of doing so, this allows us to both help the user
+  ;   checked builds to throw when it occurs without needing unchecked builds
+  ;   to pay for the overhead of doing so, this allows us to both help the user
   ;   find issues in their code and not slow down the language as a whole.
   ;
   ; - Some native optimisations work better when the optimiser can assume
