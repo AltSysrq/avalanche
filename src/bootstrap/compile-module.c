@@ -31,6 +31,8 @@
 #include "../runtime/avalanche/compenv.h"
 #include "../bsd.h"
 
+#include "common.h"
+
 /*
 
   Single Avalanche Module Compiler (to P-Code)
@@ -47,24 +49,8 @@
 
  */
 
-typedef struct {
-  unsigned argc;
-  const char*const* argv;
-} main_data;
-
-static ava_value main_impl(void* arg);
 static const ava_pcode_global_list* compile(
   ava_string package_prefix, ava_string file_prefix, ava_string infile);
-static void spit(ava_string outfile, const ava_pcode_global_list* pcode);
-
-int main(int argc, const char*const* argv) {
-  main_data md = { argc, argv };
-
-  ava_init();
-  ava_invoke_in_context(main_impl, &md);
-
-  return 0;
-}
 
 static ava_value main_impl(void* arg) {
   unsigned argc = ((const main_data*)arg)->argc;
@@ -122,22 +108,4 @@ static const ava_pcode_global_list* compile(
            ava_error_list_to_string(&errors, 50, ava_false)));
 
   return pcode;
-}
-
-static void spit(ava_string outfile, const ava_pcode_global_list* pcode) {
-  FILE* out;
-  ava_string pcode_string;
-  size_t len;
-
-  pcode_string = ava_pcode_global_list_to_string(pcode, 0);
-  len = ava_string_length(pcode_string);
-
-  out = fopen(ava_string_to_cstring(outfile), "w");
-  if (!out)
-    err(EX_CANTCREAT, "Failed to open %s", ava_string_to_cstring(outfile));
-
-  if (len != fwrite(ava_string_to_cstring(pcode_string), 1, len, out))
-    err(EX_IOERR, "Error writing %s", ava_string_to_cstring(outfile));
-
-  fclose(out);
 }
