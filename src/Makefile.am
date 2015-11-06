@@ -20,7 +20,9 @@ RE2C_FLAGS = -g
 AVA_DRIVERS = runtime/-llvm-support/drivers/isa-unchecked.bc
 
 lib_LTLIBRARIES = libavart.la libavart-native.la
-noinst_PROGRAMS = simple-interp llvm-ir-dump.t
+noinst_PROGRAMS = simple-interp llvm-ir-dump.t \
+bootstrap/bin/compile-module
+
 noinst_DATA =  $(AVA_DRIVERS)
 libavart_la_SOURCES = \
 runtime/alloc.c \
@@ -95,6 +97,9 @@ simple_interp_LDADD = libavart.la libavart-native.la
 
 llvm_ir_dump_t_SOURCES = llvm-ir-dump.cxx
 llvm_ir_dump_t_LDADD = libavart.la libavart-native.la $(LLVM_LIBS)
+
+bootstrap_bin_compile_module_SOURCES = bootstrap/compile-module.c
+bootstrap_bin_compile_module_LDADD = libavart.la
 
 runtime/gen-lex.c: runtime/lex.c
 	$(AM_V_GEN)$(RE2C) --input custom -c $(RE2C_FLAGS) \

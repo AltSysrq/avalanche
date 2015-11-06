@@ -35,3 +35,8 @@ ava-config.h
 *-trait.h
 *.class
 *.bc
+src/bootstrap/bin
+*.avam
+*.avami
+*.avap
+*.avapi
