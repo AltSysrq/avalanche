@@ -84,6 +84,9 @@ runtime/-intrinsics/variable.c
 
 libavart_native_la_SOURCES = \
 runtime/-llvm-support/drivers/gen-isa-unchecked.c \
+runtime/-llvm-support/drivers/gen-avast-unchecked.c \
+runtime/-llvm-support/drivers/gen-avast-checked-1.c \
+runtime/-llvm-support/drivers/gen-avast-checked-2.c \
 runtime/-llvm-support/drivers/gen-main.c \
 runtime/-llvm-support/driver-iface.cxx \
 runtime/-llvm-support/ir-types.cxx \
@@ -153,3 +156,30 @@ runtime/-llvm-support/drivers/gen-main.c: \
 	dat2c.tcl
 	$(DAT2C) ava_driver_main \
 		<runtime/-llvm-support/drivers/main.bc
+
+runtime/-llvm-support/drivers/gen-avast-unchecked.c: \
+	runtime/-llvm-support/drivers/avast-unchecked.bc dat2c.tcl
+	$(DAT2C) ava_driver_avast_unchecked \
+		<runtime/-llvm-support/drivers/avast-unchecked.bc
+
+runtime/-llvm-support/drivers/avast-unchecked.bc: \
+	runtime/avast.c runtime/avalanche/*.h
+	$(EMIT_LLVM) -DAVAST_CHECK_LEVEL=0 runtime/avast.c
+
+runtime/-llvm-support/drivers/gen-avast-checked-1.c: \
+	runtime/-llvm-support/drivers/avast-checked-1.bc dat2c.tcl
+	$(DAT2C) ava_driver_avast_checked_1 \
+		<runtime/-llvm-support/drivers/avast-checked-1.bc
+
+runtime/-llvm-support/drivers/avast-checked-1.bc: \
+	runtime/avast.c runtime/avalanche/*.h
+	$(EMIT_LLVM) -DAVAST_CHECK_LEVEL=1 runtime/avast.c
+
+runtime/-llvm-support/drivers/gen-avast-checked-2.c: \
+	runtime/-llvm-support/drivers/avast-checked-2.bc dat2c.tcl
+	$(DAT2C) ava_driver_avast_checked_2 \
+		<runtime/-llvm-support/drivers/avast-checked-2.bc
+
+runtime/-llvm-support/drivers/avast-checked-2.bc: \
+	runtime/avast.c runtime/avalanche/*.h
+	$(EMIT_LLVM) -DAVAST_CHECK_LEVEL=2 runtime/avast.c
