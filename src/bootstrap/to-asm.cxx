@@ -176,7 +176,7 @@ static void dump_assembly(llvm::Module& module) {
 
   std::unique_ptr<llvm::TargetMachine> target_machine(
     target->createTargetMachine(triple.getTriple(), "", "", options,
-                                llvm::Reloc::Default,
+                                llvm::Reloc::PIC_,
                                 llvm::CodeModel::Default,
                                 llvm::CodeGenOpt::Aggressive));
 

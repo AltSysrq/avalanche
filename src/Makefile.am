@@ -8,6 +8,7 @@ AM_CFLAGS = $(LIBUNWIND_CFLAGS) $(LIBFFI_CFLAGS) \
 AM_CXXFLAGS = $(LIBUNWIND_CFLAGS) $(LIBFFI_CFLAGS) \
               $(EXTRA_CFLAGS) $(LLVM_CPPFLAGS) $(LLVM_CXXFLAGS) \
               -std=c++11 -D__STDC_LIMIT_MACROS -D__STDC_CONSTANT_MACROS
+AM_CCASFLAGS = -g0
 EMIT_LLVM_CFLAGS= -O3 -g0 -fno-caret-diagnostics -fno-diagnostics-fixit-info \
                   -fno-color-diagnostics -c -emit-llvm \
 		  -DNDEBUG -DHAVE_CONFIG_H -Wall $(DEFAULT_INCLUDES)
@@ -205,6 +206,7 @@ runtime/-llvm-support/drivers/avast-unchecked.bc
 
 AVAST_MODULES = \
 org.ava-lang.avast/builtins.avam \
+org.ava-lang.avast/cstdio.avam \
 org.ava-lang.avast/operators.avam
 
 org.ava-lang.avast.avap: $(AVA_LINK_PACKAGE) $(AVAST_MODULES)
