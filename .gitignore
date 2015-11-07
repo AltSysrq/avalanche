@@ -40,3 +40,4 @@ src/bootstrap/bin
 *.avami
 *.avap
 *.avapi
+org.*.S

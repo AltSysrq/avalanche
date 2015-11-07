@@ -668,8 +668,12 @@ noexcept {
 
   /* Only declare the function itself if not already defined. (A driver may
    * have defined it already.)
+   *
+   * If the function is not published, it is never accessed by name and may
+   * coexist with other functions of the same same.
    */
-  fun = context.module.getFunction(mangled_name);
+  fun = llvm::GlobalValue::InternalLinkage == linkage? nullptr :
+    context.module.getFunction(mangled_name);
   if (!fun) {
     fun = llvm::Function::Create(
       fun_type, linkage,
@@ -678,6 +682,7 @@ noexcept {
     if (will_be_defined)
       fun->setUnnamedAddr(true);
   } else {
+    /* TODO This probably shouldn't be an assert, but a normal error */
     assert(!will_be_defined);
   }
   context.global_funs[ix] = fun;

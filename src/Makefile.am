@@ -22,7 +22,7 @@ AVA_DRIVERS = runtime/-llvm-support/drivers/isa-unchecked.bc
 lib_LTLIBRARIES = libavart.la libavart-native.la
 noinst_PROGRAMS = simple-interp llvm-ir-dump.t \
 bootstrap/bin/compile-module bootstrap/bin/link-package \
-bootstrap/bin/make-interface
+bootstrap/bin/make-interface bootstrap/bin/to-asm
 
 noinst_DATA =  $(AVA_DRIVERS)
 libavart_la_SOURCES = \
@@ -105,6 +105,8 @@ bootstrap_bin_link_package_SOURCES = bootstrap/link-package.c
 bootstrap_bin_link_package_LDADD = libavart.la
 bootstrap_bin_make_interface_SOURCES = bootstrap/make-interface.c
 bootstrap_bin_make_interface_LDADD = libavart.la
+bootstrap_bin_to_asm_SOURCES = bootstrap/to-asm.cxx
+bootstrap_bin_to_asm_LDADD = libavart.la libavart-native.la $(LLVM_LIBS)
 
 runtime/gen-lex.c: runtime/lex.c
 	$(AM_V_GEN)$(RE2C) --input custom -c $(RE2C_FLAGS) \

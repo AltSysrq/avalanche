@@ -23,10 +23,11 @@ static ava_value main_impl(void* arg);
 static void spit(ava_string outfile, const ava_pcode_global_list* pcode)
 AVA_UNUSED;
 
+static ava_string slurp_file(ava_string infile) AVA_UNUSED;
 static ava_pcode_global_list* slurp(ava_string infile) AVA_UNUSED;
 
 int main(int argc, const char*const* argv) {
-  main_data md = { argc, argv };
+  main_data md = { (unsigned)argc, argv };
 
   ava_init();
   ava_invoke_in_context(main_impl, &md);
@@ -53,7 +54,7 @@ static void spit(ava_string outfile, const ava_pcode_global_list* pcode) {
   fclose(out);
 }
 
-static ava_pcode_global_list* slurp(ava_string infile) {
+static ava_string slurp_file(ava_string infile) {
   ava_string accum;
   char buff[4096];
   size_t nread;
@@ -75,5 +76,9 @@ static ava_pcode_global_list* slurp(ava_string infile) {
 
   fclose(in);
 
-  return ava_pcode_global_list_of_string(accum);
+  return accum;
+}
+
+static ava_pcode_global_list* slurp(ava_string infile) {
+  return ava_pcode_global_list_of_string(slurp_file(infile));
 }
