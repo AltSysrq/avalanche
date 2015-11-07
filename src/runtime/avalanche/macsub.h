@@ -41,6 +41,7 @@ struct ava_symbol_s;
 struct ava_symtab_s;
 struct ava_varscope_s;
 struct ava_compenv_s;
+struct ava_pcode_global_list_s;
 
 /**
  * An AST node after macro processing.
@@ -629,6 +630,23 @@ ava_macro_subst_result ava_macsub_error_result(
  * The panic flag is shared between all contexts created from the same parent.
  */
 void ava_macsub_panic(ava_macsub_context* context);
+
+/**
+ * Inserts into the given context's symbol table symbols exported from the
+ * given P-Code module, as if the module were loaded with reqmod or reqpkg.
+ *
+ * @param context The context to modify.
+ * @param module The P-Code to insert.
+ * @param name The name of the package or module, as would be passed to reqmod
+ * or reqpkg.
+ * @param location The location to report for errors due to this insertion.
+ * @param is_package True if this is a package, false if a module.
+ */
+/* Implemented in -intrinsics/require.c */
+void ava_macsub_insert_module(
+  ava_macsub_context* context, const struct ava_pcode_global_list_s* module,
+  ava_string name,
+  const ava_compile_location* location, ava_bool is_package);
 
 /**
  * Returns an error AST node without emitting any errors.

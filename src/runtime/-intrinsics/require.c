@@ -282,20 +282,42 @@ static void ava_intr_req_do_import(
   ava_macsub_context* context, ava_string name,
   const ava_compile_location* location, ava_bool is_package
 ) {
+  ava_compenv* compenv;
+  const ava_pcode_global_list* module;
+  ava_string cache_error;
+
+  compenv = ava_macsub_get_compenv(context);
+
+  /* Try to get the package/module from the cache */
+  module = ava_module_cache_get(
+    is_package? &compenv->package_cache : &compenv->module_cache,
+    name, &cache_error);
+  if (ava_string_is_present(cache_error)) {
+    ava_macsub_record_error(
+      context, ava_error_failed_reading_cached_module(
+        location, name, cache_error));
+    ava_macsub_panic(context);
+    return;
+  }
+
+  ava_macsub_insert_module(context, module, name, location, is_package);
+}
+
+void ava_macsub_insert_module(
+  ava_macsub_context* context, const ava_pcode_global_list* module,
+  ava_string name,
+  const ava_compile_location* location, ava_bool is_package
+) {
   AVA_STATIC_STRING(package_sentinel_prefix, "(ava_intr_reqpkg)");
   AVA_STATIC_STRING(module_sentinel_prefix, "(ava_intr_reqmod)");
 
-  ava_compenv* compenv;
-  ava_symtab* symtab;
-  ava_symbol* sentinel, * symbol;
-  const ava_pcode_global_list* module;
   const ava_pcode_global* global, * target, ** global_array;
   size_t global_size, ix;
-  ava_string cache_error;
+  ava_symbol* sentinel, * symbol;
   ava_intr_require_import* definer;
+  ava_symtab* symtab;
 
   symtab = ava_macsub_get_symtab(context);
-  compenv = ava_macsub_get_compenv(context);
 
   /* Check whether this import has already happened.
    *
@@ -315,18 +337,6 @@ static void ava_intr_req_do_import(
       context, ava_error_package_or_module_rerequired(
         location, name));
     /* Probably won't lead to a bunch of errors later, don't panic */
-    return;
-  }
-
-  /* Try to get the package/module from the cache */
-  module = ava_module_cache_get(
-    is_package? &compenv->package_cache : &compenv->module_cache,
-    name, &cache_error);
-  if (ava_string_is_present(cache_error)) {
-    ava_macsub_record_error(
-      context, ava_error_failed_reading_cached_module(
-        location, name, cache_error));
-    ava_macsub_panic(context);
     return;
   }
 

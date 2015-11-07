@@ -13,19 +13,26 @@ EMIT_LLVM_CFLAGS= -O3 -g0 -fno-caret-diagnostics -fno-diagnostics-fixit-info \
 		  -DNDEBUG -DHAVE_CONFIG_H -Wall $(DEFAULT_INCLUDES)
 EMIT_LLVM = $(AM_V_GEN)$(CLANG) $(EMIT_LLVM_CFLAGS) -o $@
 DAT2C = $(AM_V_GEN)$(TCLSH) dat2c.tcl >$@
+BOOTSTRAP_LIBS = libavart-bootstrap.la $(LIBUNWIND_LIBS) $(LIBFFI_LIBS)
+
+AVA_COMPILE_MODULE = @AVA_BOOTSTRAP_TOOLCHAIN_DIR@/compile-module
+AVA_LINK_PACKAGE = @AVA_BOOTSTRAP_TOOLCHAIN_DIR@/link-package
+AVA_MAKE_INTERFACE = @AVA_BOOTSTRAP_TOOLCHAIN_DIR@/make-interface
+AVA_TO_ASM = @AVA_BOOTSTRAP_TOOLCHAIN_DIR@/to-asm
 
 # Use -b instead of -g if $(CC) doesn't support label pointers
 RE2C_FLAGS = -g
 
-AVA_DRIVERS = runtime/-llvm-support/drivers/isa-unchecked.bc
-
+# The -bootstrap static libraries are the same as the dynamic libraries we
+# install, except they do not have avast fully compiled in. They are used for
+# building the bootstrap tools which compile avast itself.
+noinst_LTLIBRARIES = libavart-bootstrap.la
 lib_LTLIBRARIES = libavart.la libavart-native.la
 noinst_PROGRAMS = simple-interp llvm-ir-dump.t \
 bootstrap/bin/compile-module bootstrap/bin/link-package \
 bootstrap/bin/make-interface bootstrap/bin/to-asm
 
-noinst_DATA =  $(AVA_DRIVERS)
-libavart_la_SOURCES = \
+libavart_bootstrap_la_SOURCES = \
 runtime/alloc.c \
 runtime/array-list.c \
 runtime/avast.c \
@@ -82,6 +89,11 @@ runtime/-intrinsics/ret.c \
 runtime/-intrinsics/user-macro.c \
 runtime/-intrinsics/variable.c
 
+libavart_la_SOURCES = \
+org.ava-lang.avast.S \
+org.ava-lang.avast.avapi.c \
+runtime/compenv-avast.c
+
 libavart_native_la_SOURCES = \
 runtime/-llvm-support/drivers/gen-isa-unchecked.c \
 runtime/-llvm-support/drivers/gen-avast-unchecked.c \
@@ -94,7 +106,7 @@ runtime/-llvm-support/jit-context.cxx \
 runtime/-llvm-support/optimisation.cxx \
 runtime/-llvm-support/translation.cxx
 
-libavart_la_LIBADD = $(LIBUNWIND_LIBS) $(LIBFFI_LIBS)
+libavart_la_LIBADD = $(BOOTSTRAP_LIBS)
 libavart_native_la_LIBADD = $(LLVM_LIBS)
 simple_interp_SOURCES = interp/main.c
 simple_interp_LDADD = libavart.la libavart-native.la
@@ -103,13 +115,13 @@ llvm_ir_dump_t_SOURCES = llvm-ir-dump.cxx
 llvm_ir_dump_t_LDADD = libavart.la libavart-native.la $(LLVM_LIBS)
 
 bootstrap_bin_compile_module_SOURCES = bootstrap/compile-module.c
-bootstrap_bin_compile_module_LDADD = libavart.la
+bootstrap_bin_compile_module_LDADD = libavart-bootstrap.la $(BOOTSTRAP_LIBS)
 bootstrap_bin_link_package_SOURCES = bootstrap/link-package.c
-bootstrap_bin_link_package_LDADD = libavart.la
+bootstrap_bin_link_package_LDADD = $(BOOTSTRAP_LIBS)
 bootstrap_bin_make_interface_SOURCES = bootstrap/make-interface.c
-bootstrap_bin_make_interface_LDADD = libavart.la
+bootstrap_bin_make_interface_LDADD = $(BOOTSTRAP_LIBS)
 bootstrap_bin_to_asm_SOURCES = bootstrap/to-asm.cxx
-bootstrap_bin_to_asm_LDADD = libavart.la libavart-native.la $(LLVM_LIBS)
+bootstrap_bin_to_asm_LDADD = $(BOOTSTRAP_LIBS) libavart-native.la $(LLVM_LIBS)
 
 runtime/gen-lex.c: runtime/lex.c
 	$(AM_V_GEN)$(RE2C) --input custom -c $(RE2C_FLAGS) \
@@ -183,3 +195,27 @@ runtime/-llvm-support/drivers/gen-avast-checked-2.c: \
 runtime/-llvm-support/drivers/avast-checked-2.bc: \
 	runtime/avast.c runtime/avalanche/*.h
 	$(EMIT_LLVM) -DAVAST_CHECK_LEVEL=2 runtime/avast.c
+
+ASM_DRIVERS = \
+runtime/-llvm-support/drivers/isa-unchecked.bc \
+runtime/-llvm-support/drivers/avast-unchecked.bc
+
+.avap.S: $(AVA_TO_ASM) $(ASM_DRIVERS)
+	$(AM_V_GEN)$(AVA_TO_ASM) $(ASM_DRIVERS) $< >$@
+
+AVAST_MODULES = \
+org.ava-lang.avast/builtins.avam \
+org.ava-lang.avast/operators.avam
+
+org.ava-lang.avast.avap: $(AVA_LINK_PACKAGE) $(AVAST_MODULES)
+	$(AM_V_GEN)$(AVA_LINK_PACKAGE) $(AVAST_MODULES)
+
+.ava.avam: $(AVA_COMPILE_MODULE)
+	$(AM_V_GEN)$(AVA_COMPILE_MODULE) $<
+
+.avap.avapi: $(AVA_MAKE_INTERFACE)
+	$(AM_V_GEN)$(AVA_MAKE_INTERFACE) $<
+
+org.ava-lang.avast.avapi.c: org.ava-lang.avast.avapi dat2c.tcl
+	$(DAT2C) ava_org_ava_lang_avast_avapi \
+		<org.ava-lang.avast.avapi

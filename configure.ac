@@ -9,11 +9,16 @@ LT_INIT()
 AM_CONFIG_HEADER([config.h])
 PKG_PROG_PKG_CONFIG()
 
+: ${AVA_BOOTSTRAP_TOOLCHAIN_DIR:=bootstrap/bin}
+AC_ARG_VAR([AVA_BOOTSTRAP_TOOLCHAIN_DIR],
+[Directory containing bootstrap Avalanche tools. Must be set for cross-compiling.])
+
 # Checks for programs.
 AC_PROG_CC
 AC_PROG_CC_C99
 AM_PROG_CC_C_O
 AC_PROG_CXX
+AM_PROG_AS
 AC_CHECK_PROG([RE2C], [re2c], [re2c], [])
 AC_CHECK_PROGS([TCLSH], [tclsh8.6 tclsh8.5 tclsh])
 AC_CHECK_PROGS([CLANG], [clang])

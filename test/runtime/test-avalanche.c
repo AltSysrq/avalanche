@@ -182,7 +182,7 @@ static ava_value run_test_impl(void* arg) {
   compenv = ava_compenv_new(AVA_ASCII9_STRING("input:"));
   ava_compenv_use_simple_source_reader(compenv, AVA_EMPTY_STRING);
   compenv->read_source = read_source_mask_filename;
-  ava_compenv_use_minimal_macsub(compenv);
+  ava_compenv_use_standard_macsub(compenv);
 
   if (!ava_compenv_compile_file(&pcode, &xcode, compenv,
                                 ava_string_of_cstring(inputs[ix]),
@@ -272,6 +272,8 @@ static void execute_xcode(ava_compenv* compenv,
   jit = ava_jit_context_new();
   ava_jit_add_driver(jit, ava_driver_isa_unchecked_data,
                      ava_driver_isa_unchecked_size);
+  ava_jit_add_driver(jit, ava_driver_avast_checked_2_data,
+                     ava_driver_avast_checked_2_size);
   add_dependent_modules(jit, compenv, xcode, &loaded_modules);
   jit_error = ava_jit_run_module(
     jit, xcode,
