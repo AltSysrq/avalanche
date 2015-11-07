@@ -219,3 +219,8 @@ org.ava-lang.avast.avap: $(AVA_LINK_PACKAGE) $(AVAST_MODULES)
 org.ava-lang.avast.avapi.c: org.ava-lang.avast.avapi dat2c.tcl
 	$(DAT2C) ava_org_ava_lang_avast_avapi \
 		<org.ava-lang.avast.avapi
+
+clean-local:
+	find . \( -name \*.avam -o -name \*.avap -o -name \*.avapi \) -delete
+	find . \( -name gen-\*.h -o -name gen-\*.c \) -delete
+	find . \( -name \*.bc -o -name org.\*.S -o -name \*.avapi.c \) -delete
