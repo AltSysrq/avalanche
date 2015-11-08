@@ -1446,7 +1446,7 @@ set defs {
   }
 
   cerror C5077 expression_form_discarded {} {
-    msg "Statement-form construct does not produce a value."
+    msg "Expression-form construct discarded."
     explanation {
       Control structures generally come in two forms: statement-form and
       expression-form, identified by result bodies being brace-enclosed blocks
