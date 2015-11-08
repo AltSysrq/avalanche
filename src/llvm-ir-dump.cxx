@@ -40,7 +40,7 @@ static ava_value run(void* filename) {
 
   compenv = ava_compenv_new(AVA_ASCII9_STRING("input:"));
   ava_compenv_use_simple_source_reader(compenv, AVA_EMPTY_STRING);
-  ava_compenv_use_minimal_macsub(compenv);
+  ava_compenv_use_standard_macsub(compenv);
   ava_compenv_compile_file(NULL, &xcode, compenv,
                            ava_string_of_cstring((const char*)filename),
                            &errors, NULL);
@@ -54,6 +54,8 @@ static ava_value run(void* filename) {
 
   xlator.add_driver(ava_driver_isa_unchecked_data,
                     ava_driver_isa_unchecked_size);
+  xlator.add_driver(ava_driver_avast_unchecked_data,
+                    ava_driver_avast_unchecked_size);
   xlator.add_driver(ava_driver_main_data, ava_driver_main_size);
   std::unique_ptr<llvm::Module> output = xlator.translate(
     xcode, ava_string_of_cstring((const char*)filename),
