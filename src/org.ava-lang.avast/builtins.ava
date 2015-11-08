@@ -151,16 +151,16 @@ namespace integer {
   EXTERN mod "" ava pos pos
   ; Calculates the remainder of truncating division of two integers.
   ;
-  ; Note that an $rhs of -0x8000000000000000 causes the function to simply
-  ; return $lhs.
+  ; Note that an $rhs of 0 causes the function to simply return $lhs.
   ;
   ; Behaviour is undefined if $rhs is 0.
   ;
   ; :arg lhs The left-hand side; empty string is 0.
   ;
-  ; :arg rhs The right-hand side; empty string is -0x8000000000000000.
+  ; :arg rhs The right-hand side; empty string is 0.
   ;
-  ; :return The remainder of truncating division in ($lhs / $rhs).
+  ; :return The remainder of truncating division in ($lhs / $rhs), or $lhs if
+  ; $rhs is 0.
   ;
   ; :see $mod
   EXTERN rem "" ava pos pos
@@ -279,7 +279,7 @@ namespace integer {
 
   ; Logically negates an integer.
   ;
-  ; :arg val The value to negate.
+  ; :arg val The value to negate. Empty string is 0.
   ;
   ; :return 1 if $val is an integer equal to 0, 0 if it is any other integer.
   ; Empty string is 0.

@@ -136,7 +136,7 @@ defun(integer__div)(ava_value a, ava_value b) {
                   ava_error_undef_integer_overflow(
                     ai, AVA_ASCII9_STRING("/"), bi));
 #endif
-  res = ai / bi - ((ai < 0) ^ (bi < 0)) + (bi < 0);
+  res = ai / bi;
   return ava_value_of_integer(res);
 }
 
@@ -166,13 +166,15 @@ defun(integer__rem)(ava_value a, ava_value b) {
 
   ai = ava_integer_of_value(a, 0);
   bi = ava_integer_of_value(b, 0x8000000000000000LL);
-#if AVAST_CHECK_LEVEL >= 1
   if (0 == bi)
-    ava_throw_str(&ava_undefined_behaviour_exception,
-                  ava_error_undef_int_div_by_zero(
-                    ai, AVA_ASCII9_STRING("/"), bi));
-#endif
-  res = ai % bi;
+    res = ai;
+  else if (-1 == bi)
+    /* Traps on -0x8000000000000000LL % -1 since it may be implemented with the
+     * same machine instruction as division.
+     */
+    res = 0;
+  else
+    res = ai % bi;
 
   return ava_value_of_integer(res);
 }
@@ -263,6 +265,10 @@ COMPARATOR(leq, <=,     0x7FFFFFFFFFFFFFFFLL,   -0x8000000000000000LL)
 COMPARATOR(sgt, > ,     -0x8000000000000000LL,  0x7FFFFFFFFFFFFFFFLL)
 COMPARATOR(geq, >=,     -0x8000000000000000LL,  0x7FFFFFFFFFFFFFFFLL)
 #undef COMPARATOR
+
+defun(integer__lnot)(ava_value a) {
+  return ava_value_of_integer(!ava_integer_of_value(a, 0));
+}
 
 /******************** UNSIGNED OPERATIONS ********************/
 
