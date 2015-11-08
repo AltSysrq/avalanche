@@ -81,6 +81,8 @@ import unsigned u
 ;   < <= > >= == !=             LTR             14
 ;   &&                          LTR             8
 ;   ||                          LTR             6
+;   ?                           RTL             5
+;   :                           LTR             2
 ;   =                           RTL             1
 
 macro DEFUNARY control      %MACRO >0 !op >1 (>2 (!>))
@@ -118,3 +120,24 @@ DEFBINARY       u>=     14      %u.geq
 DEFBINARY       >       14      %i.sgt
 DEFBINARY       u>      14      %u.sgt
 DEFBINARY       =       1       #set#
+
+; Encloses everything to its right in parentheses.
+;
+; This has much the same use as {$} from Haskell.
+;
+; Ex: {foo bar : baz quux} is the same as
+; {foo bar (baz quux)}
+MACRO : op 2 < (>)
+; The ternary operator, a-la C.
+;
+; Used with : to separate the "then" and "else" cases. The compound operator as
+; a whole is right-associative.
+;
+; Ex:
+; ```
+;   fun to-digit digit =
+;   \ (0 == $digit ? zero :
+;      1 == $digit ? one :
+;      2 == $digit ? two : other)
+; ```
+MACRO ? op 5 (%if (<) (>0-1) !else >-0)
