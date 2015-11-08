@@ -436,7 +436,7 @@ static const ava_symbol ava_macsub_string_pseudosymbol = {
   .visibility = ava_v_private,
   .v = {
     .macro = {
-      .precedence = 10,
+      .precedence = STRING_PSEUDOMACRO_PRECEDENCE,
       .macro_subst = ava_intr_string_pseudomacro,
       .userdata = NULL
     }
