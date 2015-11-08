@@ -18,6 +18,7 @@
 reqmod builtins
 import byte-string bs
 import integer i
+import unsigned u
 
 ; OPERATOR NAMES
 ;
@@ -90,11 +91,16 @@ DEFUNARY        !       35      %i.lnot
 DEFUNARY        ~^      35      %i.not
 DEFUNARY        b#      35      %bs.length
 DEFBINARY       *       30      %i.mul
+DEFBINARY       u*      30      %u.mul
 DEFBINARY       /       30      %i.div
+DEFBINARY       u/      30      %u.div
 DEFBINARY       %       30      %i.mod
+DEFBINARY       u%      30      %u.mod
 DEFBINARY       %%      30      %i.rem
 DEFBINARY-OPT   +       20      %i.add
+DEFBINARY-OPT   u+      20      %u.add
 DEFBINARY-OPT   -       20      %i.sub
+DEFBINARY-OPT   u-      20      %u.sub
 DEFBINARY       <<^     14      %i.lsh
 DEFBINARY       >>^     14      %i.rsh
 DEFBINARY       >>-^    14      %i.ash
@@ -102,9 +108,13 @@ DEFBINARY       &^      14      %i.and
 DEFBINARY       |^      14      %i.or
 DEFBINARY       ^^      14      %i.xor
 DEFBINARY       <       8       %i.slt
+DEFBINARY       u<      8       %u.slt
 DEFBINARY       <=      8       %i.leq
+DEFBINARY       u<=     8       %u.leq
 DEFBINARY       ==      8       %i.equ
 DEFBINARY       !=      8       %i.neq
 DEFBINARY       >=      8       %i.geq
+DEFBINARY       u>=     8       %u.geq
 DEFBINARY       >       8       %i.sgt
+DEFBINARY       u>      8       %u.sgt
 DEFBINARY       =       1       #set#

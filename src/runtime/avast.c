@@ -263,3 +263,71 @@ COMPARATOR(leq, <=,     0x7FFFFFFFFFFFFFFFLL,   -0x8000000000000000LL)
 COMPARATOR(sgt, > ,     -0x8000000000000000LL,  0x7FFFFFFFFFFFFFFFLL)
 COMPARATOR(geq, >=,     -0x8000000000000000LL,  0x7FFFFFFFFFFFFFFFLL)
 #undef COMPARATOR
+
+/******************** UNSIGNED OPERATIONS ********************/
+
+defun(unsigned__add)(ava_value a, ava_value b) {
+  ava_ulong ai, bi;
+
+  ai = ava_integer_of_value(a, 0);
+  bi = ava_integer_of_value(b, 0);
+  return ava_value_of_integer(ai + bi);
+}
+
+defun(unsigned__sub)(ava_value a, ava_value b) {
+  ava_ulong ai, bi;
+
+  ai = ava_integer_of_value(a, 0);
+  bi = ava_integer_of_value(b, 0);
+  return ava_value_of_integer(ai - bi);
+}
+
+defun(unsigned__mul)(ava_value a, ava_value b) {
+  ava_ulong ai, bi;
+
+  ai = ava_integer_of_value(a, 1);
+  bi = ava_integer_of_value(b, 1);
+  return ava_value_of_integer(ai * bi);
+}
+
+defun(unsigned__div)(ava_value a, ava_value b) {
+  ava_ulong ai, bi;
+
+  ai = ava_integer_of_value(a, 0);
+  bi = ava_integer_of_value(b, 1);
+
+#if AVAST_CHECK_LEVEL >= 1
+  if (!bi)
+    ava_throw_str(&ava_undefined_behaviour_exception,
+                  ava_error_undef_int_div_by_zero(
+                    ai, AVA_ASCII9_STRING("u/"), bi));
+#endif
+
+  return ava_value_of_integer(ai / bi);
+}
+
+defun(unsigned__mod)(ava_value a, ava_value b) {
+  ava_ulong ai, bi;
+
+  ai = ava_integer_of_value(a, 0);
+  bi = ava_integer_of_value(b, 0);
+
+  if (!bi)
+    return ava_value_of_integer(ai);
+  else
+    return ava_value_of_integer(ai % bi);
+}
+
+#define COMPARATOR(name, op, left_default, right_default)       \
+  defun(unsigned__##name)(ava_value a, ava_value b) {           \
+    ava_ulong ai, bi;                                           \
+    ai = ava_integer_of_value(a, left_default);                 \
+    bi = ava_integer_of_value(b, right_default);                \
+    return ava_value_of_integer(ai op bi);                      \
+  }
+
+COMPARATOR(slt,  <,     -1LL,   0LL)
+COMPARATOR(leq, <=,     -1LL,   0LL)
+COMPARATOR(sgt,  >,     0LL,    -1LL)
+COMPARATOR(geq, >=,     0LL,    -1LL)
+#undef COMPARATOR
