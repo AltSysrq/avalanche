@@ -46,6 +46,7 @@ ava_compenv* ava_compenv_new(ava_string package_prefix) {
   LIST_INIT(&env->package_cache);
   LIST_INIT(&env->module_cache);
   SLIST_INIT(&env->pending_modules);
+  env->implicit_packages = ava_empty_list();
 
   return env;
 }
@@ -124,7 +125,7 @@ ava_bool ava_compenv_compile_file(
   ava_ast_node_postprocess(root_node);
   if (!TAILQ_EMPTY(&errors)) goto error;
 
-  pcode = ava_codegen_run(root_node, &errors);
+  pcode = ava_codegen_run(root_node, env->implicit_packages, &errors);
   if (dst_pcode) *dst_pcode = pcode;
   if (!TAILQ_EMPTY(&errors)) goto error;
 

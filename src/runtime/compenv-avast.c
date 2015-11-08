@@ -30,16 +30,19 @@
 extern const char*const ava_org_ava_lang_avast_avapi_data;
 extern const size_t ava_org_ava_lang_avast_avapi_size;
 
+AVA_STATIC_STRING(ava_compenv_avast_name, "org.ava-lang.avast");
+
 void ava_compenv_use_standard_macsub(ava_compenv* env) {
   env->new_macsub = ava_compenv_standard_new_macsub;
+  env->implicit_packages = ava_list_append(
+    env->implicit_packages, ava_value_of_string(
+      ava_compenv_avast_name));
 }
 
 ava_macsub_context* ava_compenv_standard_new_macsub(
   ava_compenv* compenv,
   struct ava_compile_error_list_s* errors
 ) {
-  AVA_STATIC_STRING(avast_name, "org.ava-lang.avast");
-
   ava_macsub_context* context;
   ava_compile_location location;
 
@@ -56,6 +59,6 @@ ava_macsub_context* ava_compenv_standard_new_macsub(
     context, ava_pcode_global_list_of_string(
       ava_string_of_bytes(ava_org_ava_lang_avast_avapi_data,
                           ava_org_ava_lang_avast_avapi_size)),
-    avast_name, &location, ava_true);
+    ava_compenv_avast_name, &location, ava_true);
   return context;
 }

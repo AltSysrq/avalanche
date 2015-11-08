@@ -20,6 +20,7 @@
 #ifndef AVA_RUNTIME_CODE_GEN_H_
 #define AVA_RUNTIME_CODE_GEN_H_
 
+#include "list.h"
 #include "errors.h"
 #include "parser.h"
 #include "macsub.h"
@@ -404,12 +405,15 @@ void ava_codegen_export(
  * ie, the semantics around global scope and so forth.
  *
  * @param root The AST node at the root of the file.
+ * @param implicit_packages A list of package names to be implicitly linked by
+ * load-pkg instructions at the beginning of the P-Code.
  * @param errors A list to which any encountered errors are encountered.
  * @return The generated P-Code. The P-Code is not necessarily valid if errors
  * is non-empty.
  */
 ava_pcode_global_list* ava_codegen_run(
   ava_ast_node* root,
+  ava_list_value implicit_packages,
   ava_compile_error_list* errors);
 
 /**

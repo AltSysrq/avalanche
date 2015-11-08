@@ -23,6 +23,7 @@
 
 #include "string.h"
 #include "value.h"
+#include "list.h"
 #include "map.h"
 #include "module-cache.h"
 
@@ -124,6 +125,13 @@ struct ava_compenv_s {
    * Arbitrary data for use by new_macsub.
    */
   ava_datum new_macsub_userdata;
+
+  /**
+   * A list of package names which are automatically injected as a dependency.
+   * When a codegen context is created, load-pkg instructions are emitted to
+   * link against these packages.
+   */
+  ava_list_value implicit_packages;
 };
 
 /**
@@ -157,6 +165,9 @@ void ava_compenv_use_minimal_macsub(ava_compenv* env);
  * Configures the given compilation environment to create macro substitution
  * contexts with both the intrinsics macros and the core library
  * (org.ava-lang.avast) available.
+ *
+ * The org.ava-lang.avast package is implicitly added to the list of implicit
+ * packages.
  *
  * This is not available in the bootstrapping library.
  */

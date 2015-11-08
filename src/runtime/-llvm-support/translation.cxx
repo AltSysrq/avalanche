@@ -982,7 +982,9 @@ noexcept {
       irb.CreateCall(
         context.module.getOrInsertFunction(
           ava::get_init_fun_name(
-            ava_string_to_cstring(v->name), ""),
+            ava_string_to_cstring(
+              ava_string_concat(
+                v->name, AVA_ASCII9_STRING(":"))), ""),
           init_fun_type));
     }
   }
