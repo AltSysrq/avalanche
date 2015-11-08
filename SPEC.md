@@ -435,13 +435,13 @@ but any Blocks or Substitutions they contain are.
 
 A syntax unit is said to invoke a macro if it is a Bareword whose symbol in the
 current scope references a macro. L-Strings, R-Strings, and LR-Strings are
-treated as operator macros with precedence 10, using the following
+treated as operator macros with precedence 20, using the following
 pseudo-macro-templates (where `@` indicates conversion of the string to an
 A-String):
 ```
-  L-String =>   (%string-concat (<) @) >
-  R-String =>   < (%string-concat @ (>))
-  LR-String =>  (%string-concat (%string-concat (<) @) (>))
+  L-String =>   (#string-concat# (<) @) >
+  R-String =>   < (#string-concat# @ (>))
+  LR-String =>  (#string-concat# (#string-concat# (<) @) (>))
 ```
 
 The macro processing algorithm for a single statement is as follows:

@@ -75,12 +75,12 @@ import unsigned u
 ;   Examples                    Type            Precedence
 ;   ! ~^                        Unary RTL       35
 ;   * / % %%                    LTR             30
-;   + -                         LTR             20
-;   <<^ >>^ >>-^ &^ |^ ^^       LTR             14
-;   ``                          LTR             10 (fixed)
-;   < <= > >= == !=             LTR             8
-;   &&                          LTR             6
-;   ||                          LTR             4
+;   + -                         LTR             28
+;   <<^ >>^ >>-^ &^ |^ ^^       LTR             24
+;   ``                          LTR             20 (fixed)
+;   < <= > >= == !=             LTR             14
+;   &&                          LTR             8
+;   ||                          LTR             6
 ;   =                           RTL             1
 
 macro DEFUNARY control      %MACRO >0 !op >1 (>2 (!>))
@@ -97,24 +97,24 @@ DEFBINARY       u/      30      %u.div
 DEFBINARY       %       30      %i.mod
 DEFBINARY       u%      30      %u.mod
 DEFBINARY       %%      30      %i.rem
-DEFBINARY-OPT   +       20      %i.add
-DEFBINARY-OPT   u+      20      %u.add
-DEFBINARY-OPT   -       20      %i.sub
-DEFBINARY-OPT   u-      20      %u.sub
-DEFBINARY       <<^     14      %i.lsh
-DEFBINARY       >>^     14      %i.rsh
-DEFBINARY       >>-^    14      %i.ash
-DEFBINARY       &^      14      %i.and
-DEFBINARY       |^      14      %i.or
-DEFBINARY       ^^      14      %i.xor
-DEFBINARY       <       8       %i.slt
-DEFBINARY       u<      8       %u.slt
-DEFBINARY       <=      8       %i.leq
-DEFBINARY       u<=     8       %u.leq
-DEFBINARY       ==      8       %i.equ
-DEFBINARY       !=      8       %i.neq
-DEFBINARY       >=      8       %i.geq
-DEFBINARY       u>=     8       %u.geq
-DEFBINARY       >       8       %i.sgt
-DEFBINARY       u>      8       %u.sgt
+DEFBINARY-OPT   +       28      %i.add
+DEFBINARY-OPT   u+      28      %u.add
+DEFBINARY-OPT   -       28      %i.sub
+DEFBINARY-OPT   u-      28      %u.sub
+DEFBINARY       <<^     24      %i.lsh
+DEFBINARY       >>^     24      %i.rsh
+DEFBINARY       >>-^    24      %i.ash
+DEFBINARY       &^      24      %i.and
+DEFBINARY       |^      24      %i.or
+DEFBINARY       ^^      24      %i.xor
+DEFBINARY       <       14      %i.slt
+DEFBINARY       u<      14      %u.slt
+DEFBINARY       <=      14      %i.leq
+DEFBINARY       u<=     14      %u.leq
+DEFBINARY       ==      14      %i.equ
+DEFBINARY       !=      14      %i.neq
+DEFBINARY       >=      14      %i.geq
+DEFBINARY       u>=     14      %u.geq
+DEFBINARY       >       14      %i.sgt
+DEFBINARY       u>      14      %u.sgt
 DEFBINARY       =       1       #set#

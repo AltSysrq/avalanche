@@ -37,27 +37,27 @@ deftest(nonempty_substitution) {
 }
 
 deftest(lstring) {
-  defun("org.ava-lang.avast:string-concat");
+  defun("#string-concat#");
   test_macsub("seq(void) { seq(last) { "
-              "org.ava-lang.avast:string-concat { "
+              "#string-concat# { "
               "seq(last) { bareword:foo }; string:bar; } } }",
               "foo `bar\"");
 }
 
 deftest(rstring) {
-  defun("org.ava-lang.avast:string-concat");
+  defun("#string-concat#");
   test_macsub("seq(void) { seq(last) { "
-              "org.ava-lang.avast:string-concat { "
+              "#string-concat# { "
               "string:foo; seq(last) { bareword:bar }; } } }",
               "\"foo` bar");
 }
 
 deftest(lrstring) {
-  defun("org.ava-lang.avast:string-concat");
+  defun("#string-concat#");
   test_macsub("seq(void) { seq(last) { "
-              "org.ava-lang.avast:string-concat { "
+              "#string-concat# { "
               "seq(last) { "
-              "org.ava-lang.avast:string-concat { "
+              "#string-concat# { "
               "seq(last) { bareword:foo }; "
               "string:bar; } }; "
               "seq(last) { bareword:quux }; } } }",

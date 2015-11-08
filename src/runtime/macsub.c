@@ -33,7 +33,7 @@
 #include "-intrinsics/fundamental.h"
 #include "../bsd.h"
 
-#define STRING_PSEUDOMACRO_PRECEDENCE 10
+#define STRING_PSEUDOMACRO_PRECEDENCE 20
 
 typedef struct ava_compenv_s ava_compenv;
 

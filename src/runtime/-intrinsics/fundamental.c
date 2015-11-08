@@ -314,8 +314,7 @@ ava_macro_subst_result ava_intr_string_pseudomacro(
   const ava_parse_unit* provoker,
   ava_bool* consumed_other_statements
 ) {
-  AVA_STATIC_STRING(concat_function,
-                    "org.ava-lang.avast:string-concat");
+  AVA_STATIC_STRING(concat_function, "#string-concat#");
 
   ava_macro_subst_result result;
   const ava_parse_unit* src_unit;
