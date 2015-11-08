@@ -1,0 +1,34 @@
+import cstdio *
+
+fun song () {
+  for {bottles = 99} ($bottles >= 0) {bottles = $bottles - 1} {
+    verse ()
+  }
+
+  fun verse () {
+    on-the-wall $bottles true
+    on-the-wall $bottles false
+    take-one-down ()
+    on-the-wall (($bottles - 1) % 100) true
+    puts ""
+  }
+
+  fun on-the-wall bottles extend {
+    puts : count $bottles ` of beer` : $extend ? " on the wall" : ""
+  }
+
+  fun count bottles = (
+    if (0 == $bottles) ("No more bottles")
+       (1 == $bottles) ("1 bottle")
+       else            ($bottles ` bottles"))
+
+  fun take-one-down () {
+    if ($bottles) {
+      puts "Take one down, pass it around"
+    } else {
+      puts "Go to the store, buy some more"
+    }
+  }
+}
+
+song ()
