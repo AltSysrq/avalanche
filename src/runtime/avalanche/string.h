@@ -79,7 +79,13 @@ typedef union {
 #define _AVA_IS_ASCII9_CHAR(ch) ((ch) > 0 && (ch) < 128)
 #define _AVA_ASCII9_ENCODE_CHAR(ch,ix)                  \
   (((ava_ascii9_string)((ch) & 0x7F)) << (57 - (ix)*7))
-#define _AVA_STRCHR(str,ix) ((ix) < sizeof(str)? (str)[ix] : 0)
+/* The somewhat odd-looking index in this macro works around an issue in Clang
+ * where, if any errors are found in the compilation unit, it proceeds to
+ * produce a warning for *every* *single* character this macro sets to zero if
+ * ix is allowed to go beyond the end.
+ */
+#define _AVA_STRCHR(str,ix) \
+  ((ix) < sizeof(str)? (str)[(ix) * ((ix) < sizeof(str))] : 0)
 #define _AVA_ASCII9_ENCODE_STRCHR(str,ix)       \
   _AVA_ASCII9_ENCODE_CHAR(_AVA_STRCHR((str), (ix)), (ix))
 #define _AVA_ASCII9_ENCODE_STR(str) (           \
