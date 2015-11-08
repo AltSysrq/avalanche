@@ -689,6 +689,8 @@ noexcept {
 
   /* Global constant ava_function referencing this function.
    *
+   * In theory, the below would be nice.
+   *
    * For functions with internal linkage, the constant also has internal
    * linkage.
    *
@@ -702,11 +704,20 @@ noexcept {
    * function lives in an Avalanche-unaware library. Thus, each module
    * reinitialises the FFI, taking care to do it in a way that doesn't
    * interfere with concurrent usages of that data.
+   *
+   * However, LinkOnceODR doesn't work well if there's a possibility of PIC and
+   * non-PIC code being mixed, since PIC will expect the global to be a pointer
+   * to the actual value, whereas non-PIC will interpret the global directly.
+   *
+   * Therefore, just make all of them internal for now.
    */
   llvm::GlobalValue::LinkageTypes funvar_linkage =
+    /* Logic described above
     llvm::GlobalValue::InternalLinkage == linkage?
     llvm::GlobalValue::InternalLinkage :
     llvm::GlobalValue::LinkOnceODRLinkage;
+    */
+    llvm::GlobalValue::InternalLinkage;
 
   llvm::Constant* argspecs[prototype->num_args];
   for (size_t i = 0; i < prototype->num_args; ++i) {
