@@ -55,6 +55,26 @@
 #define defun(name)                             \
   ava_value a$org__ava_lang__avast___##name
 
+/**
+ * In checked builds, obfuscates the result of a comparison result (ie, results
+ * where anything less than 0 indicates less-than, greater than 0 indicates
+ * greater-than, and 0 indicates equality) to catch usages which incorrectly
+ * test for equality with -1 or 1.
+ */
+static inline ava_integer obfuscate_comparison(ava_integer raw) {
+#if AVAST_CHECK_LEVEL >= 1
+  /* Use the stack pointer to produce an arbitrary value. */
+  volatile unsigned dummy;
+  ava_integer obfus = 1 | ((((ava_intptr)&dummy) >> 5) & 0xFF);
+
+  if (raw < 0) return -obfus;
+  if (raw > 0) return +obfus;
+  return 0;
+#else
+  return raw;
+#endif
+}
+
 /******************** STRING OPERATIONS ********************/
 
 defun(byte_string__concat)(ava_value a, ava_value b) {
@@ -67,6 +87,28 @@ defun(byte_string__length)(ava_value a) {
   return ava_value_of_integer(
     ava_string_length(ava_to_string(a)));
 }
+
+defun(byte_string__equ)(ava_value a, ava_value b) {
+  return ava_value_of_integer(ava_value_equal(a, b));
+}
+
+defun(byte_string__neq)(ava_value a, ava_value b) {
+  return ava_value_of_integer(!ava_value_equal(a, b));
+}
+
+defun(byte_string__compare)(ava_value a, ava_value b) {
+  return ava_value_of_integer(obfuscate_comparison(ava_value_strcmp(a, b)));
+}
+
+#define COMPARATOR(name, ck)                                    \
+  defun(byte_string__##name)(ava_value a, ava_value b) {        \
+    return ava_value_of_integer(ava_value_strcmp(a, b) ck);     \
+  }
+COMPARATOR(slt, < 0)
+COMPARATOR(leq, <= 0)
+COMPARATOR(sgt, > 0)
+COMPARATOR(geq, >= 0)
+#undef COMPARATOR
 
 /******************** INTEGER OPERATIONS ********************/
 

@@ -1,0 +1,31 @@
+extern pass-test pass_test c void [int pos]
+
+macro assert control %if (%! (>)) {
+  %cstdio.puts ("Assertion ` [>] ` failed")
+  %pass-test "0"
+}
+
+import byte-string bs
+
+assert 9 == b# "avalanche"
+assert 2 == b# "ß"
+assert "foo" b== "foo"
+assert "foo" b!= "bar"
+assert "foo" b> "bar"
+assert "foo" b>= "bar"
+assert "bar" b< "foo"
+assert "bar" b<= "foo"
+assert "foo" b<= "foo"
+assert "foo" b>= "foo"
+assert "fo" b< "foo"
+assert ! : "foo" b< "bar"
+assert ! : "bar" b> "foo"
+assert bs.compare "foo" "bar" > 0
+assert bs.compare "bar" "foo" < 0
+assert bs.compare "foo" "foo" == 0
+assert bs.compare "fo" "foo" < 0
+assert "" b== "foo" b* 0
+assert "foo" b== "foo" b* 1
+assert "foofoofoo" b== "foo" b* 3
+assert 42 == b# : a b* 42
+pass-test 42

@@ -29,6 +29,49 @@ namespace byte-string {
   ;
   ; :return The number of bytes in the bytestring of $val.
   EXTERN length "" ava pos
+
+  ; Compares two values for physical equality.
+  ;
+  ; Two values are physically equal if and only if they are represented by
+  ; exactly the same byte string. There is no lenience whatsoever here; this
+  ; test does not consider 0x1 and 1 to be equal, for example.
+  ;
+  ; :arg lhs The left-hand side.
+  ;
+  ; :arg rhs The righ-hand side.
+  ;
+  ; :return 1 if $lhs and $rhs are the same values, 0 otherwise.
+  EXTERN equ "" ava pos pos
+
+  ; Compares two values for physical inequality.
+  ;
+  ; This is the inverse of $equ.
+  EXTERN neq "" ava pos pos
+
+  ; Compares the physical representation of two values.
+  ;
+  ; The byte-strings representing the values are compared byte-by-byte. Upon
+  ; the first byte that differs, the value whose byte (unsigned) is less than
+  ; the other's is considered to come lexicographically first. If one value is
+  ; a prefix of the other, it is lexicographically first.
+  ;
+  ; :arg lhs The left-hand side.
+  ;
+  ; :arg rhs The right-hand side.
+  ;
+  ; :return An arbitrary negative integer if $lhs is lexicographically ordered
+  ; before $rhs; a positive integer if it is ordered after; zero if the two
+  ; values are exactly equal.
+  EXTERN compare "" ava pos pos
+
+  ; Equivalent to (($compare $lhs $rhs) < 0)
+  EXTERN slt "" ava pos pos
+  ; Equivalent to (($compare $lhs $rhs) <= 0)
+  EXTERN leq "" ava pos pos
+  ; Equivalent to (($compare $lhs $rhs) > 0)
+  EXTERN sgt "" ava pos pos
+  ; Equivalent to (($compare $lhs $rhs) >= 0)
+  EXTERN geq "" ava pos pos
 }
 
 ; The #string-concat# special used by string concatenation operators.

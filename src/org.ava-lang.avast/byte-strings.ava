@@ -1,0 +1,48 @@
+;-
+; Copyright (c) 2015, Jason Lingle
+;
+; Permission to  use, copy,  modify, and/or distribute  this software  for any
+; purpose  with or  without fee  is hereby  granted, provided  that the  above
+; copyright notice and this permission notice appear in all copies.
+;
+; THE SOFTWARE  IS PROVIDED "AS  IS" AND  THE AUTHOR DISCLAIMS  ALL WARRANTIES
+; WITH  REGARD   TO  THIS  SOFTWARE   INCLUDING  ALL  IMPLIED   WARRANTIES  OF
+; MERCHANTABILITY AND FITNESS. IN NO EVENT  SHALL THE AUTHOR BE LIABLE FOR ANY
+; SPECIAL,  DIRECT,   INDIRECT,  OR  CONSEQUENTIAL  DAMAGES   OR  ANY  DAMAGES
+; WHATSOEVER RESULTING FROM LOSS OF USE, DATA OR PROFITS, WHETHER IN AN ACTION
+; OF  CONTRACT, NEGLIGENCE  OR OTHER  TORTIOUS ACTION,  ARISING OUT  OF OR  IN
+; CONNECTION WITH THE USE OR PERFORMANCE OF THIS SOFTWARE.
+
+reqmod builtins
+reqmod operators
+
+namespace byte-string {
+  ; Concatenates a string with itself multiple times.
+  ;
+  ; Starting with the empty string, $lhs is appended to an accumulator and $rhs
+  ; is decremented until $rhs becomes negative.
+  ;
+  ; :arg lhs The string to self-concatenate.
+  ;
+  ; :arg rhs The number of concatenations.
+  ;
+  ; :return $lhs concatenated with itself $rhs times.
+  ;
+  ; :complexity O(log($rhs))
+  FUN mul lhs rhs {
+    accum = ""
+    amount = $lhs
+    count = $rhs
+
+    for {count = $rhs} ($count > 0) {count = $count >>^ 1} {
+      if ($count &^ 1) {
+        accum = concat $accum $amount
+      }
+      amount = concat $amount $amount
+    }
+
+    ret $accum
+  }
+}
+
+DEFBINARY       b*      30      %byte-string.mul

@@ -206,6 +206,7 @@ runtime/-llvm-support/drivers/avast-unchecked.bc
 
 AVAST_MODULES = \
 org.ava-lang.avast/builtins.avam \
+org.ava-lang.avast/byte-strings.avam \
 org.ava-lang.avast/cstdio.avam \
 org.ava-lang.avast/operators.avam
 

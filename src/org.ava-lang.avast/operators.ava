@@ -85,9 +85,9 @@ import unsigned u
 ;   :                           LTR             2
 ;   =                           RTL             1
 
-macro DEFUNARY control      %MACRO >0 !op >1 (>2 (!>))
-macro DEFBINARY-OPT control %MACRO >0 !op >1 (>2 (!<*) (!>))
-macro DEFBINARY control     %MACRO >0 !op >1 (>2 (!<) (!>))
+Macro DEFUNARY control      %MACRO >0 !op >1 (>2 (!>))
+Macro DEFBINARY-OPT control %MACRO >0 !op >1 (>2 (!<*) (!>))
+Macro DEFBINARY control     %MACRO >0 !op >1 (>2 (!<) (!>))
 
 DEFUNARY        !       35      %i.lnot
 DEFUNARY        ~^      35      %i.not
@@ -111,14 +111,20 @@ DEFBINARY       |^      24      %i.or
 DEFBINARY       ^^      24      %i.xor
 DEFBINARY       <       14      %i.slt
 DEFBINARY       u<      14      %u.slt
+DEFBINARY       b<      14      %bs.slt
 DEFBINARY       <=      14      %i.leq
 DEFBINARY       u<=     14      %u.leq
+DEFBINARY       b<=     14      %bs.leq
 DEFBINARY       ==      14      %i.equ
+DEFBINARY       b==     14      %bs.equ
 DEFBINARY       !=      14      %i.neq
+DEFBINARY       b!=     14      %bs.neq
 DEFBINARY       >=      14      %i.geq
 DEFBINARY       u>=     14      %u.geq
+DEFBINARY       b>=     14      %bs.geq
 DEFBINARY       >       14      %i.sgt
 DEFBINARY       u>      14      %u.sgt
+DEFBINARY       b>      14      %bs.sgt
 DEFBINARY       =       1       #set#
 
 ; Encloses everything to its right in parentheses.
