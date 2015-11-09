@@ -453,3 +453,272 @@ namespace unsigned {
   ; an integer less than to $rhs.
   EXTERN geq "" ava pos pos
 }
+
+namespace math {
+  ; The cmath library
+  ;
+  ; This only includes functions that are not conceptually "specific" to
+  ; floating-point values; ie, general-purpose operations one might reasonably
+  ; want to wildcard-import.
+  ;
+  ; Unless otherwise noted, all functions treat the empty string as 0 and
+  ; behave the same as their cmath counterparts.
+  EXTERN sqrt sqrt c double [double pos]
+  EXTERN cbrt cbrt c double [double pos]
+  EXTERN hypot hypot c double [double pos] [double pos]
+  EXTERN ceil ceil c double [double pos]
+  EXTERN floor floor c double [double pos]
+  EXTERN round round c double [double pos]
+  EXTERN trunc trunc c double [double pos]
+
+  EXTERN acos acos c double [double pos]
+  EXTERN acosh acosh c double [double pos]
+  EXTERN asin asin c double [double pos]
+  EXTERN asinh asinh c double [double pos]
+  EXTERN atan atan c double [double pos]
+  EXTERN atanh atanh c double [double pos]
+  EXTERN atan2 atan2 c double [double pos] [double pos]
+  EXTERN cos cos c double [double pos]
+  EXTERN cosh cosh c double [double pos]
+  EXTERN erf erf c double [double pos]
+  EXTERN erfc erfc c double [double pos]
+  EXTERN exp exp c double [double pos]
+  EXTERN exp2 exp2 c double [double pos]
+  EXTERN expm1 expm1 c double [double pos]
+  EXTERN j0 j0 c double [double pos]
+  EXTERN j1 j1 c double [double pos]
+  EXTERN jn jn c double [int pos] [double pos]
+  EXTERN lgamma lgamma c double [double pos]
+  EXTERN ln log c double [double pos]
+  EXTERN log log10 c double [double pos]
+  EXTERN lg log2 c double [double pos]
+  EXTERN ln1p log1p c double [double pos]
+  EXTERN sin sin c double [double pos]
+  EXTERN sinh sinh c double [double pos]
+  EXTERN tan tan c double [double pos]
+  EXTERN tanh tanh c double [double pos]
+  EXTERN tgamma tgamma c ldouble [double pos]
+  EXTERN y0 y0 c double [double pos]
+  EXTERN y1 y1 c double [double pos]
+  EXTERN yn yn c double [int pos] [double pos]
+}
+
+namespace real {
+  EXTERN fma fma c double [double pos] [double pos] [double pos]
+  ; fpclassify() and friends need to be implemented in C, since it depends on
+  ; proprocessor macros.
+  ; frexp() needs to be implemented in C as separate mantissa/exponent due to
+  ; the out-parameter.
+  EXTERN logb logb c double [double pos]
+  EXTERN ldexp ldexp c double [double pos] [int pos]
+  EXTERN scalbn scalbn c double [double pos] [int pos]
+  EXTERN copysign copysign c double [double pos] [double pos]
+  EXTERN abs fabs c double [double pos]
+  EXTERN dim fdim c double [double pos] [double pos]
+  ; min and max fronted by C for better empty-value handling
+  ; signbit is in C, since it may be a preprocessor definition
+  ; fmod is fronted by C for nicer behaviour
+  EXTERN nearbyint nearbyint c double [double pos]
+  EXTERN nextafter nextafter c double [double pos] [double pos]
+  EXTERN nexttoward nexttoward c double [double pos] [ldouble pos]
+  EXTERN ieee-remainder remainder c double [double pos] [double pos]
+
+  ; Classifies real values.
+  ;
+  ; :arg val The real number to classify.
+  ;
+  ; :return "infinite" if $val is positive or negative infinity; "nan" if $val
+  ; is a NaN of any kind; "normal" if $val is a non-zero, finite number in
+  ; IEEE normal form; subnormal if $val is a non-zero, finite number in IEEE
+  ; denormalised form; "zero" if $val is positive or negative zero.
+  EXTERN fpclassify "" ava pos
+  ; Returns whether its argument is a finite number.
+  EXTERN is-finite "" ava pos
+  ; Returns whether its argument is positive or negative infinity.
+  EXTERN is-infinite "" ava pos
+  ; Returns whether its argument is a NaN of any kind.
+  EXTERN is-nan "" ava pos
+  ; Returns whether its argument is a finite number in IEEE normal form.
+  EXTERN is-normal "" ava pos
+  ; Returns whether the sign bit on the given real number would indicate a
+  ; negative number.
+  EXTERN signbit-is-negative "" ava pos
+  ; Returns the mantissa of its argument.
+  ;
+  ; :return A real number in between 0.5 inclusive and 1.0 exclusive equal to
+  ; the mantissa of the input,r or zero 0 if the argument is 0.
+  ;
+  ; :see frexp(3)
+  EXTERN mantissa "" ava pos
+  ; Returns the exponent of its argument.
+  ;
+  ; :return An integer equal to the exponent on the given real number.
+  ;
+  ; :see frexp(3)
+  EXTERN exponent "" ava pos
+  ; Returns the fractional part of the given real number, with the same sign as
+  ; the input.
+  ;
+  ; :see modf(3)
+  EXTERN fractional "" ava pos
+  ; Returns the integral part of the given real number, with the same sign as
+  ; the input.
+  ;
+  ; :see modf(3)
+  EXTERN integral "" ava pos
+  ; Returns the minimum of two input real numbers.
+  ;
+  ; The empty string is interpreted as positive infinity in both cases.
+  EXTERN min "" ava pos pos
+  ; Returns the maximum of two input real numbers.
+  ;
+  ; The empty string is interpreted as negative infinity in both cases.
+  EXTERN max "" ava pos pos
+
+  ; Sums two real numbers.
+  ;
+  ; This is also used as the unary {+} operator.
+  ;
+  ; :arg lhs The left-hand side. Empty string is +0.0.
+  ;
+  ; :arg rhs The right-hand side. Empty string is +0.0.
+  ;
+  ; :return $lhs + $rhs
+  EXTERN add "" ava pos pos
+  ; Subtracts two real numbers.
+  ;
+  ; This is also used as the unary negation operator.
+  ;
+  ; :arg lhs The left-hand side. Empty string is +0.0.
+  ;
+  ; :arg rhs The right-hand side. Empty string is +0.0.
+  ;
+  ; :return $lhs - $rhs
+  EXTERN sub "" ava pos pos
+  ; Multiplies two real numbers.
+  ;
+  ; :arg lhs The left-hand side. Empty string is +1.0.
+  ;
+  ; :arg rhs The right-hand side. Empty string is +1.0.
+  ;
+  ; :return $lhs * $rhs
+  EXTERN mul "" ava pos pos
+  ; Divides two real numbers.
+  ;
+  ; :arg lhs The left-hand side. Empty string is +0.0.
+  ;
+  ; :arg rhs The right-hand side. Empty string is +1.0.
+  ;
+  ; :return $lhs / $rhs
+  EXTERN div "" ava pos pos
+  ; Computes the remainder of real division.
+  ;
+  ; The result has the same sign as $lhs, which makes it of questionable
+  ; utility in many contexts. $mod is a better solution for most applications.
+  ;
+  ; :arg lhs The left-hand side. Empty string is +0.0.
+  ;
+  ; :arg rhs The right-hand side. Empty string is infinity. A value of $rhs
+  ; equal to positive or negative infinity causes $lhs to be returned.
+  ;
+  ; :return fmod $lhs $rhs
+  ;
+  ; :see $mod
+  ; :see fmod(3)
+  EXTERN rem "" ava pos pos
+  ; Computes the modulus of two real numbers.
+  ;
+  ; The result is always positive when it is a number, and always falls between
+  ; +0.0 inclusive and (abs $rhs) exclusive.
+  ;
+  ; If $lhs is negative and $rhs is infinite, the result is NaN.
+  ;
+  ; :arg lhs The left-hand side. Empty string is +0.0.
+  ;
+  ; :arg rhs The right-hand side. Empty string is infinity.
+  ;
+  ; :return $lhs % $rhs
+  EXTERN mod "" ava pos pos
+  ; Raises one real number to the power of another.
+  ;
+  ; :arg lhs The left-hand side. Empty string is +1.0.
+  ;
+  ; :arg rhs The right-hand side. Empty string is +1.0.
+  ;
+  ; :return $lhs ** $rhs
+  ;
+  ; :see pow(3)
+  EXTERN pow "" ava pos pos
+
+  ; Compares two real numbers for exact equality.
+  ;
+  ; Note that NaN != NaN, and is inequal to everything else.
+  ;
+  ; :arg lhs The left-hand side. Empty string is NaN.
+  ;
+  ; :arg rhs The right-hand side. Empty string is NaN.
+  ;
+  ; :return Whether $lhs == $rhs exactly, and neither is NaN.
+  EXTERN equ "" ava pos pos
+  ; Compares two real numbers for exact inequality.
+  ;
+  ; :arg lhs The left-hand side. Empty string is NaN.
+  ;
+  ; :arg rhs The right-hand side. Empty string is NaN.
+  ;
+  ; :return Whether $lhs != $rhs
+  EXTERN neq "" ava pos pos
+  ; Compares two real numbers for strict less-than.
+  ;
+  ; Note that this never returns true if either argument is NaN.
+  ;
+  ; :arg lhs The left-hand side. Empty string is NaN.
+  ;
+  ; :arg rhs The right-hand side. Empty string is NaN.
+  ;
+  ; :return Whether $lhs < $rhs
+  EXTERN slt "" ava pos pos
+  ; Compares two real numbers for less-than or equality.
+  ;
+  ; Note that this never returns true if either argument is NaN.
+  ;
+  ; :arg lhs The left-hand side. Empty string is NaN.
+  ;
+  ; :arg rhs The right-hand side. Empty string is NaN.
+  ;
+  ; :return Whether $lhs <= $rhs
+  EXTERN leq "" ava pos pos
+  ; Compares two real numbers for strict greater-than.
+  ;
+  ; Note that this never returns true if either argument is NaN.
+  ;
+  ; :arg lhs The left-hand side. Empty string is NaN.
+  ;
+  ; :arg rhs The right-hand side. Empty string is NaN.
+  ;
+  ; :return Whether $lhs > $rhs
+  EXTERN sgt "" ava pos pos
+  ; Compares two real numbers for greater-than or equality.
+  ;
+  ; Note that this never returns true if either argument is NaN.
+  ;
+  ; :arg lhs The left-hand side. Empty string is NaN.
+  ;
+  ; :arg rhs The right-hand side. Empty string is NaN.
+  ;
+  ; :return Whether $lhs >= $rhs
+  EXTERN geq "" ava pos pos
+
+  ; Converts a value to a normalised real number.
+  ;
+  ; :arg val The value to normalise. If this is already a normalised real
+  ; number, it is returned verbatim. If if can be interpreted as a real number,
+  ; it is interpreted as such and normalised. If it is empty, the value of
+  ; $default is used instead.
+  ;
+  ; :arg default The real number to use if $val is empty. Empty string is NaN.
+  ;
+  ; :return A normalised real number equal to $val if $val was non-empty, or to
+  ; $default if $val was empty.
+  EXTERN of "" ava pos pos
+}

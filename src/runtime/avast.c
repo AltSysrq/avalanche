@@ -18,6 +18,8 @@
 #endif
 
 #include <stdlib.h>
+#include <math.h>
+#include <limits.h>
 
 #define AVA__INTERNAL_INCLUDE 1
 #include "avalanche/defs.h"
@@ -26,6 +28,7 @@
 #include "avalanche/list.h"
 #include "avalanche/map.h"
 #include "avalanche/integer.h"
+#include "avalanche/real.h"
 #include "avalanche/map.h"
 #include "avalanche/exception.h"
 #include "avalanche/errors.h"
@@ -379,3 +382,158 @@ COMPARATOR(leq, <=,     -1LL,   0LL)
 COMPARATOR(sgt,  >,     0LL,    -1LL)
 COMPARATOR(geq, >=,     0LL,    -1LL)
 #undef COMPARATOR
+
+/******************** REAL OPERATIONS ********************/
+
+#ifndef COMPILING_DRIVER
+defun(real__fpclassify)(ava_value a) {
+  AVA_STATIC_STRING(error_base, "Unexpected fpclassify() result: ");
+  ava_real r;
+  int class;
+  ava_string res;
+
+  r = ava_real_of_value(a, NAN);
+  switch ((class = fpclassify(r))) {
+  case FP_INFINITE: res = AVA_ASCII9_STRING("infinite"); break;
+  case FP_NAN:      res = AVA_ASCII9_STRING("nan"); break;
+  case FP_NORMAL:   res = AVA_ASCII9_STRING("normal"); break;
+  case FP_SUBNORMAL:res = AVA_ASCII9_STRING("subnormal"); break;
+  case FP_ZERO:     res = AVA_ASCII9_STRING("zero"); break;
+  default:
+    ava_throw_str(&ava_internal_exception,
+                  ava_string_concat(
+                    error_base,
+                    ava_to_string(ava_value_of_integer(class))));
+  }
+
+  return ava_value_of_string(res);
+}
+#endif
+
+defun(real__is_finite)(ava_value a) {
+  return ava_value_of_integer(!!isfinite(ava_real_of_value(a, NAN)));
+}
+
+defun(real__is_infinite)(ava_value a) {
+  return ava_value_of_integer(!!isinf(ava_real_of_value(a, 0.0)));
+}
+
+defun(real__is_nan)(ava_value a) {
+  return ava_value_of_integer(!!isnan(ava_real_of_value(a, 0.0)));
+}
+
+defun(real__is_normal)(ava_value a) {
+  return ava_value_of_integer(!!isnormal(ava_real_of_value(a, NAN)));
+}
+
+defun(real__signbit_is_negative)(ava_value a) {
+  return ava_value_of_integer(!!signbit(ava_real_of_value(a, +0.0)));
+}
+
+defun(real__mantissa)(ava_value a) {
+  int dummy;
+
+  return ava_value_of_real(frexp(ava_real_of_value(a, 0.0), &dummy));
+}
+
+defun(real__exponent)(ava_value a) {
+  int ret;
+
+  (void)frexp(ava_real_of_value(a, 0.0), &ret);
+  return ava_value_of_integer(ret);
+}
+
+defun(real__fractional)(ava_value a) {
+  double dummy;
+
+  return ava_value_of_real(modf(ava_real_of_value(a, 0.0), &dummy));
+}
+
+defun(real__integral)(ava_value a) {
+  double ret;
+
+  (void)modf(ava_real_of_value(a, 0.0), &ret);
+  return ava_value_of_real(ret);
+}
+
+defun(real__min)(ava_value a, ava_value b) {
+  return ava_value_of_real(
+    fmin(ava_real_of_value(a, INFINITY),
+         ava_real_of_value(b, INFINITY)));
+}
+
+defun(real__max)(ava_value a, ava_value b) {
+  return ava_value_of_real(
+    fmax(ava_real_of_value(a, -INFINITY),
+         ava_real_of_value(b, -INFINITY)));
+}
+
+defun(real__add)(ava_value a, ava_value b) {
+  return ava_value_of_real(
+    ava_real_of_value(a, 0.0) + ava_real_of_value(b, 0.0));
+}
+
+defun(real__sub)(ava_value a, ava_value b) {
+  return ava_value_of_real(
+    ava_real_of_value(a, 0.0) - ava_real_of_value(b, 0.0));
+}
+
+defun(real__mul)(ava_value a, ava_value b) {
+  return ava_value_of_real(
+    ava_real_of_value(a, 1.0) * ava_real_of_value(b, 1.0));
+}
+
+defun(real__div)(ava_value a, ava_value b) {
+  return ava_value_of_real(
+    ava_real_of_value(a, 0.0) / ava_real_of_value(b, 1.0));
+}
+
+defun(real__rem)(ava_value a, ava_value b) {
+  return ava_value_of_real(
+    fmod(ava_real_of_value(a, 0.0),
+         ava_real_of_value(b, INFINITY)));
+}
+
+defun(real__mod)(ava_value a, ava_value b) {
+  ava_real ar, br, res;
+
+  ar = ava_real_of_value(a, 0.0);
+  br = ava_real_of_value(b, INFINITY);
+
+  if (isinf(br)) {
+    if (ar < 0)
+      res = NAN;
+    else
+      res = ar;
+  } else {
+    res = ar - fabs(br) * floor(ar / fabs(br));
+  }
+
+  return ava_value_of_real(res);
+}
+
+defun(real__pow)(ava_value a, ava_value b) {
+  return ava_value_of_real(
+    pow(ava_real_of_value(a, 1.0),
+        ava_real_of_value(b, 1.0)));
+}
+
+#define COMPARATOR(name, op)                            \
+  defun(real__##name)(ava_value a, ava_value b) {       \
+    return ava_value_of_integer(                        \
+      ava_real_of_value(a, NAN) op                      \
+      ava_real_of_value(b, NAN));                       \
+  }
+COMPARATOR(equ, ==)
+COMPARATOR(neq, !=)
+COMPARATOR(slt, < )
+COMPARATOR(leq, <=)
+COMPARATOR(sgt, > )
+COMPARATOR(geq, >=)
+#undef COMPARATOR
+
+defun(real__of)(ava_value a, ava_value b) {
+  return ava_value_of_real(
+    ava_real_of_value(
+      a, ava_real_of_value(b, NAN)));
+}

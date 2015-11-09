@@ -177,7 +177,7 @@ runtime/-llvm-support/drivers/gen-avast-unchecked.c: \
 
 runtime/-llvm-support/drivers/avast-unchecked.bc: \
 	runtime/avast.c runtime/avalanche/*.h
-	$(EMIT_LLVM) -DAVAST_CHECK_LEVEL=0 runtime/avast.c
+	$(EMIT_LLVM) -DAVAST_CHECK_LEVEL=0 -DCOMPILING_DRIVER runtime/avast.c
 
 runtime/-llvm-support/drivers/gen-avast-checked-1.c: \
 	runtime/-llvm-support/drivers/avast-checked-1.bc dat2c.tcl
@@ -186,7 +186,7 @@ runtime/-llvm-support/drivers/gen-avast-checked-1.c: \
 
 runtime/-llvm-support/drivers/avast-checked-1.bc: \
 	runtime/avast.c runtime/avalanche/*.h
-	$(EMIT_LLVM) -DAVAST_CHECK_LEVEL=1 runtime/avast.c
+	$(EMIT_LLVM) -DAVAST_CHECK_LEVEL=1 -DCOMPILING_DRIVER runtime/avast.c
 
 runtime/-llvm-support/drivers/gen-avast-checked-2.c: \
 	runtime/-llvm-support/drivers/avast-checked-2.bc dat2c.tcl
@@ -195,7 +195,7 @@ runtime/-llvm-support/drivers/gen-avast-checked-2.c: \
 
 runtime/-llvm-support/drivers/avast-checked-2.bc: \
 	runtime/avast.c runtime/avalanche/*.h
-	$(EMIT_LLVM) -DAVAST_CHECK_LEVEL=2 runtime/avast.c
+	$(EMIT_LLVM) -DAVAST_CHECK_LEVEL=2 -DCOMPILING_DRIVER runtime/avast.c
 
 ASM_DRIVERS = \
 runtime/-llvm-support/drivers/isa-unchecked.bc \
