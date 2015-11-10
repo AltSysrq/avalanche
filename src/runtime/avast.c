@@ -410,6 +410,10 @@ defun(real__fpclassify)(ava_value a) {
 }
 #endif
 
+/* The below can't be included in the driver since GNU libc uses inline
+ * assembly, which apparently LLVMs JIT can't handle.
+ */
+#ifndef COMPILING_DRIVER
 defun(real__is_finite)(ava_value a) {
   return ava_value_of_integer(!!isfinite(ava_real_of_value(a, NAN)));
 }
@@ -455,6 +459,7 @@ defun(real__integral)(ava_value a) {
   (void)modf(ava_real_of_value(a, 0.0), &ret);
   return ava_value_of_real(ret);
 }
+#endif /* COMPILING_DRIVER */
 
 defun(real__min)(ava_value a, ava_value b) {
   return ava_value_of_real(
