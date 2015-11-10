@@ -16,10 +16,10 @@ EMIT_LLVM = $(AM_V_GEN)$(CLANG) $(EMIT_LLVM_CFLAGS) -o $@
 DAT2C = $(AM_V_GEN)$(TCLSH) dat2c.tcl >$@
 BOOTSTRAP_LIBS = libavart-bootstrap.la $(LIBUNWIND_LIBS) $(LIBFFI_LIBS)
 
-AVA_COMPILE_MODULE = @AVA_BOOTSTRAP_TOOLCHAIN_DIR@/compile-module
-AVA_LINK_PACKAGE = @AVA_BOOTSTRAP_TOOLCHAIN_DIR@/link-package
-AVA_MAKE_INTERFACE = @AVA_BOOTSTRAP_TOOLCHAIN_DIR@/make-interface
-AVA_TO_ASM = @AVA_BOOTSTRAP_TOOLCHAIN_DIR@/to-asm
+AVA_COMPILE_MODULE = @AVA_BOOTSTRAP_TOOLCHAIN_DIR@/compile-module$(EXEEXT)
+AVA_LINK_PACKAGE = @AVA_BOOTSTRAP_TOOLCHAIN_DIR@/link-package$(EXEEXT)
+AVA_MAKE_INTERFACE = @AVA_BOOTSTRAP_TOOLCHAIN_DIR@/make-interface$(EXEEXT)
+AVA_TO_ASM = @AVA_BOOTSTRAP_TOOLCHAIN_DIR@/to-asm$(EXEEXT)
 
 # Use -b instead of -g if $(CC) doesn't support label pointers
 RE2C_FLAGS = -g
@@ -218,6 +218,16 @@ org.ava-lang.avast.avap: $(AVA_LINK_PACKAGE) $(AVAST_MODULES)
 
 .avap.avapi: $(AVA_MAKE_INTERFACE)
 	$(AM_V_GEN)$(AVA_MAKE_INTERFACE) $<
+
+# Duplicates of the above, since GNU Make doesn't support prereqs on
+# traditional implicit rules.
+# Non-GNU-Make will silently ignore these.
+%.avam: %.ava $(AVA_COMPILE_MODULE)
+	$(AM_V_GEN)$(AVA_COMPILE_MODULE) $<
+%.avapi: %.avap $(AVA_MAKE_INTERFACE)
+	$(AM_V_GEN)$(AVA_MAKE_INTERFACE) $<
+%.S: %.avap $(AVA_TO_ASM) $(ASM_DRIVERS)
+	$(AM_V_GEN)$(AVA_TO_ASM) $(ASM_DRIVERS) $< >$@
 
 org.ava-lang.avast.avapi.c: org.ava-lang.avast.avapi dat2c.tcl
 	$(DAT2C) ava_org_ava_lang_avast_avapi \
