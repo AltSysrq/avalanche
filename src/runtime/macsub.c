@@ -33,6 +33,8 @@
 #include "-intrinsics/fundamental.h"
 #include "../bsd.h"
 
+#define CONTROL_MACRO_PRECEDENCE -1
+#define FUNCTION_MACRO_PRECEDENCE (AVA_MAX_OPERATOR_MACRO_PRECEDENCE+1)
 #define STRING_PSEUDOMACRO_PRECEDENCE 20
 
 typedef struct ava_compenv_s ava_compenv;
@@ -66,6 +68,10 @@ static ava_ast_node* ava_macsub_run_one_nonempty_statement(
   ava_macsub_context* context,
   ava_parse_statement* statement,
   ava_bool* consumed_rest);
+
+static ava_bool ava_macsub_is_macroid(
+  signed* min_precedence, ava_symbol_type* found_type,
+  ava_macsub_context* context, const ava_parse_unit* unit);
 
 static ava_macsub_resolve_macro_result ava_macsub_resolve_macro(
   const ava_symbol** dst,
@@ -345,10 +351,10 @@ static ava_ast_node* ava_macsub_run_one_nonempty_statement(
   ava_bool* consumed_rest
 ) {
   const ava_symbol* symbol;
-  const ava_parse_unit* unit;
+  const ava_parse_unit* unit, * candidate;
   ava_macro_subst_result subst_result;
-  unsigned precedence;
-  ava_bool rtl;
+  ava_symbol_type macro_type = ava_st_other, candidate_type;
+  signed precedence = -0x7f, candidate_precedence;
 
   tail_call:
 
@@ -369,38 +375,32 @@ static ava_ast_node* ava_macsub_run_one_nonempty_statement(
    */
   if (!TAILQ_NEXT(unit, next)) goto no_macsub;
 
-  switch (ava_macsub_resolve_macro(&symbol, context, unit,
-                                   ava_st_control_macro, 0)) {
-  case ava_mrmr_ambiguous: goto ambiguous;
-  case ava_mrmr_is_macro: goto macsub;
-  case ava_mrmr_not_macro: break;
-  }
+  candidate_precedence = 0x7FFFF;
+  candidate = NULL;
+  candidate_type = ava_st_other;
 
-  for (precedence = 0; precedence <= AVA_MAX_OPERATOR_MACRO_PRECEDENCE;
-       ++precedence) {
-    rtl = (precedence & 1);
-
-    for (unit = rtl? TAILQ_FIRST(&statement->units) :
-                     TAILQ_LAST(&statement->units, ava_parse_unit_list_s);
-         unit;
-         unit = rtl? TAILQ_NEXT(unit, next) :
-                     TAILQ_PREV(unit, ava_parse_unit_list_s, next)) {
-      switch (ava_macsub_resolve_macro(&symbol, context, unit,
-                                       ava_st_operator_macro, precedence)) {
-      case ava_mrmr_ambiguous: goto ambiguous;
-      case ava_mrmr_is_macro: goto macsub;
-      case ava_mrmr_not_macro: break;
+  TAILQ_FOREACH(unit, &statement->units, next) {
+    if (ava_macsub_is_macroid(&precedence, &macro_type, context, unit)) {
+      if (precedence < candidate_precedence ||
+          /* If even, last wins (effectively right-to-left first-wins),
+           * otherwise first wins.
+           */
+          (!(precedence & 1) && precedence == candidate_precedence)) {
+        candidate = unit;
+        candidate_precedence = precedence;
+        candidate_type = macro_type;
       }
     }
   }
 
-  unit = TAILQ_FIRST(&statement->units);
-
-  switch (ava_macsub_resolve_macro(&symbol, context, unit,
-                                   ava_st_function_macro, 0)) {
-  case ava_mrmr_ambiguous: goto ambiguous;
-  case ava_mrmr_is_macro: goto macsub;
-  case ava_mrmr_not_macro: break;
+  if (candidate) {
+    unit = candidate;
+    switch (ava_macsub_resolve_macro(&symbol, context, candidate,
+                                     candidate_type, candidate_precedence)) {
+    case ava_mrmr_ambiguous: goto ambiguous;
+    case ava_mrmr_is_macro: goto macsub;
+    case ava_mrmr_not_macro: abort();
+    }
   }
 
   /* No more macro substitution possible */
@@ -443,6 +443,62 @@ static const ava_symbol ava_macsub_string_pseudosymbol = {
   }
 };
 
+static ava_bool ava_macsub_is_macroid(
+  signed* min_precedence, ava_symbol_type* found_type,
+  ava_macsub_context* context, const ava_parse_unit* unit
+) {
+  const ava_symbol** results;
+  size_t num_results, i;
+  signed precedence;
+  ava_bool found, allow_cf;
+
+  switch (unit->type) {
+  case ava_put_lstring:
+  case ava_put_rstring:
+  case ava_put_lrstring:
+    *min_precedence = STRING_PSEUDOMACRO_PRECEDENCE;
+    *found_type = ava_st_operator_macro;
+    return ava_true;
+
+  case ava_put_bareword:
+    /* Handled below */
+    break;
+
+  default:
+    /* Definitely not a macro */
+    return ava_false;
+  }
+
+  num_results = ava_symtab_get(
+    &results, context->symbol_table, unit->v.string);
+  found = ava_false;
+  allow_cf = (NULL == TAILQ_PREV(unit, ava_parse_unit_list_s, next));
+  for (i = 0; i < num_results; ++i) {
+    switch (results[i]->type) {
+    case ava_st_function_macro:
+    case ava_st_control_macro:
+    case ava_st_operator_macro:
+      if (!allow_cf && ava_st_operator_macro != results[i]->type) break;
+
+      precedence = (
+        ava_st_function_macro == results[i]->type? FUNCTION_MACRO_PRECEDENCE :
+        ava_st_control_macro == results[i]->type? CONTROL_MACRO_PRECEDENCE :
+        (signed)results[i]->v.macro.precedence);
+
+      if (!found || precedence < *min_precedence) {
+        *min_precedence = precedence;
+        *found_type = results[i]->type;
+        found = ava_true;
+      }
+      break;
+
+    default: break;
+    }
+  }
+
+  return found;
+}
+
 static ava_macsub_resolve_macro_result ava_macsub_resolve_macro(
   const ava_symbol** dst,
   ava_macsub_context* context,
@@ -477,7 +533,8 @@ static ava_macsub_resolve_macro_result ava_macsub_resolve_macro(
    */
   for (i = 0; i < num_results; ++i) {
     if (target_type == results[i]->type &&
-        target_precedence == results[i]->v.macro.precedence) {
+        (target_type != ava_st_operator_macro ||
+         target_precedence == results[i]->v.macro.precedence)) {
       *dst = results[i];
       if (1 != num_results)
         return ava_mrmr_ambiguous;
