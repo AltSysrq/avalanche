@@ -1,0 +1,20 @@
+import cstdio *
+import real r
+
+Extern pass-test pass_test c void [int pos]
+
+Fun fail () = pass-test 0
+
+Fun assert-equals expr expected actual {
+  if ($expected .!= $actual) {
+    puts ($expr ` failed:\nExpected: ` $expected
+          `\nActual: ` $actual)
+    fail ()
+  }
+}
+
+Macro asseq control (%assert-equals [>0 "==" ":" >1+] (>0) (>1+))
+Macro assert control %if (%! (>)) {
+  %cstdio.puts ("Assertion ` [>] ` failed")
+  %pass-test "0"
+}
