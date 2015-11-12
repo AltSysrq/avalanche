@@ -722,3 +722,89 @@ namespace real {
   ; $default if $val was empty.
   EXTERN of "" ava pos pos
 }
+
+namespace map {
+  ; Returns the number of key/value pairs in the given map.
+  EXTERN npairs "" ava pos
+  ; Returns the last value in the given map bound to the given key.
+  ;
+  ; :arg map The map to search.
+  ;
+  ; :arg key The key for which to search.
+  ;
+  ; :return The last value in $map which is bound to $key.
+  ;
+  ; :throw error(no-such-key) if $key is not bound in $map.
+  ;
+  ; :see $get-last-or-empty
+  EXTERN get-last "" ava pos pos
+  ; Returns the last value in the given map bound to the given key, or the
+  ; empty string if there is no such key.
+  ;
+  ; :arg map The map to search.
+  ;
+  ; :arg key The key for which to search.
+  ;
+  ; :return If $map contains at least one value bound to $key, the final such
+  ; value.  Otherwise, the empty string.
+  EXTERN get-last-or-empty "" ava pos pos
+  ; Returns a list of values bound to the given key in the map.
+  ;
+  ; :arg map The map to search.
+  ;
+  ; :arg key The key for which to search.
+  ;
+  ; :return A list containing every value in $map which is bound to $key, in
+  ; order. If $map does not contain any values bound to $key, the empty list is
+  ; returned.
+  EXTERN get-all "" ava pos pos
+  ; Adds a new key/value binding to a map.
+  ;
+  ; :arg map The map to manipulate.
+  ;
+  ; :arg key The key of the new pair.
+  ;
+  ; :arg value The value of the new pair.
+  ;
+  ; :return A map containing all the pairs of $map followed by a pair of
+  ; $key,$value. Other pairs in $map whose key is $key are unaffected and
+  ; remain in the map.
+  EXTERN add "" ava pos pos pos
+  ; Binds a key in a map to a single value.
+  ;
+  ; :arg map The map to manipulate.
+  ;
+  ; :arg key The key to bind or rebind.
+  ;
+  ; :arg value The single value to bind to $key.
+  ;
+  ; :return A map derived from $map, but with all pairs bound to $key but the
+  ; last deleted, and the last such pair's value changed to $value. If $map had
+  ; no pairs with a key equal to $key, the returned map has a pair holding $key
+  ; and $value added to the end (as with $add).
+  EXTERN remap-one "" ava pos pos pos
+  ; Binds a key in a map to a set number of values.
+  ;
+  ; :arg map The map to manipulate.
+  ;
+  ; :arg key The key to bind or rebind.
+  ;
+  ; :arg values A list of values to bind to $key.
+  ;
+  ; :return A map derived from $map, but with all but the last {$list.length
+  ; $values} pairs bound to $key deleted, and the remaining such pairs with
+  ; their values changed to successive values from $values. If $map had fewer
+  ; than {$list.length $values} pairs with a key of $key, new pairs are added
+  ; (as with $add) to the end of the map so that all values from $values are
+  ; bound.
+  EXTERN remap-all "" ava pos pos pos
+  ; Returns the number of pairs in a map matching a given key.
+  ;
+  ; :arg map The map to search.
+  ;
+  ; :arg key The key for which to search.
+  ;
+  ; :return An integer indicating how many pairs exist in $map whose key is
+  ; $key.
+  EXTERN count "" ava pos pos
+}

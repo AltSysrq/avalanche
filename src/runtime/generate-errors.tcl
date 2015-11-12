@@ -436,6 +436,19 @@ set defs {
     }
   }
 
+  serror R0041 map_no_such_key {
+    {ava_value key}
+  } {
+    msg "Key \"%key%\" does not exist in map."
+    explanation {
+      An attempt was made to extract the value associated with the given key in
+      a map, but the map does not contain that key.
+
+      If the key being missing is expected, in many cases the lenient indexing
+      operator ()? can be used to handle the situation elegantly.
+    }
+  }
+
   serror U3000 undef_integer_overflow {
     {ava_integer a} {ava_string op} {ava_integer b}
   } {

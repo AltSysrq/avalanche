@@ -1,9 +1,4 @@
-extern pass-test pass_test c void [int pos]
-
-macro assert control %if (%! (>)) {
-  %cstdio.puts ("Assertion ` [>] ` failed")
-  %pass-test "0"
-}
+reqmod runtime/ava-tests/helpers/assert
 
 import byte-string bs
 

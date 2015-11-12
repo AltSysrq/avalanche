@@ -1,0 +1,6 @@
+Extern pass-test pass_test c void [int pos]
+
+Macro assert control %if (%! (>)) {
+  %cstdio.puts ("Assertion ` [>] ` failed")
+  %pass-test "0"
+}

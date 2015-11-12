@@ -55,8 +55,9 @@
 #define AVAST_CHECK_LEVEL 2
 #endif
 
+#define fun(name) a$org__ava_lang__avast___##name
 #define defun(name)                             \
-  ava_value a$org__ava_lang__avast___##name
+  ava_value fun(name)
 
 /**
  * In checked builds, obfuscates the result of a comparison result (ie, results
@@ -542,3 +543,183 @@ defun(real__of)(ava_value a, ava_value b) {
     ava_real_of_value(
       a, ava_real_of_value(b, NAN)));
 }
+
+/******************** MAP OPERATIONS ********************/
+
+/*
+  It might initially seem like the cursor API could be presented directly to
+  Avalanche, and this other stuff implemented in Avalanche itself.
+
+  However, cursors are sensitive to the underlying representation, which would
+  violate the semantics of Avalanche values. Additionally, there is no way to
+  validate an arbitrary cursor value.
+ */
+
+defun(map__npairs)(ava_value m) {
+  return ava_value_of_integer(ava_map_npairs(m));
+}
+
+defun(map__get_last_impl)
+(ava_map_value map, ava_value key);
+
+defun(map__get_last)(ava_value map, ava_value key) {
+  return fun(map__get_last_impl)(ava_map_value_of(map), key);
+}
+
+#ifndef COMPILING_DRIVER
+AVA_STATIC_STRING(no_such_key_type, "no-such-key");
+
+defun(map__get_last_impl)(ava_map_value map, ava_value key) {
+  ava_map_cursor cursor, next_cursor;
+
+  cursor = ava_map_find(map, key);
+  if (AVA_MAP_CURSOR_NONE == cursor)
+    ava_throw_uex(&ava_error_exception, no_such_key_type,
+                  ava_error_map_no_such_key(key));
+
+  while (AVA_MAP_CURSOR_NONE !=
+         (next_cursor = ava_map_next(map, cursor)))
+    cursor = next_cursor;
+
+  return ava_map_get(map, cursor);
+}
+#endif
+
+defun(map__get_last_or_empty_impl)
+(ava_map_value map, ava_value key);
+
+defun(map__get_last_or_empty)(ava_value map, ava_value key) {
+  return fun(map__get_last_or_empty_impl)(ava_map_value_of(map), key);
+}
+
+#ifndef COMPILING_DRIVER
+defun(map__get_last_or_empty_impl)(ava_map_value map, ava_value key) {
+  ava_map_cursor cursor, next_cursor;
+
+  cursor = ava_map_find(map, key);
+  if (AVA_MAP_CURSOR_NONE == cursor)
+    return ava_value_of_string(AVA_EMPTY_STRING);
+
+  while (AVA_MAP_CURSOR_NONE !=
+         (next_cursor = ava_map_next(map, cursor)))
+    cursor = next_cursor;
+
+  return ava_map_get(map, cursor);
+}
+#endif
+
+defun(map__get_all_impl)
+(ava_map_value map, ava_value key);
+
+defun(map__get_all)(ava_value map, ava_value key) {
+  return fun(map__get_all_impl)(ava_map_value_of(map), key);
+}
+
+#ifndef COMPILING_DRIVER
+defun(map__get_all_impl)(ava_map_value map, ava_value key) {
+  ava_list_value ret;
+  ava_map_cursor cursor;
+
+  ret = ava_empty_list();
+  for (cursor = ava_map_find(map, key);
+       AVA_MAP_CURSOR_NONE != cursor;
+       cursor = ava_map_next(map, cursor))
+    ret = ava_list_append(ret, ava_map_get(map, cursor));
+
+  return ret.v;
+}
+#endif
+
+defun(map__add)(ava_value map, ava_value key, ava_value value) {
+  return ava_map_add(map, key, value);
+}
+
+defun(map__remap_one_impl)
+(ava_map_value map, ava_value key, ava_value value);
+
+defun(map__remap_one)(ava_value map, ava_value key, ava_value value) {
+  return fun(map__remap_one_impl)(ava_map_value_of(map), key, value);
+}
+
+
+#ifndef COMPILING_DRIVER
+defun(map__remap_one_impl)(ava_map_value map, ava_value key, ava_value value) {
+  ava_map_cursor cursor;
+
+  cursor = ava_map_find(map, key);
+  if (AVA_MAP_CURSOR_NONE == cursor) {
+    map = ava_map_add(map, key, value);
+  } else {
+    while (AVA_MAP_CURSOR_NONE != ava_map_next(map, cursor)) {
+      map = ava_map_remove(map, cursor);
+      cursor = ava_map_find(map, key);
+    }
+
+    map = ava_map_set(map, cursor, value);
+  }
+
+  return map.v;
+}
+#endif
+
+defun(map__remap_all_impl)
+(ava_map_value map, ava_value key, ava_list_value values);
+
+defun(map__remap_all)(ava_value map, ava_value key, ava_value values) {
+  return fun(map__remap_all_impl)(
+    ava_map_value_of(map), key, ava_list_value_of(values));
+}
+
+#ifndef COMPILING_DRIVER
+defun(map__remap_all_impl)(
+  ava_map_value map, ava_value key, ava_list_value values
+) {
+  size_t ix, in_list, in_map;
+  ava_map_cursor cursor;
+
+  ix = 0;
+  in_list = ava_list_length(values);
+  in_map = 0;
+  for (cursor = ava_map_find(map, key);
+       AVA_MAP_CURSOR_NONE != cursor;
+       cursor = ava_map_next(map, cursor))
+    ++in_map;
+
+  while (in_map > in_list) {
+    map = ava_map_remove(map, ava_map_find(map, key));
+    --in_map;
+  }
+
+  for (cursor = ava_map_find(map, key);
+       AVA_MAP_CURSOR_NONE != cursor;
+       cursor = ava_map_next(map, cursor))
+    map = ava_map_set(map, cursor, ava_list_index(values, ix++));
+
+  while (ix < in_list)
+    map = ava_map_add(map, key, ava_list_index(values, ix++));
+
+  return map.v;
+}
+#endif
+
+size_t fun(map__count_impl)
+(ava_map_value map, ava_value key);
+
+defun(map__count)(ava_value map, ava_value key) {
+  return ava_value_of_integer(
+    fun(map__count_impl)(ava_map_value_of(map), key));
+}
+
+#ifndef COMPILING_DRIVER
+size_t fun(map__count_impl)(ava_map_value map, ava_value key) {
+  size_t count;
+  ava_map_cursor cursor;
+
+  for (count = 0, cursor = ava_map_find(map, key);
+       AVA_MAP_CURSOR_NONE != cursor;
+       cursor = ava_map_next(map, cursor))
+    ++count;
+
+  return count;
+}
+#endif

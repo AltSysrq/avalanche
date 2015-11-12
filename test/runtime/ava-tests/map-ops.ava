@@ -1,0 +1,32 @@
+reqmod runtime/ava-tests/helpers/assert
+
+assert 0 == map.npairs []
+assert 1 == map.npairs [foo bar]
+assert 2 == map.npairs [foo bar foo bar]
+assert 2 == map.npairs "a b c d"
+assert baz b== map.get-last [foo bar foo baz x x] foo
+assert x b== map.get-last [foo bar foo baz x x] x
+assert baz b== map.get-last-or-empty [foo bar foo baz x x] foo
+assert x b== map.get-last-or-empty [foo bar foo baz x x] x
+assert () b== map.get-last-or-empty [foo bar foo bar x x] 42
+assert [] b== map.get-all [a b a c d e] x
+assert [e] b== map.get-all [a b a c d e] d
+assert [b c] b== map.get-all [a b a c d e] a
+assert [foo bar] b== map.add [] foo bar
+assert [foo bar foo baz] b== map.add [foo bar] foo baz
+assert [foo bar] b== map.remap-one [] foo bar
+assert [foo bar] b== map.remap-one [foo quux] foo bar
+assert [a b foo bar c d] b== map.remap-one [foo quux a b foo xyzzy c d] foo bar
+assert [a b c d foo bar] b== map.remap-one [a b c d] foo bar
+assert [] b== map.remap-all [] foo []
+assert [foo bar] b== map.remap-all [] foo [bar]
+assert [foo bar foo baz] b== map.remap-all [] foo [bar baz]
+assert [a b c d] b== map.remap-all [x x a b x y c d x z] x []
+assert [a b c d x plugh] b== map.remap-all [x x a b x y c d x z] x [plugh]
+assert [x xyzzy foo bar x plugh] b==
+\ map.remap-all [x x foo bar] x [xyzzy plugh]
+assert 0 == map.count [x x x y plugh xyzzy] y
+assert 2 == map.count [x x x y plugh xyzzy] x
+assert 1 == map.count [x x x y plugh xyzzy] plugh
+
+pass-test 42
