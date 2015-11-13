@@ -624,6 +624,14 @@ static void ava_intr_loop_cg_evaluate(
         loop->each_data_reg.index =
           ava_codegen_push_reg(context, ava_prt_data, 1);
 
+        /* While we don't care about the reader, we do want to behave like
+         * assignment and set the L-Value up before possibly throwing if we
+         * fall off the end of the list.
+         */
+        ava_ast_node_cg_set_up(
+          loop->clauses[clause].v.each.lvalues[i], context);
+
+        ava_codegen_set_location(context, loop->clauses[clause].location);
         AVA_PCXB(lindex, loop->each_data_reg,
                  loop->clauses[clause].v.each.reg_list,
                  loop->clauses[clause].v.each.reg_index,
@@ -632,6 +640,8 @@ static void ava_intr_loop_cg_evaluate(
         AVA_PCXB(iadd_imm, loop->clauses[clause].v.each.reg_index,
                  loop->clauses[clause].v.each.reg_index, +1);
         ava_ast_node_cg_discard(
+          loop->clauses[clause].v.each.lvalues[i], context);
+        ava_ast_node_cg_tear_down(
           loop->clauses[clause].v.each.lvalues[i], context);
 
         ava_codegen_pop_reg(context, ava_prt_data, 1);

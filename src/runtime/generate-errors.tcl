@@ -1855,6 +1855,23 @@ set defs {
     }
   }
 
+  cerror C5115 subscripted_composite_is_bareword {} {
+    msg "Subscripted value is a bareword."
+    explanation {
+      The indicated expression is "essentially" a bareword, but is subscripted
+      in a non-assignment context.
+
+      For example, the code
+        x = foo(bar)
+      will generate this error, since it is doomed to fail at runtime, and what
+      was almost certainly intended was
+        x = $foo(bar)
+
+      If subscripting a literal string is really what is desired, use a string
+      literal or other explicit type of literal.
+    }
+  }
+
   cerror X9000 xcode_dupe_label {{ava_value label}} {
     msg "P-Code label present in function more than once: %label%"
     explanation {

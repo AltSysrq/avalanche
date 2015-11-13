@@ -652,6 +652,8 @@ void ava_ast_node_cg_evaluate(ava_ast_node* node,
                               const struct ava_pcode_register_s* dst,
                               ava_codegen_context* context) {
   assert(ava_prt_data == dst->type || ava_prt_var == dst->type);
+
+  ava_ast_node_cg_set_up(node, context);
   if (node->v->cg_evaluate)
     (*node->v->cg_evaluate)(node, dst, context);
   else
@@ -659,6 +661,7 @@ void ava_ast_node_cg_evaluate(ava_ast_node* node,
                       ava_error_does_not_produce_a_value(
                         &node->location, ava_string_of_cstring(
                           node->v->name)));
+  ava_ast_node_cg_tear_down(node, context);
 }
 
 void ava_ast_node_cg_spread(ava_ast_node* node,
@@ -666,11 +669,14 @@ void ava_ast_node_cg_spread(ava_ast_node* node,
                             ava_codegen_context* context) {
   assert(ava_prt_list == dst->type);
   assert(node->v->cg_spread);
+  ava_ast_node_cg_set_up(node, context);
   (*node->v->cg_spread)(node, dst, context);
+  ava_ast_node_cg_tear_down(node, context);
 }
 
 void ava_ast_node_cg_discard(ava_ast_node* node,
                              ava_codegen_context* context) {
+  ava_ast_node_cg_set_up(node, context);
   if (node->v->cg_discard)
     (*node->v->cg_discard)(node, context);
   else
@@ -678,11 +684,13 @@ void ava_ast_node_cg_discard(ava_ast_node* node,
                       ava_error_is_pure_but_would_discard(
                         &node->location, ava_string_of_cstring(
                           node->v->name)));
+  ava_ast_node_cg_tear_down(node, context);
 }
 
 void ava_ast_node_cg_force(ava_ast_node* node,
                            const ava_pcode_register* dst,
                            ava_codegen_context* context) {
+  ava_ast_node_cg_set_up(node, context);
   if (node->v->cg_force) {
     (*node->v->cg_force)(node, dst, context);
   } else if (node->v->cg_evaluate) {
@@ -691,10 +699,25 @@ void ava_ast_node_cg_force(ava_ast_node* node,
     ava_ast_node_cg_discard(node, context);
     AVA_PCXB(ld_imm_vd, *dst, AVA_EMPTY_STRING);
   }
+  ava_ast_node_cg_tear_down(node, context);
 }
 
 void ava_ast_node_cg_define(ava_ast_node* node,
                             ava_codegen_context* context) {
   assert(node->v->cg_define);
   (*node->v->cg_define)(node, context);
+}
+
+void ava_ast_node_cg_set_up(ava_ast_node* node,
+                            ava_codegen_context* context) {
+  if (!node->setup_count++)
+    if (node->v->cg_set_up)
+      (*node->v->cg_set_up)(node, context);
+}
+
+void ava_ast_node_cg_tear_down(ava_ast_node* node,
+                               ava_codegen_context* context) {
+  if (!--node->setup_count)
+    if (node->v->cg_tear_down)
+      (*node->v->cg_tear_down)(node, context);
 }

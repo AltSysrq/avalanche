@@ -100,6 +100,7 @@ Macro DEFBINARY control     %MACRO >0 !op >1 (>2 (!<) (!>))
 DEFUNARY        !       35      %i.lnot
 DEFUNARY        ~^      35      %i.not
 DEFUNARY        b#      35      %bs.length
+DEFUNARY        m#      35      %map.npairs
 DEFBINARY       .**     31      %r.pow
 DEFBINARY       *       30      %i.mul
 DEFBINARY       u*      30      %u.mul
@@ -168,3 +169,10 @@ MACRO : op 2 < (>)
 ;      2 == $digit ? two : other)
 ; ```
 MACRO ? op 5 (%if (<) (>0-1) !else >-0)
+
+ALIAS #name-subscript#get## = map.get-last
+ALIAS #name-subscript#with## = map.remap-one
+ALIAS #name-subscript#get#?# = map.get-last-or-empty
+ALIAS #name-subscript#with#?# = map.remap-one
+ALIAS #name-subscript#get#*# = map.get-all
+ALIAS #name-subscript#with#*# = map.remap-all

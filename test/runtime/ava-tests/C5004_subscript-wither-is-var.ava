@@ -1,0 +1,4 @@
+alias #name-subscript#get#x# = #name-subscript#get##
+#name-subscript#with#x# = 42
+
+x(42)x = 42

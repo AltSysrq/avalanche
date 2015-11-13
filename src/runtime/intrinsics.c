@@ -34,6 +34,7 @@
 #include "-intrinsics/pasta.h"
 #include "-intrinsics/require.h"
 #include "-intrinsics/ret.h"
+#include "-intrinsics/subscript.h"
 #include "-intrinsics/user-macro.h"
 #include "-intrinsics/variable.h"
 
@@ -92,8 +93,11 @@ void ava_register_intrinsics(ava_macsub_context* context) {
   DEFINE("reqmod",      CTL,    NULL,           reqmod);
   DEFINE("reqpkg",      CTL,    NULL,           reqpkg);
   DEFINE("ret",         CTL,    NULL,           ret);
-  DEFINE("#var#",       CTL,    NULL,           var);
   DEFINE("#set#",       CTL,    NULL,           set);
+  DEFINE("#var#",       CTL,    NULL,           var);
+  DEFINE("#name-subscript#", CTL, "#name-subscript#", subscript);
+  DEFINE("#numeric-subscript#", CTL, "#numeric-subscript#", subscript);
+  DEFINE("#string-subscript#", CTL, "#string-subscript#", subscript);
   /* Weak absolute imports of the intrinsics and standard library */
   ava_macsub_import(&abs, &amb, context,
                     intrinsic_prefix, AVA_EMPTY_STRING,

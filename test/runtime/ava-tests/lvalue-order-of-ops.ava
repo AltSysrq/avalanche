@@ -1,0 +1,8 @@
+extern pass-test pass_test c void [int pos]
+
+r = "$"
+x("") = []
+x("")(4) = []
+x(r = "")(r = $r `4")(r = $r `2") = plugh
+pass-test $r
+

@@ -85,8 +85,10 @@ runtime/-intrinsics/if.c \
 runtime/-intrinsics/loop.c \
 runtime/-intrinsics/namespace.c \
 runtime/-intrinsics/pasta.c \
+runtime/-intrinsics/reg-rvalue.c \
 runtime/-intrinsics/require.c \
 runtime/-intrinsics/ret.c \
+runtime/-intrinsics/subscript.c \
 runtime/-intrinsics/user-macro.c \
 runtime/-intrinsics/variable.c
 

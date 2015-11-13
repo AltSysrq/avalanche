@@ -40,4 +40,19 @@ ava_ast_node* ava_intr_funcall_of(
   ava_macsub_context* context,
   const ava_parse_statement* statement);
 
+/**
+ * Constructs a function call node from the given AST nodes providing the
+ * parameters. The zeroth parameter is the function itself.
+ *
+ * @param context The macro substitution context.
+ * @param parms The parameters to the function, including the function itself
+ * in position 0. This array is copied and need not outlive this function call.
+ * @param num_parms The length of the parms array, including the function
+ * itself. Must be at least 2.
+ */
+ava_ast_node* ava_intr_funcall_make(
+  ava_macsub_context* context,
+  ava_ast_node*const* parms,
+  size_t num_parms);
+
 #endif /* AVA_RUNTIME__INTRINSICS_FUNCALL_H_ */

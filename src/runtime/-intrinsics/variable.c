@@ -80,6 +80,10 @@ static void ava_intr_var_write_cg_discard(
   ava_intr_var_write* node, ava_codegen_context* context);
 static void ava_intr_var_write_cg_define(
   ava_intr_var_write* node, ava_codegen_context* context);
+static void ava_intr_var_write_cg_set_up(
+  ava_intr_var_write* node, ava_codegen_context* context);
+static void ava_intr_var_write_cg_tear_down(
+  ava_intr_var_write* node, ava_codegen_context* context);
 
 static const ava_ast_node_vtable ava_intr_var_write_vtable = {
   .name = "variable write",
@@ -88,6 +92,8 @@ static const ava_ast_node_vtable ava_intr_var_write_vtable = {
   .cg_evaluate = (ava_ast_node_cg_evaluate_f)ava_intr_var_write_cg_evaluate,
   .cg_discard = (ava_ast_node_cg_discard_f)ava_intr_var_write_cg_discard,
   .cg_define = (ava_ast_node_cg_define_f)ava_intr_var_write_cg_define,
+  .cg_set_up = (ava_ast_node_cg_set_up_f)ava_intr_var_write_cg_set_up,
+  .cg_tear_down = (ava_ast_node_cg_tear_down_f)ava_intr_var_write_cg_tear_down,
 };
 
 static ava_var_casing ava_var_casing_of(ava_string name);
@@ -498,6 +504,18 @@ static void ava_intr_var_write_cg_define(
                node->owned_var->v.var.name);
     ava_codegen_export(context, node->owned_var);
   }
+}
+
+static void ava_intr_var_write_cg_set_up(
+  ava_intr_var_write* node, ava_codegen_context* context
+) {
+  ava_ast_node_cg_set_up(node->producer, context);
+}
+
+static void ava_intr_var_write_cg_tear_down(
+  ava_intr_var_write* node, ava_codegen_context* context
+) {
+  ava_ast_node_cg_tear_down(node->producer, context);
 }
 
 ava_macro_subst_result ava_intr_set_subst(
