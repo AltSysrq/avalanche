@@ -160,3 +160,39 @@ deftest(wide_end_end) {
   ck_assert_int_eq(0x80000000LL, BEG("0x80000000~end", 66));
   ck_assert_int_eq(66, END("0x80000000~end", 66));
 }
+
+deftest(compact_minimal_stringify) {
+  assert_value_equals_str("0~end", IV("~").v);
+}
+
+deftest(compact_positive_stringify) {
+  assert_value_equals_str("1~42", IV("01~042").v);
+}
+
+deftest(compact_negative_stringify) {
+  assert_value_equals_str("-1~-42", IV("-01~-042").v);
+}
+
+deftest(compact_end_stringify) {
+  assert_value_equals_str("end~end", IV("END~").v);
+}
+
+deftest(wide_positive_stringify) {
+  assert_value_equals_str("1000000000000~2000000000000",
+                          IV("1000000000000~2000000000000").v);
+}
+
+deftest(wide_negative_stringify) {
+  assert_value_equals_str("-1000000000000~-2000000000000",
+                          IV("-1000000000000~-2000000000000").v);
+}
+
+deftest(wide_begin_end_stringify) {
+  assert_value_equals_str("end~2000000000000",
+                          IV("end~2000000000000").v);
+}
+
+deftest(wide_end_end_stringify) {
+  assert_value_equals_str("1000000000000~end",
+                          IV("1000000000000~").v);
+}
