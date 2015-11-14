@@ -346,6 +346,19 @@ char ava_string_index(ava_string str, size_t ix) AVA_PURE;
  */
 ava_string ava_string_slice(ava_string, size_t begin, size_t end) AVA_PURE;
 /**
+ * Equivalent to ava_string_slice(str, 0, end), but more efficient.
+ *
+ * Complexity: Amortised O(1)
+ */
+ava_string ava_string_trunc(ava_string str, size_t end) AVA_PURE;
+/**
+ * Equivalent to ava_string_slice(str, begin, ava_string_length(str)), but more
+ * efficient.
+ *
+ * Complexity: Amortised O(1)
+ */
+ava_string ava_string_behead(ava_string str, size_t begin) AVA_PURE;
+/**
  * Produces a string containing the values of both strings concatenated.
  *
  * Complexity: Amortized O(1)

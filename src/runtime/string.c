@@ -470,6 +470,27 @@ ava_string ava_string_slice(ava_string str, size_t begin, size_t end) {
   return ret;
 }
 
+ava_string ava_string_trunc(ava_string str, size_t end) {
+  if (ava_string_is_ascii9(str)) {
+    str.ascii9 &= (1LL << 63) >> (7 * end) << 1;
+    str.ascii9 |= 1;
+    return str;
+  } else {
+    return ava_string_slice(str, 0, end);
+  }
+}
+
+ava_string ava_string_behead(ava_string str, size_t begin) {
+  if (ava_string_is_ascii9(str)) {
+    str.ascii9 -= 1;
+    str.ascii9 <<= 7 * begin;
+    str.ascii9 |= 1;
+    return str;
+  } else {
+    return ava_string_slice(str, begin, ava_string_length(str));
+  }
+}
+
 signed ava_strcmp(ava_string a, ava_string b) {
   ava_str_tmpbuff atmp, btmp;
   const char*restrict ac, *restrict bc;

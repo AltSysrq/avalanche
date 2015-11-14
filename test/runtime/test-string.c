@@ -497,7 +497,48 @@ deftest(slice_to_tocnac_left_only_complex) {
   ava_string result = ava_string_slice(in, 200, 252);
 
   assert_matches_large_string(result, 200, 252);
+}
 
+#define TBTEST(name, input, op, off, expect)            \
+  deftest(name) {                                       \
+    ava_string a = AVA_ASCII9_STRING(input);            \
+    ck_assert_str_eq(expect, ava_string_to_cstring(     \
+                       ava_string_##op(a, off)));       \
+  }
+TBTEST(trunc_ascii9_0, "avalanche", trunc, 0, "");
+TBTEST(trunc_ascii9_1, "avalanche", trunc, 1, "a");
+TBTEST(trunc_ascii9_2, "avalanche", trunc, 2, "av");
+TBTEST(trunc_ascii9_3, "avalanche", trunc, 3, "ava");
+TBTEST(trunc_ascii9_4, "avalanche", trunc, 4, "aval");
+TBTEST(trunc_ascii9_5, "avalanche", trunc, 5, "avala");
+TBTEST(trunc_ascii9_6, "avalanche", trunc, 6, "avalan");
+TBTEST(trunc_ascii9_7, "avalanche", trunc, 7, "avalanc");
+TBTEST(trunc_ascii9_8, "avalanche", trunc, 8, "avalanch");
+TBTEST(trunc_ascii9_9, "avalanche", trunc, 9, "avalanche");
+TBTEST(behead_ascii9_0,"avalanche", behead,0, "avalanche");
+TBTEST(behead_ascii9_1,"avalanche", behead,1,  "valanche");
+TBTEST(behead_ascii9_2,"avalanche", behead,2,   "alanche");
+TBTEST(behead_ascii9_3,"avalanche", behead,3,    "lanche");
+TBTEST(behead_ascii9_4,"avalanche", behead,4,     "anche");
+TBTEST(behead_ascii9_5,"avalanche", behead,5,      "nche");
+TBTEST(behead_ascii9_6,"avalanche", behead,6,       "che");
+TBTEST(behead_ascii9_7,"avalanche", behead,7,        "he");
+TBTEST(behead_ascii9_8,"avalanche", behead,8,         "e");
+TBTEST(behead_ascii9_9,"avalanche", behead,9,          "");
+#undef TBTEST
+
+deftest(trunc_twine) {
+  AVA_STATIC_STRING(in, "avalanches");
+
+  ck_assert_str_eq("ava", ava_string_to_cstring(
+                     ava_string_trunc(in, 3)));
+}
+
+deftest(behead_twine) {
+  AVA_STATIC_STRING(in, "avalanches");
+
+  ck_assert_str_eq("lanches", ava_string_to_cstring(
+                     ava_string_behead(in, 3)));
 }
 
 deftest(ascii9_to_bytes_whole) {

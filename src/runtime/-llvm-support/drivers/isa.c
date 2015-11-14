@@ -32,7 +32,18 @@
 
 #include <stdlib.h>
 
-#include "../../avalanche.h"
+#define AVA__INTERNAL_INCLUDE 1
+#include "../../avalanche/defs.h"
+#include "../../avalanche/alloc.h"
+#include "../../avalanche/string.h"
+#include "../../avalanche/value.h"
+#include "../../avalanche/integer.h"
+#include "../../avalanche/real.h"
+#include "../../avalanche/list.h"
+#include "../../avalanche/function.h"
+#include "../../avalanche/exception.h"
+#include "../../avalanche/list-proj.h"
+#include "../../avalanche/errors.h"
 
 /* Tell the code generator about the platform's C ABI */
 struct ava_c_abi_info {

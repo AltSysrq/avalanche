@@ -59,6 +59,7 @@ runtime/hash-map-64.c \
 runtime/hexes.c \
 runtime/init.c \
 runtime/integer-fast-dec.c \
+runtime/interval.c \
 runtime/intrinsics.c \
 runtime/list.c \
 runtime/list-map.c \

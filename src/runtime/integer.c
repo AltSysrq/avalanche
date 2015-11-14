@@ -111,7 +111,7 @@ ava_integer ava_integer_of_noninteger_value(
       WS+                       { continue; }
       TRUTHY WS*                { END(); return 1; }
       FALSEY WS*                { END(); return 0; }
-      END WS*                   { END(); return 1LL << 63; }
+      END WS*                   { END(); return AVA_INTEGER_END; }
       BIN_LITERAL WS*           { END(); return ava_integer_parse_bin(tok, cursor); }
       OCT_LITERAL WS*           { END(); return ava_integer_parse_oct(tok, cursor); }
       HEX_LITERAL WS*           { END(); return ava_integer_parse_hex(tok, cursor); }

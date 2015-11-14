@@ -27,6 +27,11 @@
  * Integer type used in user integer arithmetic calculations.
  */
 typedef ava_slong ava_integer;
+/**
+ * Convenience constant for the most negative integer, when used to indicate
+ * "end" or "negative zero".
+ */
+#define AVA_INTEGER_END ((ava_integer)1LL << 63)
 /* integer.c actually needs to define this symbol as an ava_value_trait, but
  * we'd prefer not to make that being the first trait on integers contractural.
  * Instead, just hide the declaration from the compiler when compiling that
