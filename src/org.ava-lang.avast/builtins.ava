@@ -808,3 +808,17 @@ namespace map {
   ; $key.
   EXTERN count "" ava pos pos
 }
+
+namespace interval {
+  ; Constructs an interval between two integers.
+  ;
+  ; Positive integers represent absolute indices, negative integers represent
+  ; offsets from the end of whatever the interval is used to index. The special
+  ; value "end" is used to mean "negative zero", i.e., it refers to one past
+  ; the last element in the indexed structure.
+  ;
+  ; :arg begin Inclusive lower-bound of the range. Defaults to 0.
+  ;
+  ; :arg end Exclusive upper-bound of the range. Defaults to "end".
+  EXTERN of "" ava pos pos
+}

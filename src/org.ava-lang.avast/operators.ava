@@ -76,6 +76,7 @@ import real r
 ;   ``          A-Strings
 ;   %%          Remainder
 ;   **          Exponentiation
+;   ~           Interval
 ;
 ; This gives us
 ;
@@ -87,15 +88,17 @@ import real r
 ;   <<^ >>^ >>-^ &^ |^ ^^       LTR             24
 ;   ``                          LTR             20 (fixed)
 ;   < <= > >= == !=             LTR             14
+;   ~                           LTR             10
 ;   &&                          LTR             8
 ;   ||                          LTR             6
 ;   ?                           RTL             5
 ;   :                           LTR             2
 ;   =                           RTL             1
 
-Macro DEFUNARY control      %MACRO >0 !op >1 !<* (>2 (!>))
-Macro DEFBINARY-OPT control %MACRO >0 !op >1 (>2 (!<*) (!>))
-Macro DEFBINARY control     %MACRO >0 !op >1 (>2 (!<) (!>))
+Macro DEFUNARY control       %MACRO >0 !op >1 !<* (>2 (!>))
+Macro DEFBINARY-OPT control  %MACRO >0 !op >1 (>2 (!<*) (!>))
+Macro DEFBINARY-OPT2 control %MACRO >0 !op >1 (>2 (!<*) (!>*))
+Macro DEFBINARY control      %MACRO >0 !op >1 (>2 (!<) (!>))
 
 DEFUNARY        !       35      %i.lnot
 DEFUNARY        ~^      35      %i.not
@@ -147,6 +150,7 @@ DEFBINARY       >       14      %i.sgt
 DEFBINARY       u>      14      %u.sgt
 DEFBINARY       b>      14      %bs.sgt
 DEFBINARY       .>      14      %r.sgt
+DEFBINARY-OPT2  ~       12      %interval.of
 DEFBINARY       =       1       #set#
 
 ; Encloses everything to its right in parentheses.

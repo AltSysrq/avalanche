@@ -29,6 +29,7 @@
 #include "avalanche/map.h"
 #include "avalanche/integer.h"
 #include "avalanche/real.h"
+#include "avalanche/interval.h"
 #include "avalanche/map.h"
 #include "avalanche/exception.h"
 #include "avalanche/errors.h"
@@ -723,3 +724,9 @@ size_t fun(map__count_impl)(ava_map_value map, ava_value key) {
   return count;
 }
 #endif
+
+defun(interval__of)(ava_value begin, ava_value end) {
+  return ava_interval_value_of_range(
+    ava_integer_of_value(begin, 0),
+    ava_integer_of_value(end, AVA_INTEGER_END)).v;
+}
