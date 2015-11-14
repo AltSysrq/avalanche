@@ -789,3 +789,106 @@ deftest(is_empty_twine_nonempty) {
   AVA_STATIC_STRING(str, "avalanches");
   ck_assert(!ava_string_is_empty(str));
 }
+
+#define A9_IX_OF(name, ix, a, b)                                \
+  deftest(a9_ix_##name) {                                       \
+    ava_ascii9_string as = _AVA_ASCII9_ENCODE_STR(a);           \
+    ava_ascii9_string bs = _AVA_ASCII9_ENCODE_STR(b);           \
+    ck_assert_int_eq(ix, ava_ascii9_index_of_match(as, bs));    \
+  }
+
+A9_IX_OF(no_match, -1, "avalanche", "mountains");
+A9_IX_OF(exact_match, 0, "avalanche", "avalanche");
+A9_IX_OF(match_0_ab, 0, "abbbbbbbb", "aaaaaaaaa");
+A9_IX_OF(match_0_ba, 0, "baaaaaaaa", "bbbbbbbbb");
+A9_IX_OF(match_1_ab, 1, "babbbbbbb", "aaaaaaaaa");
+A9_IX_OF(match_1_ba, 1, "abaaaaaaa", "bbbbbbbbb");
+A9_IX_OF(match_2_ab, 2, "bbabbbbbb", "aaaaaaaaa");
+A9_IX_OF(match_2_ba, 2, "aabaaaaaa", "bbbbbbbbb");
+A9_IX_OF(match_3_ab, 3, "bbbabbbbb", "aaaaaaaaa");
+A9_IX_OF(match_3_ba, 3, "aaabaaaaa", "bbbbbbbbb");
+A9_IX_OF(match_4_ab, 4, "bbbbabbbb", "aaaaaaaaa");
+A9_IX_OF(match_4_ba, 4, "aaaabaaaa", "bbbbbbbbb");
+A9_IX_OF(match_5_ab, 5, "bbbbbabbb", "aaaaaaaaa");
+A9_IX_OF(match_5_ba, 5, "aaaaabaaa", "bbbbbbbbb");
+A9_IX_OF(match_6_ab, 6, "bbbbbbabb", "aaaaaaaaa");
+A9_IX_OF(match_6_ba, 6, "aaaaaabaa", "bbbbbbbbb");
+A9_IX_OF(match_7_ab, 7, "bbbbbbbab", "aaaaaaaaa");
+A9_IX_OF(match_7_ba, 7, "aaaaaaaba", "bbbbbbbbb");
+A9_IX_OF(match_8_ab, 8, "bbbbbbbba", "aaaaaaaaa");
+A9_IX_OF(match_8_ba, 8, "aaaaaaaab", "bbbbbbbbb");
+A9_IX_OF(match_eos, 3, "foo", "bar");
+
+A9_IX_OF(match_0203_03, 1, "\x02\x03", "\x03\x03\x03\x03\x03\x03\x03\x03\x03");
+
+#undef A9_IX_OF
+
+deftest(a9_ix_brute_force) {
+  unsigned char a, b;
+  ava_string str;
+
+  for (a = 1; a <= 127; ++a) {
+    for (b = 1; b <= 127; ++b) {
+      str.ascii9 = AVA_ASCII9(a, b);
+      ck_assert_msg(0 == ava_strchr(str, a),
+                    "ava_strchr(%02X%02X, %02X) = %d, expected 0",
+                    (unsigned)a, (unsigned)b, (unsigned)a,
+                    ava_strchr(str, a));
+      if (b != a)
+        ck_assert_msg(1 == ava_strchr(str, b),
+                      "ava_strchr(%02X%02X, %02X) = %d, expected 1",
+                      (unsigned)a, (unsigned)b, (unsigned)b,
+                      ava_strchr(str, b));
+    }
+  }
+}
+
+deftest(strchr_ascii_ascii9_hit) {
+  ava_string str = AVA_ASCII9_STRING("avalanche");
+  ck_assert_int_eq(1, ava_strchr_ascii(str, 'v'));
+}
+
+deftest(strchr_ascii_ascii9_miss) {
+  ava_string str = AVA_ASCII9_STRING("avalanche");
+  ck_assert_int_eq(-1, ava_strchr_ascii(str, 'x'));
+}
+
+deftest(strchr_ascii_twine_hit) {
+  AVA_STATIC_STRING(str, "avalanches");
+  ck_assert_int_eq(9, ava_strchr_ascii(str, 's'));
+}
+
+deftest(strchr_ascii_twine_miss) {
+  AVA_STATIC_STRING(str, "avalanches");
+  ck_assert_int_eq(-1, ava_strchr_ascii(str, 'x'));
+}
+
+deftest(strchr_general_ascii9_hit) {
+  ava_string str = AVA_ASCII9_STRING("avalanche");
+  ck_assert_int_eq(1, ava_strchr(str, 'v'));
+}
+
+deftest(strchr_general_ascii9_miss) {
+  ava_string str = AVA_ASCII9_STRING("avalanche");
+  ck_assert_int_eq(-1, ava_strchr(str, 'x'));
+}
+
+deftest(strchr_general_ascii9_nul) {
+  ava_string str = AVA_ASCII9_STRING("foo");
+  ck_assert_int_eq(-1, ava_strchr(str, 0));
+}
+
+deftest(strchr_general_ascii9_nonascii) {
+  ava_string str = AVA_ASCII9_STRING("eoo");
+  ck_assert_int_eq(-1, ava_strchr(str, 128 | 'o'));
+}
+
+deftest(strchr_general_twine_hit) {
+  AVA_STATIC_STRING(str, "avalanches");
+  ck_assert_int_eq(9, ava_strchr(str, 's'));
+}
+
+deftest(strchr_general_twine_miss) {
+  AVA_STATIC_STRING(str, "avalanches");
+  ck_assert_int_eq(-1, ava_strchr(str, 'x'));
+}

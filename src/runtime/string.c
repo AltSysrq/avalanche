@@ -105,7 +105,6 @@ static void assert_aligned(const void* ptr) {
   assert(0 == (size_t)ptr % AVA_STRING_ALIGNMENT);
 }
 
-static ava_bool ava_string_is_ascii9(ava_string);
 static ava_bool ava_string_can_encode_ascii9(const char*, size_t);
 static ava_ascii9_string ava_ascii9_encode(const char*, size_t);
 static void ava_ascii9_decode(ava_ulong*restrict dst, ava_ascii9_string);
@@ -158,10 +157,6 @@ static inline ava_twine_tag ava_twine_get_tag(const void* body);
 static inline void* ava_twine_get_body_ptr(const void* body);
 static const void* ava_twine_pack_body(ava_twine_tag tag,
                                        const void* body_ptr);
-
-static ava_bool ava_string_is_ascii9(ava_string str) {
-  return str.ascii9 & 1;
-}
 
 static ava_bool ava_string_can_encode_ascii9(const char* str,
                                              size_t sz) {
@@ -579,6 +574,68 @@ ava_ascii9_string ava_string_to_ascii9(ava_string str) {
     return ava_ascii9_encode(dat, len);
   else
     return 0;
+}
+
+ssize_t ava_ascii9_index_of_match(ava_ascii9_string a,
+                                  ava_ascii9_string b) {
+  ava_ascii9_string mask = 0x8102040810204081LL;
+  ava_ascii9_string decr;
+  ava_ascii9_string xored, decred, masked;
+  unsigned bc;
+
+  /* Rotate `a` right 1, so that the high bit is set; shift `b` right 1, so
+   * that the high bit is clear.
+   */
+  a = (a >> 1) | (a << 63);
+  b >>= 1;
+  /* By XORing b into a, a character slot becomes exactly zero iff both strings
+   * had the same character there. The high bit in a remains set.
+   */
+  xored = a ^ b;
+  /* Decrement each character in xored. This has the effect that the zeroth bit
+   * of each character is inverted, *except* for characters followed by a zero,
+   * since that zero has to borrow for the decrement. If the zeroth character
+   * was zero, this clears the high bit.
+   *
+   * We suppress decrementing characters which have their 1-bit set. This is
+   * because that could be their *only* set bit, which could get taken away if
+   * the character after them borrows it away.
+   */
+  decr = mask & ~ xored;
+  decred = xored - decr;
+  /* Produce a mask of bits which were followed by a zero character. */
+  masked = (decred ^ xored ^ decr) & mask;
+
+  if (!masked) return -1;
+  bc = __builtin_clzll(masked);
+  /* return bc / 7; */
+  return (((8LL << 56) | (7LL << 49) | (6LL << 42) |
+           (5LL << 35) | (4LL << 28) | (3LL << 21) |
+           (2LL << 14) | (1LL <<  7) | (0LL <<  0))
+          >> bc) & 0xF;
+}
+
+ssize_t ava_strchr(ava_string haystack, char needle) {
+  const char* dat, * found;
+
+  if (ava_string_is_ascii9(haystack)) {
+    if (!_AVA_IS_ASCII9_CHAR(needle))
+      /* By definition, can't be in the string */
+      return -1;
+
+    return ava_ascii9_index_of_match(
+      haystack.ascii9,
+      AVA_ASCII9(needle, needle, needle,
+                 needle, needle, needle,
+                 needle, needle, needle));
+  } else {
+    dat = ava_twine_force(haystack.twine);
+    found = memchr(dat, needle, ava_string_length(haystack));
+    if (found)
+      return found - dat;
+    else
+      return -1;
+  }
 }
 
 static inline ava_twine_tag ava_twine_get_tag(const void* body) {
