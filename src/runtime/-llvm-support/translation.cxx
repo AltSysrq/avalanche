@@ -179,12 +179,6 @@ static void build_user_function(
   llvm::DebugLoc init_loc,
   llvm::DIFile in_file) noexcept;
 
-static void explicitly_deinitialise_registers(
-  llvm::IRBuilder<true>& irb,
-  const ava_xcode_function* xfun,
-  const ava_ulong* phi,
-  llvm::Value*const* regs) noexcept;
-
 static bool translate_instruction(
   ava_xcode_translation_context& context,
   llvm::IRBuilder<true>& irb,
@@ -1260,14 +1254,20 @@ noexcept {
   for (size_t block_ix = 0; block_ix < xfun->num_blocks; ++block_ix) {
     const ava_xcode_basic_block* block = xfun->blocks[block_ix];
     irb.SetInsertPoint(basic_blocks[block_ix]);
-    /* Explicitly tell the backend that particular registers do not have any
-     * particular value upon entry/exit to basic blocks.
+    /* We used to add explicit stores of "undefined" to each register not
+     * considered inialised at this point and immediately before leaving each
+     * basic block, on the grounds that the instructions are ultimately free
+     * and do nothing but give the optimiser more information.
      *
-     * The optimiser could probably figure this out on its own, given how
-     * simple our definite initialisation checks are, but it doesn't hurt to
-     * add this.
+     * However, the sheer number of these that are produced for longer
+     * functions bogs LLVM down, and essentially makes compilation of most
+     * functions O(n**2) (assuming number of registers and number of basic
+     * blocks are directly correlated, which they often are).
+     *
+     * Given how simplistic our evaluation of register initialisation is, it's
+     * probably reasonable to expect that LLVM could come to the same
+     * conclusions itself.
      */
-    explicitly_deinitialise_registers(irb, xfun, block->phi_iinit, regs);
 
     bool has_terminal = false;
     for (size_t instr_ix = 0; instr_ix < block->length; ++instr_ix) {
@@ -1279,27 +1279,13 @@ noexcept {
 
     if (!has_terminal) {
       /* Fell off the end of the block */
-      explicitly_deinitialise_registers(irb, xfun, block->phi_oinit, regs);
+      /* We also used to explicitly deinitialise registers here; see above for
+       * why we no longer do this.
+       */
       if (block_ix + 1 < xfun->num_blocks)
         irb.CreateBr(basic_blocks[block_ix + 1]);
       else
         irb.CreateRet(context.empty_string_value);
-    }
-  }
-}
-
-static void explicitly_deinitialise_registers(
-  llvm::IRBuilder<true>& irb,
-  const ava_xcode_function* xfun,
-  const ava_ulong* phi,
-  llvm::Value*const* regs)
-noexcept {
-  for (size_t i = 0; i < xfun->reg_type_off[ava_prt_function+1]; ++i) {
-    if (!ava_xcode_phi_get(phi, i)) {
-      llvm::PointerType* reg_type =
-        llvm::cast<llvm::PointerType>(regs[i]->getType());
-      irb.CreateStore(
-        llvm::UndefValue::get(reg_type->getElementType()), regs[i]);
     }
   }
 }
@@ -1610,8 +1596,6 @@ noexcept {
 
     llvm::Value* src = load_register(
       context, irb, p->return_value, pcfun, regs, nullptr);
-    explicitly_deinitialise_registers(
-      irb, xfun, xfun->blocks[this_basic_block]->phi_oinit, regs);
     irb.CreateRet(src);
   } return true;
 
@@ -1627,9 +1611,6 @@ noexcept {
       test = irb.CreateICmpNE(key, value);
     else
       test = irb.CreateICmpEQ(key, value);
-
-    explicitly_deinitialise_registers(
-      irb, xfun, xfun->blocks[this_basic_block]->phi_oinit, regs);
 
     llvm::BasicBlock* subsequent;
     if (this_basic_block + 1 < xfun->num_blocks) {
@@ -1651,9 +1632,6 @@ noexcept {
 
   case ava_pcxt_goto: {
     const ava_pcx_goto* p = (const ava_pcx_goto*)exe;
-
-    explicitly_deinitialise_registers(
-      irb, xfun, xfun->blocks[this_basic_block]->phi_oinit, regs);
 
     irb.CreateBr(basic_blocks[p->target]);
   } return true;
