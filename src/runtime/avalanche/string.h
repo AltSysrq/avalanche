@@ -325,7 +325,7 @@ void ava_string_to_bytes(void*restrict dst, ava_string str,
  *
  * Complexity: O(1)
  */
-size_t ava_string_length(ava_string str) AVA_PURE;
+size_t ava_strlen(ava_string str) AVA_PURE;
 /**
  * Returns the character at the given index within the given string.
  *
@@ -352,7 +352,7 @@ ava_string ava_string_slice(ava_string, size_t begin, size_t end) AVA_PURE;
  */
 ava_string ava_string_trunc(ava_string str, size_t end) AVA_PURE;
 /**
- * Equivalent to ava_string_slice(str, begin, ava_string_length(str)), but more
+ * Equivalent to ava_string_slice(str, begin, ava_strlen(str)), but more
  * efficient.
  *
  * Complexity: Amortised O(1)

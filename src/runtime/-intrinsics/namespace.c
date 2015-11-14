@@ -130,14 +130,14 @@ ava_macro_subst_result ava_intr_import_subst(
     }
   }
 
-  source_len = ava_string_length(source);
+  source_len = ava_strlen(source);
   if (source_len && '.' != ava_string_index(source, source_len-1) &&
       ':' != ava_string_index(source, source_len-1)) {
     source = ava_strcat(source, AVA_ASCII9_STRING("."));
     ++source_len;
   }
 
-  dest_len = ava_string_length(dest);
+  dest_len = ava_strlen(dest);
   if (dest_len) {
     if (!ava_strcmp(AVA_ASCII9_STRING("*"), dest)) {
       dest = AVA_EMPTY_STRING;

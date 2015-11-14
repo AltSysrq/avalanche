@@ -855,7 +855,7 @@ noexcept {
       context.types.ava_string, ascii9);
   } else {
     const char* data = ava_string_to_cstring(string);
-    size_t size = (ava_string_length(string) +
+    size_t size = (ava_strlen(string) +
                    AVA_STRING_ALIGNMENT /* +1 for NUL, -1 for realign */)
       / AVA_STRING_ALIGNMENT * AVA_STRING_ALIGNMENT;
     llvm::Constant* strconst = llvm::ConstantDataArray::get(
@@ -881,7 +881,7 @@ noexcept {
       /* Bitcast arrayness away */
       llvm::ConstantExpr::getBitCast(
         strglob, context.types.ava_twine->getElementType(0)),
-      llvm::ConstantInt::get(context.types.c_size, ava_string_length(string)),
+      llvm::ConstantInt::get(context.types.c_size, ava_strlen(string)),
       twinetailconst,
       nullptr);
     llvm::GlobalVariable* twinevar = new llvm::GlobalVariable(

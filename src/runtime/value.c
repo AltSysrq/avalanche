@@ -233,7 +233,7 @@ static ava_ulong ava_value_siphash(ava_value value,
     n = 1;
     rem = 0;
   } else {
-    strlen = ava_string_length(str);
+    strlen = ava_strlen(str);
     data = (const ava_ulong*)ava_string_to_cstring_buff(tmpbuf, str);
     n = strlen / sizeof(ava_ulong);
     rem = strlen % sizeof(ava_ulong);

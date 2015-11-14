@@ -126,7 +126,7 @@ static ava_list_value ava_list_value_of_string(
                               result.index_start));
           }
 
-          if (1 != ava_string_length(result.str)) {
+          if (1 != ava_strlen(result.str)) {
             if (return_empty_on_fail)
               return ava_empty_list();
             else
@@ -210,7 +210,7 @@ ava_string ava_list_escape(ava_value val) {
   size_t strlen, i;
 
   str = ava_to_string(val);
-  strlen = ava_string_length(str);
+  strlen = ava_strlen(str);
 
   /* Special case: The empty string needs to be quoted, otherwise it will
    * disappear.
@@ -312,7 +312,7 @@ ava_string ava_list_escape(ava_value val) {
 
   escaped = ava_strcat(
     escaped, ava_string_slice(
-      str, clean_start, ava_string_length(str)));
+      str, clean_start, ava_strlen(str)));
   escaped = ava_strcat(
     escaped, AVA_ASCII9_STRING("\\}"));
 

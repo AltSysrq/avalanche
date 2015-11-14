@@ -355,7 +355,7 @@ static size_t ava_ascii9_length(ava_ascii9_string s) {
 #endif /* defined(__GNUC__) && defined(__SSE4_2__) */
 }
 
-size_t ava_string_length(ava_string str) {
+size_t ava_strlen(ava_string str) {
   if (str.ascii9 & 1) {
     return ava_ascii9_length(str.ascii9);
   } else {
@@ -392,8 +392,8 @@ ava_string ava_strcat(ava_string a, ava_string b) {
       ava_ascii9_length(a.ascii9) + ava_ascii9_length(b.ascii9) <= 9)
     return (ava_string) { .ascii9 = ava_ascii9_concat(a.ascii9, b.ascii9) };
 
-  alen = ava_string_length(a);
-  blen = ava_string_length(b);
+  alen = ava_strlen(a);
+  blen = ava_strlen(b);
 
   /* If one is empty, return the other */
   if (0 == alen) return b;
@@ -450,7 +450,7 @@ ava_string ava_string_slice(ava_string str, size_t begin, size_t end) {
     return ret;
   }
 
-  if (0 == begin && ava_string_length(str) == end)
+  if (0 == begin && ava_strlen(str) == end)
     return str;
 
   /* Convert to an ASCII9 string if possible */
@@ -487,7 +487,7 @@ ava_string ava_string_behead(ava_string str, size_t begin) {
     str.ascii9 |= 1;
     return str;
   } else {
-    return ava_string_slice(str, begin, ava_string_length(str));
+    return ava_string_slice(str, begin, ava_strlen(str));
   }
 }
 
@@ -502,8 +502,8 @@ signed ava_strcmp(ava_string a, ava_string b) {
 
   ac = ava_string_to_cstring_buff(atmp, a);
   bc = ava_string_to_cstring_buff(btmp, b);
-  alen = ava_string_length(a);
-  blen = ava_string_length(b);
+  alen = ava_strlen(a);
+  blen = ava_strlen(b);
   n = alen < blen? alen : blen;
   cmp = memcmp(ac, bc, n);
 
@@ -516,7 +516,7 @@ ava_bool ava_string_equal(ava_string a, ava_string b) {
   if (ava_string_is_ascii9(a) || ava_string_is_ascii9(b)) {
     return ava_string_to_ascii9(a) == ava_string_to_ascii9(b);
   } else {
-    size_t alen = ava_string_length(a), blen = ava_string_length(b);
+    size_t alen = ava_strlen(a), blen = ava_strlen(b);
     return alen == blen &&
       0 == memcmp(ava_twine_force(a.twine), ava_twine_force(b.twine),
                   alen);
@@ -537,10 +537,10 @@ ava_bool ava_string_starts_with(ava_string big, ava_string small) {
   if (ava_string_is_ascii9(big) && ava_string_is_ascii9(small))
     return ava_ascii9_starts_with(big.ascii9, small.ascii9);
 
-  small_len = ava_string_length(small);
+  small_len = ava_strlen(small);
   if (small_len > 9 && ava_string_is_ascii9(big)) return ava_false;
 
-  big_len = ava_string_length(big);
+  big_len = ava_strlen(big);
   if (small_len > big_len) return ava_false;
 
   smallc = ava_string_to_cstring_buff(smalltmp, small);
@@ -586,7 +586,7 @@ ava_ascii9_string ava_string_to_ascii9(ava_string str) {
   if (ava_string_is_ascii9(str))
     return str.ascii9;
 
-  len = ava_string_length(str);
+  len = ava_strlen(str);
   if (len > 9)
     return 0;
 
@@ -651,7 +651,7 @@ ssize_t ava_strchr(ava_string haystack, char needle) {
                  needle, needle, needle));
   } else {
     dat = ava_twine_force(haystack.twine);
-    found = memchr(dat, needle, ava_string_length(haystack));
+    found = memchr(dat, needle, ava_strlen(haystack));
     if (found)
       return found - dat;
     else

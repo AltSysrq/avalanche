@@ -613,7 +613,7 @@ static ava_bool ava_hash_map_to_ascii9(ava_value*restrict value) {
     return ava_true;
 
   str = ava_to_string(*value);
-  strlen = ava_string_length(str);
+  strlen = ava_strlen(str);
   if (strlen > 9)
     return ava_false;
 

@@ -207,7 +207,7 @@ static ava_var_casing ava_var_casing_of(ava_string name) {
   size_t strlen, i;
 
   str = ava_string_to_cstring_buff(tmp, name);
-  strlen = ava_string_length(name);
+  strlen = ava_strlen(name);
 
   for (i = 0; i < strlen; ++i) {
     has_upper |= (str[i] >= 'A' && str[i] <= 'Z');

@@ -380,7 +380,7 @@ static ava_bool ava_intr_fun_is_named(ava_string* name) {
   if (ava_string_is_empty(*name)) return ava_false;
 
   if ('-' == ava_string_index(*name, 0)) {
-    *name = ava_string_slice(*name, 1, ava_string_length(*name));
+    *name = ava_string_slice(*name, 1, ava_strlen(*name));
     return ava_true;
   } else {
     return ava_false;

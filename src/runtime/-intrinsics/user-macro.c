@@ -296,7 +296,7 @@ static void ava_intr_user_macro_body_translate_bareword(
   assert(ava_put_bareword == unit->type);
 
   value = unit->v.string;
-  strlen = ava_string_length(value);
+  strlen = ava_strlen(value);
   sigil = strlen? ava_string_index(value, 0) : 0;
   chopped = strlen? ava_string_slice(value, 1, strlen) : value;
 
@@ -397,7 +397,7 @@ static void ava_intr_user_macro_body_translate_splice(
 ) {
   enum { star, plus, singular } plurality;
   ava_uint begin, end;
-  size_t strlen = ava_string_length(tail);
+  size_t strlen = ava_strlen(tail);
   char plurality_ch;
 
   /* TODO: Indicate context */

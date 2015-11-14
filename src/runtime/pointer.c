@@ -125,7 +125,7 @@ const ava_pointer_prototype* ava_pointer_prototype_parse(ava_string protostr) {
   if (ava_string_is_empty(protostr))
     ava_throw_str(&ava_format_exception, ava_error_bad_pointer_prototype());
 
-  constness = ava_string_index(protostr, ava_string_length(protostr)-1);
+  constness = ava_string_index(protostr, ava_strlen(protostr)-1);
   switch (constness) {
   case '*': is_const = ava_false; break;
   case '&': is_const = ava_true;  break;
@@ -134,7 +134,7 @@ const ava_pointer_prototype* ava_pointer_prototype_parse(ava_string protostr) {
     /* unreachable */
   }
 
-  tag = ava_string_slice(protostr, 0, ava_string_length(protostr) - 1);
+  tag = ava_string_slice(protostr, 0, ava_strlen(protostr) - 1);
 
   if (ava_string_is_empty(tag))
     return is_const?

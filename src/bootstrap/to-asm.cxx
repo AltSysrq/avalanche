@@ -135,7 +135,7 @@ static void slurp_driver(const char** data_dst, size_t* size_dst,
   text = slurp_file(ava_string_of_cstring(infile));
 
   *data_dst = ava_string_to_cstring(text);
-  *size_dst = ava_string_length(text);
+  *size_dst = ava_strlen(text);
 }
 
 static ava_string derive_package_prefix(ava_string infile) {

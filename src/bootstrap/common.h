@@ -41,7 +41,7 @@ static void spit(ava_string outfile, const ava_pcode_global_list* pcode) {
   size_t len;
 
   pcode_string = ava_pcode_global_list_to_string(pcode, 0);
-  len = ava_string_length(pcode_string);
+  len = ava_strlen(pcode_string);
 
   out = fopen(ava_string_to_cstring(outfile), "w");
   if (!out)

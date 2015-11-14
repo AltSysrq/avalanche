@@ -421,7 +421,7 @@ static void ava_parse_simplify_group_tag(
   ava_parse_unit* orig, * bareword;
   ava_parse_statement* statement;
 
-  if (1 == ava_string_length(closing_token->str))
+  if (1 == ava_strlen(closing_token->str))
     /* No tag */
     return;
 
@@ -451,7 +451,7 @@ static void ava_parse_simplify_group_tag(
 
   bareword->v.string = ava_strcat(
     base, ava_string_slice(closing_token->str, 1,
-                           ava_string_length(closing_token->str)));
+                           ava_strlen(closing_token->str)));
 
   unit->type = ava_put_substitution;
   TAILQ_INIT(&unit->v.statements);
@@ -477,7 +477,7 @@ static ava_parse_unit_read_result ava_parse_bareword(
   ava_bool has_dollar;
   ava_bool in_var;
 
-  strlen = ava_string_length(token->str);
+  strlen = ava_strlen(token->str);
   content = ava_string_to_cstring_buff(strtmp, token->str);
 
   has_dollar = ava_false;
@@ -894,7 +894,7 @@ static ava_parse_unit_read_result ava_parse_subscript(
       ava_strcat(
         ava_string_slice(
           last_token.str,
-          1, ava_string_length(last_token.str)),
+          1, ava_strlen(last_token.str)),
         AVA_ASCII9_STRING("#")));
     tag_off = 1;
   } else {

@@ -59,7 +59,7 @@ deftest(string_of_chunk_iterator_empty) {
   ava_value x0 = xn_of(0);
   ava_string str = ava_to_string(x0);
 
-  ck_assert_int_eq(0, ava_string_length(str));
+  ck_assert_int_eq(0, ava_strlen(str));
 }
 
 deftest(string_of_chunk_iterator_power_of_two) {
@@ -68,7 +68,7 @@ deftest(string_of_chunk_iterator_power_of_two) {
   ava_string str = ava_to_string(x65536);
   unsigned i;
 
-  ck_assert_int_eq(sizeof(bytes), ava_string_length(str));
+  ck_assert_int_eq(sizeof(bytes), ava_strlen(str));
 
   ava_string_to_bytes(bytes, str, 0, sizeof(bytes));
   for (i = 0; i < sizeof(bytes); ++i)
@@ -81,7 +81,7 @@ deftest(string_of_chunk_iterator_power_of_two_minus_one) {
   ava_string str = ava_to_string(x65535);
   unsigned i;
 
-  ck_assert_int_eq(sizeof(bytes), ava_string_length(str));
+  ck_assert_int_eq(sizeof(bytes), ava_strlen(str));
 
   ava_string_to_bytes(bytes, str, 0, sizeof(bytes));
   for (i = 0; i < sizeof(bytes); ++i)
@@ -92,7 +92,7 @@ deftest(string_of_chunk_iterator_two) {
   ava_value x2 = xn_of(2);
   ava_string str = ava_to_string(x2);
 
-  ck_assert_int_eq(2, ava_string_length(str));
+  ck_assert_int_eq(2, ava_strlen(str));
   ck_assert_int_eq(1, ava_string_index(str, 0));
   ck_assert_int_eq(0, ava_string_index(str, 1));
 }

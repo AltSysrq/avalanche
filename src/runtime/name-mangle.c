@@ -27,7 +27,7 @@
 #include "-hexes.h"
 
 ava_demangled_name ava_name_demangle(ava_string instr) {
-  size_t srclen = ava_string_length(instr);
+  size_t srclen = ava_strlen(instr);
   char dst[srclen];
   ava_str_tmpbuff srctmp;
   const unsigned char* src;
@@ -92,7 +92,7 @@ ava_demangled_name ava_name_demangle(ava_string instr) {
 ava_string ava_name_mangle(ava_demangled_name name) {
   static const char hexits[16] = { '0', '1', '2', '3', '4', '5', '6', '7',
                                    '8', '9', 'A', 'B', 'C', 'D', 'E', 'F' };
-  size_t srclen = ava_string_length(name.name);
+  size_t srclen = ava_strlen(name.name);
   char dst[2 + srclen*3];
   ava_str_tmpbuff srctmp;
   const unsigned char* src;

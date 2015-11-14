@@ -96,11 +96,11 @@ static ava_string validate_infile(ava_string dir_prefix, ava_string infile) {
     errx(EX_USAGE, "%s does not start with %s",
          ava_string_to_cstring(infile), ava_string_to_cstring(dir_prefix));
 
-  len = ava_string_length(infile);
+  len = ava_strlen(infile);
   if (len < 5 || !ava_string_equal(AVA_ASCII9_STRING(".avam"),
                                    ava_string_slice(infile, len - 5, len)))
     errx(EX_USAGE, "%s does not end with .avam",
          ava_string_to_cstring(infile));
 
-  return ava_string_slice(infile, ava_string_length(dir_prefix), len - 5);
+  return ava_string_slice(infile, ava_strlen(dir_prefix), len - 5);
 }

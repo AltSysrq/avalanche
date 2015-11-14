@@ -48,32 +48,32 @@ static void assert_matches_large_string(
 ) {
   char dat[end - begin];
 
-  ck_assert_int_eq(end - begin, ava_string_length(str));
+  ck_assert_int_eq(end - begin, ava_strlen(str));
   ava_string_to_bytes(dat, str, 0, end - begin);
   ck_assert_int_eq(0, memcmp(dat, large_string + begin, end - begin));
 }
 
 deftest(length_of_empty_string_is_zero) {
-  ck_assert_int_eq(0, ava_string_length(AVA_EMPTY_STRING));
+  ck_assert_int_eq(0, ava_strlen(AVA_EMPTY_STRING));
 }
 
 deftest(length_of_ascii9_hello_is_5) {
-  ck_assert_int_eq(5, ava_string_length(AVA_ASCII9_STRING("hello")));
+  ck_assert_int_eq(5, ava_strlen(AVA_ASCII9_STRING("hello")));
 }
 
 deftest(length_of_ascii9_avalanche_is_9) {
-  ck_assert_int_eq(9, ava_string_length(AVA_ASCII9_STRING("avalanche")));
+  ck_assert_int_eq(9, ava_strlen(AVA_ASCII9_STRING("avalanche")));
 }
 
 deftest(length_of_flat_helloworld_is_10) {
   AVA_STATIC_STRING(hello_world, "helloworld");
-  ck_assert_int_eq(10, ava_string_length(hello_world));
+  ck_assert_int_eq(10, ava_strlen(hello_world));
 }
 
 deftest(string_of_hello_produces_ascii9_string) {
   ava_string str = ava_string_of_cstring("hello");
   ck_assert(str.ascii9 & 1);
-  ck_assert_int_eq(5, ava_string_length(str));
+  ck_assert_int_eq(5, ava_strlen(str));
 }
 
 deftest(ascii9_string_index) {
@@ -117,7 +117,7 @@ deftest(rope_of_flat_and_ascii9_index) {
 deftest(string_of_hello_world_produces_heap_string) {
   ava_string str = ava_string_of_cstring("hello world");
   ck_assert(!(str.ascii9 & 1));
-  ck_assert_int_eq(11, ava_string_length(str));
+  ck_assert_int_eq(11, ava_strlen(str));
 }
 
 deftest(string_of_cstring_produces_nonstring) {
@@ -133,7 +133,7 @@ deftest(string_of_bytes_accepts_nuls) {
   ava_string str = ava_string_of_bytes(dat, sizeof(dat));
   unsigned i;
 
-  ck_assert_int_eq(sizeof(dat), ava_string_length(str));
+  ck_assert_int_eq(sizeof(dat), ava_strlen(str));
 
   for (i = 0; i < sizeof(dat); ++i)
     ck_assert_int_eq(dat[i], ava_string_index(str, i));
@@ -151,15 +151,15 @@ deftest(string_of_char_produces_single_character_string) {
   ava_string str;
 
   str = ava_string_of_char(0);
-  ck_assert_int_eq(1, ava_string_length(str));
+  ck_assert_int_eq(1, ava_strlen(str));
   ck_assert_int_eq(0, ava_string_index(str, 0));
 
   str = ava_string_of_char('x');
-  ck_assert_int_eq(1, ava_string_length(str));
+  ck_assert_int_eq(1, ava_strlen(str));
   ck_assert_int_eq('x', ava_string_index(str, 0));
 
   str = ava_string_of_char(255);
-  ck_assert_int_eq(1, ava_string_length(str));
+  ck_assert_int_eq(1, ava_strlen(str));
   ck_assert_int_eq(255, ava_string_index(str, 0) & 0xFF);
 }
 
@@ -212,7 +212,7 @@ deftest(ascii9_ascii9_to_ascii9_concat) {
     AVA_ASCII9_STRING("bar"));
 
   ck_assert(str.ascii9 & 1);
-  ck_assert_int_eq(6, ava_string_length(str));
+  ck_assert_int_eq(6, ava_strlen(str));
   ck_assert_str_eq("foobar", ava_string_to_cstring(str));
 }
 
@@ -222,7 +222,7 @@ deftest(empty_ascii9_to_ascii9_concat) {
     AVA_ASCII9_STRING("foo"));
 
   ck_assert(str.ascii9 & 1);
-  ck_assert_int_eq(3, ava_string_length(str));
+  ck_assert_int_eq(3, ava_strlen(str));
   ck_assert_str_eq("foo", ava_string_to_cstring(str));
 }
 
@@ -232,7 +232,7 @@ deftest(ascii9_empty_to_ascii9_concat) {
     AVA_EMPTY_STRING);
 
   ck_assert(str.ascii9 & 1);
-  ck_assert_int_eq(3, ava_string_length(str));
+  ck_assert_int_eq(3, ava_strlen(str));
   ck_assert_str_eq("foo", ava_string_to_cstring(str));
 }
 
@@ -241,7 +241,7 @@ deftest(ascii9_ascii9_to_flat_concat) {
     AVA_ASCII9_STRING("avalanche"),
     AVA_ASCII9_STRING("foobar"));
 
-  ck_assert_int_eq(15, ava_string_length(str));
+  ck_assert_int_eq(15, ava_strlen(str));
   ck_assert_str_eq("avalanchefoobar", ava_string_to_cstring(str));
 }
 
@@ -250,7 +250,7 @@ deftest(ascii9_flat_to_flat_concat) {
   ava_string str = ava_strcat(
     AVA_ASCII9_STRING("foo"), flat);
 
-  ck_assert_int_eq(5, ava_string_length(str));
+  ck_assert_int_eq(5, ava_strlen(str));
   ck_assert_str_eq("foo\303\237", ava_string_to_cstring(str));
 }
 
@@ -259,7 +259,7 @@ deftest(flat_ascii9_to_flat_concat) {
   ava_string str = ava_strcat(
     flat, AVA_ASCII9_STRING("foo"));
 
-  ck_assert_int_eq(5, ava_string_length(str));
+  ck_assert_int_eq(5, ava_strlen(str));
   ck_assert_str_eq("\303\237foo", ava_string_to_cstring(str));
 }
 
@@ -267,7 +267,7 @@ deftest(flat_flat_to_flat_concat) {
   AVA_STATIC_STRING(flat, "\303\237");
   ava_string str = ava_strcat(flat, flat);
 
-  ck_assert_int_eq(4, ava_string_length(str));
+  ck_assert_int_eq(4, ava_strlen(str));
   ck_assert_str_eq("\303\237\303\237", ava_string_to_cstring(str));
 }
 

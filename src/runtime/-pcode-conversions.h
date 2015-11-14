@@ -30,7 +30,7 @@ static ava_pcode_register_type ava_pcode_parse_register_type(
   ava_value value
 ) {
   ava_string str = ava_to_string(value);
-  size_t length = ava_string_length(str);
+  size_t length = ava_strlen(str);
 
   if (1 != length)
     FORMAT_ERROR("Register type of non-1 length");
@@ -64,7 +64,7 @@ static ava_string ava_pcode_register_type_to_string(
 
 static ava_pcode_register ava_pcode_parse_register(ava_value value) {
   ava_string str = ava_to_string(value);
-  size_t length = ava_string_length(str);
+  size_t length = ava_strlen(str);
   ava_pcode_register reg;
   ava_integer index;
 

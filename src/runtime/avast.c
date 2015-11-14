@@ -89,7 +89,7 @@ defun(byte_string__concat)(ava_value a, ava_value b) {
 
 defun(byte_string__length)(ava_value a) {
   return ava_value_of_integer(
-    ava_string_length(ava_to_string(a)));
+    ava_strlen(ava_to_string(a)));
 }
 
 defun(byte_string__equ)(ava_value a, ava_value b) {

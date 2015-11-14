@@ -52,7 +52,7 @@ ava_integer ava_integer_of_noninteger_value(
   ava_str_tmpbuff tmpbuff;
   size_t strlen;
 
-  strlen = ava_string_length(str);
+  strlen = ava_strlen(str);
 
   /* Inlined case only checks for ASCII9 empty string. */
   if (0 == strlen)
@@ -142,7 +142,7 @@ ava_bool ava_string_is_integer(ava_string str) {
   ava_str_tmpbuff tmpbuff;
   size_t strlen;
 
-  strlen = ava_string_length(str);
+  strlen = ava_strlen(str);
 
   if (str.ascii9 & 1 &&
       PARSE_DEC_FAST_ERROR != ava_integer_parse_dec_fast(str.ascii9, strlen))
