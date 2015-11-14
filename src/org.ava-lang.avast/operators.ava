@@ -180,3 +180,6 @@ ALIAS #name-subscript#get#?# = map.get-last-or-empty
 ALIAS #name-subscript#with#?# = map.remap-one
 ALIAS #name-subscript#get#*# = map.get-all
 ALIAS #name-subscript#with#*# = map.remap-all
+ALIAS #string-subscript#get## = byte-string.index
+ALIAS #string-subscript#with## = byte-string.set
+ALIAS #string-subscript#get#?# = byte-string.index-lenient

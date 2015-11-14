@@ -72,6 +72,59 @@ namespace byte-string {
   EXTERN sgt "" ava pos pos
   ; Equivalent to (($compare $lhs $rhs) >= 0)
   EXTERN geq "" ava pos pos
+
+  ; Indexes or slices a string in terms of bytes.
+  ;
+  ; Note that there is nothing preventing, eg, the splitting of UTF-8 sequences
+  ; with this function; it operates strictly in terms of the raw byte-sequence.
+  ;
+  ; :arg str The string to slice.
+  ;
+  ; :arg ix The index into the string. This is an interval; a single integer
+  ; selects the single byte at that index, while a range selects a substring.
+  ;
+  ; :return A string containing the selected bytes.
+  ;
+  ; :throw error(out-of-bounds) if $ix indicates an index that is not within
+  ; the string's bounds.
+  ;
+  ; :throw error(illegal-range) if $ix is a range with a maximum less than the
+  ; minimum.
+  EXTERN index "" ava pos pos
+  ; Replaces a substring of a string with another string.
+  ;
+  ; As with $index, nothing prentes mangling of UTF-8 sequences and so forth
+  ; when using this function.
+  ;
+  ; :arg str The string whose substring is to be replaced.
+  ;
+  ; :arg ix The index into the string. This is an interval; a single integer
+  ; causes a single byte to be replaced, while a range selects a (possibly
+  ; empty) substring. A singular range is permitted to refer to the index one
+  ; past the end of the string, which causes the replacement to be simply
+  ; appended.
+  ;
+  ; :arg replacement The new string to insert at the selected range. Note that,
+  ; even if $ix is singular, this need not be a single character.
+  ;
+  ; :return A string where the substring of $str selected by $ix has been
+  ; replaced by the bytes of $replacement.
+  ;
+  ; :throw error(out-of-bounds) if $ix indicates an index that is not within
+  ; the string's bounds.
+  ;
+  ; :throw error(illegal-range) if $ix is a range with a maximum less than the
+  ; minimum.
+  EXTERN set "" ava pos pos pos
+  ; Like $index, except that the empty string is returned if $ix is singular
+  ; and out of bounds or is an illegal range, and $ix is implicitly clamped to
+  ; the valid boundaries of the string.
+  ;
+  ; Note that there is no corresponding {set-lenient} operation, since there is
+  ; no logical way out-of-bounds access or illegal ranges could be interpreted.
+  ; (For example, in {foo = "" \ foo{65536}? = x}, what would the result of
+  ; {foo} be after execution?)
+  EXTERN index-lenient "" ava pos pos
 }
 
 ; The #string-concat# special used by string concatenation operators.

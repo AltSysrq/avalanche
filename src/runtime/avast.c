@@ -80,6 +80,68 @@ static inline ava_integer obfuscate_comparison(ava_integer raw) {
 #endif
 }
 
+void fun(throw__singular_out_of_bounds)
+(ava_integer index, ava_integer max) AVA_NORETURN;
+void fun(throw__range_out_of_bounds)
+(ava_integer range_min, ava_integer range_max, ava_integer max) AVA_NORETURN;
+void fun(throw__inverted_range)
+(ava_integer range_min, ava_integer range_max) AVA_NORETURN;
+
+#ifndef COMPILING_DRIVER
+void fun(throw__singular_out_of_bounds)(ava_integer ix, ava_integer max) {
+  AVA_STATIC_STRING(out_of_bounds, "out-of-bounds");
+  ava_throw_uex(&ava_error_exception, out_of_bounds,
+                ava_error_singular_index_out_of_bounds(ix, max));
+}
+
+void fun(throw__range_out_of_bounds)(ava_integer range_min,
+                                     ava_integer range_max,
+                                     ava_integer max) {
+  AVA_STATIC_STRING(out_of_bounds, "out-of-bounds");
+  ava_throw_uex(&ava_error_exception, out_of_bounds,
+                ava_error_range_index_out_of_bounds(
+                  range_min, range_max, max));
+}
+
+void fun(throw__inverted_range)(ava_integer range_min,
+                                ava_integer range_max) {
+  AVA_STATIC_STRING(illegal_range, "illegal-range");
+  ava_throw_uex(&ava_error_exception, illegal_range,
+                ava_error_range_inverted(range_min, range_max));
+}
+#endif
+
+static inline void strict_index_check(ava_integer ix, ava_integer max) {
+  if (ix < 0 || ix >= max)
+    fun(throw__singular_out_of_bounds)(ix, max);
+}
+
+static inline void strict_range_check(ava_integer range_min,
+                                      ava_integer range_max,
+                                      ava_integer max) {
+  if (range_max < range_min)
+    fun(throw__inverted_range)(range_min, range_max);
+
+  if (range_min < 0 || range_min > max ||
+      range_max < 0 || range_max > max)
+    fun(throw__range_out_of_bounds)(range_min, range_max, max);
+}
+
+static inline ava_bool lenient_index_check(ava_integer ix, ava_integer max) {
+  return ix >= 0 && ix < max;
+}
+
+static inline void lenient_range_check(ava_integer* range_min,
+                                       ava_integer* range_max,
+                                       ava_integer max) {
+  if (*range_min < 0) *range_min = 0;
+  else if (*range_min > max) *range_min = max;
+  if (*range_max > max) *range_max = max;
+
+  if (*range_max < *range_min)
+    *range_max = *range_min;
+}
+
 /******************** STRING OPERATIONS ********************/
 
 defun(byte_string__concat)(ava_value a, ava_value b) {
@@ -114,6 +176,76 @@ COMPARATOR(leq, <= 0)
 COMPARATOR(sgt, > 0)
 COMPARATOR(geq, >= 0)
 #undef COMPARATOR
+
+defun(byte_string__index)(ava_value str, ava_value index) {
+  ava_string s, ret;
+  ava_integer max, begin, end;
+  ava_interval_value ival;
+
+  s = ava_to_string(str);
+  max = ava_strlen(s);
+  ival = ava_interval_value_of(index);
+  if (ava_interval_is_singular(ival)) {
+    begin = ava_interval_get_singular(ival, max);
+    strict_index_check(begin, max);
+    ret = ava_string_slice(s, begin, begin+1);
+  } else {
+    begin = ava_interval_get_begin(ival, max);
+    end = ava_interval_get_end(ival, max);
+    strict_range_check(begin, end, max);
+    ret = ava_string_slice(s, begin, end);
+  }
+
+  return ava_value_of_string(ret);
+}
+
+defun(byte_string__set)(ava_value str, ava_value index, ava_value new) {
+  ava_string s, prefix, suffix;
+  ava_integer max, begin, end;
+  ava_interval_value ival;
+
+  s = ava_to_string(str);
+  max = ava_strlen(s);
+  ival = ava_interval_value_of(index);
+  if (ava_interval_is_singular(ival)) {
+    begin = ava_interval_get_singular(ival, max);
+    strict_index_check(begin, max + 1);
+    end = begin + 1;
+  } else {
+    begin = ava_interval_get_begin(ival, max);
+    end = ava_interval_get_end(ival, max);
+    strict_range_check(begin, end, max);
+  }
+
+  prefix = ava_string_trunc(s, begin);
+  suffix = end < max? ava_string_behead(s, end) : AVA_EMPTY_STRING;
+  return ava_value_of_string(
+    ava_strcat(ava_strcat(prefix, ava_to_string(new)), suffix));
+}
+
+defun(byte_string__index_lenient)(ava_value str, ava_value index) {
+  ava_string s, ret;
+  ava_integer max, begin, end;
+  ava_interval_value ival;
+
+  s = ava_to_string(str);
+  max = ava_strlen(s);
+  ival = ava_interval_value_of(index);
+  if (ava_interval_is_singular(ival)) {
+    begin = ava_interval_get_singular(ival, max);
+    if (lenient_index_check(begin, max))
+      ret = ava_string_slice(s, begin, begin+1);
+    else
+      ret = AVA_EMPTY_STRING;
+  } else {
+    begin = ava_interval_get_begin(ival, max);
+    end = ava_interval_get_end(ival, max);
+    lenient_range_check(&begin, &end, max);
+    ret = ava_string_slice(s, begin, end);
+  }
+
+  return ava_value_of_string(ret);
+}
 
 /******************** INTEGER OPERATIONS ********************/
 

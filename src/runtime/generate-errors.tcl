@@ -449,6 +449,48 @@ set defs {
     }
   }
 
+  serror R0042 singular_index_out_of_bounds {
+    {ava_integer ix} {ava_integer max}
+  } {
+    msg "Index %ix% out of range (0 ~ %max%)"
+    explanation {
+      An array-like structure was accessed with a single index not within its
+      legal range.
+
+      A lenient variant of the indexing operator (eg, []? for lists) may
+      provide an elegant way to handle out-of-bounds values in certain cases.
+    }
+  }
+
+  serror R0043 range_index_out_of_bounds {
+    {ava_integer range_min} {ava_integer range_max}
+    {ava_integer max}
+  } {
+    msg "Range (%range_min% ~ %range_max%) not a subset of (0 ~ %max%)"
+    explanation {
+      An array-like structure was accessed with a range which includes indices
+      which are not within the legal range.
+
+      A lenient variant of the indexing operator (eg, []? for lists) may
+      provide an elegant way to handle ranges like this if range clamping is
+      indeed the desired behaviour.
+    }
+  }
+
+  serror R0044 range_inverted {
+    {ava_integer range_min} {ava_integer range_max}
+  } {
+    msg "Nonsensical range (%range_min% ~ %range_max%)"
+    explanation {
+      The effective range passed to an array-like indexing operator has a
+      maximum which is less than the minimum.
+
+      If it would be appropriate to silently treat such ranges as the empty
+      range, a lenient version of the indexing operator (eg, []? for lists) may
+      be useful.
+    }
+  }
+
   serror U3000 undef_integer_overflow {
     {ava_integer a} {ava_string op} {ava_integer b}
   } {
