@@ -262,7 +262,7 @@ std::unique_ptr<llvm::Module> ava::xcode_to_ir_translator::translate(
   llvm::LLVMContext& llvm_context,
   std::string& error)
 const noexcept {
-  ava_string full_module_name = ava_string_concat(package_prefix, module_name);
+  ava_string full_module_name = ava_strcat(package_prefix, module_name);
 
   std::unique_ptr<llvm::Module> module(
     new llvm::Module(llvm::StringRef(ava_string_to_cstring(full_module_name)),
@@ -988,7 +988,7 @@ noexcept {
         context.module.getOrInsertFunction(
           ava::get_init_fun_name(
             ava_string_to_cstring(
-              ava_string_concat(
+              ava_strcat(
                 v->name, AVA_ASCII9_STRING(":"))), ""),
           init_fun_type));
     }

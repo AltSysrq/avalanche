@@ -242,7 +242,7 @@ static void add_dependent_modules(
         TAILQ_INIT(&errors);
         if (!ava_compenv_compile_file(
               NULL, &submod, compenv,
-              ava_string_concat(lm->name, AVA_ASCII9_STRING(".ava")),
+              ava_strcat(lm->name, AVA_ASCII9_STRING(".ava")),
               &errors, NULL)) {
           ck_abort_msg("Compilation of submodule %s failed:\n%s",
                        ava_string_to_cstring(lm->name),

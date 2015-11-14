@@ -363,7 +363,7 @@ ava_string ava_string_behead(ava_string str, size_t begin) AVA_PURE;
  *
  * Complexity: Amortized O(1)
  */
-ava_string ava_string_concat(ava_string left, ava_string right) AVA_PURE;
+ava_string ava_strcat(ava_string left, ava_string right) AVA_PURE;
 
 /**
  * Returns a 32-bit hash of the given ASCII9 string.

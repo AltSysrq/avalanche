@@ -855,7 +855,7 @@ ava_function_bind_status ava_function_bind(
 
     default:
       *message = ava_error_function_unbound_argument(
-        ava_string_concat(
+        ava_strcat(
           AVA_ASCII9_STRING("#"),
           ava_to_string(ava_value_of_integer(arg+1))));
       return ava_fbs_impossible;

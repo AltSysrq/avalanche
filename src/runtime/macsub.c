@@ -150,7 +150,7 @@ ava_string ava_macsub_apply_prefix(
   const ava_macsub_context* context,
   ava_string simple_name
 ) {
-  return ava_string_concat(context->symbol_prefix, simple_name);
+  return ava_strcat(context->symbol_prefix, simple_name);
 }
 
 unsigned ava_macsub_get_level(const ava_macsub_context* context) {
@@ -179,24 +179,24 @@ void ava_macsub_gensym_seed(ava_macsub_context* context,
 
     context->gensym->last_seed = location->source;
     context->gensym->base_prefix =
-      ava_string_concat(
+      ava_strcat(
         AVA_ASCII9_STRING("?["),
-        ava_string_concat(
+        ava_strcat(
           ava_string_of_bytes(buf, sizeof(buf)),
           AVA_ASCII9_STRING("];")));
   }
 
   ++context->gensym->generation;
-  context->gensym->prefix = ava_string_concat(
+  context->gensym->prefix = ava_strcat(
     context->gensym->base_prefix,
-    ava_string_concat(
+    ava_strcat(
       ava_to_string(ava_value_of_integer(context->gensym->generation)),
       AVA_ASCII9_STRING(";")));
 }
 
 ava_string ava_macsub_gensym(const ava_macsub_context* context,
                              ava_string key) {
-  return ava_string_concat(context->gensym->prefix, key);
+  return ava_strcat(context->gensym->prefix, key);
 }
 
 ava_macsub_context* ava_macsub_context_push_major(
@@ -210,7 +210,7 @@ ava_macsub_context* ava_macsub_context_push_major(
   this->compenv = parent->compenv;
   this->varscope = ava_varscope_new();
   this->errors = parent->errors;
-  this->symbol_prefix = ava_string_concat(parent->symbol_prefix, interfix);
+  this->symbol_prefix = ava_strcat(parent->symbol_prefix, interfix);
   this->panic = parent->panic;
   this->level = parent->level + 1;
   this->gensym = parent->gensym;
@@ -229,7 +229,7 @@ ava_macsub_context* ava_macsub_context_push_minor(
   this->compenv = parent->compenv;
   this->varscope = parent->varscope;
   this->errors = parent->errors;
-  this->symbol_prefix = ava_string_concat(parent->symbol_prefix, interfix);
+  this->symbol_prefix = ava_strcat(parent->symbol_prefix, interfix);
   this->panic = parent->panic;
   this->level = parent->level;
   this->gensym = parent->gensym;

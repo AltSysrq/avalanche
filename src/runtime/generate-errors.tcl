@@ -2129,14 +2129,14 @@ proc build-string {dst code fmt parms} {
       if {{} eq $segment} {
         # Nothing to do
       } elseif {[is-ascii9 $segment]} {
-        puts "  $dst = ava_string_concat("
+        puts "  $dst = ava_strcat("
         puts "    $dst, AVA_ASCII9_STRING([quote $segment]));"
       } else {
         puts "  { AVA_STATIC_STRING(_segment, [quote $segment]);"
-        puts "    $dst = ava_string_concat($dst, _segment); }"
+        puts "    $dst = ava_strcat($dst, _segment); }"
       }
     } else {
-      puts "  $dst = ava_string_concat("
+      puts "  $dst = ava_strcat("
       puts "    $dst,"
       puts "    [[dict get $types $segment]-to-string $segment]);"
     }

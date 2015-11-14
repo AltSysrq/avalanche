@@ -612,7 +612,7 @@ static void ava_lex_accum_verb(
   const ava_lex_pos* frag_start,
   ava_lex_context* lex
 ) {
-  lex->accum = ava_string_concat(
+  lex->accum = ava_strcat(
     lex->accum,
     ava_string_slice(lex->str, frag_start->index, lex->p.index));
 }
@@ -621,7 +621,7 @@ static void ava_lex_accum_nl(
   const ava_lex_pos* frag_start,
   ava_lex_context* lex
 ) {
-  lex->accum = ava_string_concat(
+  lex->accum = ava_strcat(
     lex->accum, AVA_ASCII9_STRING("\n"));
 }
 
@@ -657,7 +657,7 @@ static void ava_lex_accum_esc_off(
   default: abort();
   }
 
-  lex->accum = ava_string_concat(lex->accum, ava_string_of_char(ch));
+  lex->accum = ava_strcat(lex->accum, ava_string_of_char(ch));
 }
 
 static void ava_lex_accum_esc(

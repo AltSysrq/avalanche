@@ -135,14 +135,14 @@ static ava_string ava_intr_pasta_to_string(const ava_intr_pasta* this) {
   accum = AVA_ASCII9_STRING("pasta {");
   for (i = 0; i < this->num_clauses; ++i) {
     if (this->clauses[i].symbol) {
-      accum = ava_string_concat(accum, this->clauses[i].symbol->full_name);
-      accum = ava_string_concat(accum, AVA_ASCII9_STRING(": "));
+      accum = ava_strcat(accum, this->clauses[i].symbol->full_name);
+      accum = ava_strcat(accum, AVA_ASCII9_STRING(": "));
     }
-    accum = ava_string_concat(
+    accum = ava_strcat(
       accum, ava_ast_node_to_string(this->clauses[i].body));
-    accum = ava_string_concat(accum, AVA_ASCII9_STRING("; "));
+    accum = ava_strcat(accum, AVA_ASCII9_STRING("; "));
   }
-  accum = ava_string_concat(accum, AVA_ASCII9_STRING(" }"));
+  accum = ava_strcat(accum, AVA_ASCII9_STRING(" }"));
 
   return accum;
 }
@@ -302,7 +302,7 @@ static void ava_intr_goto_postprocess(ava_intr_goto* this) {
 }
 
 static ava_string ava_intr_goto_to_string(const ava_intr_goto* this) {
-  return ava_string_concat(AVA_ASCII9_STRING("goto "),
+  return ava_strcat(AVA_ASCII9_STRING("goto "),
                            this->target? this->target->full_name :
                            this->target_name);
 }

@@ -83,7 +83,7 @@ static inline ava_integer obfuscate_comparison(ava_integer raw) {
 
 defun(byte_string__concat)(ava_value a, ava_value b) {
   return ava_value_of_string(
-    ava_string_concat(
+    ava_strcat(
       ava_to_string(a), ava_to_string(b)));
 }
 
@@ -402,7 +402,7 @@ defun(real__fpclassify)(ava_value a) {
   case FP_ZERO:     res = AVA_ASCII9_STRING("zero"); break;
   default:
     ava_throw_str(&ava_internal_exception,
-                  ava_string_concat(
+                  ava_strcat(
                     error_base,
                     ava_to_string(ava_value_of_integer(class))));
   }

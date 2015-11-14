@@ -120,7 +120,7 @@ ava_string ava_error_list_to_string(
     error_header = AVA_ASCII9_STRING("[ERROR] ");
   }
 
-#define CAT(after) (accum = ava_string_concat(accum, (after)))
+#define CAT(after) (accum = ava_strcat(accum, (after)))
 #define CATA(after) CAT(AVA_ASCII9_STRING(after))
 #define CATI(after) CAT(ava_to_string(ava_value_of_integer(after)))
 

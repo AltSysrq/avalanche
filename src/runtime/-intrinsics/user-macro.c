@@ -514,28 +514,28 @@ static ava_string ava_intr_user_macro_to_string(
   ava_string accum;
 
   accum = node->self_name;
-  accum = ava_string_concat(accum, AVA_ASCII9_STRING(" "));
-  accum = ava_string_concat(accum, node->symbol->full_name);
+  accum = ava_strcat(accum, AVA_ASCII9_STRING(" "));
+  accum = ava_strcat(accum, node->symbol->full_name);
   switch (node->symbol->type) {
   case ava_st_control_macro:
-    accum = ava_string_concat(accum, AVA_ASCII9_STRING(" control "));
+    accum = ava_strcat(accum, AVA_ASCII9_STRING(" control "));
     break;
 
   case ava_st_operator_macro:
-    accum = ava_string_concat(accum, AVA_ASCII9_STRING(" op "));
-    accum = ava_string_concat(
+    accum = ava_strcat(accum, AVA_ASCII9_STRING(" op "));
+    accum = ava_strcat(
       accum, ava_to_string(ava_value_of_integer(
                              node->symbol->v.macro.precedence)));
-    accum = ava_string_concat(accum, AVA_ASCII9_STRING(" "));
+    accum = ava_strcat(accum, AVA_ASCII9_STRING(" "));
     break;
 
   case ava_st_function_macro:
-    accum = ava_string_concat(accum, AVA_ASCII9_STRING(" fun "));
+    accum = ava_strcat(accum, AVA_ASCII9_STRING(" fun "));
     break;
 
   default: abort();
   }
-  accum = ava_string_concat(
+  accum = ava_strcat(
     accum, ava_pcode_macro_list_to_string(
       node->symbol->v.macro.userdata, 1));
   return accum;

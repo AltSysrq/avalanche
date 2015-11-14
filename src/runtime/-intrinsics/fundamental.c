@@ -118,27 +118,27 @@ static ava_string ava_intr_seq_to_string(const ava_intr_seq* seq) {
   accum = AVA_ASCII9_STRING("seq(");
   switch (seq->return_policy) {
   case ava_isrp_void:
-    accum = ava_string_concat(accum, AVA_ASCII9_STRING("void"));
+    accum = ava_strcat(accum, AVA_ASCII9_STRING("void"));
     break;
   case ava_isrp_only:
-    accum = ava_string_concat(accum, AVA_ASCII9_STRING("only"));
+    accum = ava_strcat(accum, AVA_ASCII9_STRING("only"));
     break;
   case ava_isrp_last:
-    accum = ava_string_concat(accum, AVA_ASCII9_STRING("last"));
+    accum = ava_strcat(accum, AVA_ASCII9_STRING("last"));
     break;
   }
-  accum = ava_string_concat(accum, AVA_ASCII9_STRING(") { "));
+  accum = ava_strcat(accum, AVA_ASCII9_STRING(") { "));
 
   STAILQ_FOREACH(entry, &seq->children, next) {
-    accum = ava_string_concat(
+    accum = ava_strcat(
       accum, (*entry->node->v->to_string)(entry->node));
     if (STAILQ_NEXT(entry, next))
-      accum = ava_string_concat(accum, AVA_ASCII9_STRING("; "));
+      accum = ava_strcat(accum, AVA_ASCII9_STRING("; "));
     else
-      accum = ava_string_concat(accum, AVA_ASCII9_STRING(" "));
+      accum = ava_strcat(accum, AVA_ASCII9_STRING(" "));
   }
 
-  accum = ava_string_concat(accum, AVA_ASCII9_STRING("}"));
+  accum = ava_strcat(accum, AVA_ASCII9_STRING("}"));
   return accum;
 }
 
@@ -522,7 +522,7 @@ static ava_string ava_intr_string_expr_to_string(
   else
     str = AVA_ASCII9_STRING("string:");
 
-  return ava_string_concat(str, node->value);
+  return ava_strcat(str, node->value);
 }
 
 static ava_ast_node* ava_intr_string_expr_to_lvalue(
@@ -630,13 +630,13 @@ static ava_string ava_intr_semilit_to_string(
   accum = AVA_ASCII9_STRING("[");
   for (i = 0; i < node->num_elements; ++i) {
     if (i)
-      accum = ava_string_concat(accum, AVA_ASCII9_STRING(" "));
+      accum = ava_strcat(accum, AVA_ASCII9_STRING(" "));
 
-    accum = ava_string_concat(
+    accum = ava_strcat(
       accum, ava_ast_node_to_string(node->elements[i]));
   }
 
-  return ava_string_concat(accum, AVA_ASCII9_STRING("]"));
+  return ava_strcat(accum, AVA_ASCII9_STRING("]"));
 }
 
 static void ava_intr_semilit_postprocess(
@@ -769,7 +769,7 @@ static ava_ast_node* ava_intr_spread_of(
 }
 
 static ava_string ava_intr_spread_to_string(const ava_intr_spread* node) {
-  return ava_string_concat(AVA_ASCII9_STRING("\\*"),
+  return ava_strcat(AVA_ASCII9_STRING("\\*"),
                            ava_ast_node_to_string(node->child));
 }
 

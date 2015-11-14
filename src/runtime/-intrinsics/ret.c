@@ -78,7 +78,7 @@ ava_macro_subst_result ava_intr_ret_subst(
 }
 
 static ava_string ava_intr_ret_to_string(const ava_intr_ret* node) {
-  return ava_string_concat(
+  return ava_strcat(
     AVA_ASCII9_STRING("ret "), ava_ast_node_to_string(node->value));
 }
 

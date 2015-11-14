@@ -69,8 +69,8 @@ static ava_value main_impl(void* arg) {
     errx(EX_USAGE, "Bad input filename: %s", argv[1]);
 
   package_name = ava_string_of_bytes(argv[1], slash - argv[1]);
-  package_prefix = ava_string_concat(package_name, AVA_ASCII9_STRING(":"));
-  file_prefix = ava_string_concat(package_name, AVA_ASCII9_STRING("/"));
+  package_prefix = ava_strcat(package_name, AVA_ASCII9_STRING(":"));
+  file_prefix = ava_strcat(package_name, AVA_ASCII9_STRING("/"));
   infile = ava_string_of_cstring(slash + 1);
 
   len = ava_string_length(infile);
@@ -78,11 +78,11 @@ static ava_value main_impl(void* arg) {
                                    ava_string_slice(infile, len - 4, len)))
     errx(EX_USAGE, "Bad input filename: %s", argv[1]);
 
-  outfile = ava_string_concat(
+  outfile = ava_strcat(
     ava_string_slice(infile, 0, len - 4), AVA_ASCII9_STRING(".avam"));
 
   pcode = compile(package_prefix, file_prefix, infile);
-  spit(ava_string_concat(file_prefix, outfile), pcode);
+  spit(ava_strcat(file_prefix, outfile), pcode);
 
   return ava_value_of_string(AVA_EMPTY_STRING);
 }

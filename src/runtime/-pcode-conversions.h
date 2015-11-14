@@ -84,7 +84,7 @@ static ava_pcode_register ava_pcode_parse_register(ava_value value) {
 }
 
 static ava_string ava_pcode_register_to_string(ava_pcode_register reg) {
-  return ava_string_concat(
+  return ava_strcat(
     ava_pcode_register_type_to_string(reg.type),
     ava_to_string(ava_value_of_integer(reg.index)));
 }
@@ -194,15 +194,15 @@ static ava_string apply_indent(ava_string str, ava_uint indent) {
   ava_uint i;
 
   for (i = 0; i < indent; ++i)
-    base = ava_string_concat(base, AVA_ASCII9_STRING("\t"));
+    base = ava_strcat(base, AVA_ASCII9_STRING("\t"));
 
-  return ava_string_concat(base, str);
+  return ava_strcat(base, str);
 }
 
 static ava_string ava_pcode_elt_escape(ava_string elt_string) {
-  return ava_string_concat(
+  return ava_strcat(
     AVA_ASCII9_STRING("["),
-    ava_string_concat(
+    ava_strcat(
       elt_string,
       AVA_ASCII9_STRING("]")));
 }

@@ -291,10 +291,10 @@ static ava_string ava_intr_var_read_to_string(const ava_intr_var_read* node) {
 
   accum = AVA_ASCII9_STRING("var-read(");
   if (node->var)
-    accum = ava_string_concat(accum, node->var->full_name);
+    accum = ava_strcat(accum, node->var->full_name);
   else
-    accum = ava_string_concat(accum, node->name);
-  accum = ava_string_concat(accum, AVA_ASCII9_STRING(")"));
+    accum = ava_strcat(accum, node->name);
+  accum = ava_strcat(accum, AVA_ASCII9_STRING(")"));
 
   return accum;
 }
@@ -442,10 +442,10 @@ static ava_string ava_intr_var_write_to_string(const ava_intr_var_write* node) {
   ava_string accum;
 
   accum = base;
-  accum = ava_string_concat(accum, node->var->full_name);
-  accum = ava_string_concat(accum, AVA_ASCII9_STRING(" = "));
-  accum = ava_string_concat(accum, ava_ast_node_to_string(node->producer));
-  accum = ava_string_concat(accum, AVA_ASCII9_STRING(")"));
+  accum = ava_strcat(accum, node->var->full_name);
+  accum = ava_strcat(accum, AVA_ASCII9_STRING(" = "));
+  accum = ava_strcat(accum, ava_ast_node_to_string(node->producer));
+  accum = ava_strcat(accum, AVA_ASCII9_STRING(")"));
   return accum;
 }
 

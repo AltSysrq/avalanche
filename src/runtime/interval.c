@@ -80,8 +80,8 @@ static ava_string ava_compact_interval_to_string(ava_value value) {
   begin = ava_value_slong(value);
   end = ava_value_slong(value >> 32);
 
-  return ava_string_concat(
-    ava_string_concat(
+  return ava_strcat(
+    ava_strcat(
       (ava_sint)0x80000000 == begin? AVA_ASCII9_STRING("end") :
       ava_to_string(ava_value_of_integer(begin)),
       AVA_ASCII9_STRING("~")),
@@ -92,8 +92,8 @@ static ava_string ava_compact_interval_to_string(ava_value value) {
 static ava_string ava_wide_interval_to_string(ava_value value) {
   const ava_wide_interval* i = ava_value_ptr(value);
 
-  return ava_string_concat(
-    ava_string_concat(
+  return ava_strcat(
+    ava_strcat(
       AVA_INTEGER_END == i->begin? AVA_ASCII9_STRING("end") :
       ava_to_string(ava_value_of_integer(i->begin)),
       AVA_ASCII9_STRING("~")),

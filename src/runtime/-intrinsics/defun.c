@@ -110,7 +110,7 @@ ava_macro_subst_result ava_intr_fun_subst(
 
   name = name_unit->v.string;
   subcontext = ava_macsub_context_push_major(
-    context, ava_string_concat(name, AVA_ASCII9_STRING("\\")));
+    context, ava_strcat(name, AVA_ASCII9_STRING("\\")));
   ava_macsub_import(&abs, &amb, subcontext,
                     ava_macsub_apply_prefix(subcontext, AVA_EMPTY_STRING),
                     AVA_EMPTY_STRING,
@@ -265,7 +265,7 @@ ava_macro_subst_result ava_intr_fun_subst(
 
     argspecs[arg_ix].binding.type = arg_type;
     argspecs[arg_ix].binding.name =
-      ava_string_concat(AVA_ASCII9_STRING("-"), arg_name);
+      ava_strcat(AVA_ASCII9_STRING("-"), arg_name);
     argspecs[arg_ix].binding.value = arg_default;
 
     var = AVA_NEW(ava_symbol);
@@ -391,11 +391,11 @@ static ava_string ava_intr_fun_to_string(const ava_intr_fun* this) {
   ava_string accum;
 
   accum = this->self_name;
-  accum = ava_string_concat(accum, AVA_ASCII9_STRING("["));
-  accum = ava_string_concat(
+  accum = ava_strcat(accum, AVA_ASCII9_STRING("["));
+  accum = ava_strcat(
     accum, ava_to_string(ava_value_of_function(&this->symbol->v.var.fun)));
-  accum = ava_string_concat(accum, AVA_ASCII9_STRING("] = "));
-  accum = ava_string_concat(accum, ava_ast_node_to_string(this->body));
+  accum = ava_strcat(accum, AVA_ASCII9_STRING("] = "));
+  accum = ava_strcat(accum, ava_ast_node_to_string(this->body));
   return accum;
 }
 

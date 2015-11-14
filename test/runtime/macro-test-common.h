@@ -59,23 +59,23 @@ static ava_string stringify(const ava_ast_node* node) {
 static ava_string dummy_macro_to_string(const dummy_macro_node* this) {
   ava_string accum = this->name;
 
-  accum = ava_string_concat(accum, AVA_ASCII9_STRING(" { "));
+  accum = ava_strcat(accum, AVA_ASCII9_STRING(" { "));
   if (this->left) {
-    accum = ava_string_concat(accum, AVA_ASCII9_STRING("left = "));
-    accum = ava_string_concat(accum, stringify(this->left));
-    accum = ava_string_concat(accum, AVA_ASCII9_STRING("; "));
+    accum = ava_strcat(accum, AVA_ASCII9_STRING("left = "));
+    accum = ava_strcat(accum, stringify(this->left));
+    accum = ava_strcat(accum, AVA_ASCII9_STRING("; "));
   }
   if (this->right) {
-    accum = ava_string_concat(accum, AVA_ASCII9_STRING("right = "));
-    accum = ava_string_concat(accum, stringify(this->right));
-    accum = ava_string_concat(accum, AVA_ASCII9_STRING("; "));
+    accum = ava_strcat(accum, AVA_ASCII9_STRING("right = "));
+    accum = ava_strcat(accum, stringify(this->right));
+    accum = ava_strcat(accum, AVA_ASCII9_STRING("; "));
   }
   if (this->next) {
-    accum = ava_string_concat(accum, AVA_ASCII9_STRING("next = "));
-    accum = ava_string_concat(accum, stringify(this->next));
-    accum = ava_string_concat(accum, AVA_ASCII9_STRING("; "));
+    accum = ava_strcat(accum, AVA_ASCII9_STRING("next = "));
+    accum = ava_strcat(accum, stringify(this->next));
+    accum = ava_strcat(accum, AVA_ASCII9_STRING("; "));
   }
-  accum = ava_string_concat(accum, AVA_ASCII9_STRING("}"));
+  accum = ava_strcat(accum, AVA_ASCII9_STRING("}"));
   return accum;
 }
 
@@ -209,13 +209,13 @@ static ava_string funmacro_to_string(const funmacro_node* this) {
   unsigned i;
 
   accum = this->name;
-  accum = ava_string_concat(
+  accum = ava_strcat(
     accum, AVA_ASCII9_STRING(" { "));
   for (i = 0; i < this->num_args; ++i) {
-    accum = ava_string_concat(accum, stringify(this->args[i]));
-    accum = ava_string_concat(accum, AVA_ASCII9_STRING("; "));
+    accum = ava_strcat(accum, stringify(this->args[i]));
+    accum = ava_strcat(accum, AVA_ASCII9_STRING("; "));
   }
-  accum = ava_string_concat(accum, AVA_ASCII9_STRING("}"));
+  accum = ava_strcat(accum, AVA_ASCII9_STRING("}"));
   return accum;
 }
 

@@ -381,7 +381,7 @@ static ava_ascii9_string ava_ascii9_concat(
   return a | (b >> 7 * ava_ascii9_length(a));
 }
 
-ava_string ava_string_concat(ava_string a, ava_string b) {
+ava_string ava_strcat(ava_string a, ava_string b) {
   size_t alen, blen;
   ava_string ret;
 

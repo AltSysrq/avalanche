@@ -93,7 +93,7 @@ deftest(flat_string_index) {
 }
 
 deftest(rope_of_flat_index) {
-  ava_string str = ava_string_concat(
+  ava_string str = ava_strcat(
     ava_string_of_bytes(large_string, 128),
     ava_string_of_bytes(large_string + 128, 128));
   unsigned i;
@@ -105,7 +105,7 @@ deftest(rope_of_flat_index) {
 deftest(rope_of_flat_and_ascii9_index) {
   ava_string left = ava_string_of_bytes(large_string, 128);
   ava_string right = ava_string_of_bytes(large_string + 128, 5);
-  ava_string str = ava_string_concat(left, right);
+  ava_string str = ava_strcat(left, right);
   unsigned i;
 
   ck_assert(right.ascii9 & 1);
@@ -183,7 +183,7 @@ deftest(flat_string_to_cstring) {
 }
 
 deftest(rope_of_flat_and_ascii9_to_cstring) {
-  ava_string orig = ava_string_concat(
+  ava_string orig = ava_strcat(
     ava_string_of_bytes(large_string, 256),
     AVA_ASCII9_STRING("foo"));
   char expected[256+3+1];
@@ -195,7 +195,7 @@ deftest(rope_of_flat_and_ascii9_to_cstring) {
 }
 
 deftest(rope_of_flats_to_cstring) {
-  ava_string orig = ava_string_concat(
+  ava_string orig = ava_strcat(
     ava_string_of_bytes(large_string, 256),
     ava_string_of_bytes(large_string + 256, 256));
   char expected[513];
@@ -207,7 +207,7 @@ deftest(rope_of_flats_to_cstring) {
 }
 
 deftest(ascii9_ascii9_to_ascii9_concat) {
-  ava_string str = ava_string_concat(
+  ava_string str = ava_strcat(
     AVA_ASCII9_STRING("foo"),
     AVA_ASCII9_STRING("bar"));
 
@@ -217,7 +217,7 @@ deftest(ascii9_ascii9_to_ascii9_concat) {
 }
 
 deftest(empty_ascii9_to_ascii9_concat) {
-  ava_string str = ava_string_concat(
+  ava_string str = ava_strcat(
     AVA_EMPTY_STRING,
     AVA_ASCII9_STRING("foo"));
 
@@ -227,7 +227,7 @@ deftest(empty_ascii9_to_ascii9_concat) {
 }
 
 deftest(ascii9_empty_to_ascii9_concat) {
-  ava_string str = ava_string_concat(
+  ava_string str = ava_strcat(
     AVA_ASCII9_STRING("foo"),
     AVA_EMPTY_STRING);
 
@@ -237,7 +237,7 @@ deftest(ascii9_empty_to_ascii9_concat) {
 }
 
 deftest(ascii9_ascii9_to_flat_concat) {
-  ava_string str = ava_string_concat(
+  ava_string str = ava_strcat(
     AVA_ASCII9_STRING("avalanche"),
     AVA_ASCII9_STRING("foobar"));
 
@@ -247,7 +247,7 @@ deftest(ascii9_ascii9_to_flat_concat) {
 
 deftest(ascii9_flat_to_flat_concat) {
   AVA_STATIC_STRING(flat, "\303\237");
-  ava_string str = ava_string_concat(
+  ava_string str = ava_strcat(
     AVA_ASCII9_STRING("foo"), flat);
 
   ck_assert_int_eq(5, ava_string_length(str));
@@ -256,7 +256,7 @@ deftest(ascii9_flat_to_flat_concat) {
 
 deftest(flat_ascii9_to_flat_concat) {
   AVA_STATIC_STRING(flat, "\303\237");
-  ava_string str = ava_string_concat(
+  ava_string str = ava_strcat(
     flat, AVA_ASCII9_STRING("foo"));
 
   ck_assert_int_eq(5, ava_string_length(str));
@@ -265,14 +265,14 @@ deftest(flat_ascii9_to_flat_concat) {
 
 deftest(flat_flat_to_flat_concat) {
   AVA_STATIC_STRING(flat, "\303\237");
-  ava_string str = ava_string_concat(flat, flat);
+  ava_string str = ava_strcat(flat, flat);
 
   ck_assert_int_eq(4, ava_string_length(str));
   ck_assert_str_eq("\303\237\303\237", ava_string_to_cstring(str));
 }
 
 deftest(flat_flat_to_rope_concat) {
-  ava_string str = ava_string_concat(
+  ava_string str = ava_strcat(
     ava_string_of_bytes(large_string + 0, 256),
     ava_string_of_bytes(large_string + 256, 256));
 
@@ -284,7 +284,7 @@ deftest(left_to_right_rope_build_chars) {
   unsigned i;
 
   for (i = 0; i < 1024; ++i)
-    str = ava_string_concat(str, ava_string_of_char(large_string[i]));
+    str = ava_strcat(str, ava_string_of_char(large_string[i]));
 
   assert_matches_large_string(str, 0, 1024);
 }
@@ -294,7 +294,7 @@ deftest(right_to_left_rope_build_chars) {
   unsigned i;
 
   for (i = 0; i < 1024; ++i)
-    str = ava_string_concat(ava_string_of_char(large_string[1023-i]), str);
+    str = ava_strcat(ava_string_of_char(large_string[1023-i]), str);
 
   assert_matches_large_string(str, 0, 1024);
 }
@@ -304,7 +304,7 @@ deftest(left_to_right_rope_build_slices) {
   unsigned i;
 
   for (i = 0; i < sizeof(large_string) / 128; ++i)
-    str = ava_string_concat(str, ava_string_of_bytes(
+    str = ava_strcat(str, ava_string_of_bytes(
                               large_string + i * 128, 128));
 
   assert_matches_large_string(str, 0, sizeof(large_string));
@@ -315,7 +315,7 @@ deftest(right_to_left_rope_build_slices) {
   unsigned i;
 
   for (i = 0; i < sizeof(large_string) / 128; ++i)
-    str = ava_string_concat(
+    str = ava_strcat(
       ava_string_of_bytes(
         large_string + sizeof(large_string) - (i+1) * 128, 128),
       str);
@@ -375,7 +375,7 @@ deftest(flat_slice_to_empty) {
 }
 
 deftest(rope_slice_to_empty) {
-  ava_string orig = ava_string_concat(
+  ava_string orig = ava_strcat(
     ava_string_of_bytes(large_string, 256),
     ava_string_of_bytes(large_string + 256, 256));
   ava_string str = ava_string_slice(orig, 42, 42);
@@ -384,7 +384,7 @@ deftest(rope_slice_to_empty) {
 }
 
 deftest(rope_slice_to_ascii9) {
-  ava_string orig = ava_string_concat(
+  ava_string orig = ava_strcat(
     ava_string_of_bytes(large_string, 256),
     ava_string_of_bytes(large_string + 256, 256));
   ava_string str = ava_string_slice(orig, 42, 48);
@@ -394,7 +394,7 @@ deftest(rope_slice_to_ascii9) {
 }
 
 deftest(rope_slice_to_ascii9_across_boundary) {
-  ava_string orig = ava_string_concat(
+  ava_string orig = ava_strcat(
     ava_string_of_bytes(large_string, 256),
     ava_string_of_bytes(large_string + 256, 256));
   ava_string str = ava_string_slice(orig, 254, 259);
@@ -404,7 +404,7 @@ deftest(rope_slice_to_ascii9_across_boundary) {
 }
 
 deftest(rope_slice_to_flat_across_boundary) {
-  ava_string orig = ava_string_concat(
+  ava_string orig = ava_strcat(
     ava_string_of_bytes(large_string, 256),
     ava_string_of_bytes(large_string + 256, 256));
   ava_string str = ava_string_slice(orig, 250, 265);
@@ -413,7 +413,7 @@ deftest(rope_slice_to_flat_across_boundary) {
 }
 
 deftest(rope_slice_to_rope_across_boundary) {
-  ava_string orig = ava_string_concat(
+  ava_string orig = ava_strcat(
     ava_string_of_bytes(large_string, 256),
     ava_string_of_bytes(large_string + 256, 256));
   ava_string str = ava_string_slice(orig, 128, 300);
@@ -422,7 +422,7 @@ deftest(rope_slice_to_rope_across_boundary) {
 }
 
 deftest(rope_slice_to_rope_whole) {
-  ava_string orig = ava_string_concat(
+  ava_string orig = ava_strcat(
     ava_string_of_bytes(large_string, 256),
     ava_string_of_bytes(large_string + 256, 256));
   ava_string str = ava_string_slice(orig, 0, 512);
@@ -434,8 +434,8 @@ deftest(rope_slice_to_flat_ascii9_pair) {
   ava_string left_v = ava_string_of_bytes(large_string, 256);
   ava_string mid_9 = ava_string_of_bytes(large_string + 256, 5);
   ava_string right_v = ava_string_of_bytes(large_string + 256 + 5, 256);
-  ava_string orig = ava_string_concat(
-    left_v, ava_string_concat(mid_9, right_v));
+  ava_string orig = ava_strcat(
+    left_v, ava_strcat(mid_9, right_v));
   ava_string str = ava_string_slice(orig, 255, 265);
 
   assert_matches_large_string(str, 255, 265);
@@ -444,14 +444,14 @@ deftest(rope_slice_to_flat_ascii9_pair) {
 deftest(rope_slice_across_ascii9) {
   ava_string left_9 = ava_string_of_bytes(large_string, 5);
   ava_string right_v = ava_string_of_bytes(large_string + 5, 256);
-  ava_string orig = ava_string_concat(left_9, right_v);
+  ava_string orig = ava_strcat(left_9, right_v);
   ava_string str = ava_string_slice(orig, 1, 255);
 
   assert_matches_large_string(str, 1, 255);
 }
 
 deftest(slice_to_concat_left_only) {
-  ava_string in = ava_string_concat(
+  ava_string in = ava_strcat(
     ava_string_of_bytes(large_string, 256),
     ava_string_of_bytes(large_string + 256, 256));
   ava_string result = ava_string_slice(in, 32, 64);
@@ -460,7 +460,7 @@ deftest(slice_to_concat_left_only) {
 }
 
 deftest(slice_to_concat_ascii9_right_only) {
-  ava_string in = ava_string_concat(
+  ava_string in = ava_strcat(
     ava_string_of_bytes(large_string, 512),
     AVA_ASCII9_STRING("avalanche"));
   ava_string result = ava_string_slice(in, 513, 516);
@@ -469,7 +469,7 @@ deftest(slice_to_concat_ascii9_right_only) {
 }
 
 deftest(slice_to_concat_twine_right_only) {
-  ava_string in = ava_string_concat(
+  ava_string in = ava_strcat(
     ava_string_of_bytes(large_string, 256),
     ava_string_of_bytes(large_string + 256, 256));
   ava_string result = ava_string_slice(in, 300, 400);
@@ -478,8 +478,8 @@ deftest(slice_to_concat_twine_right_only) {
 }
 
 deftest(slice_to_concat_ascii9_right_only_complex) {
-  ava_string in = ava_string_concat(
-    ava_string_concat(
+  ava_string in = ava_strcat(
+    ava_strcat(
       ava_string_of_bytes(large_string, 250),
       ava_string_of_bytes(large_string + 250, 6)),
     ava_string_of_bytes(large_string + 256, 256));
@@ -489,9 +489,9 @@ deftest(slice_to_concat_ascii9_right_only_complex) {
 }
 
 deftest(slice_to_tocnac_left_only_complex) {
-  ava_string in = ava_string_concat(
+  ava_string in = ava_strcat(
       ava_string_of_bytes(large_string, 250),
-    ava_string_concat(
+    ava_strcat(
       ava_string_of_bytes(large_string + 250, 6),
       ava_string_of_bytes(large_string + 256, 256)));
   ava_string result = ava_string_slice(in, 200, 252);
@@ -575,7 +575,7 @@ deftest(flat_to_bytes_slice) {
 
 deftest(rope_to_bytes_whole) {
   char buf[512];
-  ava_string str = ava_string_concat(
+  ava_string str = ava_strcat(
     ava_string_of_bytes(large_string, 256),
     ava_string_of_bytes(large_string + 256, 256));
 
@@ -585,7 +585,7 @@ deftest(rope_to_bytes_whole) {
 
 deftest(rope_to_bytes_slice_before_boundary) {
   char buf[128];
-  ava_string str = ava_string_concat(
+  ava_string str = ava_strcat(
     ava_string_of_bytes(large_string, 128),
     ava_string_of_bytes(large_string + 128, 256));
 
@@ -595,7 +595,7 @@ deftest(rope_to_bytes_slice_before_boundary) {
 
 deftest(rope_to_bytes_slice_after_boundary) {
   char buf[256];
-  ava_string str = ava_string_concat(
+  ava_string str = ava_strcat(
     ava_string_of_bytes(large_string, 64),
     ava_string_of_bytes(large_string + 64, 256));
 
@@ -605,7 +605,7 @@ deftest(rope_to_bytes_slice_after_boundary) {
 
 deftest(rope_to_bytes_slice_across_boundary) {
   char buf[128];
-  ava_string str = ava_string_concat(
+  ava_string str = ava_strcat(
     ava_string_of_bytes(large_string, 128),
     ava_string_of_bytes(large_string + 128, 256));
 

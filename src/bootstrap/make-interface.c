@@ -52,7 +52,7 @@ static ava_value main_impl(void* arg) {
     errx(EX_USAGE, "Usage: %s <infile>", argv[0]);
 
   infile = ava_string_of_cstring(argv[1]);
-  outfile = ava_string_concat(infile, AVA_ASCII9_STRING("i"));
+  outfile = ava_strcat(infile, AVA_ASCII9_STRING("i"));
 
   spit(outfile, ava_pcode_to_interface(slurp(infile)));
 

@@ -404,79 +404,79 @@ static ava_string ava_intr_loop_to_string(const ava_intr_loop* loop) {
   for (clause = 0; clause < loop->num_clauses; ++clause) {
     switch (loop->clauses[clause].type) {
     case ava_ilct_each:
-      accum = ava_string_concat(accum, AVA_ASCII9_STRING(" each ["));
+      accum = ava_strcat(accum, AVA_ASCII9_STRING(" each ["));
       for (i = 0; i < loop->clauses[clause].v.each.num_lvalues; ++i) {
         if (i)
-          accum = ava_string_concat(accum, AVA_ASCII9_STRING(", "));
-        accum = ava_string_concat(
+          accum = ava_strcat(accum, AVA_ASCII9_STRING(", "));
+        accum = ava_strcat(
           accum, ava_ast_node_to_string(
             loop->clauses[clause].v.each.lvalues[i]));
       }
-      accum = ava_string_concat(accum, AVA_ASCII9_STRING("] = "));
-      accum = ava_string_concat(
+      accum = ava_strcat(accum, AVA_ASCII9_STRING("] = "));
+      accum = ava_strcat(
         accum, ava_ast_node_to_string(loop->clauses[clause].v.each.rvalue));
       break;
 
     case ava_ilct_for:
-      accum = ava_string_concat(accum, AVA_ASCII9_STRING(" for ("));
-      accum = ava_string_concat(
+      accum = ava_strcat(accum, AVA_ASCII9_STRING(" for ("));
+      accum = ava_strcat(
         accum, ava_ast_node_to_string(loop->clauses[clause].v.vor.init));
-      accum = ava_string_concat(accum, AVA_ASCII9_STRING("; "));
-      accum = ava_string_concat(
+      accum = ava_strcat(accum, AVA_ASCII9_STRING("; "));
+      accum = ava_strcat(
         accum, ava_ast_node_to_string(loop->clauses[clause].v.vor.cond));
-      accum = ava_string_concat(accum, AVA_ASCII9_STRING("; "));
-      accum = ava_string_concat(
+      accum = ava_strcat(accum, AVA_ASCII9_STRING("; "));
+      accum = ava_strcat(
         accum, ava_ast_node_to_string(loop->clauses[clause].v.vor.update));
-      accum = ava_string_concat(accum, AVA_ASCII9_STRING(")"));
+      accum = ava_strcat(accum, AVA_ASCII9_STRING(")"));
       break;
 
     case ava_ilct_while:
       if (loop->clauses[clause].v.vhile.invert)
-        accum = ava_string_concat(accum, AVA_ASCII9_STRING(" until "));
+        accum = ava_strcat(accum, AVA_ASCII9_STRING(" until "));
       else
-        accum = ava_string_concat(accum, AVA_ASCII9_STRING(" while "));
-      accum = ava_string_concat(
+        accum = ava_strcat(accum, AVA_ASCII9_STRING(" while "));
+      accum = ava_strcat(
         accum, ava_ast_node_to_string(loop->clauses[clause].v.vhile.cond));
       break;
 
     case ava_ilct_do:
-      accum = ava_string_concat(accum, AVA_ASCII9_STRING(" do "));
+      accum = ava_strcat(accum, AVA_ASCII9_STRING(" do "));
       if (loop->clauses[clause].v.doo.is_expression)
-        accum = ava_string_concat(accum, AVA_ASCII9_STRING("("));
+        accum = ava_strcat(accum, AVA_ASCII9_STRING("("));
       else
-        accum = ava_string_concat(accum, AVA_ASCII9_STRING("{"));
-      accum = ava_string_concat(
+        accum = ava_strcat(accum, AVA_ASCII9_STRING("{"));
+      accum = ava_strcat(
         accum, ava_ast_node_to_string(loop->clauses[clause].v.doo.body));
       if (loop->clauses[clause].v.doo.is_expression)
-        accum = ava_string_concat(accum, AVA_ASCII9_STRING(")"));
+        accum = ava_strcat(accum, AVA_ASCII9_STRING(")"));
       else
-        accum = ava_string_concat(accum, AVA_ASCII9_STRING("}"));
+        accum = ava_strcat(accum, AVA_ASCII9_STRING("}"));
       break;
 
     case ava_ilct_collect:
-      accum = ava_string_concat(accum, AVA_ASCII9_STRING(" collect "));
+      accum = ava_strcat(accum, AVA_ASCII9_STRING(" collect "));
       if (loop->clauses[clause].v.collect.expression)
-        accum = ava_string_concat(
+        accum = ava_strcat(
           accum, ava_ast_node_to_string(
             loop->clauses[clause].v.collect.expression));
       else
-        accum = ava_string_concat(accum, AVA_ASCII9_STRING("<>"));
+        accum = ava_strcat(accum, AVA_ASCII9_STRING("<>"));
       break;
     }
   }
 
   if (loop->else_clause) {
-    accum = ava_string_concat(accum, AVA_ASCII9_STRING(" else "));
+    accum = ava_strcat(accum, AVA_ASCII9_STRING(" else "));
     if (loop->else_is_expression)
-      accum = ava_string_concat(accum, AVA_ASCII9_STRING("("));
+      accum = ava_strcat(accum, AVA_ASCII9_STRING("("));
     else
-      accum = ava_string_concat(accum, AVA_ASCII9_STRING("{"));
-    accum = ava_string_concat(
+      accum = ava_strcat(accum, AVA_ASCII9_STRING("{"));
+    accum = ava_strcat(
       accum, ava_ast_node_to_string(loop->else_clause));
     if (loop->else_is_expression)
-      accum = ava_string_concat(accum, AVA_ASCII9_STRING(")"));
+      accum = ava_strcat(accum, AVA_ASCII9_STRING(")"));
     else
-      accum = ava_string_concat(accum, AVA_ASCII9_STRING("}"));
+      accum = ava_strcat(accum, AVA_ASCII9_STRING("}"));
   }
 
   return accum;
@@ -929,11 +929,11 @@ static ava_string ava_intr_loopctl_to_string(const ava_intr_loopctl* this) {
     accum = AVA_ASCII9_STRING("continue");
 
   if (this->suppress_write_back)
-    accum = ava_string_concat(accum, AVA_ASCII9_STRING(" -"));
+    accum = ava_strcat(accum, AVA_ASCII9_STRING(" -"));
 
   if (this->expression) {
-    accum = ava_string_concat(accum, AVA_ASCII9_STRING(" "));
-    accum = ava_string_concat(accum, ava_ast_node_to_string(this->expression));
+    accum = ava_strcat(accum, AVA_ASCII9_STRING(" "));
+    accum = ava_strcat(accum, ava_ast_node_to_string(this->expression));
   }
 
   return accum;

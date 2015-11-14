@@ -396,7 +396,7 @@ static ava_bool ava_symtab_import_match(
 ) {
   if (ava_string_starts_with(name, import->new_prefix)) {
     /* Match */
-    *effective_name = ava_string_concat(
+    *effective_name = ava_strcat(
       import->old_prefix, ava_string_slice(
         name, ava_string_length(import->new_prefix),
         ava_string_length(name)));

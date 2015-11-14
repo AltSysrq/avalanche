@@ -105,32 +105,32 @@ static ava_string stringify_unit(const ava_parse_unit* unit) {
   switch (unit->type) {
   case ava_put_bareword:
     accum = AVA_ASCII9_STRING("bareword:");
-    accum = ava_string_concat(accum, unit->v.string);
+    accum = ava_strcat(accum, unit->v.string);
     return accum;
 
   case ava_put_astring:
     accum = AVA_ASCII9_STRING("astring:");
-    accum = ava_string_concat(accum, unit->v.string);
+    accum = ava_strcat(accum, unit->v.string);
     return accum;
 
   case ava_put_lstring:
     accum = AVA_ASCII9_STRING("lstring:");
-    accum = ava_string_concat(accum, unit->v.string);
+    accum = ava_strcat(accum, unit->v.string);
     return accum;
 
   case ava_put_rstring:
     accum = AVA_ASCII9_STRING("rstring:");
-    accum = ava_string_concat(accum, unit->v.string);
+    accum = ava_strcat(accum, unit->v.string);
     return accum;
 
   case ava_put_lrstring:
     accum = AVA_ASCII9_STRING("lrstring:");
-    accum = ava_string_concat(accum, unit->v.string);
+    accum = ava_strcat(accum, unit->v.string);
     return accum;
 
   case ava_put_verbatim:
     accum = AVA_ASCII9_STRING("verbatim:");
-    accum = ava_string_concat(accum, unit->v.string);
+    accum = ava_strcat(accum, unit->v.string);
     return accum;
 
   case ava_put_substitution:
@@ -141,11 +141,11 @@ static ava_string stringify_unit(const ava_parse_unit* unit) {
     first = ava_true;
     TAILQ_FOREACH(statement, &unit->v.statements, next) {
       if (!first)
-        accum = ava_string_concat(accum, AVA_ASCII9_STRING("; "));
-      accum = ava_string_concat(accum, stringify_statement(statement));
+        accum = ava_strcat(accum, AVA_ASCII9_STRING("; "));
+      accum = ava_strcat(accum, stringify_statement(statement));
       first = ava_false;
     }
-    accum = ava_string_concat(
+    accum = ava_strcat(
       accum, ava_put_substitution == unit->type?
       AVA_ASCII9_STRING(")") : AVA_ASCII9_STRING("}"));
     return accum;
@@ -155,16 +155,16 @@ static ava_string stringify_unit(const ava_parse_unit* unit) {
     first = ava_true;
     TAILQ_FOREACH(child, &unit->v.units, next) {
       if (!first)
-        accum = ava_string_concat(accum, AVA_ASCII9_STRING(" "));
-      accum = ava_string_concat(accum, stringify_unit(child));
+        accum = ava_strcat(accum, AVA_ASCII9_STRING(" "));
+      accum = ava_strcat(accum, stringify_unit(child));
       first = ava_false;
     }
-    accum = ava_string_concat(accum, AVA_ASCII9_STRING("]"));
+    accum = ava_strcat(accum, AVA_ASCII9_STRING("]"));
     return accum;
 
   case ava_put_spread:
     accum = AVA_ASCII9_STRING("\\*");
-    accum = ava_string_concat(accum, stringify_unit(unit->v.unit));
+    accum = ava_strcat(accum, stringify_unit(unit->v.unit));
     return accum;
   }
 
@@ -178,8 +178,8 @@ static ava_string stringify_statement(const ava_parse_statement* statement) {
 
   TAILQ_FOREACH(unit, &statement->units, next) {
     if (!ava_string_is_empty(accum))
-      accum = ava_string_concat(accum, AVA_ASCII9_STRING(" "));
-    accum = ava_string_concat(accum, stringify_unit(unit));
+      accum = ava_strcat(accum, AVA_ASCII9_STRING(" "));
+    accum = ava_strcat(accum, stringify_unit(unit));
   }
 
   return accum;

@@ -97,12 +97,12 @@ ava_macro_subst_result ava_intr_subscript_subst(
   }
 
   getter_name_unit = AVA_CLONE(*type_unit);
-  getter_name_unit->v.string = ava_string_concat(
-    ava_string_concat(type_prefix, AVA_ASCII9_STRING("get")),
+  getter_name_unit->v.string = ava_strcat(
+    ava_strcat(type_prefix, AVA_ASCII9_STRING("get")),
     type_suffix);
   wither_name_unit = AVA_CLONE(*type_unit);
-  wither_name_unit->v.string = ava_string_concat(
-    ava_string_concat(type_prefix, AVA_ASCII9_STRING("with")),
+  wither_name_unit->v.string = ava_strcat(
+    ava_strcat(type_prefix, AVA_ASCII9_STRING("with")),
     type_suffix);
 
   this = AVA_NEW(ava_intr_subscript);
@@ -139,19 +139,19 @@ static ava_string ava_intr_subscript_to_string(const ava_intr_subscript* this) {
   ava_string accum;
 
   accum = AVA_ASCII9_STRING("subscript");
-  accum = ava_string_concat(accum, AVA_ASCII9_STRING(" get = "));
-  accum = ava_string_concat(accum, ava_ast_node_to_string(this->getter));
+  accum = ava_strcat(accum, AVA_ASCII9_STRING(" get = "));
+  accum = ava_strcat(accum, ava_ast_node_to_string(this->getter));
   if (this->wither) {
-    accum = ava_string_concat(accum, AVA_ASCII9_STRING("; with = "));
-    accum = ava_string_concat(accum, ava_ast_node_to_string(this->wither));
+    accum = ava_strcat(accum, AVA_ASCII9_STRING("; with = "));
+    accum = ava_strcat(accum, ava_ast_node_to_string(this->wither));
   }
-  accum = ava_string_concat(accum, AVA_ASCII9_STRING("; comp = "));
-  accum = ava_string_concat(accum, ava_ast_node_to_string(this->composite));
-  accum = ava_string_concat(accum, AVA_ASCII9_STRING("; key = "));
-  accum = ava_string_concat(accum, ava_ast_node_to_string(this->key));
+  accum = ava_strcat(accum, AVA_ASCII9_STRING("; comp = "));
+  accum = ava_strcat(accum, ava_ast_node_to_string(this->composite));
+  accum = ava_strcat(accum, AVA_ASCII9_STRING("; key = "));
+  accum = ava_strcat(accum, ava_ast_node_to_string(this->key));
   if (this->lvalue_producer) {
-    accum = ava_string_concat(accum, AVA_ASCII9_STRING("; lvp = "));
-    accum = ava_string_concat(accum, ava_ast_node_to_string(
+    accum = ava_strcat(accum, AVA_ASCII9_STRING("; lvp = "));
+    accum = ava_strcat(accum, ava_ast_node_to_string(
                                 this->lvalue_producer));
   }
   return accum;

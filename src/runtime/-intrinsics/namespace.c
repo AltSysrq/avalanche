@@ -83,7 +83,7 @@ ava_macro_subst_result ava_intr_namespace_subst(
     }
   }
 
-  name = ava_string_concat(name, AVA_ASCII9_STRING("."));
+  name = ava_strcat(name, AVA_ASCII9_STRING("."));
   child_context = ava_macsub_context_push_minor(context, name);
   ava_macsub_import(&absolutised, &ambiguous, child_context,
                     ava_macsub_apply_prefix(context, name),
@@ -133,7 +133,7 @@ ava_macro_subst_result ava_intr_import_subst(
   source_len = ava_string_length(source);
   if (source_len && '.' != ava_string_index(source, source_len-1) &&
       ':' != ava_string_index(source, source_len-1)) {
-    source = ava_string_concat(source, AVA_ASCII9_STRING("."));
+    source = ava_strcat(source, AVA_ASCII9_STRING("."));
     ++source_len;
   }
 
@@ -144,7 +144,7 @@ ava_macro_subst_result ava_intr_import_subst(
       dest_len = 0;
     } else if (dest_len && '.' != ava_string_index(dest, dest_len-1) &&
         ':' != ava_string_index(dest, dest_len-1)) {
-      dest = ava_string_concat(dest, AVA_ASCII9_STRING("."));
+      dest = ava_strcat(dest, AVA_ASCII9_STRING("."));
       ++dest_len;
     }
   } else {
@@ -268,10 +268,10 @@ static ava_string ava_intr_alias_to_string(const ava_intr_alias* alias) {
   ava_string accum;
 
   accum = alias->self_name;
-  accum = ava_string_concat(accum, AVA_ASCII9_STRING(" "));
-  accum = ava_string_concat(accum, alias->new_symbol->full_name);
-  accum = ava_string_concat(accum, AVA_ASCII9_STRING(" = "));
-  accum = ava_string_concat(accum, alias->old_symbol->full_name);
+  accum = ava_strcat(accum, AVA_ASCII9_STRING(" "));
+  accum = ava_strcat(accum, alias->new_symbol->full_name);
+  accum = ava_strcat(accum, AVA_ASCII9_STRING(" = "));
+  accum = ava_strcat(accum, alias->old_symbol->full_name);
   return accum;
 }
 

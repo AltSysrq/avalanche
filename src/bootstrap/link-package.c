@@ -66,8 +66,8 @@ static ava_value main_impl(void* arg) {
     errx(EX_USAGE, "Bad infile: %s", argv[1]);
 
   package_name = ava_string_of_bytes(argv[1], slash - argv[1]);
-  dir_prefix = ava_string_concat(package_name, AVA_ASCII9_STRING("/"));
-  outfile = ava_string_concat(package_name, AVA_ASCII9_STRING(".avap"));
+  dir_prefix = ava_strcat(package_name, AVA_ASCII9_STRING("/"));
+  outfile = ava_strcat(package_name, AVA_ASCII9_STRING(".avap"));
 
   linker = ava_pcode_linker_new();
   TAILQ_INIT(&errors);

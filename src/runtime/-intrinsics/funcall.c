@@ -150,12 +150,12 @@ static ava_string ava_intr_funcall_to_string(const ava_intr_funcall* this) {
 
   accum = AVA_ASCII9_STRING("call { ");
   for (i = 0; i < this->num_parms; ++i) {
-    accum = ava_string_concat(
+    accum = ava_strcat(
       accum, ava_ast_node_to_string(this->parms[i]));
-    accum = ava_string_concat(
+    accum = ava_strcat(
       accum, AVA_ASCII9_STRING("; "));
   }
-  accum = ava_string_concat(accum, AVA_ASCII9_STRING("}"));
+  accum = ava_strcat(accum, AVA_ASCII9_STRING("}"));
   return accum;
 }
 

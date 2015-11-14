@@ -154,7 +154,7 @@ ava_bool ava_compenv_simple_read_source(
 
   in = fopen(
     ava_string_to_cstring(
-      ava_string_concat(
+      ava_strcat(
         ava_string_of_datum(compenv->read_source_userdata),
         filename)), "r");
   if (!in) goto error;
@@ -162,7 +162,7 @@ ava_bool ava_compenv_simple_read_source(
   source = AVA_EMPTY_STRING;
   do {
     nread = fread(buffer, 1, sizeof(buffer), in);
-    source = ava_string_concat(source, ava_string_of_bytes(buffer, nread));
+    source = ava_strcat(source, ava_string_of_bytes(buffer, nread));
   } while (nread == sizeof(buffer));
 
   if (ferror(in)) goto error;

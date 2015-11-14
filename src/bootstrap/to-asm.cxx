@@ -146,7 +146,7 @@ static ava_string derive_package_prefix(ava_string infile) {
   if (!dot)
     errx(EX_USAGE, "Bad input filename: %s", base);
 
-  return ava_string_concat(ava_string_slice(infile, 0, dot - base),
+  return ava_strcat(ava_string_slice(infile, 0, dot - base),
                            AVA_ASCII9_STRING(":"));
 }
 

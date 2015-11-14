@@ -216,7 +216,7 @@ static ava_bool ava_intr_req_is_valid_name(ava_string str, ava_bool permit_slash
 }
 
 static ava_string ava_intr_reqpkg_to_string(const ava_intr_req* node) {
-  return ava_string_concat(
+  return ava_strcat(
     AVA_ASCII9_STRING("reqpkg "),
     ava_to_string(node->targets.v));
 }
@@ -232,7 +232,7 @@ static void ava_intr_reqpkg_cg_discard(
 }
 
 static ava_string ava_intr_reqmod_to_string(const ava_intr_req* node) {
-  return ava_string_concat(
+  return ava_strcat(
     AVA_ASCII9_STRING("reqmod "),
     ava_to_string(node->targets.v));
 }
@@ -252,8 +252,8 @@ static ava_string ava_intr_require_import_to_string(
 ) {
   AVA_STATIC_STRING(prefix, "<import of ");
 
-  return ava_string_concat(
-    ava_string_concat(prefix, node->symbol->full_name),
+  return ava_strcat(
+    ava_strcat(prefix, node->symbol->full_name),
     AVA_ASCII9_STRING(">"));
 }
 
@@ -328,7 +328,7 @@ void ava_macsub_insert_module(
   sentinel->type = ava_st_other;
   sentinel->level = 0;
   sentinel->visibility = ava_v_private;
-  sentinel->full_name = ava_string_concat(
+  sentinel->full_name = ava_strcat(
     is_package? package_sentinel_prefix : module_sentinel_prefix,
     name);
   sentinel->v.other.type = &ava_intr_req_sentinel_type;
@@ -450,7 +450,7 @@ static const ava_pcode_global_list* ava_intr_req_compile_module(
 
   if (!ava_compenv_compile_file(
         &full_pcode, NULL, compenv,
-        ava_string_concat(name, AVA_ASCII9_STRING(".ava")),
+        ava_strcat(name, AVA_ASCII9_STRING(".ava")),
         ava_macsub_get_errors(context), location))
     return NULL;
 

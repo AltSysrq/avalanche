@@ -270,7 +270,7 @@ static ava_value ava_pointer_list_index(ava_list_value this,
 ava_string ava_pointer_prototype_to_string(
   const ava_pointer_prototype* prototype
 ) {
-  return ava_string_concat(prototype->tag,
+  return ava_strcat(prototype->tag,
                            prototype->is_const?
                            AVA_ASCII9_STRING("&") : AVA_ASCII9_STRING("*"));
 }

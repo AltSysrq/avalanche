@@ -68,7 +68,7 @@ static ava_string slurp_file(ava_string infile) {
   accum = AVA_EMPTY_STRING;
   do {
     nread = fread(buff, 1, sizeof(buff), in);
-    accum = ava_string_concat(accum, ava_string_of_bytes(buff, nread));
+    accum = ava_strcat(accum, ava_string_of_bytes(buff, nread));
   } while (!feof(in) && !ferror(in));
 
   if (ferror(in))

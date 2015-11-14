@@ -449,7 +449,7 @@ static void ava_parse_simplify_group_tag(
     abort();
   }
 
-  bareword->v.string = ava_string_concat(
+  bareword->v.string = ava_strcat(
     base, ava_string_slice(closing_token->str, 1,
                            ava_string_length(closing_token->str)));
 
@@ -889,9 +889,9 @@ static ava_parse_unit_read_result ava_parse_subscript(
     &substatement->units, &last_token, errors, context, closing_token_type);
 
   if (ava_purr_ok == result) {
-    tag = ava_string_concat(
+    tag = ava_strcat(
       AVA_ASCII9_STRING("#"),
-      ava_string_concat(
+      ava_strcat(
         ava_string_slice(
           last_token.str,
           1, ava_string_length(last_token.str)),

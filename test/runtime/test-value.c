@@ -106,7 +106,7 @@ deftest(singleton_chunk_iterator) {
   iterator = ava_string_chunk_iterator(val);
   while (ava_string_is_present(
            (chunk = ava_iterate_string_chunk(&iterator, val))))
-    accum = ava_string_concat(accum, chunk);
+    accum = ava_strcat(accum, chunk);
 
   ck_assert_str_eq("avalanches", ava_string_to_cstring(accum));
 }
@@ -169,7 +169,7 @@ deftest(hash_basically_works) {
 deftest(hash_crosses_rope_boundaries_correctly) {
   char buf[246];
   ava_string base = ava_to_string(xn_of(123));
-  ava_string rope = ava_string_concat(base, base);
+  ava_string rope = ava_strcat(base, base);
   ava_string_to_bytes(buf, rope, 0, 246);
   ava_string flat = ava_string_of_bytes(buf, 246);
 
