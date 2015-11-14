@@ -418,6 +418,17 @@ deftest(falsey_is_integer) {
   ck_assert(str_is_int("NULL"));
 }
 
+deftest(end_to_integer_min) {
+  ck_assert_int_eq((1LL << 63), str_to_int("end", 42));
+  ck_assert_int_eq((1LL << 63), str_to_int("END", 42));
+  ck_assert_int_eq((1LL << 63), str_to_int(" eNd ", 42));
+}
+
+deftest(end_is_integer) {
+  ck_assert(str_is_int("end"));
+  ck_assert(str_is_int(" eNd "));
+}
+
 deftest(empty_string_is_integer) {
   ck_assert(str_is_int(""));
 }

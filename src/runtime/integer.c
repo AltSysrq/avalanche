@@ -94,6 +94,7 @@ ava_integer ava_integer_of_noninteger_value(
       HEX = '0'? 'x' ;
       TRUTHY = 'on' | 'true' | 'yes' ;
       FALSEY = 'off' | 'false' | 'no' | 'null' ;
+      END = 'end';
       BIN_LITERAL = SIGN BIN [01]+  ;
       OCT_LITERAL = SIGN OCT [0-7]+ ;
       DEC_LITERAL = SIGN     [0-9]+ ;
@@ -110,6 +111,7 @@ ava_integer ava_integer_of_noninteger_value(
       WS+                       { continue; }
       TRUTHY WS*                { END(); return 1; }
       FALSEY WS*                { END(); return 0; }
+      END WS*                   { END(); return 1LL << 63; }
       BIN_LITERAL WS*           { END(); return ava_integer_parse_bin(tok, cursor); }
       OCT_LITERAL WS*           { END(); return ava_integer_parse_oct(tok, cursor); }
       HEX_LITERAL WS*           { END(); return ava_integer_parse_hex(tok, cursor); }
@@ -160,6 +162,7 @@ ava_bool ava_string_is_integer(ava_string str) {
 
       WS* TRUTHY WS*            { break; }
       WS* FALSEY WS*            { break; }
+      WS* END WS*               { break; }
       WS* BIN_LITERAL WS*       { break; }
       WS* OCT_LITERAL WS*       { break; }
       WS* DEC_LITERAL WS*       { break; }

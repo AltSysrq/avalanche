@@ -47,10 +47,11 @@ typedef ava_slong ava_integer;
  * expression. Surrounding whitespace is implicitly discarded. It is not
  * case-sensitive.
  *
- * true|false|on|off|yes|no|null|[+-]?([0-9]+|0?b[01]+|0?o[0-7]+|0?x[0-9a-f]+)
+ * true|false|on|off|yes|no|null|end|[+-]?([0-9]+|0?b[01]+|0?o[0-7]+|0?x[0-9a-f]+)
  *
  * The strings "true", "on", and "yes" are parsed as 1. The strings "false",
- * "off", "no", and "null" are parsed as 0.
+ * "off", "no", and "null" are parsed as 0. The string "end" is parsed as
+ * (1<<63) (i.e., the most negative value).
  *
  * Other than the above special cases, an integer literal is comprised of an
  * optional sign, an optional base indicator, and one or more digits in that
