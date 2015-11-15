@@ -875,3 +875,128 @@ namespace interval {
   ; :arg end Exclusive upper-bound of the range. Defaults to "end".
   EXTERN of "" ava pos pos
 }
+
+namespace list {
+  ; Returns the number of elements in the given list.
+  EXTERN length "" ava pos
+  ; Selects one item or a range of items from a list.
+  ;
+  ; :arg list The list to index.
+  ;
+  ; :arg ix The index. This is an interval. If singular, the one item at the
+  ; corresponding index is returned. If a range, a list of items at each index
+  ; in the range is returned. Note that this means that a range of one item is
+  ; distinct from a singular interval. For example, {$index [[a b]] 0} returns
+  ; the string {a b}, whereas {$index [[a b]] 0~1} returns the string {[a b]}.
+  ;
+  ; :return The item or list of items in $list selected by $ix.
+  ;
+  ; :throw error(out-of-bounds) if $ix indicates an index that is not within
+  ; the $list's bounds.
+  ;
+  ; :throw error(illegal-range) if $ix is a range with a maximum less than the
+  ; minimum.
+  EXTERN index "" ava pos pos
+  ; Replaces one item or a range of items in a list.
+  ;
+  ; :arg list The list to modify.
+  ;
+  ; :arg ix The index. This is an interval. If singular, the one item at the
+  ; corresponding index is replaced with $replacement. A singular interval may
+  ; also reference the index one past the end of the list, in which case
+  ; $replacement is appended. If a range, the sequence of items at the
+  ; contained indices are removed and replaced with successive items from
+  ; $replacement.
+  ;
+  ; :arg replacement The replacement item (if $ix is singular) or list of items
+  ; (if $ix is a range). In the latter case, it need not be a list of the same
+  ; length as the range of the interval.
+  ;
+  ; :return $list with the item or items in the interval $ix replaced by
+  ; $replacement or the items in $replacement.
+  ;
+  ; :throw error(out-of-bounds) if $ix indicates an index that is not within
+  ; the $list's bounds.
+  ;
+  ; :throw error(illegal-range) if $ix is a range with a maximum less than the
+  ; minimum.
+  EXTERN set "" ava pos pos pos
+  ; Like $index, except that the empty string/list is returned if $ix is
+  ; singular and out of bounds or is an illegal range, and $ix is implicitly
+  ; clamped to the valid boundaries of $list.
+  ;
+  ; See $byte-string.index-lenient for a discussion of why there is no
+  ; {set-lenient}.
+  EXTERN index-lenient "" ava pos pos
+
+  ; Concatenates two lists.
+  ;
+  ; :arg lhs The left list.
+  ;
+  ; :arg rhs The right list.
+  ;
+  ; :return A list containing all the items of $lhs followed by all the items
+  ; of $rhs.
+  EXTERN concat "" ava pos pos
+  ; Interleaves any number of lists.
+  ;
+  ; Given _n_ input lists, returns a list that contains item 0 from _n0_, item
+  ; 0 from _n1_, and so forth for all lists, then item 1 from _n0_, item 1 from
+  ; _n1_, and so on. All lists must be of the same length.
+  ;
+  ; Example: {$interleave [foo bar] [a b]} yields {foo a bar b}.
+  ;
+  ; This inverts $demux if all component lists are passed in in order.
+  ;
+  ; :arg lists The list of lists to interleave.
+  ;
+  ; :return The interleaved list. If $lists is empty, the empty list.
+  EXTERN interleave "" ava varargs
+  ; Demultiplexes an interleaved list.
+  ;
+  ; This inverts $interleave when given proper $offset and $stride.
+  ;
+  ; Example: {$demux [foo a bar b] 1 2} yields {a b}.
+  ;
+  ; :arg list The list to demultiplex.
+  ;
+  ; :arg offset The multiplex offset of the desired items. Must be non-negative
+  ; and strictly less than $stride. Empty is 0.
+  ;
+  ; :arg stride The stride at which items occur. It is legal for $stride to not
+  ; evenly divide into the length of $list. Empty is 1.
+  ;
+  ; :return A list containing each item from $list where
+  ; {index-of-item % $stride == $offset}.
+  ;
+  ; :throw error(illegal-argument) if $offset is negative or >= $stride.
+  EXTERN demux "" ava pos pos pos
+  ; Groups adjacent elements in a list into sub-lists.
+  ;
+  ; This is can invert $flatten when all the flattened lists had the same
+  ; length.
+  ;
+  ; Example: {$group [foo bar a b c] 2} yields {[foo bar] [a b] c}
+  ;
+  ; :arg list The list to group.
+  ;
+  ; :arg group-size The size of each group. This need not evenly divide into
+  ; the length of $list. Empty is 1.
+  ;
+  ; :return A list of length {ceil ($length $list / $group-size)} containing
+  ; lists of $group-size consecutive elements from $list. If $group-size does
+  ; not divide evenly into the length of $list, the final group will be smaller
+  ; than $group-size.
+  EXTERN group "" ava pos pos
+  ; Flattens a list of lists into one list.
+  ;
+  ; This inverts $group in all circumstances.
+  ;
+  ; Example: {$flatten [[foo bar] [a b] c]} yields {foo bar a b c}.
+  ;
+  ; :arg lists The list of lists to flatten.
+  ;
+  ; :return A list containing all the items of the zeroth element of $lists,
+  ; followed by all the elements of the first element of $lists, and so on.
+  EXTERN flatten "" ava pos
+}

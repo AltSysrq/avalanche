@@ -129,7 +129,9 @@ ava_list_value ava_list_proj_interleave(const ava_list_value*restrict lists,
   size_t first_list_length;
 #endif
 
-  assert(num_lists > 0);
+  if (0 == num_lists)
+    return ava_empty_list();
+
 #ifndef NDEBUG
   first_list_length = ava_list_length(lists[0].v);
   for (i = 1; i < num_lists; ++i)

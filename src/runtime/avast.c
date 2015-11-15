@@ -23,9 +23,11 @@
 
 #define AVA__INTERNAL_INCLUDE 1
 #include "avalanche/defs.h"
+#include "avalanche/alloc.h"
 #include "avalanche/string.h"
 #include "avalanche/value.h"
 #include "avalanche/list.h"
+#include "avalanche/list-proj.h"
 #include "avalanche/map.h"
 #include "avalanche/integer.h"
 #include "avalanche/real.h"
@@ -861,4 +863,191 @@ defun(interval__of)(ava_value begin, ava_value end) {
   return ava_interval_value_of_range(
     ava_integer_of_value(begin, 0),
     ava_integer_of_value(end, AVA_INTEGER_END)).v;
+}
+
+/******************** LIST OPERATIONS ********************/
+
+defun(list__length)(ava_value list) {
+  return ava_value_of_integer(ava_list_length(list));
+}
+
+defun(list__index)(ava_value raw_list, ava_value index) {
+  ava_list_value list;
+  ava_integer max, begin, end;
+  ava_interval_value ival;
+
+  list = ava_list_value_of(raw_list);
+  max = ava_list_length(list);
+
+  ival = ava_interval_value_of(index);
+  if (ava_interval_is_singular(ival)) {
+    begin = ava_interval_get_singular(ival, max);
+    strict_index_check(begin, max);
+    return ava_list_index(list, begin);
+  } else {
+    begin = ava_interval_get_begin(ival, max);
+    end = ava_interval_get_end(ival, max);
+    strict_range_check(begin, end, max);
+    return ava_list_slice(list, begin, end).v;
+  }
+}
+
+defun(list__index_lenient)(ava_value raw_list, ava_value index) {
+  ava_list_value list;
+  ava_integer max, begin, end;
+  ava_interval_value ival;
+
+  list = ava_list_value_of(raw_list);
+  max = ava_list_length(list);
+
+  ival = ava_interval_value_of(index);
+  if (ava_interval_is_singular(ival)) {
+    begin = ava_interval_get_singular(ival, max);
+    if (!lenient_index_check(begin, max))
+      return ava_value_of_string(AVA_EMPTY_STRING);
+    return ava_list_index(list, begin);
+  } else {
+    begin = ava_interval_get_begin(ival, max);
+    end = ava_interval_get_end(ival, max);
+    lenient_range_check(&begin, &end, max);
+    return ava_list_slice(list, begin, end).v;
+  }
+}
+
+ava_value fun(list__set_range)
+(ava_list_value list, size_t begin, size_t end, size_t listlen,
+ ava_list_value replacement);
+
+defun(list__set)(ava_value raw_list, ava_value index, ava_value val) {
+  ava_list_value list;
+  ava_integer max, begin, end;
+  ava_interval_value ival;
+
+  list = ava_list_value_of(raw_list);
+  max = ava_list_length(list);
+
+  ival = ava_interval_value_of(index);
+  if (ava_interval_is_singular(ival)) {
+    begin = ava_interval_get_singular(ival, max);
+    strict_index_check(begin, max + 1);
+
+    if (begin == max)
+      return ava_list_append(list, val).v;
+    else
+      return ava_list_set(list, begin, val).v;
+  } else {
+    begin = ava_interval_get_begin(ival, max);
+    end = ava_interval_get_end(ival, max);
+    strict_range_check(begin, end, max);
+
+    return fun(list__set_range)(list, begin, end, max, ava_list_value_of(val));
+  }
+}
+
+#ifndef COMPILING_DRIVER
+ava_value fun(list__set_range)
+(ava_list_value list, size_t begin, size_t end, size_t listlen,
+ ava_list_value repl)
+{
+  size_t repl_len, i;
+
+  if (0 == begin && end == listlen) return repl.v;
+  if (begin == listlen) return ava_list_concat(list, repl).v;
+  if (end == 0) return ava_list_concat(repl, list).v;
+
+  repl_len = ava_list_length(repl);
+
+  /* If we have to do an insertion, just rebuild the whole list */
+  if (repl_len > end - begin)
+    return ava_list_concat(
+      ava_list_concat(
+        ava_list_slice(list, 0, begin), repl),
+      ava_list_slice(list, end, listlen)).v;
+
+  /* Delete elements as necessary */
+  if (repl_len < end - begin)
+    list = ava_list_remove(list, begin + repl_len, end);
+
+  /* Replace what remain */
+  for (i = 0; i < repl_len; ++i)
+    list = ava_list_set(list, begin + i, ava_list_index(repl, i));
+
+  return list.v;
+}
+#endif
+
+defun(list__concat)(ava_value a, ava_value b) {
+  return ava_list_concat(a, b);
+}
+
+defun(list__interleave)
+(ava_value lists);
+defun(list__demux)
+(ava_value list, ava_value offset, ava_value stride);
+defun(list__group)
+(ava_value list, ava_value group_size);
+
+#ifndef COMPILING_DRIVER
+defun(list__interleave)(ava_value raw_lists) {
+  AVA_STATIC_STRING(illegal_argument, "illegal-argument");
+
+  ava_list_value* array, on_stack[16];
+  ava_list_value lists = ava_list_value_of(raw_lists), l;
+  size_t num_lists = ava_list_length(lists), i, list_length;
+
+  array = num_lists < 16? on_stack :
+    ava_alloc(sizeof(ava_list_value) * num_lists);
+
+  for (i = 0; i < num_lists; ++i) {
+    l = ava_list_value_of(ava_list_index(lists, i));
+    if (0 == i) {
+      list_length = ava_list_length(l);
+    } else {
+      if (list_length != ava_list_length(l))
+        ava_throw_uex(&ava_error_exception, illegal_argument,
+                      ava_error_interleaved_lists_not_of_same_length(
+                        i, list_length, ava_list_length(l)));
+    }
+    array[i] = l;
+  }
+
+  return ava_list_proj_interleave(array, num_lists).v;
+}
+
+defun(list__demux)(ava_value list, ava_value raw_offset, ava_value raw_stride) {
+  AVA_STATIC_STRING(illegal_argument, "illegal-argument");
+  ava_integer offset, stride;
+
+  offset = ava_integer_of_value(raw_offset, 0);
+  stride = ava_integer_of_value(raw_stride, 1);
+
+  if (offset < 0)
+    ava_throw_uex(&ava_error_exception, illegal_argument,
+                  ava_error_illegal_argument(
+                    AVA_ASCII9_STRING("offset"), raw_offset));
+  if (stride <= offset)
+    ava_throw_uex(&ava_error_exception, illegal_argument,
+                  ava_error_illegal_argument(
+                    AVA_ASCII9_STRING("stride"), raw_stride));
+
+  return ava_list_proj_demux(ava_list_value_of(list), offset, stride).v;
+}
+
+defun(list__group)(ava_value list, ava_value raw_group_size) {
+  AVA_STATIC_STRING(illegal_argument, "illegal-argument");
+  AVA_STATIC_STRING(group_size_name, "group-size");
+  ava_integer group_size;
+
+  group_size = ava_integer_of_value(raw_group_size, 1);
+  if (group_size <= 0)
+    ava_throw_uex(&ava_error_exception, illegal_argument,
+                  ava_error_illegal_argument(
+                    group_size_name, raw_group_size));
+
+  return ava_list_proj_group(ava_list_value_of(list), group_size).v;
+}
+#endif
+
+defun(list__flatten)(ava_value list) {
+  return ava_list_proj_flatten(ava_list_value_of(list)).v;
 }

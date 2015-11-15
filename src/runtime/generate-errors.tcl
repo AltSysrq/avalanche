@@ -491,6 +491,25 @@ set defs {
     }
   }
 
+  serror R0045 illegal_argument {
+    {ava_string name} {ava_value value}
+  } {
+    msg "Illegal value for argument \"%name\%: %value%"
+    explanation {
+      An invalid value was passed as a function argument.
+    }
+  }
+
+  serror R0046 interleaved_lists_not_of_same_length {
+    {ava_integer ix} {ava_integer expected} {ava_integer actual}
+  } {
+    msg "Lists to interleave have different length (%expected% vs %actual% at %ix%)"
+    explanation {
+      All lists passed to list.interleave must have the same length or the
+      operation is not well-defined.
+    }
+  }
+
   serror U3000 undef_integer_overflow {
     {ava_integer a} {ava_string op} {ava_integer b}
   } {

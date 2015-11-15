@@ -102,6 +102,7 @@ Macro DEFBINARY control      %MACRO >0 !op >1 (>2 (!<) (!>))
 
 DEFUNARY        !       35      %i.lnot
 DEFUNARY        ~^      35      %i.not
+DEFUNARY        #       35      %list.length
 DEFUNARY        b#      35      %bs.length
 DEFUNARY        m#      35      %map.npairs
 DEFBINARY       .**     31      %r.pow
@@ -183,3 +184,6 @@ ALIAS #name-subscript#with#*# = map.remap-all
 ALIAS #string-subscript#get## = byte-string.index
 ALIAS #string-subscript#with## = byte-string.set
 ALIAS #string-subscript#get#?# = byte-string.index-lenient
+ALIAS #numeric-subscript#get## = list.index
+ALIAS #numeric-subscript#with## = list.set
+ALIAS #numeric-subscript#get#?# = list.index-lenient
