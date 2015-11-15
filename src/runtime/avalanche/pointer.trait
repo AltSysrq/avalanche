@@ -78,4 +78,8 @@ trait ava pointer {
     require_tag.
   }
   method {const void*} get_const {ava_string require_tag} AVA_PURE
+  doc {
+    Adjusts the given pointer's address by the given amount.
+  }
+  method SELF adjust {ava_integer offset} AVA_PURE
 }

@@ -31,6 +31,7 @@
 #include "avalanche/map.h"
 #include "avalanche/integer.h"
 #include "avalanche/real.h"
+#include "avalanche/pointer.h"
 #include "avalanche/interval.h"
 #include "avalanche/map.h"
 #include "avalanche/exception.h"
@@ -1050,4 +1051,47 @@ defun(list__group)(ava_value list, ava_value raw_group_size) {
 
 defun(list__flatten)(ava_value list) {
   return ava_list_proj_flatten(ava_list_value_of(list)).v;
+}
+
+/******************** POINTER OPERATIONS ********************/
+
+/* All pointer operations are safe; there is deliberately no exposure of ways
+ * to actually dereference them. Ultimately, these functions provide no
+ * functionality that the application couldn't achieve via string manipulation.
+ */
+
+defun(pointer__is_null)(ava_value pointer) {
+  return ava_value_of_integer(
+    !ava_pointer_get_const(pointer, AVA_EMPTY_STRING));
+}
+
+defun(pointer__address)(ava_value pointer) {
+  return ava_value_of_integer(
+    (ava_intptr)ava_pointer_get_const(pointer, AVA_EMPTY_STRING));
+}
+
+defun(pointer__is_const)(ava_value pointer) {
+  return ava_value_of_integer(ava_pointer_is_const(pointer));
+}
+
+defun(pointer__tag)(ava_value pointer) {
+  return ava_value_of_string(ava_pointer_get_tag(pointer));
+}
+
+defun(pointer__const_cast)(ava_value pointer, ava_value is_const) {
+  return ava_pointer_const_cast_to(
+    pointer, !!ava_integer_of_value(is_const, 1));
+}
+
+defun(pointer__reinterpret_cast)(ava_value pointer, ava_value tag) {
+  return ava_pointer_reinterpret_cast_to(
+    pointer, ava_to_string(tag));
+}
+
+defun(pointer__add)(ava_value pointer, ava_value offset) {
+  return ava_pointer_adjust(pointer, ava_integer_of_value(offset, 0));
+}
+
+defun(pointer__sub)(ava_value pointer, ava_value offset) {
+  return ava_pointer_adjust(pointer, -ava_integer_of_value(offset, 0));
 }

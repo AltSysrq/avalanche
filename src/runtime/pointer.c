@@ -218,6 +218,15 @@ static const void* ava_pointer_pointer_get_const(ava_pointer_value this,
   return deobfuscate(ava_value_ulong(this.v));
 }
 
+static ava_pointer_value ava_pointer_pointer_adjust(
+  ava_pointer_value this, ava_integer offset
+) {
+  const ava_pointer_prototype*restrict proto = PROTO(this.v);
+
+  return ava_pointer_of_proto(
+    proto, deobfuscate(ava_value_ulong(this.v)) + offset);
+}
+
 static void ava_pointer_check_compatible(
   const ava_pointer_prototype*restrict proto,
   ava_string expected

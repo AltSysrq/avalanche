@@ -1000,3 +1000,58 @@ namespace list {
   ; followed by all the elements of the first element of $lists, and so on.
   EXTERN flatten "" ava pos
 }
+
+namespace pointer {
+  ; Returns whether the given raw pointer is NULL.
+  ;
+  ; Semantically equivalent to {! ! $ptr[1]} when $ptr is a normalised raw
+  ; pointer.
+  EXTERN is-null "" ava pos
+  ; Returns the virtual address of the given raw pointer.
+  ;
+  ; Semantically equivalent to {+ $ptr[1]} when $ptr is a normalised raw
+  ; pointer.
+  EXTERN address "" ava pos
+  ; Returns whether the given raw pointer is considered const.
+  ;
+  ; Semantically equivalent to {$ptr[0]{-1} b== "&"} when $ptr is a normalised
+  ; raw pointer.
+  EXTERN is-const "" ava pos
+  ; Returns the tag (assumed type) of the given raw pointer.
+  ;
+  ; Note that the empty string is used to represent "void" in C terms.
+  ;
+  ; Semantically equivalent to {$ptr[0]{0~-1}} when $ptr is a normalised raw
+  ; pointer.
+  EXTERN tag "" ava pos
+  ; Changes the constness of a pointer.
+  ;
+  ; :arg ptr The pointer whose constness is to be reset.
+  ;
+  ; :arg is-const The constness of the result. Empty is 1.
+  ;
+  ; :return A pointer with the same tag and address as $ptr, but the constness
+  ; of $is-const.
+  EXTERN const-cast "" ava pos pos
+  ; Changes the tag of a pointer.
+  ;
+  ; :arg ptr The pointer whose tag is to be reset.
+  ;
+  ; :arg tag The new tag on the result.
+  ;
+  ; :return A pointer with the same constness and address as $ptr, but the tag
+  ; of $tag.
+  EXTERN reinterpret-cast "" ava pos pos
+  ; Adjusts the address of a pointer.
+  ;
+  ; :arg ptr The pointer to adjust.
+  ;
+  ; :arg offset The offset to add to $ptr's address. Note that this is strictly
+  ; in terms of bytes, rather than values as it is in C.
+  ;
+  ; :return A pointer with the same tag and constness as $ptr, but with $offset
+  ; added to the address.
+  EXTERN add "" ava pos pos
+  ; Like $add, but $offset is implicitly negated first.
+  EXTERN sub "" ava pos pos
+}
