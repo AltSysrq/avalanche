@@ -205,6 +205,18 @@ deftest(spread_at_bol) {
   lex(ava_ltt_bareword, "bar");
 }
 
+deftest(suffix_eol_escape_multiline) {
+  start("foo \\ \n;comment\n\n bar");
+  lex(ava_ltt_bareword, "foo");
+  lex(ava_ltt_bareword, "bar");
+}
+
+deftest(prefix_eol_escape_multiline) {
+  start("foo \n; comment\n\n\\ bar");
+  lex(ava_ltt_bareword, "foo");
+  lex(ava_ltt_bareword, "bar");
+}
+
 deftest(line_with_only_backslash_not_removed) {
   start("foo\n\\\nbar");
   lex(ava_ltt_bareword, "foo");

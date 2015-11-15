@@ -419,6 +419,7 @@ ava_lex_status ava_lex_lex(ava_lex_result* dst, ava_lex_context* lex) {
       LEGAL = [^\x00-\x08\x0b\x0c\x0e-\x1f\x7f] ;
       LEGALNL = LEGAL \ [\n\r] ;
       COM = ";" LEGALNL* ;
+      COMNLP = (COM? NL WS*)+ ;
       BS = [\\] ;
       NS = LEGALNL \ [()\[\]{}\\;"`] \ WS ;
       SD = ["`] ;
@@ -431,8 +432,8 @@ ava_lex_status ava_lex_lex(ava_lex_result* dst, ava_lex_context* lex) {
       <Ground> NS+              { IND();  ACCEPT(ava_lex_bareword); }
       <Ground> WS+              {         IGNORE(); }
       <Ground> NL               {         ACCEPT(ava_lex_newline); }
-      <Ground> BS WS* COM? NL   {         IGNORE(); }
-      <Ground> NL WS* BS WS+    {         IGNORE(); }
+      <Ground> BS WS* COMNLP    {         IGNORE(); }
+      <Ground> COMNLP BS WS+    {         IGNORE(); }
       <Ground> BS WS+           { IND();  ACCEPT(ava_lex_newline); }
       <Ground> COM              {         IGNORE(); }
       <Ground> BS '*'           { IND();  ACCEPT(ava_lex_spread); }

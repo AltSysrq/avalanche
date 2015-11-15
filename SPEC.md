@@ -73,7 +73,9 @@ described below.
 
 A Newline produces a Newline Token. A Backslash followed by any amount of
 Whitespace, a possible Comment, then a Newline suppresses the Newline Token
-that would result. A Newline is also suppressed if it is followed by any number
+that would result, as well as any that would result from immediately subsequent
+lines containing only Whitespace and Comments. A Newline (and all preceding
+occurrences in blank lines) is also suppressed if it is followed by any number
 of Whitespace characters, a Backslash, and at least one Whitespace character. A
 Backslash followed by one or more Whitespace characters itself results in a
 Newline Token otherwise. Such "synthetic" Newline Tokens must occur
@@ -91,6 +93,10 @@ Independent.
     ; Whitespac
   logical line 7
   \*foo ; logical line 8, since the \ is not followed by Whitespace
+  logical line 9
+  ; Some long comment
+  ; spanning multiple lines
+  \ still logical line 9
 ```
 
 Any contiguous sequence of Word characters is a Bareword Token. Certain
