@@ -1,0 +1,4 @@
+alias #name-subscript#get#x# = #name-subscript#get##
+macro #name-subscript#with#x# control <
+
+x(42)x = 42

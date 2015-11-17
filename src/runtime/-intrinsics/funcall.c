@@ -122,18 +122,40 @@ ava_ast_node* ava_intr_funcall_of(
   return (ava_ast_node*)this;
 }
 
+ava_ast_node* ava_intr_funcall_make(
+  ava_macsub_context* context,
+  ava_ast_node*const* parms,
+  size_t num_parms
+) {
+  ava_intr_funcall* this;
+
+  assert(num_parms > 1);
+
+  this = AVA_NEW(ava_intr_funcall);
+  this->header.v = &ava_intr_funcall_vtable;
+  this->header.location = ava_compile_location_span(
+    &parms[0]->location, &parms[num_parms-1]->location);
+  this->header.context = context;
+
+  this->symtab = ava_macsub_get_symtab(context);
+  this->num_parms = num_parms;
+  this->parms = ava_clone(parms, num_parms * sizeof(ava_ast_node*));
+
+  return (ava_ast_node*)this;
+}
+
 static ava_string ava_intr_funcall_to_string(const ava_intr_funcall* this) {
   ava_string accum;
   size_t i;
 
   accum = AVA_ASCII9_STRING("call { ");
   for (i = 0; i < this->num_parms; ++i) {
-    accum = ava_string_concat(
+    accum = ava_strcat(
       accum, ava_ast_node_to_string(this->parms[i]));
-    accum = ava_string_concat(
+    accum = ava_strcat(
       accum, AVA_ASCII9_STRING("; "));
   }
-  accum = ava_string_concat(accum, AVA_ASCII9_STRING("}"));
+  accum = ava_strcat(accum, AVA_ASCII9_STRING("}"));
   return accum;
 }
 

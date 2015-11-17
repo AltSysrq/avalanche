@@ -28,24 +28,40 @@
 
 AVA_BEGIN_DECLS
 
-/**
- * The number of bytes in ava_driver_isa_unchecked_data.
- */
-extern const size_t ava_driver_isa_unchecked_size;
+#define DEFDRIVER(name)                                 \
+  extern const char*const ava_driver_##name##_data;     \
+  extern const size_t ava_driver_##name##_size
+
 /**
  * ISA driver compiled without any runtime checks enabled. Anything stated to
  * have undefined behaviour really has undefined behaviour.
  */
-extern const char*const ava_driver_isa_unchecked_data;
+DEFDRIVER(isa_unchecked);
 
-/**
- * The number of bytes in ava_driver_main_data.
- */
-extern const size_t ava_driver_main_size;
 /**
  * Driver providing the main() function for compiled programs.
  */
-extern const char*const ava_driver_main_data;
+DEFDRIVER(main);
+
+/**
+ * The low-level component of the org.ava-lang.avast package compiled in
+ * unchecked mode.
+ */
+DEFDRIVER(avast_unchecked);
+
+/**
+ * The low-level component of the org.ava-lang.avast package compiled at check
+ * level 1 (overflow and such unchecked; more common errors still checked).
+ */
+DEFDRIVER(avast_checked_1);
+
+/**
+ * The low-level component of the org.ava-lang.avast package compiled at check
+ * level 2 (all undefined behaviour checked).
+ */
+DEFDRIVER(avast_checked_2);
+
+#undef DEFDRIVER
 
 AVA_END_DECLS
 

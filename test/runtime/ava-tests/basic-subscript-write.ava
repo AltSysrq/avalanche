@@ -1,0 +1,5 @@
+extern pass-test pass_test c void [int pos]
+
+x(foo) = 40
+x(bar) = 2
+pass-test : $x(foo) + $x(bar)

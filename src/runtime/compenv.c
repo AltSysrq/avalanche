@@ -46,6 +46,7 @@ ava_compenv* ava_compenv_new(ava_string package_prefix) {
   LIST_INIT(&env->package_cache);
   LIST_INIT(&env->module_cache);
   SLIST_INIT(&env->pending_modules);
+  env->implicit_packages = ava_empty_list();
 
   return env;
 }
@@ -124,7 +125,7 @@ ava_bool ava_compenv_compile_file(
   ava_ast_node_postprocess(root_node);
   if (!TAILQ_EMPTY(&errors)) goto error;
 
-  pcode = ava_codegen_run(root_node, &errors);
+  pcode = ava_codegen_run(root_node, env->implicit_packages, &errors);
   if (dst_pcode) *dst_pcode = pcode;
   if (!TAILQ_EMPTY(&errors)) goto error;
 
@@ -153,7 +154,7 @@ ava_bool ava_compenv_simple_read_source(
 
   in = fopen(
     ava_string_to_cstring(
-      ava_string_concat(
+      ava_strcat(
         ava_string_of_datum(compenv->read_source_userdata),
         filename)), "r");
   if (!in) goto error;
@@ -161,7 +162,7 @@ ava_bool ava_compenv_simple_read_source(
   source = AVA_EMPTY_STRING;
   do {
     nread = fread(buffer, 1, sizeof(buffer), in);
-    source = ava_string_concat(source, ava_string_of_bytes(buffer, nread));
+    source = ava_strcat(source, ava_string_of_bytes(buffer, nread));
   } while (nread == sizeof(buffer));
 
   if (ferror(in)) goto error;

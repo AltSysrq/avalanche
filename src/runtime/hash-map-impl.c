@@ -613,7 +613,7 @@ static ava_bool ava_hash_map_to_ascii9(ava_value*restrict value) {
     return ava_true;
 
   str = ava_to_string(*value);
-  strlen = ava_string_length(str);
+  strlen = ava_strlen(str);
   if (strlen > 9)
     return ava_false;
 
@@ -942,7 +942,7 @@ static size_t ava_hash_map_vacuum(ava_hash_map*restrict src,
       assert(i < num_elements);
 
     key = src->esba_trait->index(src_keys, i);
-    value = src->esba_trait->index(src_keys, i);
+    value = src->esba_trait->index(src_values, i);
     dst_keys = ava_esba_list_of_raw(&key, 1);
     dst_values = ava_esba_list_of_raw(&value, 1);
 

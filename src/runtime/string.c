@@ -105,7 +105,6 @@ static void assert_aligned(const void* ptr) {
   assert(0 == (size_t)ptr % AVA_STRING_ALIGNMENT);
 }
 
-static ava_bool ava_string_is_ascii9(ava_string);
 static ava_bool ava_string_can_encode_ascii9(const char*, size_t);
 static ava_ascii9_string ava_ascii9_encode(const char*, size_t);
 static void ava_ascii9_decode(ava_ulong*restrict dst, ava_ascii9_string);
@@ -158,10 +157,6 @@ static inline ava_twine_tag ava_twine_get_tag(const void* body);
 static inline void* ava_twine_get_body_ptr(const void* body);
 static const void* ava_twine_pack_body(ava_twine_tag tag,
                                        const void* body_ptr);
-
-static ava_bool ava_string_is_ascii9(ava_string str) {
-  return str.ascii9 & 1;
-}
 
 static ava_bool ava_string_can_encode_ascii9(const char* str,
                                              size_t sz) {
@@ -360,7 +355,7 @@ static size_t ava_ascii9_length(ava_ascii9_string s) {
 #endif /* defined(__GNUC__) && defined(__SSE4_2__) */
 }
 
-size_t ava_string_length(ava_string str) {
+size_t ava_strlen(ava_string str) {
   if (str.ascii9 & 1) {
     return ava_ascii9_length(str.ascii9);
   } else {
@@ -386,7 +381,7 @@ static ava_ascii9_string ava_ascii9_concat(
   return a | (b >> 7 * ava_ascii9_length(a));
 }
 
-ava_string ava_string_concat(ava_string a, ava_string b) {
+ava_string ava_strcat(ava_string a, ava_string b) {
   size_t alen, blen;
   ava_string ret;
 
@@ -397,8 +392,8 @@ ava_string ava_string_concat(ava_string a, ava_string b) {
       ava_ascii9_length(a.ascii9) + ava_ascii9_length(b.ascii9) <= 9)
     return (ava_string) { .ascii9 = ava_ascii9_concat(a.ascii9, b.ascii9) };
 
-  alen = ava_string_length(a);
-  blen = ava_string_length(b);
+  alen = ava_strlen(a);
+  blen = ava_strlen(b);
 
   /* If one is empty, return the other */
   if (0 == alen) return b;
@@ -455,7 +450,7 @@ ava_string ava_string_slice(ava_string str, size_t begin, size_t end) {
     return ret;
   }
 
-  if (0 == begin && ava_string_length(str) == end)
+  if (0 == begin && ava_strlen(str) == end)
     return str;
 
   /* Convert to an ASCII9 string if possible */
@@ -475,6 +470,27 @@ ava_string ava_string_slice(ava_string str, size_t begin, size_t end) {
   return ret;
 }
 
+ava_string ava_string_trunc(ava_string str, size_t end) {
+  if (ava_string_is_ascii9(str)) {
+    str.ascii9 &= (1LL << 63) >> (7 * end) << 1;
+    str.ascii9 |= 1;
+    return str;
+  } else {
+    return ava_string_slice(str, 0, end);
+  }
+}
+
+ava_string ava_string_behead(ava_string str, size_t begin) {
+  if (ava_string_is_ascii9(str)) {
+    str.ascii9 -= 1;
+    str.ascii9 <<= 7 * begin;
+    str.ascii9 |= 1;
+    return str;
+  } else {
+    return ava_string_slice(str, begin, ava_strlen(str));
+  }
+}
+
 signed ava_strcmp(ava_string a, ava_string b) {
   ava_str_tmpbuff atmp, btmp;
   const char*restrict ac, *restrict bc;
@@ -486,8 +502,8 @@ signed ava_strcmp(ava_string a, ava_string b) {
 
   ac = ava_string_to_cstring_buff(atmp, a);
   bc = ava_string_to_cstring_buff(btmp, b);
-  alen = ava_string_length(a);
-  blen = ava_string_length(b);
+  alen = ava_strlen(a);
+  blen = ava_strlen(b);
   n = alen < blen? alen : blen;
   cmp = memcmp(ac, bc, n);
 
@@ -500,7 +516,7 @@ ava_bool ava_string_equal(ava_string a, ava_string b) {
   if (ava_string_is_ascii9(a) || ava_string_is_ascii9(b)) {
     return ava_string_to_ascii9(a) == ava_string_to_ascii9(b);
   } else {
-    size_t alen = ava_string_length(a), blen = ava_string_length(b);
+    size_t alen = ava_strlen(a), blen = ava_strlen(b);
     return alen == blen &&
       0 == memcmp(ava_twine_force(a.twine), ava_twine_force(b.twine),
                   alen);
@@ -521,10 +537,10 @@ ava_bool ava_string_starts_with(ava_string big, ava_string small) {
   if (ava_string_is_ascii9(big) && ava_string_is_ascii9(small))
     return ava_ascii9_starts_with(big.ascii9, small.ascii9);
 
-  small_len = ava_string_length(small);
+  small_len = ava_strlen(small);
   if (small_len > 9 && ava_string_is_ascii9(big)) return ava_false;
 
-  big_len = ava_string_length(big);
+  big_len = ava_strlen(big);
   if (small_len > big_len) return ava_false;
 
   smallc = ava_string_to_cstring_buff(smalltmp, small);
@@ -570,7 +586,7 @@ ava_ascii9_string ava_string_to_ascii9(ava_string str) {
   if (ava_string_is_ascii9(str))
     return str.ascii9;
 
-  len = ava_string_length(str);
+  len = ava_strlen(str);
   if (len > 9)
     return 0;
 
@@ -579,6 +595,68 @@ ava_ascii9_string ava_string_to_ascii9(ava_string str) {
     return ava_ascii9_encode(dat, len);
   else
     return 0;
+}
+
+ssize_t ava_ascii9_index_of_match(ava_ascii9_string a,
+                                  ava_ascii9_string b) {
+  ava_ascii9_string mask = 0x8102040810204081LL;
+  ava_ascii9_string decr;
+  ava_ascii9_string xored, decred, masked;
+  unsigned bc;
+
+  /* Rotate `a` right 1, so that the high bit is set; shift `b` right 1, so
+   * that the high bit is clear.
+   */
+  a = (a >> 1) | (a << 63);
+  b >>= 1;
+  /* By XORing b into a, a character slot becomes exactly zero iff both strings
+   * had the same character there. The high bit in a remains set.
+   */
+  xored = a ^ b;
+  /* Decrement each character in xored. This has the effect that the zeroth bit
+   * of each character is inverted, *except* for characters followed by a zero,
+   * since that zero has to borrow for the decrement. If the zeroth character
+   * was zero, this clears the high bit.
+   *
+   * We suppress decrementing characters which have their 1-bit set. This is
+   * because that could be their *only* set bit, which could get taken away if
+   * the character after them borrows it away.
+   */
+  decr = mask & ~ xored;
+  decred = xored - decr;
+  /* Produce a mask of bits which were followed by a zero character. */
+  masked = (decred ^ xored ^ decr) & mask;
+
+  if (!masked) return -1;
+  bc = __builtin_clzll(masked);
+  /* return bc / 7; */
+  return (((8LL << 56) | (7LL << 49) | (6LL << 42) |
+           (5LL << 35) | (4LL << 28) | (3LL << 21) |
+           (2LL << 14) | (1LL <<  7) | (0LL <<  0))
+          >> bc) & 0xF;
+}
+
+ssize_t ava_strchr(ava_string haystack, char needle) {
+  const char* dat, * found;
+
+  if (ava_string_is_ascii9(haystack)) {
+    if (!_AVA_IS_ASCII9_CHAR(needle))
+      /* By definition, can't be in the string */
+      return -1;
+
+    return ava_ascii9_index_of_match(
+      haystack.ascii9,
+      AVA_ASCII9(needle, needle, needle,
+                 needle, needle, needle,
+                 needle, needle, needle));
+  } else {
+    dat = ava_twine_force(haystack.twine);
+    found = memchr(dat, needle, ava_strlen(haystack));
+    if (found)
+      return found - dat;
+    else
+      return -1;
+  }
 }
 
 static inline ava_twine_tag ava_twine_get_tag(const void* body) {

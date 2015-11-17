@@ -1182,7 +1182,7 @@ static ava_value cat(size_t count, ...) {
 
   va_start(args, count);
   for (i = 0; i < count; ++i)
-    accum = ava_string_concat(accum, ava_to_string(va_arg(args, ava_value)));
+    accum = ava_strcat(accum, ava_to_string(va_arg(args, ava_value)));
 
   va_end(args);
 
@@ -1292,7 +1292,7 @@ TEST_INVOKE(invoke_string, "foobar",
             "c string \"string pos\" \"string pos\"",
             const char*, (const char* a, const char* b),
             ava_string_to_cstring(
-              ava_string_concat(ava_string_of_cstring(a),
+              ava_strcat(ava_string_of_cstring(a),
                                 ava_string_of_cstring(b))),
             STATWORD(foo), STATWORD(bar))
 

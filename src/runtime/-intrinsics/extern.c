@@ -64,7 +64,7 @@ ava_macro_subst_result ava_intr_extern_subst(
 ) {
   ava_exception_handler handler;
   const ava_parse_unit* ava_name_unit, * prototype_first_unit = NULL;
-  ava_string ava_name, native_name;
+  ava_string ava_name, native_name = AVA_EMPTY_STRING;
   ava_value prototype_list = ava_value_of_string(AVA_ASCII9_STRING("1"));
   const ava_function* prototype;
   ava_symbol* definition;
@@ -110,8 +110,13 @@ ava_macro_subst_result ava_intr_extern_subst(
   definition->definer = (ava_ast_node*)this;
   definition->full_name = ava_macsub_apply_prefix(context, ava_name);
   definition->v.var.is_mutable = ava_false;
-  definition->v.var.name.scheme = ava_nms_none;
-  definition->v.var.name.name = native_name;
+  if (ava_string_is_empty(native_name)) {
+    definition->v.var.name.scheme = ava_nms_ava;
+    definition->v.var.name.name = definition->full_name;
+  } else {
+    definition->v.var.name.scheme = ava_nms_none;
+    definition->v.var.name.name = native_name;
+  }
   definition->v.var.fun = *prototype;
 
   ava_macsub_put_symbol(context, definition, &ava_name_unit->location);

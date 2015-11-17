@@ -1,0 +1,2 @@
+macro #name-subscript#get#foo# control >
+[]()foo

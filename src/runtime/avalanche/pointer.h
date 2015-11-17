@@ -23,6 +23,7 @@
 #include "defs.h"
 #include "string.h"
 #include "value.h"
+#include "integer.h"
 
 #include "pointer-trait.h"
 

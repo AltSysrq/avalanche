@@ -25,8 +25,6 @@
  * Syntax:
  *   extern ava-name native-name prototype...
  *
- * TODO: Make the syntax more like whatever `fun` ends up using.
- *
  * The symbol table gains a function `ava-name` which references the C function
  * with the given `native-name` (which must already be mangled, if applicable)
  * and prototype.
@@ -35,7 +33,9 @@
  * implicit zeroth element, and the result converted to an ava_function.
  *
  * ava-name must be a function name. native-name and all elements of prototype
- * may be arbitrary constant expressions.
+ * may be arbitrary constant expressions. If native-name is the empty string,
+ * the native-name is implicitly the fully-qualified name of the resulting
+ * symbol, using the ava name mangling scheme.
  *
  * The visibility of the resulting symbol is intrinsic to the macro, derived
  * from *(ava_visibility*)userdata on the self symbol.

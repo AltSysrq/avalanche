@@ -303,9 +303,9 @@ static ava_xcode_function* ava_xcode_structure_function(
   for (i = ava_prt_data; i <= ava_prt_function; ++i) {
     if (reg_height[i] > 0) {
       DIE(ava_error_xcode_unbalanced_push(
-            &location, ava_string_concat(
+            &location, ava_strcat(
               ava_string_of_char("vdilpf"[i]),
-              ava_string_concat(
+              ava_strcat(
                 AVA_ASCII9_STRING(" "),
                 ava_to_string(ava_value_of_integer(reg_height[i]))))));
     }
@@ -777,7 +777,7 @@ static void ava_xcode_check_reg_init(
       ava_compile_error_add(
         errors, ava_error_xcode_uninit_reg(
           location,
-          ava_string_concat(
+          ava_strcat(
             ava_string_of_char("vdilpf"[reg.type]),
             ava_to_string(ava_value_of_integer(reg.index)))));
     }

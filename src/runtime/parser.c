@@ -421,7 +421,7 @@ static void ava_parse_simplify_group_tag(
   ava_parse_unit* orig, * bareword;
   ava_parse_statement* statement;
 
-  if (1 == ava_string_length(closing_token->str))
+  if (1 == ava_strlen(closing_token->str))
     /* No tag */
     return;
 
@@ -449,9 +449,9 @@ static void ava_parse_simplify_group_tag(
     abort();
   }
 
-  bareword->v.string = ava_string_concat(
+  bareword->v.string = ava_strcat(
     base, ava_string_slice(closing_token->str, 1,
-                           ava_string_length(closing_token->str)));
+                           ava_strlen(closing_token->str)));
 
   unit->type = ava_put_substitution;
   TAILQ_INIT(&unit->v.statements);
@@ -477,7 +477,7 @@ static ava_parse_unit_read_result ava_parse_bareword(
   ava_bool has_dollar;
   ava_bool in_var;
 
-  strlen = ava_string_length(token->str);
+  strlen = ava_strlen(token->str);
   content = ava_string_to_cstring_buff(strtmp, token->str);
 
   has_dollar = ava_false;
@@ -889,12 +889,12 @@ static ava_parse_unit_read_result ava_parse_subscript(
     &substatement->units, &last_token, errors, context, closing_token_type);
 
   if (ava_purr_ok == result) {
-    tag = ava_string_concat(
+    tag = ava_strcat(
       AVA_ASCII9_STRING("#"),
-      ava_string_concat(
+      ava_strcat(
         ava_string_slice(
           last_token.str,
-          1, ava_string_length(last_token.str)),
+          1, ava_strlen(last_token.str)),
         AVA_ASCII9_STRING("#")));
     tag_off = 1;
   } else {
@@ -1011,6 +1011,31 @@ static ava_parse_unit_read_result ava_parse_spread(
   return ava_purr_ok;
 }
 
+ava_bool ava_parse_unit_is_essentially_bareword(const ava_parse_unit* unit) {
+  for (;;) {
+    switch (unit->type) {
+    case ava_put_bareword: return ava_true;
+
+    case ava_put_substitution:
+      if (TAILQ_EMPTY(&unit->v.statements))
+        return ava_false;
+      if (TAILQ_NEXT(TAILQ_FIRST(&unit->v.statements), next))
+        return ava_false;
+      if (TAILQ_EMPTY(&TAILQ_FIRST(&unit->v.statements)->units))
+        return ava_false;
+      if (TAILQ_NEXT(
+            TAILQ_FIRST(
+              &TAILQ_FIRST(&unit->v.statements)->units), next))
+        return ava_false;
+
+      unit = TAILQ_FIRST(&TAILQ_FIRST(&unit->v.statements)->units);
+      continue;
+
+    default: return ava_false;
+    }
+  }
+}
+
 ava_compile_location ava_compile_location_span(
   const ava_compile_location* begin,
   const ava_compile_location* end
@@ -1018,7 +1043,11 @@ ava_compile_location ava_compile_location_span(
   ava_compile_location ret;
 
   ret = *begin;
-  ret.end_line = end->end_line;
-  ret.end_column = end->end_column;
+  if (ava_string_equal(begin->filename, end->filename)) {
+    if (end->end_line > ret.end_line)
+      ret.end_line = end->end_line;
+    if (end->end_column > ret.end_column)
+      ret.end_column = end->end_column;
+  }
   return ret;
 }

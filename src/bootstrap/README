@@ -1,0 +1,10 @@
+This directory provides the "bootstrap toolchain", which is used for
+building the avast library.
+
+Ordinarily, these tools are built automatically before avast is needed.
+However, when cross-compiling, versions of these tools compiled for the
+host must be used instead.
+
+These tools are not intended to be user-friendly. In particular, since
+they are used for building the core library, it will not be available
+when this toolchain is used.

@@ -36,7 +36,7 @@ static ava_value run(void* filename) {
 
   compenv = ava_compenv_new(AVA_ASCII9_STRING("input:"));
   ava_compenv_use_simple_source_reader(compenv, AVA_EMPTY_STRING);
-  ava_compenv_use_minimal_macsub(compenv);
+  ava_compenv_use_standard_macsub(compenv);
   ava_compenv_compile_file(&pcode, &xcode, compenv,
                            ava_string_of_cstring(filename),
                            &errors, NULL);
@@ -59,6 +59,9 @@ static ava_value run(void* filename) {
   ava_jit_add_driver(
     jit, ava_driver_isa_unchecked_data,
     ava_driver_isa_unchecked_size);
+  ava_jit_add_driver(
+    jit, ava_driver_avast_checked_2_data,
+    ava_driver_avast_checked_2_size);
   jit_error = ava_jit_run_module(
     jit, xcode, ava_string_of_cstring(filename),
     ava_string_of_cstring(filename),
@@ -75,6 +78,6 @@ static ava_value run(void* filename) {
 }
 
 int main(int argc, char** argv) {
-  ava_invoke_in_context(run, argv[1]);
+  ava_invoke_in_context(run, argc > 1? argv[1] : "/dev/stdin");
   return 0;
 }

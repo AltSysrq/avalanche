@@ -1,0 +1,4 @@
+extern pass-test pass_test c void [int pos]
+
+x(a)?(b)? = 42
+pass-test : $x(plugh)? + $x(a)(b)

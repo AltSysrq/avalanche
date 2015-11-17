@@ -306,6 +306,7 @@ void ava_codegen_ret(ava_codegen_context* context,
 
 ava_pcode_global_list* ava_codegen_run(
   ava_ast_node* root,
+  ava_list_value implicit_packages,
   ava_compile_error_list* errors
 ) {
   ava_pcg_builder* global_builder = ava_pcg_builder_new();
@@ -315,6 +316,7 @@ ava_pcode_global_list* ava_codegen_run(
   ava_demangled_name init_name;
   ava_list_value init_vars;
   ava_codegen_context* context;
+  size_t i, n;
 
   init_name.scheme = ava_nms_ava;
   init_name.name = AVA_ASCII9_STRING("\\init");
@@ -327,6 +329,12 @@ ava_pcode_global_list* ava_codegen_run(
                    root->location.line_offset,
                    root->location.start_line, root->location.end_line,
                    root->location.start_column, root->location.end_column);
+
+  n = ava_list_length(implicit_packages);
+  for (i = 0; i < n; ++i)
+    ava_pcgb_load_pkg(
+      global_builder, ava_to_string(ava_list_index(implicit_packages, i)));
+
   init_function = ava_pcgb_fun(
     global_builder,
     ava_false, init_name, init_prototype, init_vars,

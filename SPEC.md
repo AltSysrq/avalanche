@@ -73,7 +73,9 @@ described below.
 
 A Newline produces a Newline Token. A Backslash followed by any amount of
 Whitespace, a possible Comment, then a Newline suppresses the Newline Token
-that would result. A Newline is also suppressed if it is followed by any number
+that would result, as well as any that would result from immediately subsequent
+lines containing only Whitespace and Comments. A Newline (and all preceding
+occurrences in blank lines) is also suppressed if it is followed by any number
 of Whitespace characters, a Backslash, and at least one Whitespace character. A
 Backslash followed by one or more Whitespace characters itself results in a
 Newline Token otherwise. Such "synthetic" Newline Tokens must occur
@@ -91,6 +93,10 @@ Independent.
     ; Whitespac
   logical line 7
   \*foo ; logical line 8, since the \ is not followed by Whitespace
+  logical line 9
+  ; Some long comment
+  ; spanning multiple lines
+  \ still logical line 9
 ```
 
 Any contiguous sequence of Word characters is a Bareword Token. Certain
@@ -435,13 +441,13 @@ but any Blocks or Substitutions they contain are.
 
 A syntax unit is said to invoke a macro if it is a Bareword whose symbol in the
 current scope references a macro. L-Strings, R-Strings, and LR-Strings are
-treated as operator macros with precedence 10, using the following
+treated as operator macros with precedence 20, using the following
 pseudo-macro-templates (where `@` indicates conversion of the string to an
 A-String):
 ```
-  L-String =>   (%string-concat (<) @) >
-  R-String =>   < (%string-concat @ (>))
-  LR-String =>  (%string-concat (%string-concat (<) @) (>))
+  L-String =>   (#string-concat# (<) @) >
+  R-String =>   < (#string-concat# @ (>))
+  LR-String =>  (#string-concat# (#string-concat# (<) @) (>))
 ```
 
 The macro processing algorithm for a single statement is as follows:

@@ -1,0 +1,52 @@
+import real r
+
+reqmod runtime/ava-tests/helpers/real-common
+
+asseq 10.0 r.fma 2.0 3.0 4.0
+asseq 5.0 r.logb 42.0
+asseq 168.0 r.ldexp 42.0 2
+asseq 168.0 r.scalbn 42.0 2
+asseq -42.0 r.copysign 42.0 -1
+asseq 42.0 r.abs -42.0
+asseq 0 r.dim 4.0 7.0
+asseq 3 r.dim 7.0 4.0
+asseq 2 r.nearbyint 2.1
+assert r.nextafter 2.1 +4 .> 2.1
+assert r.nextafter 2.1 -1 .< 2.1
+assert r.nexttoward 2.1 +4 .> 2.1
+assert r.nexttoward 2.1 -1 .< 2.1
+asseq -1 r.ieee-remainder -7 3
+
+assert nan b== r.fpclassify nan
+assert infinite b== r.fpclassify inf
+assert infinite b== r.fpclassify -inf
+assert normal b== r.fpclassify 3.14
+assert subnormal b== r.fpclassify : r.nextafter 0.0 +1
+assert zero b== r.fpclassify +0.0
+assert zero b== r.fpclassify -0.0
+assert r.is-finite 3.14
+assert r.is-finite 0
+assert ! r.is-finite inf
+assert ! r.is-finite -inf
+assert ! r.is-infinite 3.14
+assert ! r.is-infinite nan
+assert ! r.is-infinite 0
+assert r.is-infinite inf
+assert r.is-infinite -inf
+assert r.is-nan nan
+assert ! r.is-nan 3.14
+assert r.is-normal 3.14
+assert ! r.is-normal 0.0
+assert r.signbit-is-negative -1
+assert ! r.signbit-is-negative 1
+assert r.signbit-is-negative -0.0
+assert ! r.signbit-is-negative +0.0
+assert r.signbit-is-negative -inf
+assert ! r.signbit-is-negative +inf
+
+asseq 0.75 r.mantissa 1.5
+asseq 1 r.exponent 1.5
+asseq 0.5 r.fractional 1.5
+asseq 1.0 r.integral 1.5
+
+pass-test 42

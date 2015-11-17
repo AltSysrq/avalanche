@@ -8,7 +8,9 @@ CXXFLAGS="$COMMON_FLAGS -fno-caret-diagnostics -fno-diagnostics-fixit-info -fno-
 CPPFLAGS='-I/usr/local/include'
 LDFLAGS='-L/usr/local/lib -L/usr/local/lib/gcc5'
 CXXLDFLAGS="$LDFLAGS"
+# Need to disable debug info from gas or it conflicts with what LLVM outputs
+CCASFLAGS="-g0"
 
-export CC CXX CFLAGS CXXFLAGS CPPFLAGS LDFLAGS CXXLDFLAGS
+export CC CXX CFLAGS CXXFLAGS CPPFLAGS LDFLAGS CXXLDFLAGS CCASFLAGS
 
 exec ./configure

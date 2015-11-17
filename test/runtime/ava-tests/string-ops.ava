@@ -1,0 +1,45 @@
+reqmod runtime/ava-tests/helpers/assert
+
+import byte-string bs
+
+assert 9 == b# "avalanche"
+assert 2 == b# "ß"
+assert "foo" b== "foo"
+assert "foo" b!= "bar"
+assert "foo" b> "bar"
+assert "foo" b>= "bar"
+assert "bar" b< "foo"
+assert "bar" b<= "foo"
+assert "foo" b<= "foo"
+assert "foo" b>= "foo"
+assert "fo" b< "foo"
+assert ! : "foo" b< "bar"
+assert ! : "bar" b> "foo"
+assert bs.compare "foo" "bar" > 0
+assert bs.compare "bar" "foo" < 0
+assert bs.compare "foo" "foo" == 0
+assert bs.compare "fo" "foo" < 0
+assert "" b== "foo" b* 0
+assert "foo" b== "foo" b* 1
+assert "foofoofoo" b== "foo" b* 3
+assert 42 == b# : a b* 42
+
+assert "e" b== "hello"{1}
+assert "o" b== "hello"{-1}
+assert "ell" b== "hello"{1~-1}
+assert "llo" b== "hello"{2~}
+hello = "hello"
+hello{1} = "a"
+assert "hallo" b== $hello
+hello{} = "x"
+assert "hallox" b== $hello
+hello{-1} = ""
+assert "hallo" b== $hello
+hello{1 ~ 2} = "foo"
+assert "hfoollo" b== $hello
+assert "" b== $hello{99}?
+assert "" b== $hello{99 ~ 100}?
+assert "" b== $hello{2 ~ 1}?
+assert "hfoollo" b== $hello{-99 ~ 100}?
+
+pass-test 42

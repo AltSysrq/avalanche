@@ -52,7 +52,7 @@ ava_integer ava_integer_of_noninteger_value(
   ava_str_tmpbuff tmpbuff;
   size_t strlen;
 
-  strlen = ava_string_length(str);
+  strlen = ava_strlen(str);
 
   /* Inlined case only checks for ASCII9 empty string. */
   if (0 == strlen)
@@ -94,6 +94,7 @@ ava_integer ava_integer_of_noninteger_value(
       HEX = '0'? 'x' ;
       TRUTHY = 'on' | 'true' | 'yes' ;
       FALSEY = 'off' | 'false' | 'no' | 'null' ;
+      END = 'end';
       BIN_LITERAL = SIGN BIN [01]+  ;
       OCT_LITERAL = SIGN OCT [0-7]+ ;
       DEC_LITERAL = SIGN     [0-9]+ ;
@@ -110,6 +111,7 @@ ava_integer ava_integer_of_noninteger_value(
       WS+                       { continue; }
       TRUTHY WS*                { END(); return 1; }
       FALSEY WS*                { END(); return 0; }
+      END WS*                   { END(); return AVA_INTEGER_END; }
       BIN_LITERAL WS*           { END(); return ava_integer_parse_bin(tok, cursor); }
       OCT_LITERAL WS*           { END(); return ava_integer_parse_oct(tok, cursor); }
       HEX_LITERAL WS*           { END(); return ava_integer_parse_hex(tok, cursor); }
@@ -140,7 +142,7 @@ ava_bool ava_string_is_integer(ava_string str) {
   ava_str_tmpbuff tmpbuff;
   size_t strlen;
 
-  strlen = ava_string_length(str);
+  strlen = ava_strlen(str);
 
   if (str.ascii9 & 1 &&
       PARSE_DEC_FAST_ERROR != ava_integer_parse_dec_fast(str.ascii9, strlen))
@@ -160,6 +162,7 @@ ava_bool ava_string_is_integer(ava_string str) {
 
       WS* TRUTHY WS*            { break; }
       WS* FALSEY WS*            { break; }
+      WS* END WS*               { break; }
       WS* BIN_LITERAL WS*       { break; }
       WS* OCT_LITERAL WS*       { break; }
       WS* DEC_LITERAL WS*       { break; }

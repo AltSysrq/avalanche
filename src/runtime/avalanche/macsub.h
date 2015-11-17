@@ -41,6 +41,7 @@ struct ava_symbol_s;
 struct ava_symtab_s;
 struct ava_varscope_s;
 struct ava_compenv_s;
+struct ava_pcode_global_list_s;
 
 /**
  * An AST node after macro processing.
@@ -142,6 +143,15 @@ struct ava_ast_node_s {
    * The context which owns this node.
    */
   ava_macsub_context* context;
+
+  /**
+   * Whether this AST node is currently between cg_set_up() and cg_tear_down()
+   * calls.
+   *
+   * This is maintained by the ava_ast_node_cg_*() functions and should not be
+   * accessed externally.
+   */
+  unsigned setup_count;
 };
 
 /**
@@ -165,11 +175,27 @@ typedef ava_string (*ava_ast_node_to_string_f)(const ava_ast_node*);
  * If this node cannot be used as an lvalue, the node must record an error and
  * return a valid lvalue AST node.
  *
+ * If the value of the producer may be evaluated outside of the L-Value's
+ * control, the actual controller should surround evaluation of the actual
+ * producer and the L-Value itself with calls to ava_ast_node_cg_set_up() and
+ * ava_ast_node_cg_tear_down() on the lvalue.
+ *
+ * Note that, somewhat unusually, the result of assigning a value to an lvalue
+ * is the final value of the *innermost* value. For example, the code
+ * ```
+ *   foo = [0 1 2]
+ *   bar = ($foo[1] = 42)
+ *   cstdio.puts $bar
+ * ```
+ * prints "0 42 2". This is primarily to support the assign-barrier operator in
+ * a consistent way.
+ *
  * @param lvalue The node to be converted to an lvalue.
  * @param producer The AST node which will determine the value to write back
  * into the lvalue.
  * @param reader An outvar for an AST node which can be used to read the
- * pre-assignment value of the lvalue.
+ * pre-assignment value of the lvalue. The reader is only guaranteed to be
+ * meaningful between setup and teardown of the returned node.
  */
 typedef ava_ast_node* (*ava_ast_node_to_lvalue_f)(
   const ava_ast_node* lvalue, ava_ast_node* producer,
@@ -254,6 +280,35 @@ typedef void (*ava_ast_node_cg_force_f)(
 typedef void (*ava_ast_node_cg_define_f)(
   ava_ast_node* node, struct ava_codegen_context_s* context);
 
+/**
+ * The code-generation set-up function for an AST node.
+ *
+ * All calls to the cg_* methods which generate executable code occur between
+ * single calls to cg_set_up() and cg_tear_down(). Nodes do not have to be
+ * prepared for generating code without cg_set_up() having been called, or for
+ * cg_set_up() to be called more than once before cg_tear_down(), etc.
+ *
+ * Setup of an AST node may have side-effects (for example, subscripting needs
+ * to evaluate its composite and the subscript proper) and may affect the
+ * register stacks, but may not transfer flow by direct control instructions.
+ *
+ * All L-Values should forward this call to their producer with
+ * ava_ast_node_cg_set_up() after they have finished setting up (even if they
+ * have no setup to do).
+ */
+typedef void (*ava_ast_node_cg_set_up_f)(
+  ava_ast_node* node, struct ava_codegen_context_s* context);
+/**
+ * The code-generation tear-down function for an AST node.
+ *
+ * This must restore the register stacks, etc, to what they were before the
+ * corresponding call to cg_set_up().
+ *
+ * @see ava_ast_node_cg_tear_down_f()
+ */
+typedef void (*ava_ast_node_cg_tear_down_f)(
+  ava_ast_node* node, struct ava_codegen_context_s* context);
+
 struct ava_ast_node_vtable_s {
   /**
    * A human-readable name for this AST node, used in diagnostics.
@@ -276,6 +331,8 @@ struct ava_ast_node_vtable_s {
   ava_ast_node_cg_discard_f cg_discard;
   ava_ast_node_cg_force_f cg_force;
   ava_ast_node_cg_define_f cg_define;
+  ava_ast_node_cg_set_up_f cg_set_up;
+  ava_ast_node_cg_tear_down_f cg_tear_down;
 };
 
 /**
@@ -313,6 +370,9 @@ ava_string ava_ast_node_get_funname(const ava_ast_node* node);
 /**
  * Calls the given node's cg_evaluate method if there is one; otherwise,
  * records an error that the node does not produce a value.
+ *
+ * This call implies calls to ava_ast_node_cg_set_up() and
+ * ava_ast_node_cg_tear_down().
  */
 void ava_ast_node_cg_evaluate(ava_ast_node* node,
                               const struct ava_pcode_register_s* dst,
@@ -321,6 +381,9 @@ void ava_ast_node_cg_evaluate(ava_ast_node* node,
  * Calls the given node's cg_spread method.
  *
  * The process aborts if the method is not defined on the node.
+ *
+ * This call implies calls to ava_ast_node_cg_set_up() and
+ * ava_ast_node_cg_tear_down().
  */
 void ava_ast_node_cg_spread(ava_ast_node* node,
                             const struct ava_pcode_register_s* dst,
@@ -328,12 +391,18 @@ void ava_ast_node_cg_spread(ava_ast_node* node,
 /**
  * Calls the given node's cg_discard method if there is one; otherwise, records
  * an error that the node is pure.
+ *
+ * This call implies calls to ava_ast_node_cg_set_up() and
+ * ava_ast_node_cg_tear_down().
  */
 void ava_ast_node_cg_discard(ava_ast_node* node,
                              struct ava_codegen_context_s* context);
 /**
  * Calls the given node's cg_force method if there is one. Otherwise, chooses a
  * default implementation based on whether the node defines cg_evaluate().
+ *
+ * This call implies calls to ava_ast_node_cg_set_up() and
+ * ava_ast_node_cg_tear_down().
  */
 void ava_ast_node_cg_force(ava_ast_node* node,
                            const struct ava_pcode_register_s* dst,
@@ -345,6 +414,23 @@ void ava_ast_node_cg_force(ava_ast_node* node,
  */
 void ava_ast_node_cg_define(ava_ast_node* node,
                             struct ava_codegen_context_s* context);
+
+/**
+ * Ensures the cg_set_up() method has been called on the given node, if it has
+ * one.
+ *
+ * This call is balanced by calls to ava_ast_node_cg_tear_down(); if n calls
+ * are made to this function, the cg_tear_down() method is invoked only after n
+ * calls have been made to it.
+ */
+void ava_ast_node_cg_set_up(ava_ast_node* node,
+                            struct ava_codegen_context_s* context);
+
+/**
+ * Balance for ava_ast_node_cg_tear_down().
+ */
+void ava_ast_node_cg_tear_down(ava_ast_node* node,
+                               struct ava_codegen_context_s* context);
 
 /**
  * Describes how a sequence of statements determines what value to return as a
@@ -629,6 +715,23 @@ ava_macro_subst_result ava_macsub_error_result(
  * The panic flag is shared between all contexts created from the same parent.
  */
 void ava_macsub_panic(ava_macsub_context* context);
+
+/**
+ * Inserts into the given context's symbol table symbols exported from the
+ * given P-Code module, as if the module were loaded with reqmod or reqpkg.
+ *
+ * @param context The context to modify.
+ * @param module The P-Code to insert.
+ * @param name The name of the package or module, as would be passed to reqmod
+ * or reqpkg.
+ * @param location The location to report for errors due to this insertion.
+ * @param is_package True if this is a package, false if a module.
+ */
+/* Implemented in -intrinsics/require.c */
+void ava_macsub_insert_module(
+  ava_macsub_context* context, const struct ava_pcode_global_list_s* module,
+  ava_string name,
+  const ava_compile_location* location, ava_bool is_package);
 
 /**
  * Returns an error AST node without emitting any errors.

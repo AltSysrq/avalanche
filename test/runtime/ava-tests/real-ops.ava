@@ -1,0 +1,63 @@
+import real r
+
+reqmod runtime/ava-tests/helpers/real-common
+
+asseq 1.0 r.min 1.0 3.14
+asseq 1.0 r.min 1.0 ()
+asseq 1.0 r.min () 1.0
+asseq inf r.min () ()
+asseq 1.0 r.max 1.0 -3.14
+asseq 1.0 r.max 1.0 ()
+asseq 1.0 r.max () 1.0
+asseq -inf r.max () ()
+
+asseq 3.0 1.0 .+ 2.0
+asseq 2.0 2.0 .+ ()
+asseq 2.0 () .+ 2.0
+asseq 1.0 3.0 .- 2.0
+asseq 3.0 3.0 .- ()
+asseq -2 () .- 2.0
+asseq 84 42.0 .* 2.0
+asseq 42.0 42.0 .* ()
+asseq 42.0 () .* 42.0
+asseq 21.0 42.0 ./ 2.0
+asseq 42.0 42.0 ./ ()
+asseq 0 () ./ 2.0
+asseq 1 7.0 .% 3.0
+asseq 2 -7.0 .% 3.0
+asseq 7 7.0 .% ()
+asseq 0 () .% 3.0
+assert r.is-nan : -7.0 .% ()
+assert r.is-nan : -7.0 .% inf
+assert r.is-nan : -7.0 .% -inf
+asseq 1 7.0 .%% 3.0
+asseq -1 -7.0 .%% 3.0
+asseq 7 7.0 .%% ()
+asseq -7 -7.0 .%% ()
+asseq 0 () .%% 3.0
+asseq 8 2.0 .** 3.0
+asseq 1 2.0 .** 0.0
+asseq 2 2.0 .** ()
+asseq 1 () .** 2.0
+
+assert 0.0 .== 0.0
+assert ! : 0.0 .== ()
+assert ! : () .== 0.0
+assert () .!= ()
+assert 0.0 .!= ()
+assert ! : 0.0 .!= 0.0
+
+assert ! : 0.0 .< 0.0           \ assert ! : 0.0 .> 0.0
+assert 0.0 .< 1.0               \ assert 1.0 .> 0.0
+assert ! : 0.0 .< -1.0          \ assert ! : -1.0 .> 0.0
+assert ! : 0.0 .< ()            \ assert ! : () .> 0.0
+assert ! : () .< 0.0            \ assert ! : 0.0 .> ()
+assert ! : () .< ()             \ assert ! : () .> ()
+assert 0.0 .<= 0.0              \ assert 0.0 .>= 0.0
+assert 0.0 .<= 1.0              \ assert 1.0 .>= 0.0
+assert ! : 0.0 .<= -1.0         \ assert ! : -1.0 .>= 0.0
+assert ! : 0.0 .<= ()           \ assert ! : () .>= 0.0
+assert ! : () .<= 0.0           \ assert ! : 0.0 .>= ()
+assert ! : () .<= ()            \ assert ! : () .>= ()
+
+pass-test 42

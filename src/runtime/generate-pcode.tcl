@@ -663,19 +663,19 @@ proc gen-impl {} {
         if {[is-substruct $ftype]} {
           lassign $ftype cname cmne
           putm {
-            elt_string = ava_string_concat\(
+            elt_string = ava_strcat\(
               elt_string, AVA_ASCII9_STRING(" \\""\{\n")\);
-            elt_string = ava_string_concat\(
+            elt_string = ava_strcat\(
               elt_string, ava_pcode_CNAME_list_to_string\(
                 elt->FIELD, indent+1\)\);
-            elt_string = ava_string_concat\(
+            elt_string = ava_strcat\(
               elt_string, apply_indent(AVA_ASCII9_STRING("\\""\}"), indent)\);
           } CNAME $cname FIELD [dict get $field name]
         } else {
           putm {
-            elt_string = ava_string_concat\(
+            elt_string = ava_strcat\(
               elt_string, AVA_ASCII9_STRING(" ")\);
-            elt_string = ava_string_concat\(
+            elt_string = ava_strcat\(
               elt_string, ava_list_escape\(
                 ava_value_of_string\(
                   ava_pcode_TYPE_to_string(elt->FIELD)\)\)\);
@@ -690,10 +690,10 @@ proc gen-impl {} {
     putm {
           default: /* unreachable */ abort();
           \} /* switch (velt->type) */
-          accum = ava_string_concat\(
+          accum = ava_strcat\(
             accum, apply_indent\(
               ava_pcode_elt_escape(elt_string), indent\)\);
-          accum = ava_string_concat(accum, AVA_ASCII9_STRING("\n"));
+          accum = ava_strcat(accum, AVA_ASCII9_STRING("\n"));
         \} /* end foreach */
         return accum;
       \}

@@ -1,10 +1,8 @@
-extern fopen fopen c FILE* [string named -file] [string named -mode]
-extern fputs fputs c int [string named -text] [FILE* named -to]
-extern fclose fclose c int [FILE* pos]
 extern get-prog-name getprogname c string "void pos"
-macro = op 1 (%#set# (<) (>))
 
 fun puts-stdout \*strings {
+  import cstdio *
+
   stdout = fopen -mode w -file /dev/stdout
   each fragment in $strings {
     fputs -to $stdout -text $fragment

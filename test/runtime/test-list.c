@@ -237,7 +237,7 @@ deftest(all_two_char_strings_escaped_reversibly) {
               ava_value_of_string(in_str)))).c.v;
       ck_assert_int_eq(1, ava_list_length(parsed_list));
       out_str = ava_to_string(ava_list_index(parsed_list, 0));
-      ck_assert_int_eq(2, ava_string_length(out_str));
+      ck_assert_int_eq(2, ava_strlen(out_str));
       ava_string_to_bytes(out, out_str, 0, 2);
 
       ck_assert_int_eq(in[0], out[0]);

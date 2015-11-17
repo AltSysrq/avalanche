@@ -1,0 +1,189 @@
+;-
+; Copyright (c) 2015, Jason Lingle
+;
+; Permission to  use, copy,  modify, and/or distribute  this software  for any
+; purpose  with or  without fee  is hereby  granted, provided  that the  above
+; copyright notice and this permission notice appear in all copies.
+;
+; THE SOFTWARE  IS PROVIDED "AS  IS" AND  THE AUTHOR DISCLAIMS  ALL WARRANTIES
+; WITH  REGARD   TO  THIS  SOFTWARE   INCLUDING  ALL  IMPLIED   WARRANTIES  OF
+; MERCHANTABILITY AND FITNESS. IN NO EVENT  SHALL THE AUTHOR BE LIABLE FOR ANY
+; SPECIAL,  DIRECT,   INDIRECT,  OR  CONSEQUENTIAL  DAMAGES   OR  ANY  DAMAGES
+; WHATSOEVER RESULTING FROM LOSS OF USE, DATA OR PROFITS, WHETHER IN AN ACTION
+; OF  CONTRACT, NEGLIGENCE  OR OTHER  TORTIOUS ACTION,  ARISING OUT  OF OR  IN
+; CONNECTION WITH THE USE OR PERFORMANCE OF THIS SOFTWARE.
+
+; Core arithmetic operators.
+
+reqmod builtins
+import byte-string bs
+import integer i
+import unsigned u
+import real r
+
+; OPERATOR NAMES
+;
+; Most operators use the same names as their C counterparts. Operators without
+; a type prefix implicitly apply to signed integers; types are notated as a
+; mnemonic before the operator, eg, ".+" for floating-point addition or "u+"
+; for unsigned (wrapping) addition.
+;
+; The modulus operator is %, since it's what most people want (see $i.mod vs
+; $i.rem). The truncating remainder is %%.
+;
+; All the bitwise operators have a ^ appended since they are not used
+; frequently enough to justify such short names. >>^ is logical shift, as it is
+; what's most commonly used in practise, and >>-^ is arithmetic shift.
+;
+; OPERATOR PRECEDENCE
+;
+; Generally, we want to maintain a relatively C-like operator precedence,
+; except for obvious mistakes like the bit-twiddling operators. Also, unary
+; operators cannot have different precedence from their binary counterparts.
+;
+; If we exactly cloned C, the table would be
+;
+;    ! ~^               Unary RTL
+;    * / % %%           LTR
+;    + -                LTR
+;    <<^ >>^ >>-^       LTR
+;    < <= > >=          LTR
+;    == !=              LTR
+;    &^                 LTR
+;    ^^                 LTR
+;    |^                 LTR
+;    &&                 LTR
+;    ||                 LTR
+;    =                  RTL
+;
+; Basically, the changes here are:
+;
+; - All the relational operators should be at the same level. Nobody ever
+;   writes ( a < b == c < d ) in C and expects it to be understood by a human.
+;
+; - All the binary bit-twiddling operators are at the same level, immediately
+;   above the relational operators.
+;
+; We also need to place the string-concatenation operators. It seems most
+; natural for these to be directly above the relational operators, since
+; embedding the results of comparisons in strings is not very common but
+; embedding the results of arithmetic is; conversely, arithmetic on
+; concatenated strings is unlikely to be common, but comparisons (b== in
+; particular) could be.
+;
+; Additional operators not found in C:
+;
+;   ``          A-Strings
+;   %%          Remainder
+;   **          Exponentiation
+;   ~           Interval
+;
+; This gives us
+;
+;   Examples                    Type            Precedence
+;   ! ~^                        Unary RTL       35
+;   **                          RTL             31
+;   * / % %%                    LTR             30
+;   + -                         LTR             28
+;   <<^ >>^ >>-^ &^ |^ ^^       LTR             24
+;   ``                          LTR             20 (fixed)
+;   < <= > >= == !=             LTR             14
+;   ~                           LTR             10
+;   &&                          LTR             8
+;   ||                          LTR             6
+;   ?                           RTL             5
+;   :                           LTR             2
+;   =                           RTL             1
+
+Macro DEFUNARY control       %MACRO >0 !op >1 !<* (>2 (!>))
+Macro DEFBINARY-OPT control  %MACRO >0 !op >1 (>2 (!<*) (!>))
+Macro DEFBINARY-OPT2 control %MACRO >0 !op >1 (>2 (!<*) (!>*))
+Macro DEFBINARY control      %MACRO >0 !op >1 (>2 (!<) (!>))
+
+DEFUNARY        !       35      %i.lnot
+DEFUNARY        ~^      35      %i.not
+DEFUNARY        #       35      %list.length
+DEFUNARY        b#      35      %bs.length
+DEFUNARY        m#      35      %map.npairs
+DEFBINARY       .**     31      %r.pow
+DEFBINARY       *       30      %i.mul
+DEFBINARY       u*      30      %u.mul
+DEFBINARY       .*      30      %r.mul
+DEFBINARY       /       30      %i.div
+DEFBINARY       u/      30      %u.div
+DEFBINARY       ./      30      %r.div
+DEFBINARY       %       30      %i.mod
+DEFBINARY       u%      30      %u.mod
+DEFBINARY       .%      30      %r.mod
+DEFBINARY       %%      30      %i.rem
+DEFBINARY       .%%     30      %r.rem
+DEFBINARY-OPT   +       28      %i.add
+DEFBINARY-OPT   u+      28      %u.add
+DEFBINARY-OPT   .+      28      %r.add
+DEFBINARY-OPT   -       28      %i.sub
+DEFBINARY-OPT   u-      28      %u.sub
+DEFBINARY-OPT   .-      28      %r.sub
+DEFBINARY       <<^     24      %i.lsh
+DEFBINARY       >>^     24      %i.rsh
+DEFBINARY       >>-^    24      %i.ash
+DEFBINARY       &^      24      %i.and
+DEFBINARY       |^      24      %i.or
+DEFBINARY       ^^      24      %i.xor
+DEFBINARY       <       14      %i.slt
+DEFBINARY       u<      14      %u.slt
+DEFBINARY       b<      14      %bs.slt
+DEFBINARY       .<      14      %r.slt
+DEFBINARY       <=      14      %i.leq
+DEFBINARY       u<=     14      %u.leq
+DEFBINARY       b<=     14      %bs.leq
+DEFBINARY       .<=     14      %r.leq
+DEFBINARY       ==      14      %i.equ
+DEFBINARY       b==     14      %bs.equ
+DEFBINARY       .==     14      %r.equ
+DEFBINARY       !=      14      %i.neq
+DEFBINARY       b!=     14      %bs.neq
+DEFBINARY       .!=     14      %r.neq
+DEFBINARY       >=      14      %i.geq
+DEFBINARY       u>=     14      %u.geq
+DEFBINARY       b>=     14      %bs.geq
+DEFBINARY       .>=     14      %r.geq
+DEFBINARY       >       14      %i.sgt
+DEFBINARY       u>      14      %u.sgt
+DEFBINARY       b>      14      %bs.sgt
+DEFBINARY       .>      14      %r.sgt
+DEFBINARY-OPT2  ~       12      %interval.of
+DEFBINARY       =       1       #set#
+
+; Encloses everything to its right in parentheses.
+;
+; This has much the same use as {$} from Haskell.
+;
+; Ex: {foo bar : baz quux} is the same as
+; {foo bar (baz quux)}
+MACRO : op 2 < (>)
+; The ternary operator, a-la C.
+;
+; Used with : to separate the "then" and "else" cases. The compound operator as
+; a whole is right-associative.
+;
+; Ex:
+; ```
+;   fun to-digit digit =
+;   \ (0 == $digit ? zero :
+;      1 == $digit ? one :
+;      2 == $digit ? two : other)
+; ```
+MACRO ? op 5 (%if (<) (>0-1) !else >-0)
+
+ALIAS #name-subscript#get## = map.get-last
+ALIAS #name-subscript#with## = map.remap-one
+ALIAS #name-subscript#get#?# = map.get-last-or-empty
+ALIAS #name-subscript#with#?# = map.remap-one
+ALIAS #name-subscript#get#*# = map.get-all
+ALIAS #name-subscript#with#*# = map.remap-all
+ALIAS #string-subscript#get## = byte-string.index
+ALIAS #string-subscript#with## = byte-string.set
+ALIAS #string-subscript#get#?# = byte-string.index-lenient
+ALIAS #numeric-subscript#get## = list.index
+ALIAS #numeric-subscript#with## = list.set
+ALIAS #numeric-subscript#get#?# = list.index-lenient

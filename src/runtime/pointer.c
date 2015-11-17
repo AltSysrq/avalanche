@@ -125,7 +125,7 @@ const ava_pointer_prototype* ava_pointer_prototype_parse(ava_string protostr) {
   if (ava_string_is_empty(protostr))
     ava_throw_str(&ava_format_exception, ava_error_bad_pointer_prototype());
 
-  constness = ava_string_index(protostr, ava_string_length(protostr)-1);
+  constness = ava_string_index(protostr, ava_strlen(protostr)-1);
   switch (constness) {
   case '*': is_const = ava_false; break;
   case '&': is_const = ava_true;  break;
@@ -134,7 +134,7 @@ const ava_pointer_prototype* ava_pointer_prototype_parse(ava_string protostr) {
     /* unreachable */
   }
 
-  tag = ava_string_slice(protostr, 0, ava_string_length(protostr) - 1);
+  tag = ava_string_slice(protostr, 0, ava_strlen(protostr) - 1);
 
   if (ava_string_is_empty(tag))
     return is_const?
@@ -218,6 +218,15 @@ static const void* ava_pointer_pointer_get_const(ava_pointer_value this,
   return deobfuscate(ava_value_ulong(this.v));
 }
 
+static ava_pointer_value ava_pointer_pointer_adjust(
+  ava_pointer_value this, ava_integer offset
+) {
+  const ava_pointer_prototype*restrict proto = PROTO(this.v);
+
+  return ava_pointer_of_proto(
+    proto, deobfuscate(ava_value_ulong(this.v)) + offset);
+}
+
 static void ava_pointer_check_compatible(
   const ava_pointer_prototype*restrict proto,
   ava_string expected
@@ -270,7 +279,7 @@ static ava_value ava_pointer_list_index(ava_list_value this,
 ava_string ava_pointer_prototype_to_string(
   const ava_pointer_prototype* prototype
 ) {
-  return ava_string_concat(prototype->tag,
+  return ava_strcat(prototype->tag,
                            prototype->is_const?
                            AVA_ASCII9_STRING("&") : AVA_ASCII9_STRING("*"));
 }

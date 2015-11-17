@@ -23,6 +23,7 @@
 
 #include "string.h"
 #include "value.h"
+#include "list.h"
 #include "map.h"
 #include "module-cache.h"
 
@@ -124,6 +125,13 @@ struct ava_compenv_s {
    * Arbitrary data for use by new_macsub.
    */
   ava_datum new_macsub_userdata;
+
+  /**
+   * A list of package names which are automatically injected as a dependency.
+   * When a codegen context is created, load-pkg instructions are emitted to
+   * link against these packages.
+   */
+  ava_list_value implicit_packages;
 };
 
 /**
@@ -153,6 +161,17 @@ void ava_compenv_use_simple_source_reader(ava_compenv* env, ava_string prefix);
  * since most code will also want avast to be available.
  */
 void ava_compenv_use_minimal_macsub(ava_compenv* env);
+/**
+ * Configures the given compilation environment to create macro substitution
+ * contexts with both the intrinsics macros and the core library
+ * (org.ava-lang.avast) available.
+ *
+ * The org.ava-lang.avast package is implicitly added to the list of implicit
+ * packages.
+ *
+ * This is not available in the bootstrapping library.
+ */
+void ava_compenv_use_standard_macsub(ava_compenv* env);
 
 /**
  * Performs all steps necessary to compile a source file to validated P-Code.
@@ -199,6 +218,17 @@ ava_bool ava_compenv_simple_read_source(
  * It is exposed here so that callers can layer other functions on top of it.
  */
 ava_macsub_context* ava_compenv_minimal_new_macsub(
+  ava_compenv* compenv,
+  ava_compile_error_list* errors);
+/**
+ * new_macsub implementation installed by
+ * ava_compenv_use_standard_macsub().
+ *
+ * This does not use the new_macsub_userdata field.
+ *
+ * It is exposed here so that callers can layer other functions on top of it.
+ */
+ava_macsub_context* ava_compenv_standard_new_macsub(
   ava_compenv* compenv,
   ava_compile_error_list* errors);
 

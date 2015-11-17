@@ -203,7 +203,7 @@ ava_bool ava_lex_token_type_is_close_paren(ava_lex_token_type type) {
 ava_lex_context* ava_lex_new(ava_string str) {
   ava_lex_context* lex = AVA_NEW(ava_lex_context);
   lex->str = str;
-  lex->strlen = ava_string_length(str);
+  lex->strlen = ava_strlen(str);
   lex->p.line = 1;
   lex->p.column = 1;
   lex->p.line_offset = 0;
@@ -419,6 +419,7 @@ ava_lex_status ava_lex_lex(ava_lex_result* dst, ava_lex_context* lex) {
       LEGAL = [^\x00-\x08\x0b\x0c\x0e-\x1f\x7f] ;
       LEGALNL = LEGAL \ [\n\r] ;
       COM = ";" LEGALNL* ;
+      COMNLP = (COM? NL WS*)+ ;
       BS = [\\] ;
       NS = LEGALNL \ [()\[\]{}\\;"`] \ WS ;
       SD = ["`] ;
@@ -431,8 +432,8 @@ ava_lex_status ava_lex_lex(ava_lex_result* dst, ava_lex_context* lex) {
       <Ground> NS+              { IND();  ACCEPT(ava_lex_bareword); }
       <Ground> WS+              {         IGNORE(); }
       <Ground> NL               {         ACCEPT(ava_lex_newline); }
-      <Ground> BS WS* COM? NL   {         IGNORE(); }
-      <Ground> NL WS* BS WS+    {         IGNORE(); }
+      <Ground> BS WS* COMNLP    {         IGNORE(); }
+      <Ground> COMNLP BS WS+    {         IGNORE(); }
       <Ground> BS WS+           { IND();  ACCEPT(ava_lex_newline); }
       <Ground> COM              {         IGNORE(); }
       <Ground> BS '*'           { IND();  ACCEPT(ava_lex_spread); }
@@ -612,7 +613,7 @@ static void ava_lex_accum_verb(
   const ava_lex_pos* frag_start,
   ava_lex_context* lex
 ) {
-  lex->accum = ava_string_concat(
+  lex->accum = ava_strcat(
     lex->accum,
     ava_string_slice(lex->str, frag_start->index, lex->p.index));
 }
@@ -621,7 +622,7 @@ static void ava_lex_accum_nl(
   const ava_lex_pos* frag_start,
   ava_lex_context* lex
 ) {
-  lex->accum = ava_string_concat(
+  lex->accum = ava_strcat(
     lex->accum, AVA_ASCII9_STRING("\n"));
 }
 
@@ -657,7 +658,7 @@ static void ava_lex_accum_esc_off(
   default: abort();
   }
 
-  lex->accum = ava_string_concat(lex->accum, ava_string_of_char(ch));
+  lex->accum = ava_strcat(lex->accum, ava_string_of_char(ch));
 }
 
 static void ava_lex_accum_esc(

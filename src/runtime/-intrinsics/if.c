@@ -175,17 +175,17 @@ static ava_string ava_intr_if_to_string(const ava_intr_if* this) {
 
   accum = AVA_ASCII9_STRING("if");
   for (i = 0; i < this->num_clauses; ++i) {
-    accum = ava_string_concat(accum, AVA_ASCII9_STRING(" {"));
+    accum = ava_strcat(accum, AVA_ASCII9_STRING(" {"));
     if (this->clauses[i].condition) {
-      accum = ava_string_concat(
+      accum = ava_strcat(
         accum, ava_ast_node_to_string(this->clauses[i].condition));
     } else {
-      accum = ava_string_concat(accum, AVA_ASCII9_STRING("else"));
+      accum = ava_strcat(accum, AVA_ASCII9_STRING("else"));
     }
-    accum = ava_string_concat(accum, AVA_ASCII9_STRING(" => "));
-    accum = ava_string_concat(
+    accum = ava_strcat(accum, AVA_ASCII9_STRING(" => "));
+    accum = ava_strcat(
       accum, ava_ast_node_to_string(this->clauses[i].result));
-    accum = ava_string_concat(accum, AVA_ASCII9_STRING("}"));
+    accum = ava_strcat(accum, AVA_ASCII9_STRING("}"));
   }
 
   return accum;

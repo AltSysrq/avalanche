@@ -175,6 +175,19 @@ ava_parse_unit* ava_parse_subst_of_nonempty_statement(
   ava_parse_statement* statement);
 
 /**
+ * Returns whether this parse unit is essentially a bareword.
+ *
+ * A parse unit is essentially a bareword if one of the following conditions is
+ * true:
+ *
+ * - The parse unit is actually a bareword.
+ *
+ * - The parse unit is a substitution containing exactly one statement, which
+ *   contains exactly one parse unit, which is itself essentially a bareword.
+ */
+ava_bool ava_parse_unit_is_essentially_bareword(const ava_parse_unit* unit);
+
+/**
  * Returns a compile location representing the span between the beginning of
  * begin and the end of end.
  *

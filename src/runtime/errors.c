@@ -69,7 +69,7 @@ static ava_string extract_source_line(const ava_compile_location* loc) {
     return AVA_ABSENT_STRING;
 
   begin = loc->line_offset;
-  strlen = ava_string_length(loc->source);
+  strlen = ava_strlen(loc->source);
   if (begin >= strlen) return AVA_ABSENT_STRING;
   str = ava_string_to_cstring(loc->source);
 
@@ -88,7 +88,7 @@ static ava_bool is_printable(ava_string str) {
     return ava_false;
 
   raw = ava_string_to_cstring_buff(tmp, str);
-  strlen = ava_string_length(str);
+  strlen = ava_strlen(str);
 
   for (i = 0; i < strlen; ++i) {
     ch = raw[i];
@@ -120,7 +120,7 @@ ava_string ava_error_list_to_string(
     error_header = AVA_ASCII9_STRING("[ERROR] ");
   }
 
-#define CAT(after) (accum = ava_string_concat(accum, (after)))
+#define CAT(after) (accum = ava_strcat(accum, (after)))
 #define CATA(after) CAT(AVA_ASCII9_STRING(after))
 #define CATI(after) CAT(ava_to_string(ava_value_of_integer(after)))
 
@@ -153,7 +153,7 @@ ava_string ava_error_list_to_string(
                        error->location.start_column,
                        error->location.start_line == error->location.end_line?
                        error->location.end_column :
-                       ava_string_length(source_line));
+                       ava_strlen(source_line));
         CAT(ava_string_of_cstring(caret));
         CATA("\n\n");
         num_lines += 3;

@@ -1,0 +1,4 @@
+extern pass-test pass_test c void [int pos]
+
+x = [foo [bar 42 baz 56] plugh xyzzy]
+pass-test $x(foo)(bar)

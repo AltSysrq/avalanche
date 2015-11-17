@@ -1,0 +1,22 @@
+reqmod runtime/ava-tests/helpers/assert
+
+import pointer p
+
+fun n ptr = p.add $ptr 0
+
+assert p.is-null [FILE* NULL]
+assert ! p.is-null [FILE* x42]
+assert 0x42 == p.address [FILE* x42]
+assert ! p.is-const [FILE* x42]
+assert p.is-const [FILE& x42]
+assert FILE b== p.tag [FILE& x42]
+assert "" b== p.tag [* x88]
+assert n [FILE& x42] b== p.const-cast [FILE* x42] true
+assert n [FILE* x42] b== p.const-cast [FILE& x42] false
+assert n [FILE& x42] b== p.const-cast [FILE* x42] ()
+assert n [foo* x42] b== p.reinterpret-cast [FILE* x42] foo
+assert n [* x42] b== p.reinterpret-cast [FILE* x42] ()
+assert n [FILE* x44] b== p.add [FILE* x42] 2
+assert n [FILE* x40] b== p.sub [FILE* x42] 2
+
+pass-test 42

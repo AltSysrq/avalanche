@@ -1,0 +1,8 @@
+reqmod runtime/ava-tests/helpers/assert
+
+fun first a b = $a
+
+x(foo)* = [42 56]
+assert 2 == m# $x
+assert 1 == m# $x(foo)*
+pass-test : first \*$x(foo)*

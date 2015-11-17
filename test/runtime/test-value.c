@@ -59,7 +59,7 @@ deftest(string_of_chunk_iterator_empty) {
   ava_value x0 = xn_of(0);
   ava_string str = ava_to_string(x0);
 
-  ck_assert_int_eq(0, ava_string_length(str));
+  ck_assert_int_eq(0, ava_strlen(str));
 }
 
 deftest(string_of_chunk_iterator_power_of_two) {
@@ -68,7 +68,7 @@ deftest(string_of_chunk_iterator_power_of_two) {
   ava_string str = ava_to_string(x65536);
   unsigned i;
 
-  ck_assert_int_eq(sizeof(bytes), ava_string_length(str));
+  ck_assert_int_eq(sizeof(bytes), ava_strlen(str));
 
   ava_string_to_bytes(bytes, str, 0, sizeof(bytes));
   for (i = 0; i < sizeof(bytes); ++i)
@@ -81,7 +81,7 @@ deftest(string_of_chunk_iterator_power_of_two_minus_one) {
   ava_string str = ava_to_string(x65535);
   unsigned i;
 
-  ck_assert_int_eq(sizeof(bytes), ava_string_length(str));
+  ck_assert_int_eq(sizeof(bytes), ava_strlen(str));
 
   ava_string_to_bytes(bytes, str, 0, sizeof(bytes));
   for (i = 0; i < sizeof(bytes); ++i)
@@ -92,7 +92,7 @@ deftest(string_of_chunk_iterator_two) {
   ava_value x2 = xn_of(2);
   ava_string str = ava_to_string(x2);
 
-  ck_assert_int_eq(2, ava_string_length(str));
+  ck_assert_int_eq(2, ava_strlen(str));
   ck_assert_int_eq(1, ava_string_index(str, 0));
   ck_assert_int_eq(0, ava_string_index(str, 1));
 }
@@ -106,7 +106,7 @@ deftest(singleton_chunk_iterator) {
   iterator = ava_string_chunk_iterator(val);
   while (ava_string_is_present(
            (chunk = ava_iterate_string_chunk(&iterator, val))))
-    accum = ava_string_concat(accum, chunk);
+    accum = ava_strcat(accum, chunk);
 
   ck_assert_str_eq("avalanches", ava_string_to_cstring(accum));
 }
@@ -169,7 +169,7 @@ deftest(hash_basically_works) {
 deftest(hash_crosses_rope_boundaries_correctly) {
   char buf[246];
   ava_string base = ava_to_string(xn_of(123));
-  ava_string rope = ava_string_concat(base, base);
+  ava_string rope = ava_strcat(base, base);
   ava_string_to_bytes(buf, rope, 0, 246);
   ava_string flat = ava_string_of_bytes(buf, 246);
 

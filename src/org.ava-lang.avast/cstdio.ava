@@ -1,0 +1,42 @@
+;-
+; Copyright (c) 2015, Jason Lingle
+;
+; Permission to  use, copy,  modify, and/or distribute  this software  for any
+; purpose  with or  without fee  is hereby  granted, provided  that the  above
+; copyright notice and this permission notice appear in all copies.
+;
+; THE SOFTWARE  IS PROVIDED "AS  IS" AND  THE AUTHOR DISCLAIMS  ALL WARRANTIES
+; WITH  REGARD   TO  THIS  SOFTWARE   INCLUDING  ALL  IMPLIED   WARRANTIES  OF
+; MERCHANTABILITY AND FITNESS. IN NO EVENT  SHALL THE AUTHOR BE LIABLE FOR ANY
+; SPECIAL,  DIRECT,   INDIRECT,  OR  CONSEQUENTIAL  DAMAGES   OR  ANY  DAMAGES
+; WHATSOEVER RESULTING FROM LOSS OF USE, DATA OR PROFITS, WHETHER IN AN ACTION
+; OF  CONTRACT, NEGLIGENCE  OR OTHER  TORTIOUS ACTION,  ARISING OUT  OF OR  IN
+; CONNECTION WITH THE USE OR PERFORMANCE OF THIS SOFTWARE.
+
+; Exports the C stdio library.
+; This is a stop-gap measure until Avalanche has its own I/O system. Only a
+; subset of cstdio is exposed.
+
+namespace cstdio {
+  EXTERN clearerr clearerr c void [FILE* pos]
+  EXTERN feof feof c int [FILE* pos]
+  EXTERN ferror ferror c int [FILE* pos]
+  EXTERN fileno fileno c int [FILE* pos]
+  EXTERN fflush fflush c int [FILE* pos]
+  EXTERN fpurge fpurge c int [FILE* pos]
+  EXTERN fgetc fgetc c int [FILE* pos]
+  EXTERN getchar getchar c int [void pos]
+  EXTERN getw getw c int [FILE* pos]
+  EXTERN fgets fgets c * [* named -dst] [int named -max] [FILE* named -from]
+  EXTERN fopen fopen c FILE* [string named -file] [string named -mode r]
+  EXTERN fdopen fdopen c FILE* [int named -fd] [string named -mode r]
+  EXTERN fread fread c size [* named -dst] [size named -size]
+  \ [size named -count] [FILE* named -from]
+  EXTERN fwrite fwrite c size [& named -src] [size named -size]
+  \ [size named -count] [FILE* named -to]
+  EXTERN fclose fclose c int [FILE* pos]
+  EXTERN fputs fputs c int [string named -text] [FILE* named -to]
+  EXTERN puts puts c int [string pos]
+  EXTERN ftell ftell c long [FILE* pos]
+  EXTERN rewind rewind c void [FILE* pos]
+}

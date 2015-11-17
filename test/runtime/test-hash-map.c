@@ -572,6 +572,25 @@ deftest(extend_after_delete) {
   }
 }
 
+deftest(delete_multiple) {
+  /* Adapted from higher-level test that detected the issue */
+  ava_value values[] = {
+    WORD(x), WORD(x),
+    WORD(a), WORD(b),
+    WORD(x), WORD(y),
+    WORD(c), WORD(d),
+    WORD(x), WORD(z),
+  };
+  ava_value map = ava_hash_map_of_raw(values, 2, values+1, 2, 5).v;
+
+  map = ava_map_remove(map, ava_map_find(map, WORD(x)));
+  assert_value_equals_str("a b x y c d x z", map);
+  map = ava_map_remove(map, ava_map_find(map, WORD(x)));
+  assert_value_equals_str("a b c d x z", map);
+  map = ava_map_remove(map, ava_map_find(map, WORD(x)));
+  assert_value_equals_str("a b c d", map);
+}
+
 deftest(concat_with_self) {
   ava_value values[] = { WORD(foo), WORD(bar) };
   ava_value map = ava_hash_map_of_raw(values, 2, values+1, 2, 1).v;

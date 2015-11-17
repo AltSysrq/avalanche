@@ -436,6 +436,105 @@ set defs {
     }
   }
 
+  serror R0041 map_no_such_key {
+    {ava_value key}
+  } {
+    msg "Key \"%key%\" does not exist in map."
+    explanation {
+      An attempt was made to extract the value associated with the given key in
+      a map, but the map does not contain that key.
+
+      If the key being missing is expected, in many cases the lenient indexing
+      operator ()? can be used to handle the situation elegantly.
+    }
+  }
+
+  serror R0042 singular_index_out_of_bounds {
+    {ava_integer ix} {ava_integer max}
+  } {
+    msg "Index %ix% out of range (0 ~ %max%)"
+    explanation {
+      An array-like structure was accessed with a single index not within its
+      legal range.
+
+      A lenient variant of the indexing operator (eg, []? for lists) may
+      provide an elegant way to handle out-of-bounds values in certain cases.
+    }
+  }
+
+  serror R0043 range_index_out_of_bounds {
+    {ava_integer range_min} {ava_integer range_max}
+    {ava_integer max}
+  } {
+    msg "Range (%range_min% ~ %range_max%) not a subset of (0 ~ %max%)"
+    explanation {
+      An array-like structure was accessed with a range which includes indices
+      which are not within the legal range.
+
+      A lenient variant of the indexing operator (eg, []? for lists) may
+      provide an elegant way to handle ranges like this if range clamping is
+      indeed the desired behaviour.
+    }
+  }
+
+  serror R0044 range_inverted {
+    {ava_integer range_min} {ava_integer range_max}
+  } {
+    msg "Nonsensical range (%range_min% ~ %range_max%)"
+    explanation {
+      The effective range passed to an array-like indexing operator has a
+      maximum which is less than the minimum.
+
+      If it would be appropriate to silently treat such ranges as the empty
+      range, a lenient version of the indexing operator (eg, []? for lists) may
+      be useful.
+    }
+  }
+
+  serror R0045 illegal_argument {
+    {ava_string name} {ava_value value}
+  } {
+    msg "Illegal value for argument \"%name\%: %value%"
+    explanation {
+      An invalid value was passed as a function argument.
+    }
+  }
+
+  serror R0046 interleaved_lists_not_of_same_length {
+    {ava_integer ix} {ava_integer expected} {ava_integer actual}
+  } {
+    msg "Lists to interleave have different length (%expected% vs %actual% at %ix%)"
+    explanation {
+      All lists passed to list.interleave must have the same length or the
+      operation is not well-defined.
+    }
+  }
+
+  serror U3000 undef_integer_overflow {
+    {ava_integer a} {ava_string op} {ava_integer b}
+  } {
+    msg "Integer overflow evaluating %a% %op% %b%"
+    explanation {
+      Signed integer operations have undefined behaviour on overflow to permit
+      better native optimisation in unchecked builds. In checked builds, this
+      condition is caught and results in this fatal exception instead.
+
+      If wrap-around is actually desired, use the wrapping arithmetic
+      operations instead (eg, u+ instead of just +).
+    }
+  }
+
+  serror U3001 undef_int_div_by_zero {
+    {ava_integer a} {ava_string op} {ava_integer b}
+  } {
+    msg "Divide-by-zero evaluating %a% %op% %b%"
+    explanation {
+      Division by zero has, in all cases, undefined behaviour. In checked
+      builds, this condition is caught and results in this fatal exception
+      instead.
+    }
+  }
+
   serror L4001 unclosed_string_literal {} {
     msg "Unclosed string literal."
     explanation {
@@ -1421,7 +1520,7 @@ set defs {
   }
 
   cerror C5077 expression_form_discarded {} {
-    msg "Statement-form construct does not produce a value."
+    msg "Expression-form construct discarded."
     explanation {
       Control structures generally come in two forms: statement-form and
       expression-form, identified by result bodies being brace-enclosed blocks
@@ -1817,6 +1916,23 @@ set defs {
     }
   }
 
+  cerror C5115 subscripted_composite_is_bareword {} {
+    msg "Subscripted value is a bareword."
+    explanation {
+      The indicated expression is "essentially" a bareword, but is subscripted
+      in a non-assignment context.
+
+      For example, the code
+        x = foo(bar)
+      will generate this error, since it is doomed to fail at runtime, and what
+      was almost certainly intended was
+        x = $foo(bar)
+
+      If subscripting a literal string is really what is desired, use a string
+      literal or other explicit type of literal.
+    }
+  }
+
   cerror X9000 xcode_dupe_label {{ava_value label}} {
     msg "P-Code label present in function more than once: %label%"
     explanation {
@@ -2074,14 +2190,14 @@ proc build-string {dst code fmt parms} {
       if {{} eq $segment} {
         # Nothing to do
       } elseif {[is-ascii9 $segment]} {
-        puts "  $dst = ava_string_concat("
+        puts "  $dst = ava_strcat("
         puts "    $dst, AVA_ASCII9_STRING([quote $segment]));"
       } else {
         puts "  { AVA_STATIC_STRING(_segment, [quote $segment]);"
-        puts "    $dst = ava_string_concat($dst, _segment); }"
+        puts "    $dst = ava_strcat($dst, _segment); }"
       }
     } else {
-      puts "  $dst = ava_string_concat("
+      puts "  $dst = ava_strcat("
       puts "    $dst,"
       puts "    [[dict get $types $segment]-to-string $segment]);"
     }

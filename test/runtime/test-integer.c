@@ -39,7 +39,7 @@ static ava_integer str_to_int(const char* s, ava_integer d) {
 static ava_integer str_to_dec_fast(const char* s) {
   ava_string str = ava_string_of_cstring(s);
   ck_assert(str.ascii9 & 1);
-  return ava_integer_parse_dec_fast(str.ascii9, ava_string_length(str));
+  return ava_integer_parse_dec_fast(str.ascii9, ava_strlen(str));
 }
 
 static int str_is_int(const char* s) {
@@ -416,6 +416,17 @@ deftest(falsey_is_integer) {
   ck_assert(str_is_int("no"));
   ck_assert(str_is_int("null"));
   ck_assert(str_is_int("NULL"));
+}
+
+deftest(end_to_integer_min) {
+  ck_assert_int_eq((1LL << 63), str_to_int("end", 42));
+  ck_assert_int_eq((1LL << 63), str_to_int("END", 42));
+  ck_assert_int_eq((1LL << 63), str_to_int(" eNd ", 42));
+}
+
+deftest(end_is_integer) {
+  ck_assert(str_is_int("end"));
+  ck_assert(str_is_int(" eNd "));
 }
 
 deftest(empty_string_is_integer) {

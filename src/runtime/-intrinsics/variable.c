@@ -80,6 +80,10 @@ static void ava_intr_var_write_cg_discard(
   ava_intr_var_write* node, ava_codegen_context* context);
 static void ava_intr_var_write_cg_define(
   ava_intr_var_write* node, ava_codegen_context* context);
+static void ava_intr_var_write_cg_set_up(
+  ava_intr_var_write* node, ava_codegen_context* context);
+static void ava_intr_var_write_cg_tear_down(
+  ava_intr_var_write* node, ava_codegen_context* context);
 
 static const ava_ast_node_vtable ava_intr_var_write_vtable = {
   .name = "variable write",
@@ -88,6 +92,8 @@ static const ava_ast_node_vtable ava_intr_var_write_vtable = {
   .cg_evaluate = (ava_ast_node_cg_evaluate_f)ava_intr_var_write_cg_evaluate,
   .cg_discard = (ava_ast_node_cg_discard_f)ava_intr_var_write_cg_discard,
   .cg_define = (ava_ast_node_cg_define_f)ava_intr_var_write_cg_define,
+  .cg_set_up = (ava_ast_node_cg_set_up_f)ava_intr_var_write_cg_set_up,
+  .cg_tear_down = (ava_ast_node_cg_tear_down_f)ava_intr_var_write_cg_tear_down,
 };
 
 static ava_var_casing ava_var_casing_of(ava_string name);
@@ -201,7 +207,7 @@ static ava_var_casing ava_var_casing_of(ava_string name) {
   size_t strlen, i;
 
   str = ava_string_to_cstring_buff(tmp, name);
-  strlen = ava_string_length(name);
+  strlen = ava_strlen(name);
 
   for (i = 0; i < strlen; ++i) {
     has_upper |= (str[i] >= 'A' && str[i] <= 'Z');
@@ -285,10 +291,10 @@ static ava_string ava_intr_var_read_to_string(const ava_intr_var_read* node) {
 
   accum = AVA_ASCII9_STRING("var-read(");
   if (node->var)
-    accum = ava_string_concat(accum, node->var->full_name);
+    accum = ava_strcat(accum, node->var->full_name);
   else
-    accum = ava_string_concat(accum, node->name);
-  accum = ava_string_concat(accum, AVA_ASCII9_STRING(")"));
+    accum = ava_strcat(accum, node->name);
+  accum = ava_strcat(accum, AVA_ASCII9_STRING(")"));
 
   return accum;
 }
@@ -436,10 +442,10 @@ static ava_string ava_intr_var_write_to_string(const ava_intr_var_write* node) {
   ava_string accum;
 
   accum = base;
-  accum = ava_string_concat(accum, node->var->full_name);
-  accum = ava_string_concat(accum, AVA_ASCII9_STRING(" = "));
-  accum = ava_string_concat(accum, ava_ast_node_to_string(node->producer));
-  accum = ava_string_concat(accum, AVA_ASCII9_STRING(")"));
+  accum = ava_strcat(accum, node->var->full_name);
+  accum = ava_strcat(accum, AVA_ASCII9_STRING(" = "));
+  accum = ava_strcat(accum, ava_ast_node_to_string(node->producer));
+  accum = ava_strcat(accum, AVA_ASCII9_STRING(")"));
   return accum;
 }
 
@@ -498,6 +504,18 @@ static void ava_intr_var_write_cg_define(
                node->owned_var->v.var.name);
     ava_codegen_export(context, node->owned_var);
   }
+}
+
+static void ava_intr_var_write_cg_set_up(
+  ava_intr_var_write* node, ava_codegen_context* context
+) {
+  ava_ast_node_cg_set_up(node->producer, context);
+}
+
+static void ava_intr_var_write_cg_tear_down(
+  ava_intr_var_write* node, ava_codegen_context* context
+) {
+  ava_ast_node_cg_tear_down(node->producer, context);
 }
 
 ava_macro_subst_result ava_intr_set_subst(

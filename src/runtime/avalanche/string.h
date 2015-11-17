@@ -76,10 +76,17 @@ typedef union {
   const ava_twine*restrict twine;
 } ava_string;
 
-#define _AVA_IS_ASCII9_CHAR(ch) ((ch) > 0 && (ch) < 128)
+#define _AVA_IS_ASCII9_CHAR(ch)                                 \
+  (((unsigned char)(ch)) > 0 && ((unsigned char)(ch)) < 128)
 #define _AVA_ASCII9_ENCODE_CHAR(ch,ix)                  \
   (((ava_ascii9_string)((ch) & 0x7F)) << (57 - (ix)*7))
-#define _AVA_STRCHR(str,ix) ((ix) < sizeof(str)? (str)[ix] : 0)
+/* The somewhat odd-looking index in this macro works around an issue in Clang
+ * where, if any errors are found in the compilation unit, it proceeds to
+ * produce a warning for *every* *single* character this macro sets to zero if
+ * ix is allowed to go beyond the end.
+ */
+#define _AVA_STRCHR(str,ix) \
+  ((ix) < sizeof(str)? (str)[(ix) * ((ix) < sizeof(str))] : 0)
 #define _AVA_ASCII9_ENCODE_STRCHR(str,ix)       \
   _AVA_ASCII9_ENCODE_CHAR(_AVA_STRCHR((str), (ix)), (ix))
 #define _AVA_ASCII9_ENCODE_STR(str) (           \
@@ -318,7 +325,7 @@ void ava_string_to_bytes(void*restrict dst, ava_string str,
  *
  * Complexity: O(1)
  */
-size_t ava_string_length(ava_string str) AVA_PURE;
+size_t ava_strlen(ava_string str) AVA_PURE;
 /**
  * Returns the character at the given index within the given string.
  *
@@ -339,11 +346,24 @@ char ava_string_index(ava_string str, size_t ix) AVA_PURE;
  */
 ava_string ava_string_slice(ava_string, size_t begin, size_t end) AVA_PURE;
 /**
+ * Equivalent to ava_string_slice(str, 0, end), but more efficient.
+ *
+ * Complexity: Amortised O(1)
+ */
+ava_string ava_string_trunc(ava_string str, size_t end) AVA_PURE;
+/**
+ * Equivalent to ava_string_slice(str, begin, ava_strlen(str)), but more
+ * efficient.
+ *
+ * Complexity: Amortised O(1)
+ */
+ava_string ava_string_behead(ava_string str, size_t begin) AVA_PURE;
+/**
  * Produces a string containing the values of both strings concatenated.
  *
  * Complexity: Amortized O(1)
  */
-ava_string ava_string_concat(ava_string left, ava_string right) AVA_PURE;
+ava_string ava_strcat(ava_string left, ava_string right) AVA_PURE;
 
 /**
  * Returns a 32-bit hash of the given ASCII9 string.
@@ -400,5 +420,50 @@ ava_bool ava_string_equal(ava_string a, ava_string b) AVA_PURE;
  * This makes it possible to switch over small ASCII strings with AVA_ASCII9().
  */
 ava_ascii9_string ava_string_to_ascii9(ava_string str) AVA_PURE;
+
+/**
+ * Returns the index of the first character which is equal in the two given
+ * ASCII9 strings, treating each string as if it were exactly 9 characters long
+ * (padded at right with NULs). If no characters match, returns -1.
+ *
+ * This is intended to be used for ava_strchr_ascii(), where haystack is the
+ * input string and needle is the target character saturating an ASCII9 string.
+ */
+ssize_t ava_ascii9_index_of_match(ava_ascii9_string haystack,
+                                  ava_ascii9_string needle) AVA_PURE;
+
+/**
+ * Returns the first index of the character needle within string haystack, or
+ * -1 if there is no such character.
+ *
+ * If needle is a non-NUL ASCII literal chacter, use ava_strchr_ascii()
+ * instead.
+ */
+ssize_t ava_strchr(ava_string haystack, char needle) AVA_PURE;
+
+/**
+ * Returns whether the given string is an ASCII9 string.
+ */
+static inline ava_bool ava_string_is_ascii9(ava_string str) {
+  return str.ascii9 & 1;
+}
+
+/**
+ * Like ava_strchr(), but faster when needle is a character literal.
+ *
+ * needle MUST be a valid ASCII9 charatcer; ie, non-NUL and within the 7-bit
+ * ASCII range.
+ */
+static inline ssize_t ava_strchr_ascii(ava_string haystack, char needle) {
+  if (ava_string_is_ascii9(haystack)) {
+    return ava_ascii9_index_of_match(
+      haystack.ascii9,
+      AVA_ASCII9(needle, needle, needle,
+                 needle, needle, needle,
+                 needle, needle, needle));
+  } else {
+    return ava_strchr(haystack, needle);
+  }
+}
 
 #endif /* AVA_RUNTIME_STRING_H_ */

@@ -71,7 +71,7 @@ ava_string ava_string_of_chunk_iterator(ava_value value) {
   iterator = ava_string_chunk_iterator(value);
   while (ava_string_is_present(
            (chunk = ava_iterate_string_chunk(&iterator, value))))
-    accum = ava_string_concat(accum, chunk);
+    accum = ava_strcat(accum, chunk);
 
   return accum;
 }
@@ -233,7 +233,7 @@ static ava_ulong ava_value_siphash(ava_value value,
     n = 1;
     rem = 0;
   } else {
-    strlen = ava_string_length(str);
+    strlen = ava_strlen(str);
     data = (const ava_ulong*)ava_string_to_cstring_buff(tmpbuf, str);
     n = strlen / sizeof(ava_ulong);
     rem = strlen % sizeof(ava_ulong);

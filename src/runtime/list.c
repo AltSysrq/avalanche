@@ -126,7 +126,7 @@ static ava_list_value ava_list_value_of_string(
                               result.index_start));
           }
 
-          if (1 != ava_string_length(result.str)) {
+          if (1 != ava_strlen(result.str)) {
             if (return_empty_on_fail)
               return ava_empty_list();
             else
@@ -210,7 +210,7 @@ ava_string ava_list_escape(ava_value val) {
   size_t strlen, i;
 
   str = ava_to_string(val);
-  strlen = ava_string_length(str);
+  strlen = ava_strlen(str);
 
   /* Special case: The empty string needs to be quoted, otherwise it will
    * disappear.
@@ -252,15 +252,15 @@ ava_string ava_list_escape(ava_value val) {
    * around it and expect it to work.
    */
   if (ava_list_is_in_normal_list_form(val, str))
-    return ava_string_concat(
-      ava_string_concat(AVA_ASCII9_STRING("["), str),
+    return ava_strcat(
+      ava_strcat(AVA_ASCII9_STRING("["), str),
       AVA_ASCII9_STRING("]"));
 
   /* If surrounding it with double-quotes is sufficient to quote it, do that */
   if (!quote_with_verbatim)
-    return ava_string_concat(
+    return ava_strcat(
       AVA_ASCII9_STRING("\""),
-      ava_string_concat(str, AVA_ASCII9_STRING("\"")));
+      ava_strcat(str, AVA_ASCII9_STRING("\"")));
 
   /* Escaping will be non-trivial, so use a verbatim */
   ava_string escaped = AVA_ASCII9_STRING("\\{");
@@ -274,10 +274,10 @@ ava_string ava_list_escape(ava_value val) {
       case ';':
       case '}':
         /* Need to escape the preceding backslash */
-        escaped = ava_string_concat(
+        escaped = ava_strcat(
           escaped, ava_string_slice(
             str, clean_start, i-1));
-        escaped = ava_string_concat(
+        escaped = ava_strcat(
           escaped, AVA_ASCII9_STRING("\\;\\"));
         clean_start = i;
         break;
@@ -300,9 +300,9 @@ ava_string ava_list_escape(ava_value val) {
       val = strdat[i] & 0xF;
       esc[4] = val + (val < 10? '0' : 'A' - 10);
 
-      escaped = ava_string_concat(
+      escaped = ava_strcat(
         escaped, ava_string_slice(str, clean_start, i));
-      escaped = ava_string_concat(
+      escaped = ava_strcat(
         escaped, ava_string_of_bytes(esc, sizeof(esc)));
       clean_start = i + 1;
     }
@@ -310,10 +310,10 @@ ava_string ava_list_escape(ava_value val) {
     preceded_by_bs = '\\' == strdat[i];
   }
 
-  escaped = ava_string_concat(
+  escaped = ava_strcat(
     escaped, ava_string_slice(
-      str, clean_start, ava_string_length(str)));
-  escaped = ava_string_concat(
+      str, clean_start, ava_strlen(str)));
+  escaped = ava_strcat(
     escaped, AVA_ASCII9_STRING("\\}"));
 
   return escaped;
@@ -397,7 +397,7 @@ ava_string ava_list_iterate_string_chunk(
   eltstr = ava_list_escape(elt);
 
   if (it->ulong > 1)
-    return ava_string_concat(AVA_ASCII9_STRING(" "), eltstr);
+    return ava_strcat(AVA_ASCII9_STRING(" "), eltstr);
   else
     return eltstr;
 }

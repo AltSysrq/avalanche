@@ -217,8 +217,8 @@ static signed ava_compare_symtab_entry(const ava_symtab_entry* a,
   ava_string as = a->symbol->full_name, bs = b->symbol->full_name;
 
   if (a->prefix_only || b->prefix_only) {
-    alen = ava_string_length(as);
-    blen = ava_string_length(bs);
+    alen = ava_strlen(as);
+    blen = ava_strlen(bs);
     if (a->prefix_only && alen < blen) {
       bs = ava_string_slice(bs, 0, alen);
       blen = alen;
@@ -396,10 +396,10 @@ static ava_bool ava_symtab_import_match(
 ) {
   if (ava_string_starts_with(name, import->new_prefix)) {
     /* Match */
-    *effective_name = ava_string_concat(
+    *effective_name = ava_strcat(
       import->old_prefix, ava_string_slice(
-        name, ava_string_length(import->new_prefix),
-        ava_string_length(name)));
+        name, ava_strlen(import->new_prefix),
+        ava_strlen(name)));
     return ava_true;
   } else {
     return ava_false;
