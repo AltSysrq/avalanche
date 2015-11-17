@@ -525,7 +525,7 @@ ava_macro_subst_result ava_intr_set_subst(
   const ava_parse_unit* provoker,
   ava_bool* consumed_other_statements
 ) {
-  const ava_parse_unit* target_unit, * expression_unit;
+  const ava_parse_unit* target_unit = NULL, * expression_unit = NULL;
   ava_ast_node* target, * expression, * reader, * result;
 
   AVA_MACRO_ARG_PARSE {

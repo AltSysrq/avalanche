@@ -45,7 +45,7 @@ runtime/empty-list.c \
 runtime/errors.c \
 runtime/esba.c \
 runtime/esba-list.c \
-runtime/exception.c \
+runtime/exception.cxx \
 runtime/function.c \
 runtime/gen-errors.c \
 runtime/gen-integer.c \
@@ -118,14 +118,19 @@ simple_interp_LDADD = libavart.la libavart-native.la
 llvm_ir_dump_t_SOURCES = llvm-ir-dump.cxx
 llvm_ir_dump_t_LDADD = libavart.la libavart-native.la $(LLVM_LIBS)
 
-bootstrap_bin_compile_module_SOURCES = bootstrap/compile-module.c
+# The dummy.cxx thing is there to force linking to occur with CXXLD, which is
+# necessary so we get C++ exception support.
+bootstrap_bin_compile_module_SOURCES = \
+	bootstrap/compile-module.c bootstrap/dummy.cxx
 bootstrap_bin_compile_module_LDADD = libavart-bootstrap.la $(BOOTSTRAP_LIBS)
-bootstrap_bin_link_package_SOURCES = bootstrap/link-package.c
+bootstrap_bin_link_package_SOURCES = \
+	bootstrap/link-package.c bootstrap/dummy.cxx
 bootstrap_bin_link_package_LDADD = $(BOOTSTRAP_LIBS)
-bootstrap_bin_make_interface_SOURCES = bootstrap/make-interface.c
+bootstrap_bin_make_interface_SOURCES = \
+	bootstrap/make-interface.c bootstrap/dummy.cxx
 bootstrap_bin_make_interface_LDADD = $(BOOTSTRAP_LIBS)
 bootstrap_bin_to_asm_SOURCES = bootstrap/to-asm.cxx
-bootstrap_bin_to_asm_LDADD = $(BOOTSTRAP_LIBS) libavart-native.la $(LLVM_LIBS)
+bootstrap_bin_to_asm_LDADD = libavart-native.la $(BOOTSTRAP_LIBS) $(LLVM_LIBS)
 
 runtime/gen-lex.c: runtime/lex.c
 	$(AM_V_GEN)$(RE2C) --input custom -c $(RE2C_FLAGS) \

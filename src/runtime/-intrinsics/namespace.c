@@ -113,7 +113,7 @@ ava_macro_subst_result ava_intr_import_subst(
   ava_bool* consumed_other_statements
 ) {
   ava_str_tmpbuff tmp;
-  const ava_parse_unit* source_unit;
+  const ava_parse_unit* source_unit = NULL;
   ava_string absolutised, ambiguous;
   ava_string source, dest = AVA_EMPTY_STRING;
   size_t source_len, dest_len, i;
@@ -198,7 +198,8 @@ ava_macro_subst_result ava_intr_alias_subst(
   const ava_parse_unit* provoker,
   ava_bool* consumed_other_statements
 ) {
-  const ava_parse_unit* source_unit, * dest_unit, * equals_unit;
+  const ava_parse_unit* source_unit = NULL, * dest_unit = NULL,
+                      * equals_unit = NULL;
   ava_string source_name, dest_name, equals;
   const ava_symbol* old_symbol, ** results;
   ava_symbol* new_symbol;

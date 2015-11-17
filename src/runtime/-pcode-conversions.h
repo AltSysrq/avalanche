@@ -18,7 +18,7 @@
 
 static void format_error(ava_string message) AVA_NORETURN;
 static void format_error(ava_string message) {
-  ava_throw(&ava_format_exception, ava_value_of_string(message), NULL);
+  ava_throw_str(&ava_format_exception, message);
 }
 
 #define FORMAT_ERROR(message) do {                      \

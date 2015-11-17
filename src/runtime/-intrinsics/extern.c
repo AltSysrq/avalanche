@@ -44,9 +44,15 @@ typedef struct {
   ava_bool defined;
 } ava_intr_extern;
 
+typedef struct {
+  ava_value value;
+  const ava_function* ret;
+} ava_intr_extern_cvt_prototype_data;
+
 static ava_string ava_intr_extern_to_string(const ava_intr_extern*);
 static void ava_intr_extern_cg_define(
   ava_intr_extern* node, ava_codegen_context* context);
+static void ava_intr_extern_cvt_prototype(void* d);
 
 static const ava_ast_node_vtable ava_intr_extern_vtable = {
   .name = "extern",
@@ -55,6 +61,12 @@ static const ava_ast_node_vtable ava_intr_extern_vtable = {
   .cg_define = (ava_ast_node_cg_define_f)ava_intr_extern_cg_define,
 };
 
+static void ava_intr_extern_cvt_prototype(void* d) {
+  ava_intr_extern_cvt_prototype_data* data = d;
+
+  data->ret = ava_function_of_value(data->value);
+}
+
 ava_macro_subst_result ava_intr_extern_subst(
   const ava_symbol* self,
   ava_macsub_context* context,
@@ -62,13 +74,14 @@ ava_macro_subst_result ava_intr_extern_subst(
   const ava_parse_unit* provoker,
   ava_bool* consumed_other_statements
 ) {
-  ava_exception_handler handler;
-  const ava_parse_unit* ava_name_unit, * prototype_first_unit = NULL;
+  ava_exception ex;
+  const ava_parse_unit* ava_name_unit = NULL, * prototype_first_unit = NULL;
   ava_string ava_name, native_name = AVA_EMPTY_STRING;
   ava_value prototype_list = ava_value_of_string(AVA_ASCII9_STRING("1"));
   const ava_function* prototype;
   ava_symbol* definition;
   ava_intr_extern* this;
+  ava_intr_extern_cvt_prototype_data cvt_prototype_data;
 
   AVA_MACRO_ARG_PARSE {
     AVA_MACRO_ARG_FROM_RIGHT_BEGIN {
@@ -84,15 +97,18 @@ ava_macro_subst_result ava_intr_extern_subst(
     }
   }
 
-  ava_try(handler) {
-    prototype = ava_function_of_value(prototype_list);
-  } ava_catch (handler, ava_format_exception) {
-    return ava_macsub_error_result(
-      context, ava_error_invalid_function_prototype(
-        &prototype_first_unit->location, handler.value));
-  } ava_catch_all {
-    ava_rethrow(&handler);
+  cvt_prototype_data.value = prototype_list;
+  if (ava_catch(&ex, ava_intr_extern_cvt_prototype, &cvt_prototype_data)) {
+    if (&ava_format_exception == ex.type) {
+      return ava_macsub_error_result(
+        context, ava_error_invalid_function_prototype(
+          &prototype_first_unit->location,
+          ava_exception_get_value(&ex)));
+    } else {
+      ava_rethrow(ex);
+    }
   }
+  prototype = cvt_prototype_data.ret;
 
   definition = AVA_NEW(ava_symbol);
   this = AVA_NEW(ava_intr_extern);

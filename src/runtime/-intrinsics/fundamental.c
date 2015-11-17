@@ -777,37 +777,52 @@ static void ava_intr_spread_postprocess(ava_intr_spread* node) {
   ava_ast_node_postprocess(node->child);
 }
 
+typedef struct {
+  const ava_intr_spread* node;
+  ava_list_value* dst;
+  ava_bool ret;
+} ava_intr_spread_get_constexpr_spread_data;
+
+static void ava_intr_spread_get_constexpr_spread_impl(void* d) {
+  ava_intr_spread_get_constexpr_spread_data* data = d;
+  const ava_intr_spread* node = data->node;
+  ava_list_value* dst = data->dst;
+  ava_value child;
+  ava_list_value sublist;
+
+  if (node->child->v->cg_spread) {
+    if (ava_ast_node_get_constexpr_spread(node->child, &sublist)) {
+      *dst = ava_list_proj_flatten(sublist);
+      data->ret = ava_true;
+    } else {
+      data->ret = ava_false;
+    }
+  } else {
+    if (ava_ast_node_get_constexpr(node->child, &child)) {
+      *dst = ava_list_value_of(child);
+      data->ret = ava_true;
+    } else {
+      data->ret = ava_false;
+    }
+  }
+}
+
 static ava_bool ava_intr_spread_get_constexpr_spread(
   const ava_intr_spread* node, ava_list_value* dst
 ) {
-  ava_exception_handler handler;
-  ava_list_value sublist;
-  ava_value child;
-  ava_bool ret;
+  ava_exception ex;
+  ava_intr_spread_get_constexpr_spread_data data;
 
-  ava_try (handler) {
-    if (node->child->v->cg_spread) {
-      if (ava_ast_node_get_constexpr_spread(node->child, &sublist)) {
-        *dst = ava_list_proj_flatten(sublist);
-        ret = ava_true;
-      } else {
-        ret = ava_false;
-      }
-    } else {
-      if (ava_ast_node_get_constexpr(node->child, &child)) {
-        *dst = ava_list_value_of(child);
-        ret = ava_true;
-      } else {
-        ret = ava_false;
-      }
-    }
-  } ava_catch (handler, ava_format_exception) {
-    return ava_false;
-  } ava_catch_all {
-    ava_rethrow(&handler);
+  data.node = node;
+  data.dst = dst;
+  if (ava_catch(&ex, ava_intr_spread_get_constexpr_spread_impl, &data)) {
+    if (&ava_format_exception == ex.type)
+      return ava_false;
+    else
+      ava_rethrow(ex);
+  } else {
+    return data.ret;
   }
-
-  return ret;
 }
 
 static void ava_intr_spread_cg_evaluate(

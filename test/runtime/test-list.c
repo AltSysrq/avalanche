@@ -129,46 +129,48 @@ deftest(empty_sublist) {
   ck_assert_int_eq(0, ava_list_length(ava_list_index(ava_list_index(list, 0), 0)));
 }
 
-#define assert_format_exception(expr)                   \
-  do {                                                  \
-    ava_exception_handler handler;                      \
-    ava_try (handler) {                                 \
-      /* Need to do something with expr so it is not */ \
-      /* optimised away */                              \
-      ck_assert_ptr_ne(NULL, ava_value_attr(expr));     \
-      ck_abort_msg("no exception thrown");              \
-    } ava_catch (handler, ava_format_exception) {       \
-      /* ok */                                          \
-    } ava_catch_all {                                   \
-      ava_rethrow(&handler);                            \
-    }                                                   \
-  } while (0)
+static void do_assert_format_exception(void* string) {
+  ava_list_value list = ava_list_value_of(
+    ava_value_of_cstring(string));
+  /* Ensure the above is forced */
+  ck_assert_ptr_ne(NULL, ava_value_attr(list.v));
+}
+
+static void assert_format_exception(const char* string) {
+  ava_exception ex;
+
+  if (ava_catch(&ex, do_assert_format_exception, (void*)string)) {
+    ck_assert_ptr_eq(&ava_format_exception, ex.type);
+  } else {
+    ck_abort_msg("no exception thrown");
+  }
+}
 
 deftest(lexer_errors_propagated) {
-  assert_format_exception(value_of_cstring("\""));
+  assert_format_exception("\"");
 }
 
 deftest(non_astrings_rejected) {
-  assert_format_exception(value_of_cstring("`lr`"));
-  assert_format_exception(value_of_cstring("`l\""));
-  assert_format_exception(value_of_cstring("\"r`"));
+  assert_format_exception("`lr`");
+  assert_format_exception("`l\"");
+  assert_format_exception("\"r`");
 }
 
 deftest(enclosures_rejected) {
-  assert_format_exception(value_of_cstring("(a)"));
-  assert_format_exception(value_of_cstring("a()"));
-  assert_format_exception(value_of_cstring("b[]"));
-  assert_format_exception(value_of_cstring("{c}"));
+  assert_format_exception("(a)");
+  assert_format_exception("a()");
+  assert_format_exception("b[]");
+  assert_format_exception("{c}");
 }
 
 deftest(error_on_unbalanced_brackets) {
-  assert_format_exception(value_of_cstring("[foo"));
-  assert_format_exception(value_of_cstring("foo]"));
-  assert_format_exception(value_of_cstring("[[][]]]"));
+  assert_format_exception("[foo");
+  assert_format_exception("foo]");
+  assert_format_exception("[[][]]]");
 }
 
 deftest(error_on_tagged_brackets) {
-  assert_format_exception(value_of_cstring("[foo]bar"));
+  assert_format_exception("[foo]bar");
 }
 
 const char* escape(const char* str) {

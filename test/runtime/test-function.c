@@ -42,16 +42,12 @@ static const ava_function* of_cstring(const char* str) {
 }
 
 static void assert_rejects(const char* str) {
-  ava_exception_handler h;
-  const ava_function* fun;
+  ava_exception ex;
 
-  ava_try (h) {
-    fun = of_cstring(str);
-    ck_abort_msg("Parsed %p from %s", fun, str);
-  } ava_catch (h, ava_format_exception) {
-    /* OK */
-  } ava_catch_all {
-    ava_rethrow(&h);
+  if (ava_catch(&ex, (void(*)(void*))of_cstring, (void*)str)) {
+    ck_assert_ptr_eq(&ava_format_exception, ex.type);
+  } else {
+    ck_abort_msg("Parsed %s unexpectly", str);
   }
 }
 
@@ -1308,25 +1304,37 @@ TEST_INVOKE(invoke_const_pointer, "foo& null",
             { .type = ava_fpt_static,
                 .value = ava_value_of_cstring("bar& xBEEF") })
 
+typedef struct {
+  const ava_function* fun;
+  size_t nparms;
+  ava_function_parameter* parms;
+} invoke_data;
+
+static void do_invoke(invoke_data* data) {
+  ava_function_bind_invoke(data->fun, data->nparms, data->parms);
+}
+
 deftest(c_void_argument_required_to_be_empty) {
-  ava_exception_handler h;
+  ava_exception ex;
   char funspec[256];
   const ava_function* fun;
   ava_function_parameter parms[1] = {
     { .type = ava_fpt_static, .value = WORD(foo) }
   };
+  invoke_data d;
 
   snprintf(funspec, sizeof(funspec), "%lld c int \"void pos\"",
            (long long)rand);
   fun = of_cstring(funspec);
 
-  ava_try (h) {
-    ava_function_bind_invoke(fun, 1, parms);
+  d.fun = fun;
+  d.nparms = 1;
+  d.parms = parms;
+
+  if (ava_catch(&ex, (void(*)(void*))do_invoke, &d)) {
+    ck_assert_ptr_eq(&ava_format_exception, ex.type);
+  } else {
     ck_abort_msg("no exception thrown");
-  } ava_catch(h, ava_format_exception) {
-    /* OK */
-  } ava_catch_all {
-    ava_rethrow(&h);
   }
 }
 

@@ -104,16 +104,18 @@ ava_pointer_value ava_pointer_of_proto(
 
 ava_pointer_value ava_pointer_of_list(ava_list_value list) {
   ava_intptr ptr;
+  const ava_pointer_prototype* proto;
 
   if (2 != ava_list_length(list))
     ava_throw_str(&ava_format_exception,
                   ava_error_list_of_non_two_length_as_pointer());
   ptr = (ava_intptr)ava_integer_of_value(ava_list_index(list, 1), 0);
+  proto = ava_pointer_prototype_parse(
+    ava_to_string(ava_list_index(list, 0)));
+  if (!proto)
+    ava_throw_str(&ava_format_exception, ava_error_bad_pointer_prototype());
 
-  return ava_pointer_of_proto(
-    ava_pointer_prototype_parse(
-      ava_to_string(ava_list_index(list, 0))),
-    (void*)ptr);
+  return ava_pointer_of_proto(proto, (void*)ptr);
 }
 
 const ava_pointer_prototype* ava_pointer_prototype_parse(ava_string protostr) {
@@ -123,15 +125,13 @@ const ava_pointer_prototype* ava_pointer_prototype_parse(ava_string protostr) {
   ava_bool is_const;
 
   if (ava_string_is_empty(protostr))
-    ava_throw_str(&ava_format_exception, ava_error_bad_pointer_prototype());
+    return NULL;
 
   constness = ava_string_index(protostr, ava_strlen(protostr)-1);
   switch (constness) {
   case '*': is_const = ava_false; break;
   case '&': is_const = ava_true;  break;
-  default:
-    ava_throw_str(&ava_format_exception, ava_error_bad_pointer_prototype());
-    /* unreachable */
+  default: return NULL;
   }
 
   tag = ava_string_slice(protostr, 0, ava_strlen(protostr) - 1);

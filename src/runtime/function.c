@@ -149,19 +149,16 @@ void ava_function_init_ffi(ava_function* fun) {
     break;
 
   case FFI_BAD_TYPEDEF:
-    ava_throw(&ava_internal_exception,
-              ava_value_of_string(ava_error_bad_ffi(bad_typedef_message)),
-              NULL);
+    ava_throw_str(&ava_internal_exception,
+                  ava_error_bad_ffi(bad_typedef_message));
 
   case FFI_BAD_ABI:
-    ava_throw(&ava_internal_exception,
-              ava_value_of_string(ava_error_bad_ffi(bad_abi_message)),
-              NULL);
+    ava_throw_str(&ava_internal_exception,
+                  ava_error_bad_ffi(bad_abi_message));
 
   default:
-    ava_throw(&ava_internal_exception,
-              ava_value_of_string(
-                ava_error_bad_ffi(unknown_error_message)), NULL);
+    ava_throw_str(&ava_internal_exception,
+                  ava_error_bad_ffi(unknown_error_message));
   }
 }
 
@@ -337,7 +334,6 @@ AVA_STATIC_STRING(ava_ushort_text, "ava_ushort");
 AVA_STATIC_STRING(ava_integer_text, "ava_integer");
 
 static ava_c_marshalling_type ava_function_parse_marshal_type(ava_value val) {
-  ava_exception_handler h;
   ava_string str = ava_to_string(val);
   ava_c_marshalling_type ret;
 
@@ -379,15 +375,12 @@ static ava_c_marshalling_type ava_function_parse_marshal_type(ava_value val) {
 #undef PRIM
 
   /* Not a primitive type, try to parse as a pointer */
-  ava_try (h) {
-    ret.pointer_proto = ava_pointer_prototype_parse(str);
-    ret.primitive_type = ava_cmpt_pointer;
-  } ava_catch (h, ava_format_exception) {
-    ava_throw_str(&ava_format_exception,
-                  ava_error_unknown_marshalling_type(str));
-  } ava_catch_all {
-    ava_rethrow(&h);
-  }
+  ret.pointer_proto = ava_pointer_prototype_parse(str);
+  if (!ret.pointer_proto)
+      ava_throw_str(&ava_format_exception,
+                    ava_error_unknown_marshalling_type(str));
+  ret.primitive_type = ava_cmpt_pointer;
+
   return ret;
 }
 
