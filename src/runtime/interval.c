@@ -78,7 +78,7 @@ static ava_string ava_compact_interval_to_string(ava_value value) {
   ava_sint begin, end;
 
   begin = ava_value_slong(value);
-  end = ava_value_slong(value >> 32);
+  end = ava_value_slong(value) >> 32;
 
   return ava_strcat(
     ava_strcat(
