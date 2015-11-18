@@ -26,13 +26,8 @@ AC_PROG_SED
 
 # Checks for libraries.
 PKG_CHECK_MODULES([CHECK], [check], [], [:])
-PKG_CHECK_MODULES([LIBUNWIND], [libunwind], [], [AC_MSG_ERROR(
-[libunwind could not be found. Make sure libunwind[-dev] is installed.])])
 PKG_CHECK_MODULES([LIBFFI], [libffi], [], [AC_MSG_ERROR(
 [libffi could not be found. Make sure libffi[-dev] is installed.])])
-# While faster setjmp() would be nice, the way this library attempts to operate
-# by redifining setjmp() and longjmp() is a bit problematic.
-# PKG_CHECK_MODULES([LIBUNWIND_SETJMP], [libunwind-setjmp], [], [:])
 AC_SEARCH_LIBS([sin], [c m])
 AC_SEARCH_LIBS([strlcpy], [c bsd])
 AC_SEARCH_LIBS([dlopen], [c dl])
