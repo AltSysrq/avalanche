@@ -385,7 +385,7 @@ static void ava_intr_var_read_cg_evaluate(
     var_reg.index = ava_varscope_get_index(
       ava_macsub_get_varscope(node->header.context), node->var);
     ava_codegen_set_location(context, &node->header.location);
-    AVA_PCXB(ld_reg, *dst, var_reg);
+    AVA_PCXB(ld_reg_s, *dst, var_reg);
     break;
 
   case ava_st_local_function: {
@@ -409,17 +409,17 @@ static void ava_intr_var_read_cg_evaluate(
       data_reg.index = data_base + num_captures;
       ava_codegen_set_location(context, &node->header.location);
       AVA_PCXB(ld_glob, data_reg, node->var->pcode_index);
-      AVA_PCXB(ld_reg, fun_reg, data_reg);
+      AVA_PCXB(ld_reg_d, fun_reg, data_reg);
 
       var_reg.type = ava_prt_var;
       for (i = 0; i < num_captures; ++i) {
         var_reg.index = ava_varscope_get_index(localscope, captures[i]);
         data_reg.index = data_base + i;
-        AVA_PCXB(ld_reg, data_reg, var_reg);
+        AVA_PCXB(ld_reg_s, data_reg, var_reg);
       }
 
       AVA_PCXB(partial, fun_reg, fun_reg, data_base, num_captures);
-      AVA_PCXB(ld_reg, *dst, fun_reg);
+      AVA_PCXB(ld_reg_u, *dst, fun_reg);
 
       ava_codegen_pop_reg(context, ava_prt_data, num_captures + 1);
       ava_codegen_pop_reg(context, ava_prt_function, 1);
@@ -479,7 +479,7 @@ static void ava_intr_var_write_cg_evaluate(
     /* Nothing else to do with the var */
   }
 
-  if (dst) AVA_PCXB(ld_reg, *dst, reg);
+  if (dst) AVA_PCXB(ld_reg_s, *dst, reg);
 
   if (ava_st_local_variable != node->var->type)
     ava_codegen_pop_reg(context, ava_prt_data, 1);

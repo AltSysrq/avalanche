@@ -706,7 +706,7 @@ static void ava_intr_semilit_cg_evaluate(
       }
     }
 
-    AVA_PCXB(ld_reg, *dst, accum);
+    AVA_PCXB(ld_reg_u, *dst, accum);
     ava_codegen_pop_reg(context, ava_prt_data, 1);
     ava_codegen_pop_reg(context, ava_prt_list, 2);
   }
@@ -847,7 +847,7 @@ static void ava_intr_spread_cg_spread(
     tmp.type = ava_prt_data;
     tmp.index = ava_codegen_push_reg(context, ava_prt_data, 1);
     ava_ast_node_cg_evaluate(node->child, &tmp, context);
-    AVA_PCXB(ld_reg, *dst, tmp);
+    AVA_PCXB(ld_reg_d, *dst, tmp);
     ava_codegen_pop_reg(context, ava_prt_data, 1);
   }
 }

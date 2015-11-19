@@ -219,7 +219,7 @@ static void ava_intr_if_cg_common(
     elselbl = ava_codegen_genlabel(context);
     if (this->clauses[i].condition) {
       ava_ast_node_cg_evaluate(this->clauses[i].condition, &dreg, context);
-      AVA_PCXB(ld_reg, creg, dreg);
+      AVA_PCXB(ld_reg_d, creg, dreg);
       AVA_PCXB(bool, creg, creg);
       ava_codegen_branch(context, &this->header.location,
                          creg, 0, ava_false, elselbl);

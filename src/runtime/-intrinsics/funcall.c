@@ -290,7 +290,7 @@ static void ava_intr_funcall_cg_evaluate(
       list_reg.index = ava_codegen_push_reg(context, ava_prt_list, 1);
       ava_ast_node_cg_spread(
         funcall->parms[i + static_fun], &list_reg, context);
-      AVA_PCXB(ld_reg, parm_reg, list_reg);
+      AVA_PCXB(ld_reg_u, parm_reg, list_reg);
       ava_codegen_pop_reg(context, ava_prt_list, 1);
     } else {
       ava_ast_node_cg_evaluate(funcall->parms[i + static_fun],
@@ -321,7 +321,7 @@ static void ava_intr_funcall_cg_evaluate(
     for (i = 0; i < num_captures; ++i) {
       var_reg.index = ava_varscope_get_index(localscope, captures[i]);
       arg_reg.index = arg_base + i;
-      AVA_PCXB(ld_reg, arg_reg, var_reg);
+      AVA_PCXB(ld_reg_s, arg_reg, var_reg);
     }
 
     /* Map parms to args */
@@ -335,7 +335,7 @@ static void ava_intr_funcall_cg_evaluate(
 
       case ava_fbat_parameter:
         parm_reg.index = parm_base + funcall->bound_args[i].v.parameter_index;
-        AVA_PCXB(ld_reg, arg_reg, parm_reg);
+        AVA_PCXB(ld_reg_s, arg_reg, parm_reg);
         break;
 
       case ava_fbat_collect: {
@@ -353,7 +353,7 @@ static void ava_intr_funcall_cg_evaluate(
           parm_reg.index = parm_base + funcall->variadic_collection[0];
           if (funcall->parms[
                 funcall->variadic_collection[0] + 1]->v->cg_spread) {
-            AVA_PCXB(ld_reg, accum, parm_reg);
+            AVA_PCXB(ld_reg_d, accum, parm_reg);
           } else {
             AVA_PCXB(lempty, accum);
             AVA_PCXB(lappend, accum, accum, parm_reg);
@@ -363,7 +363,7 @@ static void ava_intr_funcall_cg_evaluate(
             parm_reg.index = parm_base + funcall->variadic_collection[j];
             if (funcall->parms[
                   funcall->variadic_collection[j] + 1]->v->cg_spread) {
-              AVA_PCXB(ld_reg, tmplist, parm_reg);
+              AVA_PCXB(ld_reg_d, tmplist, parm_reg);
               AVA_PCXB(lcat, accum, accum, tmplist);
             } else {
               AVA_PCXB(lappend, accum, accum, parm_reg);
@@ -371,7 +371,7 @@ static void ava_intr_funcall_cg_evaluate(
           }
         }
 
-        AVA_PCXB(ld_reg, arg_reg, accum);
+        AVA_PCXB(ld_reg_u, arg_reg, accum);
 
         ava_codegen_pop_reg(context, ava_prt_list, 2);
       } break;
@@ -442,7 +442,7 @@ static void ava_intr_funcall_cg_evaluate(
     if (!funcall->parms[0]->v->cg_spread) {
       /* Simple case: The function is a lone expression */
       parm_reg.index = parm_base;
-      AVA_PCXB(ld_reg, fun_reg, parm_reg);
+      AVA_PCXB(ld_reg_d, fun_reg, parm_reg);
       normal_parm_offset = 1;
       extra_parm = ava_false;
     } else {
@@ -465,12 +465,12 @@ static void ava_intr_funcall_cg_evaluate(
       /* Accumulatign leading spreads and first non-spread (if any) into a
        * single list.
        */
-      AVA_PCXB(ld_reg, list_reg, parm_reg);
+      AVA_PCXB(ld_reg_d, list_reg, parm_reg);
       for (normal_parm_offset = 1;
            normal_parm_offset < funcall->num_parms; ++normal_parm_offset) {
         parm_reg.index = parm_base + normal_parm_offset;
         if (funcall->parms[normal_parm_offset]->v->cg_spread) {
-          AVA_PCXB(ld_reg, rlist_reg, parm_reg);
+          AVA_PCXB(ld_reg_d, rlist_reg, parm_reg);
           AVA_PCXB(lcat, list_reg, list_reg, rlist_reg);
         } else {
           AVA_PCXB(lappend, list_reg, list_reg, parm_reg);
@@ -483,11 +483,11 @@ static void ava_intr_funcall_cg_evaluate(
       tmp_reg.index = ava_codegen_push_reg(context, ava_prt_data, 1);
       /* The function is the first element in the list; error if empty */
       AVA_PCXB(lhead, tmp_reg, list_reg);
-      AVA_PCXB(ld_reg, fun_reg, tmp_reg);
+      AVA_PCXB(ld_reg_d, fun_reg, tmp_reg);
 
       /* The rest becomes the first spread argument to the function */
       AVA_PCXB(lbehead, list_reg, list_reg);
-      AVA_PCXB(ld_reg, tmp_reg, list_reg);
+      AVA_PCXB(ld_reg_u, tmp_reg, list_reg);
       preg.index = preg_base + normal_parm_offset - 1;
       AVA_PCXB(ld_parm, preg, tmp_reg, ava_true);
       ava_codegen_pop_reg(context, ava_prt_data, 1);

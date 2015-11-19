@@ -57,5 +57,5 @@ static void ava_intr_reg_rvalue_cg_evaluate(
   ava_intr_reg_rvalue* this, const ava_pcode_register* dst,
   ava_codegen_context* context
 ) {
-  AVA_PCXB(ld_reg, *dst, this->reg);
+  AVA_PCXB(ld_reg_s, *dst, this->reg);
 }

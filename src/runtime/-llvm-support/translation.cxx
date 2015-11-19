@@ -1352,8 +1352,28 @@ noexcept {
     store_register(context, irb, p->dst, src, pcfun, regs);
   } return false;
 
-  case ava_pcxt_ld_reg: {
-    const ava_pcx_ld_reg* p = (const ava_pcx_ld_reg*)exe;
+  case ava_pcxt_ld_reg_s: {
+    const ava_pcx_ld_reg_s* p = (const ava_pcx_ld_reg_s*)exe;
+
+    llvm::Value* raw_src = load_register(
+      context, irb, p->src, pcfun, regs, tmplists[0]);
+    llvm::Value* src = convert_register(
+      context, irb, raw_src, p->dst.type, p->src.type, tmplists[0]);
+    store_register(context, irb, p->dst, src, pcfun, regs);
+  } return false;
+
+  case ava_pcxt_ld_reg_u: {
+    const ava_pcx_ld_reg_u* p = (const ava_pcx_ld_reg_u*)exe;
+
+    llvm::Value* raw_src = load_register(
+      context, irb, p->src, pcfun, regs, tmplists[0]);
+    llvm::Value* src = convert_register(
+      context, irb, raw_src, p->dst.type, p->src.type, tmplists[0]);
+    store_register(context, irb, p->dst, src, pcfun, regs);
+  } return false;
+
+  case ava_pcxt_ld_reg_d: {
+    const ava_pcx_ld_reg_d* p = (const ava_pcx_ld_reg_d*)exe;
 
     llvm::Value* raw_src = load_register(
       context, irb, p->src, pcfun, regs, tmplists[0]);

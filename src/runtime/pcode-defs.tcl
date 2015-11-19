@@ -291,7 +291,6 @@ struct exe x {
   attr special-reg-read-d
   attr special-reg-read-p
   attr can-throw
-  attr can-throw-special
   prop register reg-read
   prop register reg-write
   prop int jump-target
@@ -401,30 +400,9 @@ struct exe x {
 
   # Copies the value of one register to another.
   #
-  # Semantics: dst is set to the value stored in src, possibly after
-  # conversion. The following table lists legal dst/src type pairs where dst
-  # and src are different. D- and V-registers are considered equivalent here
-  # and are not noted separately.
-  #
-  #   dv->i      Parsed as integer, default 0
-  #   i->dv      Integer stringified
-  #   dv->f      Parsed as ava_function
-  #   f->dv      Function stringified
-  #   dv->l      Parsed as list
-  #   l->dv      List stringified
-  #
-  # Exceptions may be thrown by parsing conversions.
-  #
-  # Note that conversions between types means that sequences like
-  #   ld-reg i0 d0
-  #   ld-reg d0 i0
-  # result in changing *both* registers.
-  #
-  # This instruction cannot operate on P-registers at all, see ld-parm for
-  # that.
-  elt ld-reg {
-    attr can-throw-special
-
+  # Semantics: dst is set to the value stored in src. Both registers must be of
+  # the same type, or must both be D- or V-registers.
+  elt ld-reg-s {
     register dvifl dst {
       prop reg-write
     }
@@ -434,10 +412,37 @@ struct exe x {
 
     constraint {
       @.dst.type == @.src.type ||
-      @.dst.type == ava_prt_var ||
-      @.dst.type == ava_prt_data ||
-      @.src.type == ava_prt_var ||
-      @.src.type == ava_prt_data
+      ((@.dst.type == ava_prt_data || @.dst.type == ava_prt_var) &&
+       (@.src.type == ava_prt_data || @.src.type == ava_prt_var))
+    }
+  }
+
+  # Widens a typed register to an untyped register.
+  #
+  # Semantics: dst is set to the normal form of the value stored in src.
+  elt ld-reg-u {
+    register dv dst {
+      prop reg-write
+    }
+    register ifl src {
+      prop reg-read
+    }
+  }
+
+  # Narrows an untyped register to a typed register.
+  #
+  # Semantics: dst is set to the typed value represented by the value stored in
+  # src. If the value is not interpretable as dst's type, a format exception is
+  # thrown.
+  elt ld-reg-d {
+    attr can-throw
+
+    register ifl dst {
+      prop reg-write
+    }
+
+    register dv src {
+      prop reg-read
     }
   }
 

@@ -138,16 +138,16 @@ deftest(simple_reg_rename) {
 
   fun = make_xcode_fun(
     VERB(FUN_FOO ONE_ARG VERB("x") VERB(
-           VERB("push d 1")             /* 0 */
+           VERB("push d 1")           /* 0 */
            VERB("push i 1")
            VERB("push l 1")
            VERB("push p 1")
            VERB("push f 1")
-           VERB("ld-reg d0 v0")         /* 5 */
-           VERB("ld-reg i0 d0")
-           VERB("ld-reg l0 d0")
+           VERB("ld-reg-s d0 v0")       /* 5 */
+           VERB("ld-reg-d i0 d0")
+           VERB("ld-reg-d l0 d0")
            VERB("ld-parm p0 d0 false")
-           VERB("ld-reg f0 d0")
+           VERB("ld-reg-d f0 d0")
            VERB("invoke-dd d0 f0 0 1")  /* 10 */
            VERB("ret d0")
            VERB("pop f 1")
@@ -156,16 +156,16 @@ deftest(simple_reg_rename) {
            VERB("pop i 1")
            VERB("pop d 1"))));
 
-  ck_assert_int_eq(0, INSTR(ld_reg, 0, 5)->src.index);
-  ck_assert_int_eq(1, INSTR(ld_reg, 0, 5)->dst.index);
-  ck_assert_int_eq(1, INSTR(ld_reg, 0, 6)->src.index);
-  ck_assert_int_eq(2, INSTR(ld_reg, 0, 6)->dst.index);
-  ck_assert_int_eq(1, INSTR(ld_reg, 0, 7)->src.index);
-  ck_assert_int_eq(3, INSTR(ld_reg, 0, 7)->dst.index);
+  ck_assert_int_eq(0, INSTR(ld_reg_s, 0, 5)->src.index);
+  ck_assert_int_eq(1, INSTR(ld_reg_s, 0, 5)->dst.index);
+  ck_assert_int_eq(1, INSTR(ld_reg_d, 0, 6)->src.index);
+  ck_assert_int_eq(2, INSTR(ld_reg_d, 0, 6)->dst.index);
+  ck_assert_int_eq(1, INSTR(ld_reg_d, 0, 7)->src.index);
+  ck_assert_int_eq(3, INSTR(ld_reg_d, 0, 7)->dst.index);
   ck_assert_int_eq(1, INSTR(ld_parm, 0, 8)->src.index);
   ck_assert_int_eq(4, INSTR(ld_parm, 0, 8)->dst.index);
-  ck_assert_int_eq(1, INSTR(ld_reg, 0, 9)->src.index);
-  ck_assert_int_eq(5, INSTR(ld_reg, 0, 9)->dst.index);
+  ck_assert_int_eq(1, INSTR(ld_reg_d, 0, 9)->src.index);
+  ck_assert_int_eq(5, INSTR(ld_reg_d, 0, 9)->dst.index);
   ck_assert_int_eq(5, INSTR(invoke_dd, 0, 10)->fun.index);
   ck_assert_int_eq(4, INSTR(invoke_dd, 0, 10)->base);
   ck_assert_int_eq(1, INSTR(invoke_dd, 0, 10)->dst.index);
@@ -264,7 +264,7 @@ deftest(local_uninit_reg) {
     "X9004",
     VERB(FUN_FOO ONE_ARG NO_VAR VERB(
            VERB("push d 1")
-           VERB("ld-reg d0 d0")
+           VERB("ld-reg-s d0 d0")
            VERB("pop d 1"))));
 }
 
@@ -275,7 +275,7 @@ deftest(block_fallthrough_uninit_reg) {
            VERB("push d 1")
            VERB("goto 1")
            VERB("label 1")
-           VERB("ld-reg d0 d0")
+           VERB("ld-reg-s d0 d0")
            VERB("pop d 1"))));
 }
 
@@ -288,7 +288,7 @@ deftest(maybe_uninit_reg) {
            VERB("branch i0 42 false 1")
            VERB("ld-imm-i i1 0")
            VERB("label 1")
-           VERB("ld-reg i0 i1")
+           VERB("ld-reg-s i0 i1")
            VERB("pop i 2"))));
 }
 
