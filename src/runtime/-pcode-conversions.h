@@ -206,3 +206,7 @@ static ava_string ava_pcode_elt_escape(ava_string elt_string) {
       elt_string,
       AVA_ASCII9_STRING("]")));
 }
+
+static ava_bool ava_pcode_is_valid_ex_type(ava_integer type) {
+  return type >= 0 && type < ava_pet_other_exception;
+}

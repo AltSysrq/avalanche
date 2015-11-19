@@ -1635,6 +1635,13 @@ noexcept {
 
     irb.CreateBr(basic_blocks[p->target]);
   } return true;
+
+  case ava_pcxt_try:
+  case ava_pcxt_yrt:
+  case ava_pcxt_throw:
+  case ava_pcxt_rethrow:
+    /* TODO */
+    abort();
   }
 }
 

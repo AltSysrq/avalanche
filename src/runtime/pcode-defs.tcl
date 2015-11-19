@@ -290,6 +290,8 @@ struct exe x {
   attr terminal-no-fallthrough
   attr special-reg-read-d
   attr special-reg-read-p
+  attr can-throw
+  attr can-throw-special
   prop register reg-read
   prop register reg-write
   prop int jump-target
@@ -421,6 +423,8 @@ struct exe x {
   # This instruction cannot operate on P-registers at all, see ld-parm for
   # that.
   elt ld-reg {
+    attr can-throw-special
+
     register dvifl dst {
       prop reg-write
     }
@@ -517,6 +521,7 @@ struct exe x {
   # L-register src. If src is the empty list, an error_exception of type
   # empty-list is thrown.
   elt lhead {
+    attr can-throw
     register dv dst {
       prop reg-write
     }
@@ -531,6 +536,7 @@ struct exe x {
   # with the first element deleted. If src is the empty list, an
   # error_exception of type empty-list is thrown.
   elt lbehead {
+    attr can-throw
     register l dst {
       prop reg-write
     }
@@ -544,6 +550,7 @@ struct exe x {
   # Semantics: Every element in L-register src is interpreted as a list, and
   # all are concatenated into one list, which is stored in L-register dst.
   elt lflatten {
+    attr can-throw
     register l dst {
       prop reg-write
     }
@@ -559,6 +566,7 @@ struct exe x {
   # error_exception whose user type and message is given by extype and
   # exmessage is thrown.
   elt lindex {
+    attr can-throw
     register dv dst {
       prop reg-write
     }
@@ -636,6 +644,7 @@ struct exe x {
   # arguments are indeed empty. Implementations which throw exceptions in
   # response to the assertion failure should indicate that.
   elt aaempty {
+    attr can-throw
     register v src {
       prop reg-read
     }
@@ -657,6 +666,7 @@ struct exe x {
   # taken by the function.
   elt invoke-ss {
     attr special-reg-read-d
+    attr can-throw
 
     register dv dst {
       prop reg-write
@@ -694,6 +704,7 @@ struct exe x {
   # Any exceptions resulting from marshalling the function call propagate.
   elt invoke-sd {
     attr special-reg-read-p
+    attr can-throw
 
     register dv dst {
       prop reg-write
@@ -731,6 +742,7 @@ struct exe x {
   # Any exceptions resulting from marshalling the function call propagate.
   elt invoke-dd {
     attr special-reg-read-p
+    attr can-throw
 
     register dv dst {
       prop reg-write
@@ -768,6 +780,7 @@ struct exe x {
   # non-pos arguments.
   elt partial {
     attr special-reg-read-d
+    attr can-throw
 
     register f dst {
       prop reg-write
@@ -839,6 +852,81 @@ struct exe x {
   # the branch instruction.
   elt label {
     int name
+  }
+
+  # The primary instruction for exception handling.
+  #
+  # Semantics: Control immediately transfers to the label identified by target
+  # (as per `goto`) and an exception handler is pushed onto the logical
+  # exception handler stack. ex-type is set to -1 and ex-value to the empty
+  # string. If any exception is thrown while this handler is at the top of the
+  # stack, the stack is unwound to this function frame, ex-type is set to the
+  # type of the exception and ex-value to its value, the exception handler is
+  # popped from the exception-handler stack, and the caught exception pushed
+  # onto the caught-exception stack.
+  #
+  # Note that the exception-handler and caught-exception stacks are conceptual
+  # only. All static paths through the function must have the same stack
+  # configurations for every instruction. The landing pad for the topmost
+  # exception-handler is considered part of the configuration for this purpose.
+  #
+  # The exception-handler and caught-exception stacks share the concept of
+  # ordering, in that it is meaningful to refer to the single top of the
+  # collective exception stacks.
+  #
+  # The exception stacks must be empty at any point where the function might
+  # return.
+  elt try {
+    attr terminal
+    int target {
+      prop jump-target
+    }
+    register i ex-type {
+      prop reg-write
+    }
+    register dv ex-value {
+      prop reg-read
+    }
+  }
+
+  # Ends an exception-handling context.
+  #
+  # Semantics: The top of the combined exception stacks, whichever type it is,
+  # is dropped. This instruction otherwise does nothing.
+  elt yrt {
+    # Terminal so that every basic block has at most one exception handling
+    # context.
+    attr terminal
+  }
+
+  # Throws a new exception.
+  #
+  # Semantics: An exception whose type is identified by ex-type and whose value
+  # is identified by ex-value is thrown from the current location, as per
+  # ava_throw().
+  elt throw {
+    attr terminal
+    attr terminal-no-fallthrough
+    attr can-throw
+
+    int ex-type
+    register dv ex-value {
+      prop reg-read
+    }
+
+    constraint {
+      ava_pcode_is_valid_ex_type(@.ex_type)
+    }
+  }
+
+  # Rethrows a caught exception.
+  #
+  # Semantics: The exception at the top of the caught-exception is thrown, as
+  # per ava_rethrow().
+  elt rethrow {
+    attr terminal
+    attr terminal-no-fallthrough
+    attr can-throw
   }
 }
 
