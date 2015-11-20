@@ -861,14 +861,14 @@ struct exe x {
 
   # The primary instruction for exception handling.
   #
-  # Semantics: Control immediately transfers to the label identified by target
-  # (as per `goto`) and an exception handler is pushed onto the logical
-  # exception handler stack. ex-type is set to -1 and ex-value to the empty
-  # string. If any exception is thrown while this handler is at the top of the
-  # stack, the stack is unwound to this function frame, ex-type is set to the
-  # type of the exception and ex-value to its value, the exception handler is
-  # popped from the exception-handler stack, and the caught exception pushed
-  # onto the caught-exception stack.
+  # Semantics: An exception handler is pushed onto the logical exception
+  # handler stack. ex-type is set to -1 and ex-value to the empty string.
+  # Control proceeds to the next instruction. If any exception is thrown while
+  # this handler is at the top of the stack, the stack is unwound to this
+  # function frame, ex-type is set to the type of the exception and ex-value to
+  # its value, the exception handler is popped from the exception-handler
+  # stack, the caught exception pushed onto the caught-exception stack, and
+  # control transfers to the label identified by jump-target (as per goto).
   #
   # Note that the exception-handler and caught-exception stacks are conceptual
   # only. All static paths through the function must have the same stack
