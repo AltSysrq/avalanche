@@ -113,6 +113,7 @@ bool ava::jit_context::run_module(
                  .setEngineKind(llvm::EngineKind::JIT)
                  /*.setUseMCJIT(true)*/
                  .setErrorStr(&error_str)
+                 .setOptLevel(llvm::CodeGenOpt::None)
                  .create());
 
   if (!engine) {
