@@ -2115,6 +2115,48 @@ set defs {
       from different compile runs.
     }
   }
+
+  cerror X9013 xcode_exception_conflict {
+    {ava_integer lp1} {ava_integer ce1} {ava_integer lp2} {ava_integer ce2}
+  } {
+    msg "Exception stack mismatch: (%lp1%,%ce1%) vs (%lp2%,%ce2%)."
+    explanation {
+      A single P-Code basic block can be reached with at least two distinct
+      exception stack configurations.
+
+      This is an error in whatever software generated the P-Code.
+    }
+  }
+
+  cerror X9014 xcode_exception_underflow {} {
+    msg "Exception stack underflow."
+    explanation {
+      An exception-popping P-Code instruction was encountered in a location
+      where the exception stack is empty.
+
+      This is an error in whatever software generated the P-Code.
+    }
+  }
+
+  cerror X9015 xcode_expected_empty_exception {} {
+    msg "Require-empty-exception instruction with non-empty exception stack."
+    explanation {
+      An instruction which requires the exception stack to be empty was found
+      in a basic block with a non-empty exception stack.
+
+      This is an error in whatever software generated the P-Code.
+    }
+  }
+
+  cerror X9016 xcode_expected_caught_exception {} {
+    msg "Require-caught-exception instruction with no caught-exception."
+    explanation {
+      An instruction which requires a caught-exception was found in a basic
+      block with an empty caught-exception stack.
+
+      This is an error in whatever software generated the P-Code.
+    }
+  }
 }
 
 proc ncode {code} {

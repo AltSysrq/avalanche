@@ -44,6 +44,41 @@
 #include "map.h"
 
 /**
+ * The number of successor blocks a single basic block may have.
+ */
+#define AVA_XCODE_NUM_SUCC 3
+
+/**
+ * Represents the combined exception-handler / caught-exception stacks.
+ *
+ * The caught-exception stack is directly represented as an array of values
+ * (which could be ava_exceptions in a backing implementation).
+ *
+ * Note that there is no direct way to determine whether the top of the stack
+ * is itself an exception-handler or a caught-exception, but there is also
+ * never any need to do so.
+ */
+typedef struct ava_xcode_exception_stack_s {
+  /**
+   * If the current location has a caught-exception, the index of that
+   * exception. -1 indicates there is no caught-exception. An operation which
+   * pushes onto the caught-exception stack uses the index one greater than
+   * this value.
+   */
+  signed current_exception;
+  /**
+   * If the current location has a exception-handler, the index of the basic
+   * block which acts as its landing pad.
+   */
+  signed landing_pad;
+
+  /**
+   * The next element on the combined exception stack.
+   */
+  const struct ava_xcode_exception_stack_s* next;
+} ava_xcode_exception_stack;
+
+/**
  * A basic block is a sequence of instructions which are necessarily executed
  * in sequence and unconditionally.
  *
@@ -86,14 +121,38 @@ typedef struct {
    * entry and exit of the basic block.
    */
   ava_ulong* phi_iinit, * phi_oinit, * phi_effect, * phi_iexist, * phi_oexist;
+  /**
+   * The static exception stack present throughout this basic block.
+   *
+   * NULL indicates that it has not yet been computed or that the basic block
+   * is trivially unreachable.
+   */
+  const ava_xcode_exception_stack* exception_stack;
+
+  /**
+   * Storage for exception_stack with a pushed landing-pad.
+   *
+   * This should not be accessed externally.
+   */
+  ava_xcode_exception_stack push_landing_pad;
+  /**
+   * Storage for exception_stack with a pushed caught-exception.
+   *
+   * This should not be accessed externally.
+   */
+  ava_xcode_exception_stack push_caught_exception;
 
   /**
    * The indices of the basic blocks to which execution may continue after this
    * basic block. A value of -1 indicates an empty slot.
    *
    * If the final block can fall of the end, this is also indicated as -1.
+   *
+   * Element 0 is always the next block (if any); element 1 is the jump-target
+   * (if any); element 2 is the landing-pad of the instruction following the
+   * last instruction in this block (if any).
    */
-  ava_sint next[2];
+  ava_sint next[AVA_XCODE_NUM_SUCC];
 
   /**
    * The number of instructions in this basic block.
@@ -123,6 +182,11 @@ typedef struct {
    * reg_type_off[type+1] - reg_type_off[type].
    */
   ava_pcode_register_index reg_type_off[ava_prt_function+2];
+  /**
+   * The maximum size of the caught-exception stack at any point in the
+   * function.
+   */
+  unsigned num_caught_exceptions;
 
   /**
    * The number of ulongs in each phi bitset.

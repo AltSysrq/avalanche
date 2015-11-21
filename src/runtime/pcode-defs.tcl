@@ -286,19 +286,73 @@ struct global g {
 struct exe x {
   parent global g
 
+  # Terminal instructions terminate basic blocks naturally.
   attr terminal
+  # Terminal-no-fallthrough instructions cannot proceed to the
+  # immediately-following instruction. All terminal-no-fallthrough should be
+  # terminal.
   attr terminal-no-fallthrough
+  # special-reg-read-d instructions read a range of D-registers identified by
+  # the 0th reg-read-base and reg-read-count properties.
   attr special-reg-read-d
+  # special-reg-read-p instructions read a range of P-registers identifiied by
+  # the 0th reg-read-base and reg-read-count properties.
   attr special-reg-read-p
+  # can-throw instructions terminate basic blocks at the instruction *preceding
+  # them* (even if not marked terminal) and may branch to the current landing
+  # pad, if any.
+  #
+  # The landing-pad branch logically happens *before* the instruction because,
+  # if the instruction does throw, any registers written by the instruction are
+  # not actually modified.
   attr can-throw
+  # push-landing-pad instructions push an exception-handler onto the stack
+  # which establishes their 0th landing-pad property as the landing pad for
+  # can-throw instructions. Additinoally, they push a caught-exception when
+  # transfering to their 0th landing-pad.
+  #
+  # All such instructions must be terminal.
+  attr push-landing-pad
+  # pop-exception instructions pop an item from the combined exception stack.
+  #
+  # All such instructions must be terminal.
+  attr pop-exception
+  # require-caught-exception instructions require at least one element to exist
+  # on the caught-exception stack.
+  attr require-caught-exception
+  # require-empty-exception instructions require the combined exception stack
+  # to be totally empty.
+  attr require-empty-exception
+  # Identifies fields which are registers that the instruction reads, thereby
+  # requiring them to be initialised.
   prop register reg-read
+  # Identifies fields which are registers that the instruction writes, thereby
+  # initialising them.
   prop register reg-write
+  # Identifies a label that the instruction may jump to. There is never more
+  # than one jump-target.
   prop int jump-target
+  # Identifies a label that the instruction uses as a landing pad (with
+  # push-landing-pad).
+  prop int landing-pad
+  # Identifies a field which must refer to a variable-like global entity.
   prop int global-var-ref
+  # Identifies a field which must refer to a function-like global entity.
   prop int global-fun-ref
+  # Identifies a field which must refer to some global entity. This must be
+  # given in addition to global-var-ref and global-fun-ref.
   prop int global-ref
+  # Identifies the first register, inclusive, read by a special-reg-read-*
+  # attributed instruction. There is never more than one of these properties on
+  # an instruction.
   prop int reg-read-base
+  # Identifies the number of registers read by a special-reg-read-* attributed
+  # instruction. There is never more than one of these properties on an
+  # instruction.
   prop int reg-read-count
+  # Indicates the number of arguments statically passed to any functions
+  # referenced via global-fun-ref. There is never more than one of these
+  # properties on an instruction.
   prop int static-arg-count
 
   # Records the source position in effect until the next declaration indicating
@@ -813,6 +867,7 @@ struct exe x {
   elt ret {
     attr terminal
     attr terminal-no-fallthrough
+    attr require-empty-exception
     register dv return-value {
       prop reg-read
     }
@@ -862,18 +917,18 @@ struct exe x {
   # The primary instruction for exception handling.
   #
   # Semantics: An exception handler is pushed onto the logical exception
-  # handler stack. ex-type is set to -1 and ex-value to the empty string.
-  # Control proceeds to the next instruction. If any exception is thrown while
-  # this handler is at the top of the stack, the stack is unwound to this
-  # function frame, ex-type is set to the type of the exception and ex-value to
-  # its value, the exception handler is popped from the exception-handler
-  # stack, the caught exception pushed onto the caught-exception stack, and
-  # control transfers to the label identified by jump-target (as per goto).
+  # handler stack. Control proceeds to the next instruction. If any exception
+  # is thrown while this handler is at the top of the stack, the stack is
+  # unwound to this function frame, the exception handler is popped from the
+  # exception-handler stack, the caught exception pushed onto the
+  # caught-exception stack, and control transfers to the label identified by
+  # target (as per goto).
   #
   # Note that the exception-handler and caught-exception stacks are conceptual
   # only. All static paths through the function must have the same stack
-  # configurations for every instruction. The landing pad for the topmost
-  # exception-handler is considered part of the configuration for this purpose.
+  # configurations for every instruction. The identity of the try instruction
+  # that pushed each element is considered part of the configuration for this
+  # purpose.
   #
   # The exception-handler and caught-exception stacks share the concept of
   # ordering, in that it is meaningful to refer to the single top of the
@@ -883,14 +938,30 @@ struct exe x {
   # return.
   elt try {
     attr terminal
+    attr push-landing-pad
     int target {
-      prop jump-target
+      prop landing-pad
     }
-    register i ex-type {
+  }
+
+  # Extracts the type of the current exception.
+  #
+  # Semantics: dst is set to the integer representing the type of the top-most
+  # caught-exception.
+  elt ex-type {
+    attr require-caught-exception
+    register i dst {
       prop reg-write
     }
-    register dv ex-value {
-      prop reg-read
+  }
+
+  # Extracts the value of the current exception.
+  #
+  # Semantics: dst is set to the value of the top-most caught-exception.
+  elt ex-value {
+    attr require-caught-exception
+    register dv dst {
+      prop reg-write
     }
   }
 
@@ -902,6 +973,7 @@ struct exe x {
     # Terminal so that every basic block has at most one exception handling
     # context.
     attr terminal
+    attr pop-exception
   }
 
   # Throws a new exception.
@@ -932,6 +1004,7 @@ struct exe x {
     attr terminal
     attr terminal-no-fallthrough
     attr can-throw
+    attr require-caught-exception
   }
 }
 

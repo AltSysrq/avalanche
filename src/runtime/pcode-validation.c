@@ -32,6 +32,12 @@
 #include "avalanche/errors.h"
 #include "avalanche/pcode-validation.h"
 
+static const ava_xcode_exception_stack ava_xcode_empty_exception_stack = {
+  .current_exception = -1,
+  .landing_pad = -1,
+  .next = NULL,
+};
+
 static void ava_xcode_unknown_location(
   ava_compile_location* dst);
 static void ava_xcode_make_global_location(
@@ -101,6 +107,16 @@ static ava_bool ava_xcode_link_blocks(
 static void ava_xcode_rename_registers(
   ava_xcode_function* fun,
   const size_t* num_registers);
+static ava_bool ava_xcode_assign_exception_stacks(
+  ava_xcode_function* fun,
+  ava_compile_error_list* errors,
+  ava_map_value sources);
+static ava_bool ava_xcode_validate_exception_stacks(
+  const ava_xcode_function* fun,
+  ava_compile_error_list* errors,
+  ava_map_value sources);
+static void ava_xcode_link_landing_pads(
+  ava_xcode_function* fun);
 static void ava_xcode_init_phi(ava_xcode_function* fun, size_t num_args);
 static void ava_xcode_propagate_phi(ava_xcode_function* fun);
 static ava_bool ava_xcode_propagate_phi_hop(
@@ -297,7 +313,10 @@ static ava_xcode_function* ava_xcode_structure_function(
           instr, reg_height, &location, errors))
       return NULL;
 
-    next_instr_starts_block = ava_pcode_exe_is_terminal(instr);
+    next_instr_starts_block =
+      ava_pcode_exe_is_terminal(instr) ||
+      (TAILQ_NEXT(instr, next) &&
+       ava_pcode_exe_is_can_throw(TAILQ_NEXT(instr, next)));
   }
 
   for (i = ava_prt_data; i <= ava_prt_function; ++i) {
@@ -324,6 +343,13 @@ static ava_xcode_function* ava_xcode_structure_function(
     return NULL;
 
   ava_xcode_rename_registers(fun, num_registers);
+
+  if (!ava_xcode_assign_exception_stacks(fun, errors, sources))
+    return NULL;
+  if (!ava_xcode_validate_exception_stacks(fun, errors, sources))
+    return NULL;
+  ava_xcode_link_landing_pads(fun);
+
   ava_xcode_init_phi(fun, pcode->prototype->num_args);
   ava_xcode_propagate_phi(fun);
   ava_xcode_check_phi(fun, pcode->vars, errors, sources);
@@ -502,6 +528,8 @@ static ava_bool ava_xcode_link_blocks(
     block = fun->blocks[i];
     assert(0 != block->length);
 
+    memset(block->next, -1, sizeof(block->next));
+
     /* Scan through all the instructions to maintain the location */
     for (j = 0; j < block->length; ++j)
       ava_xcode_see_exe(&location, block->elts[j], sources);
@@ -510,7 +538,6 @@ static ava_bool ava_xcode_link_blocks(
     if (!ava_pcode_exe_is_terminal(instr)) {
       /* Block simply falls through to next */
       block->next[0] = i + 1 < fun->num_blocks? (ava_sint)(i + 1) : -1;
-      block->next[1] = -1;
     } else {
       if (ava_pcode_exe_get_jump_target(&jump_target, instr, 0)) {
         cursor = ava_map_find(
@@ -523,16 +550,25 @@ static ava_bool ava_xcode_link_blocks(
           ava_map_get(label_to_block_ix, cursor), 0);
         block->elts[block->length-1] =
           ava_pcode_exe_with_jump_target(instr, 0, relinked);
-        block->next[0] = relinked;
-      } else {
-        block->next[0] = -1;
+        block->next[1] = relinked;
       }
 
-      if (ava_pcode_exe_is_terminal_no_fallthrough(instr) ||
-          i+1 == fun->num_blocks) {
-        block->next[1] = -1;
-      } else {
-        block->next[1] = i + 1;
+      if (!ava_pcode_exe_is_terminal_no_fallthrough(instr) &&
+          i+1 != fun->num_blocks) {
+        block->next[0] = i + 1;
+      }
+
+      if (ava_pcode_exe_get_landing_pad(&jump_target, instr, 0)) {
+        cursor = ava_map_find(
+          label_to_block_ix, ava_value_of_integer(jump_target));
+        if (AVA_MAP_CURSOR_NONE == cursor)
+          DIE(ava_error_xcode_jump_nxlabel(
+                &location, ava_value_of_integer(jump_target)));
+
+        relinked = ava_integer_of_value(
+          ava_map_get(label_to_block_ix, cursor), 0);
+        block->elts[block->length-1] =
+          ava_pcode_exe_with_landing_pad(instr, 0, relinked);
       }
     }
   }
@@ -627,9 +663,171 @@ static void ava_xcode_rename_registers(
   }
 }
 
+static ava_bool ava_xcode_assign_exception_stacks(
+  ava_xcode_function* fun,
+  ava_compile_error_list* errors,
+  ava_map_value sources
+) {
+  size_t block_ix, instr_ix, i;
+  ava_xcode_basic_block* block;
+  const ava_pcode_exe* instr;
+  ava_compile_location location;
+  ava_integer landing_pad;
+  ava_bool again;
+  const ava_xcode_exception_stack* next_exception_stack;
+
+  if (0 == fun->num_blocks) return ava_true;
+  fun->blocks[0]->exception_stack = &ava_xcode_empty_exception_stack;
+  fun->num_caught_exceptions = 0;
+
+  ava_xcode_unknown_location(&location);
+  do {
+    again = ava_false;
+
+    for (block_ix = 0; block_ix < fun->num_blocks; ++block_ix) {
+      block = fun->blocks[block_ix];
+      if (!block->exception_stack) continue;
+
+      /* Read through the block to maintain location */
+      for (instr_ix = 0; instr_ix < block->length; ++instr_ix)
+        ava_xcode_see_exe(&location, block->elts[instr_ix], sources);
+
+      next_exception_stack = block->exception_stack;
+      /* Only the final instruction can affect the exception stack */
+      instr_ix = block->length - 1;
+      instr = block->elts[instr_ix];
+
+      if (ava_pcode_exe_is_push_landing_pad(instr)) {
+        if (!ava_pcode_exe_get_landing_pad(&landing_pad, instr, 0))
+          abort();
+
+        block->push_landing_pad = *block->exception_stack;
+        block->push_landing_pad.next = block->exception_stack;
+        block->push_landing_pad.landing_pad = landing_pad;
+        next_exception_stack = &block->push_landing_pad;
+
+        block->push_caught_exception = *block->exception_stack;
+        block->push_caught_exception.next = block->exception_stack;
+        block->push_caught_exception.current_exception += 1;
+        if (block->push_caught_exception.current_exception+1 >
+            (signed)fun->num_caught_exceptions)
+          fun->num_caught_exceptions =
+            block->push_caught_exception.current_exception+1;
+
+        if (fun->blocks[landing_pad]->exception_stack) {
+          if (&block->push_caught_exception !=
+              fun->blocks[landing_pad]->exception_stack)
+            DIE(ava_error_xcode_exception_conflict(
+                  &location,
+                  fun->blocks[landing_pad]->exception_stack->landing_pad,
+                  fun->blocks[landing_pad]->exception_stack->current_exception,
+                  block->push_caught_exception.landing_pad,
+                  block->push_caught_exception.current_exception));
+        } else {
+          fun->blocks[landing_pad]->exception_stack =
+            &block->push_caught_exception;
+          if ((size_t)landing_pad < block_ix) again = ava_true;
+        }
+      } else if (ava_pcode_exe_is_pop_exception(instr)) {
+        if (!block->exception_stack->next)
+          DIE(ava_error_xcode_exception_underflow(&location));
+
+        next_exception_stack = block->exception_stack->next;
+      }
+
+      for (i = 0; i < AVA_XCODE_NUM_SUCC; ++i) {
+        if (-1 != block->next[i]) {
+          if (fun->blocks[block->next[i]]->exception_stack) {
+            if (next_exception_stack !=
+                fun->blocks[block->next[i]]->exception_stack)
+              DIE(ava_error_xcode_exception_conflict(
+                    &location,
+                    fun->blocks[block->next[i]]->exception_stack->landing_pad,
+                    fun->blocks[block->next[i]]->exception_stack->current_exception,
+                    next_exception_stack->landing_pad,
+                    next_exception_stack->current_exception));
+          } else {
+            if ((size_t)block->next[i] < block_ix) again = ava_true;
+            fun->blocks[block->next[i]]->exception_stack = next_exception_stack;
+          }
+        }
+      }
+    }
+  } while (again);
+
+  return ava_true;
+}
+
+static ava_bool ava_xcode_validate_exception_stacks(
+  const ava_xcode_function* fun,
+  ava_compile_error_list* errors,
+  ava_map_value sources
+) {
+  size_t block_ix, instr_ix;
+  const ava_xcode_basic_block* block;
+  const ava_pcode_exe* instr;
+  ava_compile_location location;
+
+  ava_xcode_unknown_location(&location);
+  for (block_ix = 0; block_ix < fun->num_blocks; ++block_ix) {
+    block = fun->blocks[block_ix];
+    if (!block->exception_stack) continue;
+
+    for (instr_ix = 0; instr_ix < block->length; ++instr_ix) {
+      instr = block->elts[instr_ix];
+      ava_xcode_see_exe(&location, instr, sources);
+
+      if (ava_pcode_exe_is_require_empty_exception(instr) &&
+          block->exception_stack->next)
+        DIE(ava_error_xcode_expected_empty_exception(&location));
+
+      if (ava_pcode_exe_is_require_caught_exception(instr) &&
+          -1 == block->exception_stack->current_exception)
+        DIE(ava_error_xcode_expected_caught_exception(&location));
+    }
+  }
+
+  /* If the final block can fall off the end, ensure it has an empty exception
+   * stack.
+   */
+  if (fun->num_blocks) {
+    block_ix = fun->num_blocks - 1;
+    block = fun->blocks[block_ix];
+    instr_ix = block->length - 1;
+    instr = block->elts[instr_ix];
+    if (!ava_pcode_exe_is_terminal_no_fallthrough(instr) &&
+        block->exception_stack &&
+        block->exception_stack->next)
+      DIE(ava_error_xcode_expected_empty_exception(&location));
+  }
+
+  return ava_true;
+}
+
+static void ava_xcode_link_landing_pads(
+  ava_xcode_function* fun
+) {
+  size_t block_ix;
+  ava_xcode_basic_block* block, * next_block;
+  const ava_pcode_exe* instr;
+
+  for (block_ix = 0; block_ix + 1 < fun->num_blocks; ++block_ix) {
+    block = fun->blocks[block_ix];
+    next_block = fun->blocks[block_ix+1];
+
+    if (next_block->exception_stack &&
+        -1 != next_block->exception_stack->landing_pad) {
+      instr = next_block->elts[0];
+      if (ava_pcode_exe_is_can_throw(instr)) {
+        assert(-1 == block->next[2]);
+        block->next[2] = next_block->exception_stack->landing_pad;
+      }
+    }
+  }
+}
+
 static void ava_xcode_init_phi(ava_xcode_function* fun, size_t num_args) {
   size_t block_ix, instr_ix, i;
-  ava_integer base, count;
   ava_pcode_register reg;
   ava_xcode_basic_block* block;
   const ava_pcode_exe* instr;
@@ -654,17 +852,6 @@ static void ava_xcode_init_phi(ava_xcode_function* fun, size_t num_args) {
       for (i = 0; ava_pcode_exe_get_reg_write(&reg, instr, i); ++i) {
         ava_xcode_phi_set(block->phi_effect, reg.index, ava_true);
         ava_xcode_phi_set(block->phi_oinit, reg.index, ava_true);
-      }
-
-      /* Range-based P-register reads destroy the registers */
-      if (ava_pcode_exe_is_special_reg_read_p(instr)) {
-        if (!ava_pcode_exe_get_reg_read_base(&base, instr, 0)) abort();
-        if (!ava_pcode_exe_get_reg_read_count(&count, instr, 0)) abort();
-
-        for (i = 0; i < (size_t)count; ++i) {
-          ava_xcode_phi_set(block->phi_effect, base + i, ava_true);
-          ava_xcode_phi_set(block->phi_oinit, base + i, ava_false);
-        }
       }
     }
 
@@ -696,7 +883,7 @@ static void ava_xcode_propagate_phi(ava_xcode_function* fun) {
        * The outer loop needs to run again if this changes a block ordered
        * before this block, or if it changes this block itself.
        */
-      for (i = 0; i < 2; ++i)
+      for (i = 0; i < AVA_XCODE_NUM_SUCC; ++i)
         again |= (ava_xcode_propagate_phi_hop(fun, block, block->next[i]) &&
                   i <= block_ix);
     }

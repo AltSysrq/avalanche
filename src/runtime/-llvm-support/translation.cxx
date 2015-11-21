@@ -1660,6 +1660,8 @@ noexcept {
   case ava_pcxt_yrt:
   case ava_pcxt_throw:
   case ava_pcxt_rethrow:
+  case ava_pcxt_ex_type:
+  case ava_pcxt_ex_value:
     /* TODO */
     abort();
   }
