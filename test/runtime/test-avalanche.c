@@ -61,6 +61,17 @@
 #define SUITE_NAME "avalanche"
 #define DIRECTORY "runtime/ava-tests"
 
+static void cache_avast_pcode() {
+  ava_compenv* compenv;
+  ava_compile_error_list errors;
+
+  compenv = ava_compenv_new(AVA_ASCII9_STRING("input:"));
+  ava_compenv_use_simple_source_reader(compenv, AVA_EMPTY_STRING);
+  ava_compenv_use_standard_macsub(compenv);
+
+  (void)ava_compenv_standard_new_macsub(compenv, &errors);
+}
+
 static ava_bool test_passed;
 void pass_test(int i) {
   ck_assert_int_eq(42, i);
@@ -111,6 +122,7 @@ int main(void) {
   unsigned failures, i;
 
   ava_init();
+  cache_avast_pcode();
 
   /* If being run from the project root, change to the correct directory */
   (void)chdir("test");
