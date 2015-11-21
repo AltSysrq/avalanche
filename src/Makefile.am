@@ -12,6 +12,7 @@ EMIT_LLVM_CFLAGS= -O3 -g0 -fno-caret-diagnostics -fno-diagnostics-fixit-info \
                   -fno-color-diagnostics -c -emit-llvm \
 		  -DNDEBUG -DHAVE_CONFIG_H -Wall $(DEFAULT_INCLUDES)
 EMIT_LLVM = $(AM_V_GEN)$(CLANG) $(EMIT_LLVM_CFLAGS) -o $@
+EMIT_LLVMXX = $(AM_V_GEN)$(CLANGXX) $(EMIT_LLVM_CFLAGS) -o $@
 DAT2C = $(AM_V_GEN)$(TCLSH) dat2c.tcl >$@
 BOOTSTRAP_LIBS = libavart-bootstrap.la $(LIBFFI_LIBS)
 
@@ -155,10 +156,10 @@ runtime/gen-errors.c: runtime/generate-errors.tcl
 		>runtime/gen-errors.c
 
 runtime/-llvm-support/drivers/isa-unchecked.bc: \
-	runtime/-llvm-support/drivers/isa.c \
+	runtime/-llvm-support/drivers/isa.cxx \
 	runtime/avalanche.h \
 	runtime/avalanche/*.h
-	$(EMIT_LLVM) runtime/-llvm-support/drivers/isa.c
+	$(EMIT_LLVMXX) runtime/-llvm-support/drivers/isa.cxx
 
 runtime/-llvm-support/drivers/gen-isa-unchecked.c: \
 	runtime/-llvm-support/drivers/isa-unchecked.bc \

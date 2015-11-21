@@ -34,6 +34,7 @@
 
 #define AVA__INTERNAL_INCLUDE 1
 #include "../../avalanche/defs.h"
+AVA_BEGIN_DECLS
 #include "../../avalanche/alloc.h"
 #include "../../avalanche/string.h"
 #include "../../avalanche/value.h"
@@ -44,6 +45,8 @@
 #include "../../avalanche/exception.h"
 #include "../../avalanche/list-proj.h"
 #include "../../avalanche/errors.h"
+
+/* Stay in extern "C" so names don't get mangled */
 
 /* Tell the code generator about the platform's C ABI */
 struct ava_c_abi_info {
@@ -290,8 +293,8 @@ const ava_function* ava_isa_x_partial$(
   ava_function*restrict ret;
   ava_argument_spec*restrict argspecs;
 
-  ret = AVA_CLONE(*fun);
-  ret->args = argspecs =
+  ret = (ava_function*)AVA_CLONE(*fun);
+  ret->args = argspecs = (ava_argument_spec*)
     ava_clone(fun->args, sizeof(ava_argument_spec) * fun->num_args);
 
   ava_function_partial(argspecs, fun->num_args, count, args);
@@ -379,3 +382,5 @@ ava_value ava_isa_m_from_pointer$(
 ) {
   return ava_pointer_of_proto(proto, v).v;
 }
+
+AVA_END_DECLS
