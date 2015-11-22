@@ -132,7 +132,7 @@ llvm::BasicBlock* ava::exception_abi::create_landing_pad(
   llvm::BasicBlock* target,
   llvm::Value* exception_dst,
   llvm::Value* exception_ctx,
-  ava::driver_iface& di)
+  const ava::driver_iface& di)
 const noexcept {
   llvm::LLVMContext& context(target->getContext());
   llvm::BasicBlock* bb_lp, * bb_foreign, * bb_ava, * bb_ava2, * bb_unreachable;

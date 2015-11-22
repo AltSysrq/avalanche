@@ -547,6 +547,7 @@ struct exe x {
   # Semantics: The L-register dst is set to the value of the L-register in lsrc
   # with the element read from esrc appended.
   elt lappend {
+    attr can-throw ;# Eg, OOM, max list length exceeded
     register l dst {
       prop reg-write
     }
@@ -563,6 +564,7 @@ struct exe x {
   # Semantics: The L-register dst is set to the concatenation of the lists in
   # the L-registers left and right, in that order.
   elt lcat {
+    attr can-throw ;# Eg, OOM, max list length exceeded
     register l dst {
       prop reg-write
     }

@@ -91,7 +91,7 @@ namespace ava {
       llvm::BasicBlock* target,
       llvm::Value* exception_dst,
       llvm::Value* exception_ctx,
-      ava::driver_iface& di) const noexcept;
+      const ava::driver_iface& di) const noexcept;
 
     /**
      * Generates the necessary code to drop the given exception (ie, yrt on a
