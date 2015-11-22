@@ -65,11 +65,24 @@ struct ava_c_abi_info {
   ava_string str;
   ava_function_parameter parm;
   ava_fat_list_value fat_list;
+  ava_exception exception;
 };
 void ava_c_abi_info_get$(struct ava_c_abi_info* dst) {
   /* Do nothing, this function is just here to force clang to write the
    * structure to the IR and for ir_types to find it.
    */
+}
+
+ava_integer ava_c_abi_info_catch_pattern$(ava_value value, void* dex) {
+  /* This is a nonsense function that the IR generator uses to figure out how
+   * to do C++-compatible exception handling.
+   */
+  try {
+    return ava_integer_of_noninteger_value(value, 0);
+  } catch (ava_exception ex) {
+    memcpy(dex, &ex, sizeof(ex));
+    return 0;
+  }
 }
 
 void ava_isa_g_ext_var$(const ava_value* var, ava_string name) {
@@ -303,6 +316,18 @@ const ava_function* ava_isa_x_partial$(
 
 ava_integer ava_isa_x_bool$(ava_integer i) {
   return !!i;
+}
+
+void ava_isa_foreign_exception$(ava_exception* dst) {
+  ava_value empty;
+
+  memset(dst, 0, sizeof(*dst));
+  empty = ava_value_of_string(AVA_EMPTY_STRING);
+  memcpy(dst->value, &empty, sizeof(ava_value));
+}
+
+void ava_isa_copy_exception$(ava_exception* dst, const ava_exception* src) {
+  memcpy(dst, src, sizeof(*src));
 }
 
 void ava_isa_m_to_void$(ava_value v) {

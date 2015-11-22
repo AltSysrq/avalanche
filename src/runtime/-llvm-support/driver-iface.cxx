@@ -76,6 +76,8 @@ ava::driver_iface::driver_iface(const llvm::Module& module) noexcept {
   ISA(x_invoke_dd);
   ISA(x_partial);
   ISA(x_bool);
+  ISA(foreign_exception);
+  ISA(copy_exception);
 #undef ISA
 
 #define MAR(type) do {                                            \

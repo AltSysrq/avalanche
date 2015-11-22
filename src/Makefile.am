@@ -105,6 +105,7 @@ runtime/-llvm-support/drivers/gen-avast-checked-1.c \
 runtime/-llvm-support/drivers/gen-avast-checked-2.c \
 runtime/-llvm-support/drivers/gen-main.c \
 runtime/-llvm-support/driver-iface.cxx \
+runtime/-llvm-support/exception-abi.cxx \
 runtime/-llvm-support/ir-types.cxx \
 runtime/-llvm-support/jit-context.cxx \
 runtime/-llvm-support/optimisation.cxx \

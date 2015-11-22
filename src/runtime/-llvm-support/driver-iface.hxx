@@ -497,6 +497,20 @@ namespace ava {
     F marshal_from[ava_cmpt_pointer+1];
 
     /**
+     * Signature: void (ava_exception* dst)
+     *
+     * Sets *dst to a pseudo-exception representing a foreign exception type.
+     */
+    F foreign_exception;
+
+    /**
+     * Signature: void (ava_exception* dst, const ava_exception* src)
+     *
+     * Copies *src to *dst
+     */
+    F copy_exception;
+
+    /**
      * If the module defines a `\program-entry`, a pointer to that function;
      * otherwise, NULL.
      *

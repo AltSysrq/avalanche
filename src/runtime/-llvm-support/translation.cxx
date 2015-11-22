@@ -61,6 +61,7 @@ AVA_END_DECLS
 #include "../../bsd.h"
 
 #include "driver-iface.hxx"
+#include "exception-abi.hxx"
 #include "ir-types.hxx"
 #include "translation.hxx"
 
@@ -82,6 +83,7 @@ struct ava_xcode_translation_context {
   llvm::DIBuilder dib;
   const ava::ir_types types;
   const ava::driver_iface di;
+  const ava::exception_abi ea;
 
   llvm::GlobalVariable* string_type;
   llvm::GlobalVariable* pointer_pointer_impl;
@@ -493,7 +495,8 @@ ava_xcode_translation_context::ava_xcode_translation_context(
   package_prefix(ava_string_to_cstring(package_prefix_)),
   dib(module_),
   types(llvm_context_, module_),
-  di(module_)
+  di(module_),
+  ea(module_, types)
 {
   string_type = new llvm::GlobalVariable(
     module,
@@ -1108,6 +1111,8 @@ noexcept {
    * temporary space we can make pointers to.
    */
   llvm::Value* tmplists[3];
+  llvm::Value* caught_exceptions[xfun->num_caught_exceptions];
+  llvm::Value* exception_ctxs[xfun->num_caught_exceptions];
   char reg_name[16];
   const char* reg_names[xfun->reg_type_off[ava_prt_function+1]];
 
@@ -1202,6 +1207,12 @@ noexcept {
   /* Allocate temporary list slots */
   for (size_t i = 0; i < 3; ++i)
     tmplists[i] = irb.CreateAlloca(context.types.ava_fat_list_value);
+
+  /* Allocate caught-exception stack */
+  for (size_t i = 0; i < xfun->num_caught_exceptions; ++i) {
+    caught_exceptions[i] = irb.CreateAlloca(context.types.ava_exception);
+    exception_ctxs[i] = irb.CreateAlloca(context.types.general_pointer);
+  }
 
   /* Some instructions require us to supply an array of data registers
    * somewhere. Find the largest such array we may need, allocate it once, and

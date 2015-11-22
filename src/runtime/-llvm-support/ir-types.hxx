@@ -78,6 +78,7 @@ namespace ava {
     llvm::StructType* ava_argument_binding;
     llvm::StructType* ava_c_marshalling_type;
     llvm::StructType* ava_pointer_prototype;
+    llvm::StructType* ava_exception;
 
     llvm::PointerType* general_pointer;
 
