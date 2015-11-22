@@ -478,6 +478,24 @@ namespace ava {
      * Returns !!i
      */
     F x_bool;
+    /**
+     * Implements the throw P-Code exe.
+     *
+     * Signature: void (ava_integer type, ava_value value) AVA_NORETURN
+     */
+    F x_throw;
+    /**
+     * Implements the ex-type P-Code exe.
+     *
+     * Signature: ava_integer (const ava_exception* ex)
+     */
+    F x_ex_type;
+    /**
+     * Implements the ex-value P-Code exe.
+     *
+     * Signature: ava_value (const ava_exception* ex)
+     */
+    F x_ex_value;
 
     /**
      * Marshalling functions, for invoke-ss and invoke-sd.

@@ -44,6 +44,7 @@ AVA_BEGIN_DECLS
 #include "../../avalanche/function.h"
 #include "../../avalanche/exception.h"
 #include "../../avalanche/list-proj.h"
+#include "../../avalanche/pcode.h"
 #include "../../avalanche/errors.h"
 
 /* Stay in extern "C" so names don't get mangled */
@@ -316,6 +317,34 @@ const ava_function* ava_isa_x_partial$(
 
 ava_integer ava_isa_x_bool$(ava_integer i) {
   return !!i;
+}
+
+void ava_isa_x_throw$(ava_integer type, ava_value value) {
+  static const ava_exception_type*const types[ava_pet_other_exception] = {
+    &ava_user_exception,
+    &ava_error_exception,
+    &ava_undefined_behaviour_exception,
+    &ava_format_exception,
+  };
+
+  ava_throw(types[type], value);
+}
+
+ava_integer ava_isa_x_ex_type$(const ava_exception* ex) {
+  if      (&ava_user_exception == ex->type)
+    return ava_pet_user_exception;
+  else if (&ava_error_exception == ex->type)
+    return ava_pet_error_exception;
+  else if (&ava_undefined_behaviour_exception == ex->type)
+    return ava_pet_undefined_behaviour_exception;
+  else if (&ava_format_exception == ex->type)
+    return ava_pet_format_exception;
+  else
+    return ava_pet_other_exception;
+}
+
+ava_value ava_isa_x_ex_value$(const ava_exception* ex) {
+  return ava_exception_get_value(ex);
 }
 
 void ava_isa_foreign_exception$(ava_exception* dst) {

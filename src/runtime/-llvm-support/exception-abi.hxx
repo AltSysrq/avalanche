@@ -91,20 +91,20 @@ namespace ava {
       llvm::BasicBlock* target,
       llvm::Value* exception_dst,
       llvm::Value* exception_ctx,
-      ava::driver_iface& di) noexcept;
+      ava::driver_iface& di) const noexcept;
 
     /**
      * Generates the necessary code to drop the given exception (ie, yrt on a
      * catch branch).
      */
     void drop(llvm::IRBuilder<true>& irb,
-              llvm::Value* exception_ctx) noexcept;
+              llvm::Value* exception_ctx) const noexcept;
 
     /**
      * Generates the necessary code to rethrow the given exception.
      */
     void rethrow(llvm::IRBuilder<true>& irb,
-                 llvm::Value* exception_ctx) noexcept;
+                 llvm::Value* exception_ctx) const noexcept;
 
     /**
      * The physical type of an exception. Basically

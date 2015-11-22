@@ -133,7 +133,7 @@ llvm::BasicBlock* ava::exception_abi::create_landing_pad(
   llvm::Value* exception_dst,
   llvm::Value* exception_ctx,
   ava::driver_iface& di)
-noexcept {
+const noexcept {
   llvm::LLVMContext& context(target->getContext());
   llvm::BasicBlock* bb_lp, * bb_foreign, * bb_ava, * bb_ava2, * bb_unreachable;
 
@@ -213,7 +213,7 @@ noexcept {
 
 void ava::exception_abi::drop(llvm::IRBuilder<true>& irb,
                               llvm::Value* exception_ctx)
-noexcept {
+const noexcept {
   llvm::Value* rawex = irb.CreateLoad(exception_ctx);
   irb.CreateCall(cxa_begin_catch, rawex);
   irb.CreateCall(cxa_end_catch);
@@ -222,7 +222,7 @@ noexcept {
 void ava::exception_abi::rethrow(
   llvm::IRBuilder<true>& irb,
   llvm::Value* exception_ctx)
-noexcept {
+const noexcept {
   llvm::Value* rawex = irb.CreateLoad(exception_ctx);
   irb.CreateResume(rawex);
 }

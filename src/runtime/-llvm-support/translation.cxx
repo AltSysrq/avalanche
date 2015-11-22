@@ -187,11 +187,14 @@ static bool translate_instruction(
   const ava_pcode_exe* exe,
   const ava_xcode_global* container,
   const ava_xcode_global_list* xcode,
-  llvm::BasicBlock*const* basic_blocks,
+  const std::vector<llvm::BasicBlock*>& basic_blocks,
+  const std::vector<llvm::BasicBlock*>& landing_pads,
   size_t this_basic_block,
-  llvm::Value*const* regs,
+  const std::vector<llvm::Value*>& regs,
   llvm::Value*const* tmplists,
   llvm::Value* data_array_base,
+  const std::vector<llvm::Value*>& caught_exceptions,
+  const std::vector<llvm::Value*>& exception_ctxs,
   llvm::DISubprogram scope) noexcept;
 
 static void store_register(
@@ -200,14 +203,14 @@ static void store_register(
   ava_pcode_register dst,
   llvm::Value* src,
   const ava_pcg_fun* pcfun,
-  llvm::Value*const* regs) noexcept;
+  const std::vector<llvm::Value*>& regs) noexcept;
 
 static llvm::Value* load_register(
   ava_xcode_translation_context& context,
   llvm::IRBuilder<true>& irb,
   ava_pcode_register src,
   const ava_pcg_fun* pcfun,
-  llvm::Value*const* regs,
+  const std::vector<llvm::Value*>& regs,
   llvm::Value* tmplist) noexcept;
 
 static llvm::Value* convert_register(
@@ -1105,14 +1108,16 @@ noexcept {
     subroutine_type, !pcfun->publish, true, init_loc.getLine(),
     0, true, dst);
 
-  llvm::BasicBlock* init_block, * basic_blocks[xfun->num_blocks];
-  llvm::Value* regs[xfun->reg_type_off[ava_prt_function+1]];
+  llvm::BasicBlock* init_block;
+  std::vector<llvm::BasicBlock*> basic_blocks(xfun->num_blocks);
+  std::vector<llvm::BasicBlock*> landing_pads(xfun->num_blocks);
+  std::vector<llvm::Value*> regs(xfun->reg_type_off[ava_prt_function+1]);
   /* Since ava_fat_list_value isn't first-class in the C ABI, we need some
    * temporary space we can make pointers to.
    */
   llvm::Value* tmplists[3];
-  llvm::Value* caught_exceptions[xfun->num_caught_exceptions];
-  llvm::Value* exception_ctxs[xfun->num_caught_exceptions];
+  std::vector<llvm::Value*> caught_exceptions(xfun->num_caught_exceptions);
+  std::vector<llvm::Value*> exception_ctxs(xfun->num_caught_exceptions);
   char reg_name[16];
   const char* reg_names[xfun->reg_type_off[ava_prt_function+1]];
 
@@ -1265,6 +1270,13 @@ noexcept {
   for (size_t block_ix = 0; block_ix < xfun->num_blocks; ++block_ix) {
     const ava_xcode_basic_block* block = xfun->blocks[block_ix];
     irb.SetInsertPoint(basic_blocks[block_ix]);
+
+    if (!block->exception_stack) {
+      /* Basic block is trivially unreachable */
+      irb.CreateUnreachable();
+      continue;
+    }
+
     /* We used to add explicit stores of "undefined" to each register not
      * considered inialised at this point and immediately before leaving each
      * basic block, on the grounds that the instructions are ultimately free
@@ -1284,8 +1296,9 @@ noexcept {
     for (size_t instr_ix = 0; instr_ix < block->length; ++instr_ix) {
       const ava_pcode_exe* exe = block->elts[instr_ix];
       has_terminal |= translate_instruction(
-        context, irb, exe, xcode, xcode_list, basic_blocks, block_ix,
-        regs, tmplists, data_array_base, di_fun);
+        context, irb, exe, xcode, xcode_list, basic_blocks, landing_pads,
+        block_ix, regs, tmplists, data_array_base,
+        caught_exceptions, exception_ctxs, di_fun);
     }
 
     if (!has_terminal) {
@@ -1311,11 +1324,14 @@ static bool translate_instruction(
   const ava_pcode_exe* exe,
   const ava_xcode_global* container,
   const ava_xcode_global_list* xcode,
-  llvm::BasicBlock*const* basic_blocks,
+  const std::vector<llvm::BasicBlock*>& basic_blocks,
+  const std::vector<llvm::BasicBlock*>& landing_pads,
   size_t this_basic_block,
-  llvm::Value*const* regs,
+  const std::vector<llvm::Value*>& regs,
   llvm::Value*const* tmplists,
   llvm::Value* data_array_base,
+  const std::vector<llvm::Value*>& caught_exceptions,
+  const std::vector<llvm::Value*>& exception_ctxs,
   llvm::DISubprogram scope)
 noexcept {
   const ava_xcode_function* xfun = container->fun;
@@ -1667,14 +1683,54 @@ noexcept {
     irb.CreateBr(basic_blocks[p->target]);
   } return true;
 
-  case ava_pcxt_try:
-  case ava_pcxt_yrt:
-  case ava_pcxt_throw:
-  case ava_pcxt_rethrow:
-  case ava_pcxt_ex_type:
-  case ava_pcxt_ex_value:
-    /* TODO */
-    abort();
+  case ava_pcxt_try: {
+  } return false;
+
+  case ava_pcxt_yrt: {
+    const ava_xcode_basic_block* bb = xfun->blocks[this_basic_block];
+    if (bb->exception_stack->current_exception !=
+        bb->exception_stack->next->current_exception) {
+      context.ea.drop(irb, exception_ctxs[bb->exception_stack->current_exception]);
+    }
+  } return false;
+
+  case ava_pcxt_rethrow: {
+    const ava_xcode_basic_block* bb = xfun->blocks[this_basic_block];
+    context.ea.rethrow(
+      irb, exception_ctxs[bb->exception_stack->current_exception]);
+  } return true;
+
+  case ava_pcxt_throw: {
+    const ava_pcx_throw* p = (const ava_pcx_throw*)exe;
+
+    llvm::Value* type = llvm::ConstantInt::get(
+      context.types.ava_integer, p->ex_type);
+    llvm::Value* val = load_register(
+      context, irb, p->ex_value, pcfun, regs, nullptr);
+    /* TODO This needs to be an invoke, obviously */
+    irb.CreateCall2(context.di.x_throw, type, val);
+    irb.CreateUnreachable();
+  } return true;
+
+  case ava_pcxt_ex_type: {
+    const ava_pcx_ex_type* p = (const ava_pcx_ex_type*)exe;
+    const ava_xcode_basic_block* bb = xfun->blocks[this_basic_block];
+
+    llvm::Value* type = irb.CreateCall(
+      context.di.x_ex_type,
+      caught_exceptions[bb->exception_stack->current_exception]);
+    store_register(context, irb, p->dst, type, pcfun, regs);
+  } return false;
+
+  case ava_pcxt_ex_value: {
+    const ava_pcx_ex_value* p = (const ava_pcx_ex_value*)exe;
+    const ava_xcode_basic_block* bb = xfun->blocks[this_basic_block];
+
+    llvm::Value* type = irb.CreateCall(
+      context.di.x_ex_value,
+      caught_exceptions[bb->exception_stack->current_exception]);
+    store_register(context, irb, p->dst, type, pcfun, regs);
+  } return false;
   }
 }
 
@@ -1685,7 +1741,7 @@ static void store_register(
   ava_pcode_register dst,
   llvm::Value* src,
   const ava_pcg_fun* pcfun,
-  llvm::Value*const* regs)
+  const std::vector<llvm::Value*>& regs)
 noexcept {
   switch (dst.type) {
   case ava_prt_var:
@@ -1728,7 +1784,7 @@ static llvm::Value* load_register(
   llvm::IRBuilder<true>& irb,
   ava_pcode_register src,
   const ava_pcg_fun* pcfun,
-  llvm::Value*const* regs,
+  const std::vector<llvm::Value*>& regs,
   llvm::Value* tmplist)
 noexcept {
   switch (src.type) {
