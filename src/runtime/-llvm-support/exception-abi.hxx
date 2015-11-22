@@ -32,27 +32,6 @@ namespace ava {
    * Extracts information about the underlying C++ exception ABI by inspecting
    * the output of Clang++ within the ISA driver.
    *
-   * The general exception handling pattern is:
-   *
-   *   <dosomething> unwind label %lp
-   *
-   *   %lp:
-   *   %cxxex = landingpad $ex_type personality $ex_personality
-   *            catch $ex_catch_type
-   *   %caught_type = extractvalue $ex_type %cxxex, 1
-   *   %expected_type = tail call _ $eh_typeid_for ($ex_catch_type)
-   *   %ours_p = icmp eq _ %caught_type, %expected_type
-   *   br i1 %ours_p, label %handle, label %res
-   *
-   *   %res:
-   *   resume $ex_type $cxxex
-   *
-   *   %handle:
-   *   %cxxex_data = extractvalue $ex_type %cxxex, 0
-   *   %exptr = tail call i8* $begin_catch (%cxxex_data)
-   *   ; copy *%exptr somewhere stable
-   *   tail call void $end_catch ()
-   *
    * See also:
    *
    *   Ground-up overview of how exceptions work on the Itanium ABI. It
@@ -85,15 +64,16 @@ namespace ava {
      * not an ava_exception, the exception type will be NULL and its value the
      * empty string.
      *
+     * Note that the generated landing pad catches *all* exceptions (as with
+     * `catch (...)` in C++).
+     *
      * @param debug_loc Location to use when emitting debug information for the
      * generated landing pad.
      * @param target The target to proceed to after the exception has been
      * extracted.
      * @param exception_dst Pointer into which the caught exception is copied.
-     * @param exception_ctx An i1* which stores information used by drop().
-     * @param cleanup_ctxs Array of values like exception_ctx which are to be
-     * cleaned up before starting this exception's catch.
-     * @param num_cleanup_ctxs Length of cleanup_ctxs.
+     * @param num_cleanup_exes Number of caught-exceptions to clean up before
+     * starting handling of the new exception.
      * @param di The driver_iface used in the current context.
      * @return A basic block which is a landing pad and performs the above
      * setup before proceeding to target.
@@ -102,28 +82,24 @@ namespace ava {
       llvm::DebugLoc debug_loc,
       llvm::BasicBlock* target,
       llvm::Value* exception_dst,
-      llvm::Value* exception_ctx,
-      llvm::Value*const* cleanup_ctxs,
-      size_t num_cleanup_ctxs,
+      size_t num_cleanup_exes,
       const ava::driver_iface& di) const noexcept;
 
     /**
-     * Creates a landingpad block which cleans up the given array of exceptions
-     * before resuming propagation.
+     * Creates a landingpad block which cleans up the given number of
+     * caught-exceptions before resuming propagation.
      */
     llvm::BasicBlock* create_cleanup(
       llvm::BasicBlock* after,
       llvm::DebugLoc debug_loc,
-      llvm::Value*const* cleanup_ctxs,
-      size_t num_cleanup_ctxs,
+      size_t num_cleanup_exes,
       const ava::driver_iface& di) const noexcept;
 
     /**
-     * Generates the necessary code to drop the given exception (ie, yrt on a
+     * Generates the necessary code to drop a caught-exception (ie, yrt on a
      * catch branch).
      */
     void drop(llvm::IRBuilder<true>& irb,
-              llvm::Value* exception_ctx,
               const ava::driver_iface& di) const noexcept;
 
     /**
@@ -153,9 +129,10 @@ namespace ava {
      * Returns the pointer to the ava_exception within the native exception.
      * This pointer is valid until the balancing call to cxa_end_catch().
      *
-     * This function MUST be perfectly balanced with cxa_end_catch(). It is NOT
+     * This function MUST be perfectly balanced with cxa_end_catch(). It is
      * safe to use this if the exception does not have RTTI matching
-     * ava_exception.
+     * ava_exception, but nothing useful can be done with the resulting
+     * pointer.
      *
      * If this function is invoked on an exception, it cannot be resumed
      * without first calling cxa_rethrow() (otherwise it resumes the next

@@ -515,9 +515,11 @@ namespace ava {
     F marshal_from[ava_cmpt_pointer+1];
 
     /**
-     * Signature: void (ava_exception* dst)
+     * Signature: void (ava_exception* dst, const exception*)
      *
      * Sets *dst to a pseudo-exception representing a foreign exception type.
+     * The second argument is ignored, and is only present so that this
+     * function has the same signature as copy_exception.
      */
     F foreign_exception;
 

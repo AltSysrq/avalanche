@@ -347,7 +347,8 @@ ava_value ava_isa_x_ex_value$(const ava_exception* ex) {
   return ava_exception_get_value(ex);
 }
 
-void ava_isa_foreign_exception$(ava_exception* dst) {
+void ava_isa_foreign_exception$(ava_exception* dst,
+                                const ava_exception* ignore) {
   ava_value empty;
 
   memset(dst, 0, sizeof(*dst));

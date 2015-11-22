@@ -201,7 +201,6 @@ struct ava_xcode_fun_xlate_info {
   std::map<std::pair<signed,signed>,llvm::BasicBlock*>& landing_pads;
   size_t this_basic_block;
   const std::vector<llvm::Value*>& caught_exceptions;
-  const std::vector<llvm::Value*>& exception_ctxs;
   const std::vector<llvm::Value*>& regs;
   llvm::Value*const* tmplists;
   llvm::Value* data_array_base;
@@ -214,7 +213,6 @@ struct ava_xcode_fun_xlate_info {
     std::map<std::pair<signed,signed>,llvm::BasicBlock*>& landing_pads_,
     size_t this_basic_block_,
     const std::vector<llvm::Value*>& caught_exceptions_,
-    const std::vector<llvm::Value*>& exception_ctxs_,
     const std::vector<llvm::Value*>& regs_,
     llvm::Value*const* tmplists_,
     llvm::Value* data_array_base_)
@@ -223,7 +221,6 @@ struct ava_xcode_fun_xlate_info {
     landing_pads(landing_pads_),
     this_basic_block(this_basic_block_),
     caught_exceptions(caught_exceptions_),
-    exception_ctxs(exception_ctxs_),
     regs(regs_),
     tmplists(tmplists_),
     data_array_base(data_array_base_)
@@ -1152,7 +1149,6 @@ noexcept {
    */
   llvm::Value* tmplists[3];
   std::vector<llvm::Value*> caught_exceptions(xfun->num_caught_exceptions);
-  std::vector<llvm::Value*> exception_ctxs(xfun->num_caught_exceptions);
   char reg_name[16];
   const char* reg_names[xfun->reg_type_off[ava_prt_function+1]];
 
@@ -1251,8 +1247,6 @@ noexcept {
   /* Allocate caught-exception stack */
   for (size_t i = 0; i < xfun->num_caught_exceptions; ++i) {
     caught_exceptions[i] = irb.CreateAlloca(context.types.ava_exception);
-    exception_ctxs[i] = irb.CreateAlloca(
-      llvm::Type::getInt1Ty(context.llvm_context));
   }
 
   /* Some instructions require us to supply an array of data registers
@@ -1309,8 +1303,7 @@ noexcept {
 
   ava_xcode_fun_xlate_info xi(
     context, irb, xfun, basic_blocks, landing_pads, 0,
-    caught_exceptions, exception_ctxs, regs, tmplists,
-    data_array_base);
+    caught_exceptions, regs, tmplists, data_array_base);
 
   for (size_t block_ix = 0; block_ix < xfun->num_blocks; ++block_ix) {
     xi.this_basic_block = block_ix;
@@ -1709,14 +1702,11 @@ noexcept {
     const ava_xcode_basic_block* bb = xfun->blocks[this_basic_block];
     if (bb->exception_stack->current_exception !=
         bb->exception_stack->next->current_exception) {
-      context.ea.drop(
-        irb, exception_ctxs[bb->exception_stack->current_exception],
-        context.di);
+      context.ea.drop(irb, context.di);
     }
   } return false;
 
   case ava_pcxt_rethrow: {
-    /* TODO This isn't correct for foreign exceptions. */
     INVOKE(context.ea.cxa_rethrow);
     irb.CreateUnreachable();
   } return true;
@@ -1997,11 +1987,9 @@ noexcept {
           irb.getCurrentDebugLocation(),
           basic_blocks[lp_ix],
           caught_exceptions[bb->exception_stack->current_exception+1],
-          exception_ctxs[bb->exception_stack->current_exception+1],
           /* Need to clean up all exceptions between that of the new target and
            * the location, inclusive.
            */
-          &exception_ctxs[dbb->exception_stack->current_exception],
           1 + bb->exception_stack->current_exception -
           dbb->exception_stack->current_exception,
           context.di);
@@ -2009,7 +1997,6 @@ noexcept {
         landing_pads[lp_key] = context.ea.create_cleanup(
           irb.GetInsertBlock(),
           irb.getCurrentDebugLocation(),
-          &exception_ctxs[0],
           1 + bb->exception_stack->current_exception,
           context.di);
       }

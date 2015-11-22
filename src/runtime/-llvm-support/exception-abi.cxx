@@ -78,41 +78,28 @@ llvm::BasicBlock* ava::exception_abi::create_landing_pad(
   llvm::DebugLoc debug_loc,
   llvm::BasicBlock* target,
   llvm::Value* exception_dst,
-  llvm::Value* exception_ctx,
-  llvm::Value*const* cleanup_ctxs,
-  size_t num_cleanup_ctxs,
+  size_t num_cleanup_exes,
   const ava::driver_iface& di)
 const noexcept {
   llvm::LLVMContext& context(target->getContext());
-  llvm::BasicBlock* bb_lp, * bb_foreign, * bb_ava;
+  llvm::BasicBlock* bb_lp;
 
   /*
     %lp:
     %cxxex = landingpad $ex_type personality $ex_personality
-             catch $ex_catch_type
+             catch i8* null
     ; drop cleanup exceptions
     %caught_type = extractvalue $ex_type %cxxex, 1
     %expected_type = tail call i32 $eh_typeid_for ($ex_catch_type)
     %ours_p = icmp eq i32 %caught_type, %expected_type
-    store %ours_p, $exception_ctx
-    br i1 %ours_p, label %avalanche, label %foreign
-
-    %foreign:
-    isa::foreign_exception($exception_dst)
-    br $target
-
-    %avalanche:
     %cxxex_data = extractvalue $ex_type %cxxex, 0
     %exptr = call i8* __cxa_begin_catch (%cxxex_data)
-    isa::copy_exception($exception_dst, %exptr)
+    %cpyfun = select %ours_p, isa::copy_exception, isa::foreign_exception
+    call void %cpyfun ($exception_dst, %exptr)
     br $target
    */
 
   bb_lp = llvm::BasicBlock::Create(
-    context, "", target->getParent(), target);
-  bb_foreign = llvm::BasicBlock::Create(
-    context, "", target->getParent(), target);
-  bb_ava = llvm::BasicBlock::Create(
     context, "", target->getParent(), target);
 
   llvm::IRBuilder<true> irb(bb_lp);
@@ -120,29 +107,20 @@ const noexcept {
 
   llvm::LandingPadInst* cxxex_lp = irb.CreateLandingPad(
     ex_type, ex_personality, 1);
-  cxxex_lp->addClause(ex_catch_type);
+  cxxex_lp->addClause(llvm::ConstantPointerNull::get(
+                        llvm::Type::getInt8PtrTy(target->getContext())));
 
-  for (size_t i = num_cleanup_ctxs - 1; i < num_cleanup_ctxs; --i)
-    drop(irb, cleanup_ctxs[i], di);
+  for (size_t i = 0; i < num_cleanup_exes; ++i)
+    drop(irb, di);
 
   llvm::Value* caught_type = irb.CreateExtractValue(cxxex_lp, { 1 });
   llvm::Value* expected_type = irb.CreateCall(eh_typeid_for, ex_catch_type);
   llvm::Value* ours_p = irb.CreateICmpEQ(caught_type, expected_type);
-  irb.CreateStore(ours_p, exception_ctx);
-  irb.CreateCondBr(ours_p, bb_ava, bb_foreign);
-
-  irb.SetInsertPoint(bb_foreign);
-  irb.CreateCall(di.foreign_exception, exception_dst);
-  irb.CreateBr(target);
-
-  irb.SetInsertPoint(bb_ava);
-  llvm::PHINode* cxxex_ava = irb.CreatePHI(cxxex_lp->getType(), 1);
-  cxxex_ava->addIncoming(cxxex_lp, bb_lp);
-  llvm::Value* cxx_data = irb.CreateExtractValue(cxxex_ava, { 0 });
-  llvm::Value* exptr = irb.CreateCall(cxa_begin_catch, cxx_data);
-  llvm::Value* exptr_cast = irb.CreateBitCast(
-    exptr, exception_dst->getType());
-  irb.CreateCall2(di.copy_exception, exception_dst, exptr_cast);
+  llvm::Value* cxxex_data = irb.CreateExtractValue(cxxex_lp, { 0 });
+  llvm::Value* exptr = irb.CreateCall(cxa_begin_catch, cxxex_data);
+  llvm::Value* cpyfun = irb.CreateSelect(
+    ours_p, di.copy_exception, di.foreign_exception);
+  irb.CreateCall2(cpyfun, exception_dst, exptr);
   irb.CreateBr(target);
 
   return bb_lp;
@@ -151,8 +129,7 @@ const noexcept {
 llvm::BasicBlock* ava::exception_abi::create_cleanup(
   llvm::BasicBlock* after,
   llvm::DebugLoc debug_loc,
-  llvm::Value*const* cleanup_ctxs,
-  size_t num_cleanup_ctxs,
+  size_t num_cleanup_exes,
   const ava::driver_iface& di)
 const noexcept {
   llvm::BasicBlock* bb_lp;
@@ -165,8 +142,8 @@ const noexcept {
   llvm::LandingPadInst* cxxex_lp = irb.CreateLandingPad(
     ex_type, ex_personality, 1);
   cxxex_lp->setCleanup(true);
-  for (size_t i = num_cleanup_ctxs - 1; i < num_cleanup_ctxs; --i)
-    drop(irb, cleanup_ctxs[i], di);
+  for (size_t i = 0; i < num_cleanup_exes; ++i)
+    drop(irb, di);
 
   irb.CreateResume(cxxex_lp);
 
@@ -174,15 +151,7 @@ const noexcept {
 }
 
 void ava::exception_abi::drop(llvm::IRBuilder<true>& irb,
-                              llvm::Value* exception_ctx,
                               const ava::driver_iface& di)
 const noexcept {
-  /*
-    %ours_p = load $exception_ctx
-    %fun = select %ours_p, @__cxa_end_catch(), @nop
-    call void %fun ()
-   */
-  llvm::Value* ours_p = irb.CreateLoad(exception_ctx);
-  llvm::Value* fun = irb.CreateSelect(ours_p, cxa_end_catch, di.nop);
-  irb.CreateCall(fun);
+  irb.CreateCall(cxa_end_catch);
 }
