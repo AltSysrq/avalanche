@@ -529,6 +529,13 @@ namespace ava {
     F copy_exception;
 
     /**
+     * Signature: void (void)
+     *
+     * Does nothing.
+     */
+    F nop;
+
+    /**
      * If the module defines a `\program-entry`, a pointer to that function;
      * otherwise, NULL.
      *

@@ -83,14 +83,39 @@ namespace ava {
      * Generates a landing pad which stores the details of a caught exception
      * in exception_dst, then proceeds to target. If the caught exception is
      * not an ava_exception, the exception type will be NULL and its value the
-     * empty string. exception_ctx is a i8** location where the raw
-     * native exception is stored.
+     * empty string.
+     *
+     * @param debug_loc Location to use when emitting debug information for the
+     * generated landing pad.
+     * @param target The target to proceed to after the exception has been
+     * extracted.
+     * @param exception_dst Pointer into which the caught exception is copied.
+     * @param exception_ctx An i1* which stores information used by drop().
+     * @param cleanup_ctxs Array of values like exception_ctx which are to be
+     * cleaned up before starting this exception's catch.
+     * @param num_cleanup_ctxs Length of cleanup_ctxs.
+     * @param di The driver_iface used in the current context.
+     * @return A basic block which is a landing pad and performs the above
+     * setup before proceeding to target.
      */
     llvm::BasicBlock* create_landing_pad(
       llvm::DebugLoc debug_loc,
       llvm::BasicBlock* target,
       llvm::Value* exception_dst,
       llvm::Value* exception_ctx,
+      llvm::Value*const* cleanup_ctxs,
+      size_t num_cleanup_ctxs,
+      const ava::driver_iface& di) const noexcept;
+
+    /**
+     * Creates a landingpad block which cleans up the given array of exceptions
+     * before resuming propagation.
+     */
+    llvm::BasicBlock* create_cleanup(
+      llvm::BasicBlock* after,
+      llvm::DebugLoc debug_loc,
+      llvm::Value*const* cleanup_ctxs,
+      size_t num_cleanup_ctxs,
       const ava::driver_iface& di) const noexcept;
 
     /**
@@ -98,13 +123,8 @@ namespace ava {
      * catch branch).
      */
     void drop(llvm::IRBuilder<true>& irb,
-              llvm::Value* exception_ctx) const noexcept;
-
-    /**
-     * Generates the necessary code to rethrow the given exception.
-     */
-    void rethrow(llvm::IRBuilder<true>& irb,
-                 llvm::Value* exception_ctx) const noexcept;
+              llvm::Value* exception_ctx,
+              const ava::driver_iface& di) const noexcept;
 
     /**
      * The physical type of an exception. Basically
@@ -167,10 +187,6 @@ namespace ava {
      * the exception right then and there. Calling __cxa_end_catch() is still
      * necessary, so this must be invoked with a landing pad which does just
      * that.
-     *
-     * Note that the way the Avalanche implementation actually uses this
-     * function is a bit unusual for the sake of simplicity; see the
-     * implementation of rethrow() and drop().
      */
     llvm::Value* cxa_rethrow;
   };

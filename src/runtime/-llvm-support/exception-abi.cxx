@@ -74,78 +74,27 @@ noexcept {
     ir_types.c_void, nullptr);
 }
 
-/*
-  The Itanium ABI / LLVM C++ ABI makes things a bit awkward with respect to how
-  rethrowing should work.
-
-  The "natural" first approach looks like:
-
-    landingpad:
-      __cxa_begin_catch()
-
-    yrt:
-      __cxa_end_catch()
-
-    rethrow:
-      __cxa_rethrow() unwind $+1
-      __cxa_end_catch()
-      resume
-
-  The problem here is that the code between landingpad and yrt/rethrow could
-  *itself* throw, so we would need an extra
-
-    inner_landingpad:
-      __cxa_end_catch()
-      resume
-
-  landing pad that would replace the landing pads between those endpoints. This
-  would already be extremely awkward in our model. However, there's also the
-  complication that inner_landingpad would need to account for other exceptions
-  getting pushed onto the exception stack.
-
-  Therefore, we instead maintain the invariant that, as long as a
-  caught-exception is on the P-Code stack, a corresponding native exception is
-  ready to be resumed. This is accomplished with the observation that
-  begin()/end() effectively drops the exception, while begin()/rethrow()/end()
-  permits observing the exception without dropping it. Thus:
-
-    landingpad:
-      __cxa_begin_catch()
-      ; evacuate exception to stable location
-      __cxa_rethrow() unwind $+1
-      __cxa_end_catch()
-
-    yrt:
-      __cxa_begin_catch()
-      __cxa_end_catch()
-
-    rethrow:
-      resume
-
-  A nice side-effect of this is that only the landingpad needs to care whether
-  it has caught an Avalanche exception or a foreign one; yrt and rethrow can
-  simply obliviously call the appropriate primitives.
- */
-
 llvm::BasicBlock* ava::exception_abi::create_landing_pad(
   llvm::DebugLoc debug_loc,
   llvm::BasicBlock* target,
   llvm::Value* exception_dst,
   llvm::Value* exception_ctx,
+  llvm::Value*const* cleanup_ctxs,
+  size_t num_cleanup_ctxs,
   const ava::driver_iface& di)
 const noexcept {
   llvm::LLVMContext& context(target->getContext());
-  llvm::BasicBlock* bb_lp, * bb_foreign, * bb_ava, * bb_ava2, * bb_unreachable;
+  llvm::BasicBlock* bb_lp, * bb_foreign, * bb_ava;
 
   /*
     %lp:
     %cxxex = landingpad $ex_type personality $ex_personality
              catch $ex_catch_type
-    %rawex = extractvalue $ex_type %cxxex, 0
-    store %rawex, $exception_ctx
+    ; drop cleanup exceptions
     %caught_type = extractvalue $ex_type %cxxex, 1
     %expected_type = tail call i32 $eh_typeid_for ($ex_catch_type)
     %ours_p = icmp eq i32 %caught_type, %expected_type
+    store %ours_p, $exception_ctx
     br i1 %ours_p, label %avalanche, label %foreign
 
     %foreign:
@@ -156,10 +105,6 @@ const noexcept {
     %cxxex_data = extractvalue $ex_type %cxxex, 0
     %exptr = call i8* __cxa_begin_catch (%cxxex_data)
     isa::copy_exception($exception_dst, %exptr)
-    invoke void __cxa_rethrow () to unreachable unwind %avalanche.2
-
-    %avalanche.2:
-    call void __cxa_end_catch ()
     br $target
    */
 
@@ -169,10 +114,6 @@ const noexcept {
     context, "", target->getParent(), target);
   bb_ava = llvm::BasicBlock::Create(
     context, "", target->getParent(), target);
-  bb_ava2 = llvm::BasicBlock::Create(
-    context, "", target->getParent(), target);
-  bb_unreachable = llvm::BasicBlock::Create(
-    context, "", target->getParent(), target);
 
   llvm::IRBuilder<true> irb(bb_lp);
   irb.SetCurrentDebugLocation(debug_loc);
@@ -180,11 +121,14 @@ const noexcept {
   llvm::LandingPadInst* cxxex_lp = irb.CreateLandingPad(
     ex_type, ex_personality, 1);
   cxxex_lp->addClause(ex_catch_type);
-  llvm::Value* rawex = irb.CreateExtractValue(cxxex_lp, { 0 });
-  irb.CreateStore(rawex, exception_ctx);
+
+  for (size_t i = num_cleanup_ctxs - 1; i < num_cleanup_ctxs; --i)
+    drop(irb, cleanup_ctxs[i], di);
+
   llvm::Value* caught_type = irb.CreateExtractValue(cxxex_lp, { 1 });
   llvm::Value* expected_type = irb.CreateCall(eh_typeid_for, ex_catch_type);
   llvm::Value* ours_p = irb.CreateICmpEQ(caught_type, expected_type);
+  irb.CreateStore(ours_p, exception_ctx);
   irb.CreateCondBr(ours_p, bb_ava, bb_foreign);
 
   irb.SetInsertPoint(bb_foreign);
@@ -199,30 +143,46 @@ const noexcept {
   llvm::Value* exptr_cast = irb.CreateBitCast(
     exptr, exception_dst->getType());
   irb.CreateCall2(di.copy_exception, exception_dst, exptr_cast);
-  irb.CreateInvoke(cxa_rethrow, bb_unreachable, bb_ava2);
-
-  irb.SetInsertPoint(bb_ava2);
-  irb.CreateCall(cxa_end_catch);
   irb.CreateBr(target);
 
-  irb.SetInsertPoint(bb_unreachable);
-  irb.CreateUnreachable();
+  return bb_lp;
+}
+
+llvm::BasicBlock* ava::exception_abi::create_cleanup(
+  llvm::BasicBlock* after,
+  llvm::DebugLoc debug_loc,
+  llvm::Value*const* cleanup_ctxs,
+  size_t num_cleanup_ctxs,
+  const ava::driver_iface& di)
+const noexcept {
+  llvm::BasicBlock* bb_lp;
+
+  bb_lp = llvm::BasicBlock::Create(
+    after->getContext(), "", after->getParent(), after->getNextNode());
+  llvm::IRBuilder<true> irb(bb_lp);
+  irb.SetCurrentDebugLocation(debug_loc);
+
+  llvm::LandingPadInst* cxxex_lp = irb.CreateLandingPad(
+    ex_type, ex_personality, 1);
+  cxxex_lp->setCleanup(true);
+  for (size_t i = num_cleanup_ctxs - 1; i < num_cleanup_ctxs; --i)
+    drop(irb, cleanup_ctxs[i], di);
+
+  irb.CreateResume(cxxex_lp);
 
   return bb_lp;
 }
 
 void ava::exception_abi::drop(llvm::IRBuilder<true>& irb,
-                              llvm::Value* exception_ctx)
+                              llvm::Value* exception_ctx,
+                              const ava::driver_iface& di)
 const noexcept {
-  llvm::Value* rawex = irb.CreateLoad(exception_ctx);
-  irb.CreateCall(cxa_begin_catch, rawex);
-  irb.CreateCall(cxa_end_catch);
-}
-
-void ava::exception_abi::rethrow(
-  llvm::IRBuilder<true>& irb,
-  llvm::Value* exception_ctx)
-const noexcept {
-  llvm::Value* rawex = irb.CreateLoad(exception_ctx);
-  irb.CreateResume(rawex);
+  /*
+    %ours_p = load $exception_ctx
+    %fun = select %ours_p, @__cxa_end_catch(), @nop
+    call void %fun ()
+   */
+  llvm::Value* ours_p = irb.CreateLoad(exception_ctx);
+  llvm::Value* fun = irb.CreateSelect(ours_p, cxa_end_catch, di.nop);
+  irb.CreateCall(fun);
 }

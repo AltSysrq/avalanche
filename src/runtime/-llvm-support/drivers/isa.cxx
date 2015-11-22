@@ -359,6 +359,8 @@ void ava_isa_copy_exception$(ava_exception* dst, const ava_exception* src) {
   memcpy(dst, src, sizeof(*src));
 }
 
+void ava_isa_nop$(void) { }
+
 void ava_isa_m_to_void$(ava_value v) {
   if (!ava_string_is_empty(ava_to_string(v)))
     ava_throw_str(&ava_format_exception,

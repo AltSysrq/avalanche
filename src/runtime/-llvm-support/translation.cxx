@@ -25,6 +25,7 @@
 #include <memory>
 #include <utility>
 #include <set>
+#include <map>
 #include <string>
 
 #include <llvm/ADT/StringRef.h>
@@ -186,7 +187,18 @@ struct ava_xcode_fun_xlate_info {
   llvm::IRBuilder<true>& irb;
   const ava_xcode_function* xfun;
   const std::vector<llvm::BasicBlock*>& basic_blocks;
-  std::vector<llvm::BasicBlock*>& landing_pads;
+  /**
+   * Landing pads which have been generated.
+   *
+   * The key is (destination_block,source_ce_height). destination_block is the
+   * index of the basic block which gains control upon an exception being
+   * thrown. source_ce_height is the value of current_exception at the throw
+   * point.
+   *
+   * This model is necessary to ensure we call __cxa_end_catch() the correct
+   * number of times.
+   */
+  std::map<std::pair<signed,signed>,llvm::BasicBlock*>& landing_pads;
   size_t this_basic_block;
   const std::vector<llvm::Value*>& caught_exceptions;
   const std::vector<llvm::Value*>& exception_ctxs;
@@ -199,7 +211,7 @@ struct ava_xcode_fun_xlate_info {
     llvm::IRBuilder<true>& irb_,
     const ava_xcode_function* xfun_,
     const std::vector<llvm::BasicBlock*>& basic_blocks_,
-    std::vector<llvm::BasicBlock*>& landing_pads_,
+    std::map<std::pair<signed,signed>,llvm::BasicBlock*>& landing_pads_,
     size_t this_basic_block_,
     const std::vector<llvm::Value*>& caught_exceptions_,
     const std::vector<llvm::Value*>& exception_ctxs_,
@@ -1133,7 +1145,7 @@ noexcept {
    * code can always assume it can fall through to something.
    */
   std::vector<llvm::BasicBlock*> basic_blocks(xfun->num_blocks + 1);
-  std::vector<llvm::BasicBlock*> landing_pads(xfun->num_blocks);
+  std::map<std::pair<signed,signed>,llvm::BasicBlock*> landing_pads;
   std::vector<llvm::Value*> regs(xfun->reg_type_off[ava_prt_function+1]);
   /* Since ava_fat_list_value isn't first-class in the C ABI, we need some
    * temporary space we can make pointers to.
@@ -1239,7 +1251,8 @@ noexcept {
   /* Allocate caught-exception stack */
   for (size_t i = 0; i < xfun->num_caught_exceptions; ++i) {
     caught_exceptions[i] = irb.CreateAlloca(context.types.ava_exception);
-    exception_ctxs[i] = irb.CreateAlloca(context.types.general_pointer);
+    exception_ctxs[i] = irb.CreateAlloca(
+      llvm::Type::getInt1Ty(context.llvm_context));
   }
 
   /* Some instructions require us to supply an array of data registers
@@ -1696,14 +1709,16 @@ noexcept {
     const ava_xcode_basic_block* bb = xfun->blocks[this_basic_block];
     if (bb->exception_stack->current_exception !=
         bb->exception_stack->next->current_exception) {
-      context.ea.drop(irb, exception_ctxs[bb->exception_stack->current_exception]);
+      context.ea.drop(
+        irb, exception_ctxs[bb->exception_stack->current_exception],
+        context.di);
     }
   } return false;
 
   case ava_pcxt_rethrow: {
-    const ava_xcode_basic_block* bb = xfun->blocks[this_basic_block];
-    context.ea.rethrow(
-      irb, exception_ctxs[bb->exception_stack->current_exception]);
+    /* TODO This isn't correct for foreign exceptions. */
+    INVOKE(context.ea.cxa_rethrow);
+    irb.CreateUnreachable();
   } return true;
 
   case ava_pcxt_throw: {
@@ -1961,29 +1976,50 @@ llvm::Value* ava_xcode_fun_xlate_info::create_call_or_invoke(
   llvm::Value* callee,
   llvm::ArrayRef<llvm::Value*> args)
 noexcept {
-  const ava_xcode_basic_block* bb;
+  const ava_xcode_basic_block* bb, * dbb;
   signed lp_ix;
   llvm::BasicBlock* subsequent;
   llvm::Value* ret;
+  std::pair<signed,signed> lp_key;
 
   bb = xfun->blocks[this_basic_block];
   lp_ix = bb->exception_stack->landing_pad;
-  if (-1 == lp_ix) {
+  if (-1 == lp_ix && -1 == bb->exception_stack->current_exception) {
     ret = irb.CreateCall(callee, args);
   } else {
-    if (!landing_pads[lp_ix])
-      landing_pads[lp_ix] = context.ea.create_landing_pad(
-        irb.getCurrentDebugLocation(),
-        basic_blocks[lp_ix],
-        caught_exceptions[bb->exception_stack->current_exception+1],
-        exception_ctxs[bb->exception_stack->current_exception+1],
-        context.di);
+    lp_key = std::make_pair(bb->exception_stack->landing_pad,
+                            bb->exception_stack->current_exception);
+    if (!landing_pads[lp_key]) {
+      if (-1 != lp_ix) {
+        dbb = xfun->blocks[lp_ix];
+
+        landing_pads[lp_key] = context.ea.create_landing_pad(
+          irb.getCurrentDebugLocation(),
+          basic_blocks[lp_ix],
+          caught_exceptions[bb->exception_stack->current_exception+1],
+          exception_ctxs[bb->exception_stack->current_exception+1],
+          /* Need to clean up all exceptions between that of the new target and
+           * the location, inclusive.
+           */
+          &exception_ctxs[dbb->exception_stack->current_exception],
+          1 + bb->exception_stack->current_exception -
+          dbb->exception_stack->current_exception,
+          context.di);
+      } else {
+        landing_pads[lp_key] = context.ea.create_cleanup(
+          irb.GetInsertBlock(),
+          irb.getCurrentDebugLocation(),
+          &exception_ctxs[0],
+          1 + bb->exception_stack->current_exception,
+          context.di);
+      }
+    }
 
     subsequent = llvm::BasicBlock::Create(
       context.llvm_context, "",
       basic_blocks[this_basic_block]->getParent(),
       irb.GetInsertBlock()->getNextNode());
-    ret = irb.CreateInvoke(callee, subsequent, landing_pads[lp_ix], args);
+    ret = irb.CreateInvoke(callee, subsequent, landing_pads[lp_key], args);
 
     irb.SetInsertPoint(subsequent);
   }
