@@ -795,10 +795,18 @@ static ava_bool ava_xcode_validate_exception_stacks(
     block = fun->blocks[block_ix];
     instr_ix = block->length - 1;
     instr = block->elts[instr_ix];
-    if (!ava_pcode_exe_is_terminal_no_fallthrough(instr) &&
-        block->exception_stack &&
-        block->exception_stack->next)
-      DIE(ava_error_xcode_expected_empty_exception(&location));
+    if (ava_pcode_exe_is_pop_exception(instr)) {
+      if (!ava_pcode_exe_is_terminal_no_fallthrough(instr) &&
+          block->exception_stack &&
+          block->exception_stack->next &&
+          block->exception_stack->next->next)
+        DIE(ava_error_xcode_expected_empty_exception(&location));
+    } else {
+      if (!ava_pcode_exe_is_terminal_no_fallthrough(instr) &&
+          block->exception_stack &&
+          block->exception_stack->next)
+        DIE(ava_error_xcode_expected_empty_exception(&location));
+    }
   }
 
   return ava_true;

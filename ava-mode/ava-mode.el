@@ -30,11 +30,14 @@
   (list
    (cons (regexp-opt (list
                       "alias" "Alias" "ALIAS"
-                      "break" "collect" "collecting" "continue" "do" "each"
+                      "break" "collect" "collecting" "continue"
+                      "catch" "defer" "do" "each"
                       "else" "extern" "Extern" "EXTERN"
-                      "for" "fun" "Fun" "FUN" "goto"
+                      "finally" "for" "fun" "Fun" "FUN" "goto"
                       "in" "if" "import" "macro" "Macro" "MACRO" "namespace"
-                      "pasta" "reqmod" "reqpkg" "ret" "until" "while")
+                      "on-any-bad-format"
+                      "pasta" "reqmod" "reqpkg" "ret" "try" "until" "while"
+                      "workaround" "workaround-undefined")
                      'symbols)
          'font-lock-keyword-face)
    (cons "\\$\\(\\s_\\|\\w\\)+\\$?" 'font-lock-variable-name-face)))

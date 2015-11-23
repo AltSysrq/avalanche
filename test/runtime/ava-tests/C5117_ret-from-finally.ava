@@ -1,0 +1,7 @@
+fun doit f {
+  try {
+    ret $f ()
+  } finally {
+    ret 42
+  }
+}

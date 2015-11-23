@@ -27,6 +27,7 @@
 #include "avalanche/symbol.h"
 #include "avalanche/symtab.h"
 #include "-intrinsics/defun.h"
+#include "-intrinsics/eh.h"
 #include "-intrinsics/extern.h"
 #include "-intrinsics/if.h"
 #include "-intrinsics/loop.h"
@@ -93,6 +94,7 @@ void ava_register_intrinsics(ava_macsub_context* context) {
   DEFINE("reqmod",      CTL,    NULL,           reqmod);
   DEFINE("reqpkg",      CTL,    NULL,           reqpkg);
   DEFINE("ret",         CTL,    NULL,           ret);
+  DEFINE("try",         CTL,    NULL,           try);
   DEFINE("#set#",       CTL,    NULL,           set);
   DEFINE("#var#",       CTL,    NULL,           var);
   DEFINE("#name-subscript#", CTL, "#name-subscript#", subscript);

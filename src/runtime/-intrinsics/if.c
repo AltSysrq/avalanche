@@ -132,7 +132,7 @@ ava_macro_subst_result ava_intr_if_subst(
     if (ava_put_substitution == res->type) {
       if (!this->expression_form)
         return ava_macsub_error_result(
-          context, ava_error_if_inconsistent_result_form(
+          context, ava_error_structure_inconsistent_result_form(
             &res->location));
 
       this->clauses[ix].result = ava_macsub_run(
@@ -140,7 +140,7 @@ ava_macro_subst_result ava_intr_if_subst(
     } else if (ava_put_block == res->type) {
       if (this->expression_form)
         return ava_macsub_error_result(
-          context, ava_error_if_inconsistent_result_form(
+          context, ava_error_structure_inconsistent_result_form(
             &res->location));
 
       this->clauses[ix].result = ava_macsub_run(

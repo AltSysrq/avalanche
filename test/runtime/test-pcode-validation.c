@@ -594,3 +594,13 @@ deftest(reg_init_in_try_and_lp) {
            VERB("ret v0")
            VERB("pop i 1"))));
 }
+
+deftest(yrt_at_end_of_function) {
+  (void)make_xcode_fun(
+    VERB(FUN_FOO ONE_ARG NO_VAR VERB(
+           VERB("try 1")
+           VERB("yrt")
+           VERB("ret v0")
+           VERB("label 1")
+           VERB("yrt"))));
+}

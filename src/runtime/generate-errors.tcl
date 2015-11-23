@@ -1491,14 +1491,14 @@ set defs {
     }
   }
 
-  cerror C5074 if_inconsistent_result_form {} {
-    msg "Inconsistent expression/statement-form results in if."
+  cerror C5074 structure_inconsistent_result_form {} {
+    msg "Inconsistent expression/statement-form results in control structure."
     explanation {
-      All result arguments for an "if" usage must be blocks (brace-enclosed, no
-      value returned) or substitutions (parenthesis-enclosed, result returned).
-      The expected form for a single "if" usage is decided by the first result
-      argument; this error is raised if another result block differs from the
-      first result argument.
+      All result arguments for a acontrol structure must be blocks
+      (brace-enclosed, no value returned) or substitutions
+      (parenthesis-enclosed, result returned). The expected form for a single
+      control structure is decided by the first result argument; this error is
+      raised if another result block differs from the first result argument.
     }
   }
 
@@ -1930,6 +1930,27 @@ set defs {
 
       If subscripting a literal string is really what is desired, use a string
       literal or other explicit type of literal.
+    }
+  }
+
+  cerror C5116 try_without_catch_or_finally {} {
+    msg "\"try\" without any catch or finally clauses."
+    explanation {
+      The given "try" usage has no catch clauses nor a finally block, and thus
+      does not describe any behaviour at all.
+    }
+  }
+
+  cerror C5117 jump_out_of_finally {} {
+    msg "Attempt to jump out of finally block."
+    explanation {
+      The given location attempts to directly transfer control out of the
+      "finally" block of a "try" statement.
+
+      Jumps (including returns) out of a finally block in a "try" statement
+      almost never behave intuitively, having bizarre effects such as silently
+      discarding exceptions or vetoing direct control transfers in other parts
+      of the function. Therefore, they are explicitly unsupported in Avalanche.
     }
   }
 
