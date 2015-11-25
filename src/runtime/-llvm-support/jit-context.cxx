@@ -21,7 +21,6 @@
 #include <memory>
 
 #include <llvm/ExecutionEngine/ExecutionEngine.h>
-#include <llvm/ExecutionEngine/JIT.h>
 #include <llvm/ExecutionEngine/MCJIT.h>
 #include <llvm/IR/LLVMContext.h>
 #include <llvm/IR/Module.h>
@@ -86,8 +85,8 @@ bool ava::jit_context::run_module(
   std::unique_ptr<llvm::ExecutionEngine> engine;
 
   LLVMLinkInMCJIT();
-  LLVMLinkInJIT();
   llvm::InitializeNativeTarget();
+  llvm::InitializeNativeTargetAsmPrinter();
 
   /* Somehow, LLVM's JIT can't handle modules referring to each other.
    *
@@ -101,17 +100,20 @@ bool ava::jit_context::run_module(
     new llvm::Module("jitstuff", llvm_context));
   llvm::Linker linker(linked_module.get());
   for (const std::unique_ptr<llvm::Module>& piece: modules) {
-    if (/* true on error*/linker.linkInModule(
-          piece.get(), llvm::Linker::PreserveSource, &error))
+    /* XXX LLVM 3.7 removed 3.5's ability to not destroy the input module. It
+     * also no longer returns an error string.
+     */
+    if (/* true on error*/linker.linkInModule(piece.get())) {
+      error = "Something went wrong during linking, but LLVM won't tell us.";
       return false;
+    }
   }
 
   llvm::Module* borrowed_module = linked_module.get();
 
   if (!engine)
-    engine.reset(llvm::EngineBuilder(linked_module.release())
+    engine.reset(llvm::EngineBuilder(std::move(linked_module))
                  .setEngineKind(llvm::EngineKind::JIT)
-                 /*.setUseMCJIT(true)*/
                  .setErrorStr(&error_str)
                  .setOptLevel(llvm::CodeGenOpt::None)
                  .create());
@@ -121,12 +123,15 @@ bool ava::jit_context::run_module(
     return false;
   }
 
+  /* MCJIT doesn't actually make the memory executable unless you ask it to */
+  engine->generateCodeForModule(borrowed_module);
+  engine->finalizeObject();
+
   /* TODO: Ensure that the function actually looks like this */
-  llvm::Function* init_fun = borrowed_module->getFunction(
-    ava::get_init_fun_name(ava_string_to_cstring(package_prefix),
-                           ava_string_to_cstring(module_name)));
   void (*init)(void) = reinterpret_cast<void(*)(void)>(
-      init_fun? engine->getPointerToFunction(init_fun) : nullptr);
+    engine->getFunctionAddress(
+      ava::get_init_fun_name(ava_string_to_cstring(package_prefix),
+                             ava_string_to_cstring(module_name))));
   if (init) {
     /* XXX The GC doesn't know about the module's global variables. For now,
      * just make sure it doesn't run while the module does, and assume the

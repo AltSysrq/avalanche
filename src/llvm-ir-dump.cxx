@@ -70,10 +70,10 @@ static ava_value run(void* filename) {
 
   {
     std::string dont_care;
-    llvm::raw_fd_ostream bcout("/dev/stdout", dont_care, llvm::sys::fs::F_None);
+    llvm::raw_fd_ostream bcout(1, false, false);
     llvm::ModulePassManager passManager;
     passManager.addPass(llvm::BitcodeWriterPass(bcout));
-    passManager.run(output.get());
+    passManager.run(*output);
   }
 
   return ret;

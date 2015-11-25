@@ -49,6 +49,9 @@ noexcept {
   exfun = module.getFunction("ava_c_abi_info_catch_pattern$");
   assert(exfun);
 
+  personality_fn = exfun->getPersonalityFn();
+  assert(personality_fn);
+
   /* Find the landing pad */
   entry_block = &exfun->getEntryBlock();
   invoke = llvm::cast<llvm::InvokeInst>(&entry_block->front());
@@ -57,7 +60,6 @@ noexcept {
 
   /* Dissect the landing pad */
   ex_type = llvm::cast<llvm::StructType>(lp->getType());
-  ex_personality = lp->getPersonalityFn();
   ex_catch_type = lp->getClause(0);
 
   eh_typeid_for = llvm::Intrinsic::getDeclaration(
@@ -86,8 +88,7 @@ const noexcept {
 
   /*
     %lp:
-    %cxxex = landingpad $ex_type personality $ex_personality
-             catch i8* null
+    %cxxex = landingpad $ex_type catch i8* null
     ; drop cleanup exceptions
     %caught_type = extractvalue $ex_type %cxxex, 1
     %expected_type = tail call i32 $eh_typeid_for ($ex_catch_type)
@@ -105,8 +106,7 @@ const noexcept {
   llvm::IRBuilder<true> irb(bb_lp);
   irb.SetCurrentDebugLocation(debug_loc);
 
-  llvm::LandingPadInst* cxxex_lp = irb.CreateLandingPad(
-    ex_type, ex_personality, 1);
+  llvm::LandingPadInst* cxxex_lp = irb.CreateLandingPad(ex_type, 1);
   cxxex_lp->addClause(llvm::ConstantPointerNull::get(
                         llvm::Type::getInt8PtrTy(target->getContext())));
 
@@ -120,7 +120,7 @@ const noexcept {
   llvm::Value* exptr = irb.CreateCall(cxa_begin_catch, cxxex_data);
   llvm::Value* cpyfun = irb.CreateSelect(
     ours_p, di.copy_exception, di.foreign_exception);
-  irb.CreateCall2(cpyfun, exception_dst, exptr);
+  irb.CreateCall(cpyfun, { exception_dst, exptr });
   irb.CreateBr(target);
 
   return bb_lp;
@@ -139,8 +139,7 @@ const noexcept {
   llvm::IRBuilder<true> irb(bb_lp);
   irb.SetCurrentDebugLocation(debug_loc);
 
-  llvm::LandingPadInst* cxxex_lp = irb.CreateLandingPad(
-    ex_type, ex_personality, 1);
+  llvm::LandingPadInst* cxxex_lp = irb.CreateLandingPad(ex_type, 1);
   cxxex_lp->setCleanup(true);
   for (size_t i = 0; i < num_cleanup_exes; ++i)
     drop(irb, di);

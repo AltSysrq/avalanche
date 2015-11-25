@@ -4,7 +4,12 @@ SUBDIRS = runtime .
 
 EXTRA_CFLAGS =
 AM_CFLAGS = $(LIBFFI_CFLAGS) $(EXTRA_CFLAGS)
-AM_CXXFLAGS = $(LIBFFI_CFLAGS) \
+# -fno-rtti is required for now due to
+#   http://lists.llvm.org/pipermail/llvm-dev/2015-August/089010.html
+# Because *of course* they're putting everything in the headers now. And *of
+# course* they compile their own library with -fno-rtti and try to foist all
+# their compiler flags on their users via `llvm-conifg --cxxflags`
+AM_CXXFLAGS = $(LIBFFI_CFLAGS) -fno-rtti \
               $(EXTRA_CFLAGS) $(LLVM_CPPFLAGS) $(LLVM_CXXFLAGS) \
               -std=c++11 -D__STDC_LIMIT_MACROS -D__STDC_CONSTANT_MACROS
 AM_CCASFLAGS = -g0

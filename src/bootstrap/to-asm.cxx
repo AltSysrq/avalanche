@@ -24,6 +24,7 @@
 #include <string>
 
 #include <llvm/ADT/Triple.h>
+#include <llvm/Analysis/TargetLibraryInfo.h>
 #include <llvm/CodeGen/LinkAllAsmWriterComponents.h>
 #include <llvm/CodeGen/LinkAllCodegenComponents.h>
 #include <llvm/IR/DataLayout.h>
@@ -31,12 +32,11 @@
 #include <llvm/IR/Module.h>
 #include <llvm/MC/MCTargetOptions.h>
 #include <llvm/Pass.h>
-#include <llvm/PassManager.h>
+#include <llvm/IR/LegacyPassManager.h>
 #include <llvm/Support/CodeGen.h>
 #include <llvm/Support/FormattedStream.h>
 #include <llvm/Support/TargetSelect.h>
 #include <llvm/Support/TargetRegistry.h>
-#include <llvm/Target/TargetLibraryInfo.h>
 #include <llvm/Target/TargetMachine.h>
 #include <llvm/Target/TargetOptions.h>
 
@@ -180,14 +180,16 @@ static void dump_assembly(llvm::Module& module) {
                                 llvm::CodeModel::Default,
                                 llvm::CodeGenOpt::Aggressive));
 
-  llvm::PassManager pm;
-  pm.add(new llvm::TargetLibraryInfo(triple));
-  pm.add(new llvm::DataLayoutPass(&module));
+  llvm::legacy::PassManager pm;
+  llvm::TargetLibraryInfoImpl tlii(triple);
+  pm.add(new llvm::TargetLibraryInfoWrapperPass(tlii));
 
-  llvm::raw_fd_ostream stdout(1, false, false);
-  llvm::formatted_raw_ostream out(stdout);
+  /* We need to new this because as of LLVM 3.7 (or 3.6?) the AsmPrinter thinks
+   * it owns it and deletes it.
+   */
+  llvm::raw_fd_ostream* stdout = new llvm::raw_fd_ostream(1, false, false);
   target_machine->addPassesToEmitFile(
-    pm, out, llvm::TargetMachine::CGFT_AssemblyFile, false,
+    pm, *stdout, llvm::TargetMachine::CGFT_AssemblyFile, false,
     nullptr, nullptr);
   pm.run(module);
 }

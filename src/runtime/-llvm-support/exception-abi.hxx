@@ -103,14 +103,16 @@ namespace ava {
               const ava::driver_iface& di) const noexcept;
 
     /**
+     * The "personality function" to apply to all functions that may need
+     * exception handling.
+     */
+    llvm::Constant* personality_fn;
+
+    /**
      * The physical type of an exception. Basically
      * struct { void* data; int cxx_type_id; }
      */
     llvm::StructType* ex_type;
-    /**
-     * The bitcast value of the personality function.
-     */
-    llvm::Value* ex_personality;
     /**
      * The bitcast value of the RTTI which identifies ava_exception. This is
      * both used as a "catch" clause in the landingpad instruction and is
