@@ -1,2 +1,2 @@
-reqmod runtime/ava-tests/helpers/decl-pass-test
-\      runtime/ava-tests/helpers/decl-pass-test-2
+reqmod helpers/decl-pass-test
+\      helpers/decl-pass-test-2

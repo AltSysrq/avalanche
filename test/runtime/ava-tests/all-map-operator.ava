@@ -1,4 +1,4 @@
-reqmod runtime/ava-tests/helpers/assert
+reqmod helpers/assert
 
 fun first a b = $a
 

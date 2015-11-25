@@ -1,6 +1,6 @@
 import real r
 
-reqmod runtime/ava-tests/helpers/real-common
+reqmod helpers/real-common
 
 asseq 1.0 r.min 1.0 3.14
 asseq 1.0 r.min 1.0 ()

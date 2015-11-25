@@ -1,6 +1,6 @@
 import real r
 
-reqmod runtime/ava-tests/helpers/real-common
+reqmod helpers/real-common
 
 asseq 10.0 r.fma 2.0 3.0 4.0
 asseq 5.0 r.logb 42.0

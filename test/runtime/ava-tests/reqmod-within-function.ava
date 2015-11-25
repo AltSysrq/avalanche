@@ -1,11 +1,11 @@
 fun doit () {
-  reqmod runtime/ava-tests/helpers/decl-pass-test
+  reqmod helpers/decl-pass-test
   pass-test 42
 }
 
 fun unrelated () {
   ; Also can require here
-  reqmod runtime/ava-tests/helpers/decl-pass-test
+  reqmod helpers/decl-pass-test
   pass-test 42
 }
 

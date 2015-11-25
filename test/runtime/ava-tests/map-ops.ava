@@ -1,4 +1,4 @@
-reqmod runtime/ava-tests/helpers/assert
+reqmod helpers/assert
 
 assert 0 == map.npairs []
 assert 1 == map.npairs [foo bar]
