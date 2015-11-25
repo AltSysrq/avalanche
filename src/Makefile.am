@@ -41,7 +41,7 @@ bootstrap/bin/make-interface bootstrap/bin/to-asm
 libavart_bootstrap_la_SOURCES = \
 runtime/alloc.c \
 runtime/array-list.c \
-runtime/avast.c \
+runtime/avast.cxx \
 runtime/code-gen.c \
 runtime/compenv.c \
 runtime/context.c \
@@ -191,8 +191,8 @@ runtime/-llvm-support/drivers/gen-avast-unchecked.c: \
 		<runtime/-llvm-support/drivers/avast-unchecked.bc
 
 runtime/-llvm-support/drivers/avast-unchecked.bc: \
-	runtime/avast.c runtime/avalanche/*.h
-	$(EMIT_LLVM) -DAVAST_CHECK_LEVEL=0 -DCOMPILING_DRIVER runtime/avast.c
+	runtime/avast.cxx runtime/avalanche/*.h
+	$(EMIT_LLVM) -DAVAST_CHECK_LEVEL=0 -DCOMPILING_DRIVER runtime/avast.cxx
 
 runtime/-llvm-support/drivers/gen-avast-checked-1.c: \
 	runtime/-llvm-support/drivers/avast-checked-1.bc dat2c.tcl
@@ -200,8 +200,8 @@ runtime/-llvm-support/drivers/gen-avast-checked-1.c: \
 		<runtime/-llvm-support/drivers/avast-checked-1.bc
 
 runtime/-llvm-support/drivers/avast-checked-1.bc: \
-	runtime/avast.c runtime/avalanche/*.h
-	$(EMIT_LLVM) -DAVAST_CHECK_LEVEL=1 -DCOMPILING_DRIVER runtime/avast.c
+	runtime/avast.cxx runtime/avalanche/*.h
+	$(EMIT_LLVMXX) -DAVAST_CHECK_LEVEL=1 -DCOMPILING_DRIVER runtime/avast.cxx
 
 runtime/-llvm-support/drivers/gen-avast-checked-2.c: \
 	runtime/-llvm-support/drivers/avast-checked-2.bc dat2c.tcl
@@ -209,8 +209,8 @@ runtime/-llvm-support/drivers/gen-avast-checked-2.c: \
 		<runtime/-llvm-support/drivers/avast-checked-2.bc
 
 runtime/-llvm-support/drivers/avast-checked-2.bc: \
-	runtime/avast.c runtime/avalanche/*.h
-	$(EMIT_LLVM) -DAVAST_CHECK_LEVEL=2 -DCOMPILING_DRIVER runtime/avast.c
+	runtime/avast.cxx runtime/avalanche/*.h
+	$(EMIT_LLVMXX) -DAVAST_CHECK_LEVEL=2 -DCOMPILING_DRIVER runtime/avast.cxx
 
 ASM_DRIVERS = \
 runtime/-llvm-support/drivers/isa-unchecked.bc \

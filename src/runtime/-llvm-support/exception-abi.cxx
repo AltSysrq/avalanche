@@ -107,8 +107,11 @@ const noexcept {
   irb.SetCurrentDebugLocation(debug_loc);
 
   llvm::LandingPadInst* cxxex_lp = irb.CreateLandingPad(ex_type, 1);
-  cxxex_lp->addClause(llvm::ConstantPointerNull::get(
-                        llvm::Type::getInt8PtrTy(target->getContext())));
+  /* TODO Differentiate between user catches (which should only catch
+   * ava_exception) and cleanups (which should be actual cleanup landingpads
+   * that always eventually resume).
+   */
+  cxxex_lp->addClause(ex_catch_type);
 
   for (size_t i = 0; i < num_cleanup_exes; ++i)
     drop(irb, di);

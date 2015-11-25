@@ -17,12 +17,18 @@
 #include <config.h>
 #endif
 
+/* This file needs to be an C++ since it is used as a native driver and calls
+ * functions which may throw. (Clang incorrectly tags everything with nounwind,
+ * including calls themselves, when compiling C.)
+ */
+
 #include <stdlib.h>
 #include <math.h>
 #include <limits.h>
 
 #define AVA__INTERNAL_INCLUDE 1
 #include "avalanche/defs.h"
+AVA_BEGIN_DECLS
 #include "avalanche/alloc.h"
 #include "avalanche/string.h"
 #include "avalanche/value.h"
@@ -202,7 +208,7 @@ defun(byte_string__index)(ava_value str, ava_value index) {
   return ava_value_of_string(ret);
 }
 
-defun(byte_string__set)(ava_value str, ava_value index, ava_value new) {
+defun(byte_string__set)(ava_value str, ava_value index, ava_value neu) {
   ava_string s, prefix, suffix;
   ava_integer max, begin, end;
   ava_interval_value ival;
@@ -223,7 +229,7 @@ defun(byte_string__set)(ava_value str, ava_value index, ava_value new) {
   prefix = ava_string_trunc(s, begin);
   suffix = end < max? ava_string_behead(s, end) : AVA_EMPTY_STRING;
   return ava_value_of_string(
-    ava_strcat(ava_strcat(prefix, ava_to_string(new)), suffix));
+    ava_strcat(ava_strcat(prefix, ava_to_string(neu)), suffix));
 }
 
 defun(byte_string__index_lenient)(ava_value str, ava_value index) {
@@ -526,11 +532,11 @@ COMPARATOR(geq, >=,     0LL,    -1LL)
 defun(real__fpclassify)(ava_value a) {
   AVA_STATIC_STRING(error_base, "Unexpected fpclassify() result: ");
   ava_real r;
-  int class;
+  int klasse;
   ava_string res;
 
   r = ava_real_of_value(a, NAN);
-  switch ((class = fpclassify(r))) {
+  switch ((klasse = fpclassify(r))) {
   case FP_INFINITE: res = AVA_ASCII9_STRING("infinite"); break;
   case FP_NAN:      res = AVA_ASCII9_STRING("nan"); break;
   case FP_NORMAL:   res = AVA_ASCII9_STRING("normal"); break;
@@ -540,7 +546,7 @@ defun(real__fpclassify)(ava_value a) {
     ava_throw_str(&ava_internal_exception,
                   ava_strcat(
                     error_base,
-                    ava_to_string(ava_value_of_integer(class))));
+                    ava_to_string(ava_value_of_integer(klasse))));
   }
 
   return ava_value_of_string(res);
@@ -997,7 +1003,7 @@ defun(list__interleave)(ava_value raw_lists) {
   size_t num_lists = ava_list_length(lists), i, list_length;
 
   array = num_lists < 16? on_stack :
-    ava_alloc(sizeof(ava_list_value) * num_lists);
+    (ava_list_value*)ava_alloc(sizeof(ava_list_value) * num_lists);
 
   for (i = 0; i < num_lists; ++i) {
     l = ava_list_value_of(ava_list_index(lists, i));
@@ -1095,3 +1101,5 @@ defun(pointer__add)(ava_value pointer, ava_value offset) {
 defun(pointer__sub)(ava_value pointer, ava_value offset) {
   return ava_pointer_adjust(pointer, -ava_integer_of_value(offset, 0));
 }
+
+AVA_END_DECLS

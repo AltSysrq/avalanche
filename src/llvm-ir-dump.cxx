@@ -69,7 +69,6 @@ static ava_value run(void* filename) {
   ava::optimise_module(*output, 3);
 
   {
-    std::string dont_care;
     llvm::raw_fd_ostream bcout(1, false, false);
     llvm::ModulePassManager passManager;
     passManager.addPass(llvm::BitcodeWriterPass(bcout));

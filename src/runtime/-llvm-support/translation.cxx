@@ -416,11 +416,16 @@ noexcept {
    * "main".
    */
   for (auto& fun: module) {
-    if (fun.getName() != "main" && !fun.empty()) {
+    if (fun.getName() != "main" && !fun.empty() && !fun.isIntrinsic()) {
       fun.addFnAttr(llvm::Attribute::AlwaysInline);
       fun.setUnnamedAddr(true);
       fun.setVisibility(llvm::GlobalValue::DefaultVisibility);
       fun.setLinkage(llvm::GlobalValue::PrivateLinkage);
+      /* Clang when compiling C sets "nounwind" on all the functions it emits,
+       * even though there's nothing stopping C functions from calling things
+       * that do unwind.
+       */
+      fun.removeFnAttr(llvm::Attribute::NoUnwind);
     }
 
     declared_symbols.insert(fun.getName());
