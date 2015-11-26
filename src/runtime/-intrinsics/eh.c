@@ -45,6 +45,8 @@ typedef struct {
 
   ava_ast_node* body, * finally;
   ava_bool expression_form;
+  /* So we can produce better diagnostics */
+  ava_bool is_defer;
   ava_bool postprocessed;
 
   ava_intr_reg_rvalue exception_value;
@@ -295,9 +297,16 @@ static void ava_intr_try_cg_evaluate(
   ava_codegen_context* context
 ) {
   if (!node->expression_form) {
-    ava_codegen_error(context, (ava_ast_node*)node,
-                      ava_error_statement_form_does_not_produce_a_value(
-                        &node->header.location));
+    if (node->is_defer) {
+      ava_codegen_error(context, (ava_ast_node*)node,
+                        ava_error_does_not_produce_a_value(
+                          &node->header.location,
+                          AVA_ASCII9_STRING("defer")));
+    } else {
+      ava_codegen_error(context, (ava_ast_node*)node,
+                        ava_error_statement_form_does_not_produce_a_value(
+                          &node->header.location));
+    }
     return;
   }
 
@@ -431,4 +440,37 @@ static void ava_intr_try_finally_barrier(
     ava_codegen_error(
       context, node, ava_error_jump_out_of_finally(location));
   }
+}
+
+ava_macro_subst_result ava_intr_defer_subst(
+  const struct ava_symbol_s* self,
+  ava_macsub_context* context,
+  const ava_parse_statement* statement,
+  const ava_parse_unit* provoker,
+  ava_bool* consumed_other_statements
+) {
+  const ava_parse_unit* finally_begin, * finally_end;
+  ava_intr_try* this;
+
+  finally_begin = TAILQ_NEXT(provoker, next);
+  assert(finally_begin);
+  finally_end = TAILQ_LAST(&statement->units, ava_parse_unit_list_s);
+
+  this = ava_intr_try_new(context, provoker, 0);
+  this->expression_form = ava_false;
+  this->is_defer = ava_true;
+  if (finally_begin == finally_end && ava_put_block == finally_begin->type) {
+    this->finally = ava_macsub_run_contents(context, finally_begin);
+  } else {
+    this->finally = ava_macsub_run_units(context, finally_begin, finally_end);
+  }
+  this->body = ava_macsub_run_from(
+    context, &this->header.location,
+    TAILQ_NEXT(statement, next), ava_isrp_void);
+
+  *consumed_other_statements = ava_true;
+  return (ava_macro_subst_result) {
+    .status = ava_mss_done,
+    .v = { .node = (ava_ast_node*)this },
+  };
 }

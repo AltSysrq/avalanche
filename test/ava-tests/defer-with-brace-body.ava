@@ -1,0 +1,9 @@
+reqmod helpers/test
+
+test.register defer-with-brace-body {
+  defer {
+    x = $x * 2
+    test.pass $x
+  }
+  x = 21
+}

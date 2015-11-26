@@ -43,7 +43,8 @@ runtime/test-compiled.t
 runtime_test_compiled_t_SOURCES = \
 	runtime/test-compiled.c ava-tests.S dummy.cxx
 
-ava-tests.S: compile-ava-tests.sh ava-tests/*.ava ava-tests/helpers/*.ava
+ava-tests.S: compile-ava-tests.sh ava-tests/*.ava ava-tests/helpers/*.ava \
+		$(AVA_TO_ASM) $(AVA_COMPILE_MODULE) $(AVA_LINK_PACKAGE)
 	$(AM_V_GEN)./compile-ava-tests.sh
 
 BENCHMARKS = benchmarks/list/avalanche.t benchmarks/map/avalanche.t \

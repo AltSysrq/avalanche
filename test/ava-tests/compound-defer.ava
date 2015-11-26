@@ -1,0 +1,8 @@
+reqmod helpers/test
+
+test.register compound-defer {
+  defer test.pass $x
+  defer x = $x + 2
+  defer x = $x * 2
+  x = 20
+}
