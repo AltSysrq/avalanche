@@ -1954,6 +1954,37 @@ set defs {
     }
   }
 
+  cerror C5118 illegal_alias {{ava_string name}} {
+    msg "Cannot make non-private alias of symbol %name%"
+    explanation {
+      The indicated symbol is a type which cannot be assigned an
+      externally-visible alias, even though the thing it aliases may be
+      globally visible.
+    }
+  }
+
+  cerror C5119 exported_alias_of_intrinsic {{ava_string name}} {
+    msg "Cannot make non-private alias of intrinsic macro %name%"
+    explanation {
+      The given alias attempts to make an intrinsic macro externally-visible
+      under a different name, which is not permitted.
+
+      The semantics of an externally-visible alias require any dependent
+      modules to be able to fully reconstruct the symbol from the module which
+      declares the alias, but this is impossible for macros intrinsic to the
+      runtime or native language extensions.
+
+      In most cases, the desired effect can be achieved via a macro. For
+      example, instead of
+
+        ALIAS fn = fun
+
+      write
+
+        MACRO fn control %fun >
+    }
+  }
+
   cerror X9000 xcode_dupe_label {{ava_value label}} {
     msg "P-Code label present in function more than once: %label%"
     explanation {

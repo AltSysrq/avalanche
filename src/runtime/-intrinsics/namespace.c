@@ -31,6 +31,7 @@
 #include "../avalanche/pcode.h"
 #include "../avalanche/code-gen.h"
 #include "../avalanche/errors.h"
+#include "user-macro.h"
 #include "namespace.h"
 
 typedef struct {
@@ -279,12 +280,48 @@ static ava_string ava_intr_alias_to_string(const ava_intr_alias* alias) {
 static void ava_intr_alias_cg_define(
   ava_intr_alias* alias, ava_codegen_context* context
 ) {
+  ava_pcm_builder* ignore_macro_builder;
+
   if (alias->defined) return;
 
   if (alias->old_symbol->definer) {
     ava_ast_node_cg_define(alias->old_symbol->definer, context);
     alias->new_symbol->pcode_index = alias->old_symbol->pcode_index;
     ava_codegen_export(context, alias->new_symbol);
+  } else {
+    switch (alias->new_symbol->type) {
+    case ava_st_control_macro:
+    case ava_st_operator_macro:
+    case ava_st_function_macro:
+      if (alias->new_symbol->visibility > ava_v_private) {
+        if (ava_intr_user_macro_eval ==
+            alias->new_symbol->v.macro.macro_subst){
+          AVA_PCGB(macro, alias->new_symbol->visibility > ava_v_internal,
+                   alias->new_symbol->full_name,
+                   alias->new_symbol->type,
+                   alias->new_symbol->v.macro.precedence,
+                   &ignore_macro_builder);
+          ((ava_pcg_macro*)TAILQ_LAST(
+            ava_pcg_builder_get(ava_pcx_builder_get_parent(
+                                  ava_codegen_get_builder(context))),
+            ava_pcode_global_list_s))->body =
+              (ava_pcode_macro_list*)alias->new_symbol->v.macro.userdata;
+        } else {
+          ava_codegen_error(
+            context, (const ava_ast_node*)alias,
+            ava_error_exported_alias_of_intrinsic(
+              &alias->header.location, alias->old_symbol->full_name));
+        }
+      } break;
+
+    default:
+      if (alias->new_symbol->visibility > ava_v_private) {
+        ava_codegen_error(
+          context, (const ava_ast_node*)alias,
+          ava_error_illegal_alias(&alias->header.location,
+                                  alias->old_symbol->full_name));
+      } break;
+    }
   }
 
   alias->defined = ava_true;
