@@ -3,5 +3,8 @@ reqmod helpers/assert
 namespace test {
   Extern pass pass_test c void [int pos]
   Extern register ava_register_test ava pos pos
-  Alias assert = ava-tests:assert
+  Macro assert control %if (%! (>)) {
+    %cstdio.puts ("Assertion ` [>] ` failed")
+    %pass "0"
+  }
 }

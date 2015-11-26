@@ -474,3 +474,121 @@ ava_macro_subst_result ava_intr_defer_subst(
     .v = { .node = (ava_ast_node*)this },
   };
 }
+
+typedef struct {
+  ava_ast_node header;
+
+  ava_pcode_exception_type type;
+  ava_ast_node* value;
+
+  ava_bool postprocessed;
+} ava_intr_throw;
+
+static ava_string ava_intr_throw_to_string(const ava_intr_throw* node);
+static void ava_intr_throw_postprocess(ava_intr_throw* node);
+static void ava_intr_throw_cg_discard(
+  ava_intr_throw* node, ava_codegen_context* context);
+
+static const ava_ast_node_vtable ava_intr_throw_vtable = {
+  .name = "throw statement",
+  .to_string = (ava_ast_node_to_string_f)ava_intr_throw_to_string,
+  .postprocess = (ava_ast_node_postprocess_f)ava_intr_throw_postprocess,
+  .cg_discard = (ava_ast_node_cg_discard_f)ava_intr_throw_cg_discard,
+};
+
+ava_macro_subst_result ava_intr_throw_subst(
+  const struct ava_symbol_s* self,
+  ava_macsub_context* context,
+  const ava_parse_statement* statement,
+  const ava_parse_unit* provoker,
+  ava_bool* consumed_other_statements
+) {
+  AVA_STATIC_STRING(undefined_behaviour_str, "undefined-behaviour");
+  const ava_string user_str = AVA_ASCII9_STRING("user");
+  const ava_string error_str = AVA_ASCII9_STRING("error");
+  const ava_string format_str = AVA_ASCII9_STRING("format");
+  AVA_STATIC_STRING(types, "user, error, format, or undefined-behaviour");
+
+  const ava_parse_unit* type_unit = NULL, * value_unit = NULL;
+  ava_string type_str = AVA_EMPTY_STRING;
+  ava_intr_throw* this;
+
+  AVA_MACRO_ARG_PARSE {
+    AVA_MACRO_ARG_FROM_RIGHT_BEGIN {
+      AVA_MACRO_ARG_CURRENT_UNIT(type_unit, "type");
+      AVA_MACRO_ARG_BAREWORD(type_str, "type");
+      AVA_MACRO_ARG_UNIT(value_unit, "value");
+    }
+  }
+
+  this = AVA_NEW(ava_intr_throw);
+  this->header.context = context;
+  this->header.location = provoker->location;
+  this->header.v = &ava_intr_throw_vtable;
+
+  if (ava_string_equal(user_str, type_str))
+    this->type = ava_pet_user_exception;
+  else if (ava_string_equal(error_str, type_str))
+    this->type = ava_pet_error_exception;
+  else if (ava_string_equal(format_str, type_str))
+    this->type = ava_pet_format_exception;
+  else if (ava_string_equal(undefined_behaviour_str, type_str))
+    this->type = ava_pet_undefined_behaviour_exception;
+  else
+    return ava_macsub_error_result(
+      context, ava_error_bad_macro_keyword(
+        &provoker->location, self->full_name, type_str, types));
+
+  this->value = ava_macsub_run_units(context, value_unit, value_unit);
+
+  return (ava_macro_subst_result) {
+    .status = ava_mss_done,
+    .v = { .node = (ava_ast_node*)this },
+  };
+}
+
+static ava_string ava_intr_throw_to_string(const ava_intr_throw* node) {
+  AVA_STATIC_STRING(undefined_behaviour_str, "undefined-behaviour");
+  const ava_string user_str = AVA_ASCII9_STRING("user");
+  const ava_string error_str = AVA_ASCII9_STRING("error");
+  const ava_string format_str = AVA_ASCII9_STRING("format");
+
+  ava_string accum, type_str;
+
+  accum = AVA_ASCII9_STRING("throw ");
+  switch (node->type) {
+  case ava_pet_user_exception:
+    type_str = user_str; break;
+  case ava_pet_error_exception:
+    type_str = error_str; break;
+  case ava_pet_format_exception:
+    type_str = format_str; break;
+  case ava_pet_undefined_behaviour_exception:
+    type_str = undefined_behaviour_str;
+  default: abort();
+  }
+
+  accum = ava_strcat(accum, type_str);
+  accum = ava_strcat(accum, AVA_ASCII9_STRING(" "));
+  accum = ava_strcat(accum, ava_ast_node_to_string(node->value));
+  return accum;
+}
+
+static void ava_intr_throw_postprocess(ava_intr_throw* node) {
+  if (node->postprocessed) return;
+
+  node->postprocessed = ava_true;
+  ava_ast_node_postprocess(node->value);
+}
+
+static void ava_intr_throw_cg_discard(
+  ava_intr_throw* node, ava_codegen_context* context
+) {
+  ava_pcode_register reg;
+
+  reg.type = ava_prt_data;
+  reg.index = ava_codegen_push_reg(context, ava_prt_data, 1);
+  ava_ast_node_cg_evaluate(node->value, &reg, context);
+  AVA_PCXB(throw, node->type, reg);
+  ava_codegen_pop_reg(context, ava_prt_data, 1);
+}

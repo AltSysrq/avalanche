@@ -1,0 +1,13 @@
+reqmod helpers/test
+
+fun doit () {
+  #throw# user 42
+}
+
+test.register direct-throw-user {
+  try {
+    doit ()
+  } catch x {
+    test.pass $x
+  }
+}

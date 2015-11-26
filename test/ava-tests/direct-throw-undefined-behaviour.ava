@@ -1,0 +1,13 @@
+reqmod helpers/test
+
+fun doit () {
+  #throw# undefined-behaviour 42
+}
+
+test.register direct-throw-undefined-behaviour {
+  try {
+    doit ()
+  } workaround-undefined x {
+    test.pass $x
+  }
+}

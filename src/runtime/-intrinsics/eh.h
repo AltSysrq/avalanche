@@ -109,8 +109,8 @@ ava_macro_subst_result ava_intr_try_subst(
  * Syntax:
  *   "#throw#" type value
  *
- * type is a bareword integer which is a throwable value of
- * ava_pcode_exception_type. value is evaluated as an expression.
+ * type is a bareword, one of "user", "error", "format", or
+ * "undefined-behaviour". value is evaluated as an expression.
  *
  * Semantics: An exception of the given type and value is thrown.
  *

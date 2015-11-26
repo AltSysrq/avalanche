@@ -224,6 +224,7 @@ AVAST_MODULES = \
 org.ava-lang.avast/builtins.avam \
 org.ava-lang.avast/byte-strings.avam \
 org.ava-lang.avast/cstdio.avam \
+org.ava-lang.avast/exceptions.avam \
 org.ava-lang.avast/operators.avam
 
 org.ava-lang.avast.avap: $(AVA_LINK_PACKAGE) $(AVAST_MODULES)

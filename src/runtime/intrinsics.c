@@ -95,6 +95,7 @@ void ava_register_intrinsics(ava_macsub_context* context) {
   DEFINE("reqmod",      CTL,    NULL,           reqmod);
   DEFINE("reqpkg",      CTL,    NULL,           reqpkg);
   DEFINE("ret",         CTL,    NULL,           ret);
+  DEFINE("#throw#",     CTL,    NULL,           throw);
   DEFINE("try",         CTL,    NULL,           try);
   DEFINE("#set#",       CTL,    NULL,           set);
   DEFINE("#var#",       CTL,    NULL,           var);
