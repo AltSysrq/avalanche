@@ -327,7 +327,7 @@ static void ava_intr_try_cg_common(
   ava_codegen_context* context
 ) {
   ava_codegen_jprot do_finally_jprot, yrt_jprot;
-  ava_uint join_label, start_catch_label, finally_label, next_label;
+  ava_uint join_label, start_catch_label = ~0u, finally_label = ~0u, next_label;
   ava_pcode_register ex_type;
   size_t catch;
 
@@ -537,7 +537,7 @@ ava_macro_subst_result ava_intr_throw_subst(
   else
     return ava_macsub_error_result(
       context, ava_error_bad_macro_keyword(
-        &provoker->location, self->full_name, type_str, types));
+        &type_unit->location, self->full_name, type_str, types));
 
   this->value = ava_macsub_run_units(context, value_unit, value_unit);
 
