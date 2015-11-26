@@ -34,7 +34,7 @@ RE2C_FLAGS = -g
 # building the bootstrap tools which compile avast itself.
 noinst_LTLIBRARIES = libavart-bootstrap.la
 lib_LTLIBRARIES = libavart.la libavart-native.la
-noinst_PROGRAMS = simple-interp llvm-ir-dump.t \
+noinst_PROGRAMS = llvm-ir-dump.t \
 bootstrap/bin/compile-module bootstrap/bin/link-package \
 bootstrap/bin/make-interface bootstrap/bin/to-asm \
 bootstrap/bin/compile-module-std
@@ -114,14 +114,11 @@ runtime/-llvm-support/drivers/gen-main.c \
 runtime/-llvm-support/driver-iface.cxx \
 runtime/-llvm-support/exception-abi.cxx \
 runtime/-llvm-support/ir-types.cxx \
-runtime/-llvm-support/jit-context.cxx \
 runtime/-llvm-support/optimisation.cxx \
 runtime/-llvm-support/translation.cxx
 
 libavart_la_LIBADD = $(BOOTSTRAP_LIBS)
 libavart_native_la_LIBADD = $(LLVM_LIBS)
-simple_interp_SOURCES = interp/main.c
-simple_interp_LDADD = libavart.la libavart-native.la
 
 llvm_ir_dump_t_SOURCES = llvm-ir-dump.cxx
 llvm_ir_dump_t_LDADD = libavart.la libavart-native.la $(LLVM_LIBS)

@@ -42,3 +42,4 @@ src/bootstrap/bin
 *.avapi
 org.*.S
 *.avapi.c
+test/*.S
