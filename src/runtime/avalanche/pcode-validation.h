@@ -73,6 +73,12 @@ typedef struct ava_xcode_exception_stack_s {
   signed landing_pad;
 
   /**
+   * Reflects the `cleanup` value of the `try` which owns the top-most
+   * `landing_pad` value.
+   */
+  ava_bool landing_pad_is_cleanup;
+
+  /**
    * The next element on the combined exception stack.
    */
   const struct ava_xcode_exception_stack_s* next;

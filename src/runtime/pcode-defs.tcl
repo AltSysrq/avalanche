@@ -335,6 +335,9 @@ struct exe x {
   # Identifies a label that the instruction uses as a landing pad (with
   # push-landing-pad).
   prop int landing-pad
+  # Indicates whether the landing-pad pushed by a push-landing-pad instruction
+  # is a cleanup or a catch.
+  prop bool landing-pad-is-cleanup
   # Identifies a field which must refer to a variable-like global entity.
   prop int global-var-ref
   # Identifies a field which must refer to a function-like global entity.
@@ -938,9 +941,17 @@ struct exe x {
   #
   # The exception stacks must be empty at any point where the function might
   # return.
+  #
+  # If cleanup is true, exceptions of any kind (including foreign exceptions)
+  # will be caught, and all exceptions will be treated as foreign (eg, ex-type
+  # will return ava_pet_other_exception and ex-value will be empty). Otherwise
+  # it is undefined whether foreign exceptions will be caught.
   elt try {
     attr terminal
     attr push-landing-pad
+    bool cleanup {
+      prop landing-pad-is-cleanup
+    }
     int target {
       prop landing-pad
     }

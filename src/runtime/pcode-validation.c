@@ -704,6 +704,10 @@ static ava_bool ava_xcode_assign_exception_stacks(
         block->push_landing_pad = *block->exception_stack;
         block->push_landing_pad.next = block->exception_stack;
         block->push_landing_pad.landing_pad = landing_pad;
+        if (!ava_pcode_exe_get_landing_pad_is_cleanup(
+              &block->push_landing_pad.landing_pad_is_cleanup,
+              instr, 0))
+          abort();
         next_exception_stack = &block->push_landing_pad;
 
         block->push_caught_exception = *block->exception_stack;

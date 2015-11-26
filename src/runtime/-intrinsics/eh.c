@@ -339,7 +339,7 @@ static void ava_intr_try_cg_common(
       (ava_codegen_jprot_exit_f)ava_intr_try_do_finally,
       node);
     finally_label = ava_codegen_genlabel(context);
-    AVA_PCXB(try, finally_label);
+    AVA_PCXB(try, ava_true, finally_label);
   }
 
   join_label = ava_codegen_genlabel(context);
@@ -349,7 +349,7 @@ static void ava_intr_try_cg_common(
       &yrt_jprot, context,
       ava_intr_try_put_yrt, NULL);
     start_catch_label = ava_codegen_genlabel(context);
-    AVA_PCXB(try, start_catch_label);
+    AVA_PCXB(try, ava_false, start_catch_label);
   }
 
   if (node->expression_form)

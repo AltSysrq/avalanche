@@ -395,7 +395,7 @@ deftest(try_nxlabel) {
   xcode_fail_with(
     "X9003",
     VERB(FUN_FOO ONE_ARG NO_VAR VERB(
-           VERB("try 99")
+           VERB("try true 99")
            VERB("yrt"))));
 }
 
@@ -403,7 +403,7 @@ deftest(unclosed_try_at_ret) {
   xcode_fail_with(
     "X9015",
     VERB(FUN_FOO ONE_ARG NO_VAR VERB(
-           VERB("try 1")
+           VERB("try true 1")
            VERB("ret v0")
            VERB("label 1"))));
 }
@@ -412,7 +412,7 @@ deftest(unclosed_try_at_fall_off) {
   xcode_fail_with(
     "X9015",
     VERB(FUN_FOO ONE_ARG NO_VAR VERB(
-           VERB("try 1")
+           VERB("try true 1")
            VERB("goto 2")
            VERB("label 1")
            VERB("yrt")
@@ -431,7 +431,7 @@ deftest(rethrow_without_exception) {
   xcode_fail_with(
     "X9016",
     VERB(FUN_FOO ONE_ARG NO_VAR VERB(
-           VERB("try 1")
+           VERB("try true 1")
            VERB("rethrow")
            VERB("yrt")
            VERB("ret v0")
@@ -443,7 +443,7 @@ deftest(exception_conflict_lp_vs_ce) {
   xcode_fail_with(
     "X9013",
     VERB(FUN_FOO ONE_ARG NO_VAR VERB(
-           VERB("try 1")
+           VERB("try true 1")
            VERB("label 1")
            VERB("ret v0"))));
 }
@@ -452,9 +452,9 @@ deftest(exception_conflict_sibling_tries_same_lp) {
   xcode_fail_with(
     "X9013",
     VERB(FUN_FOO ONE_ARG NO_VAR VERB(
-           VERB("try 1")
+           VERB("try true 1")
            VERB("yrt")
-           VERB("try 1")
+           VERB("try true 1")
            VERB("yrt")
            VERB("ret v0")
            VERB("label 1")
@@ -465,8 +465,8 @@ deftest(exception_conflict_nested_tries_same_lp) {
   xcode_fail_with(
     "X9013",
     VERB(FUN_FOO ONE_ARG NO_VAR VERB(
-           VERB("try 1")
-           VERB("try 1")
+           VERB("try true 1")
+           VERB("try true 1")
            VERB("yrt")
            VERB("yrt")
            VERB("ret v0")
@@ -481,10 +481,10 @@ deftest(exception_conflict_colliding_tries) {
            VERB("push i 1")
            VERB("ld-reg-d i0 v0")
            VERB("branch i0 0 false 1")
-           VERB("try 2")
+           VERB("try true 2")
            VERB("goto 3")
            VERB("label 1")
-           VERB("try 4")
+           VERB("try true 4")
            VERB("goto 3")
            VERB("label 3")
            VERB("yrt")
@@ -503,7 +503,7 @@ deftest(exception_conflict_infinite_try) {
     "X9013",
     VERB(FUN_FOO ONE_ARG NO_VAR VERB(
            VERB("label 0")
-           VERB("try 1")
+           VERB("try true 1")
            VERB("goto 0")
            VERB("label 1")
            VERB("yrt"))));
@@ -514,7 +514,7 @@ deftest(exception_conflict_infinite_catch) {
     "X9013",
     VERB(FUN_FOO ONE_ARG NO_VAR VERB(
            VERB("label 0")
-           VERB("try 1")
+           VERB("try true 1")
            VERB("yrt")
            VERB("ret v0")
            VERB("label 1")
@@ -527,14 +527,14 @@ deftest(accepts_try_join) {
            VERB("push i 1")
            VERB("ld-reg-d i0 v0")
            VERB("branch i0 0 false 1")
-           VERB("try 2")
+           VERB("try true 2")
            VERB("yrt")
            VERB("goto 3")
            VERB("label 2")
            VERB("yrt")
            VERB("goto 3")
            VERB("label 1")
-           VERB("try 4")
+           VERB("try true 4")
            VERB("yrt")
            VERB("goto 3")
            VERB("label 4")
@@ -548,7 +548,7 @@ deftest(try_not_phi_to_catch) {
   (void)make_xcode_fun(
     VERB(FUN_FOO ONE_ARG NO_VAR VERB(
            VERB("push d 1")
-           VERB("try 1")
+           VERB("try true 1")
            VERB("ld-imm-vd d0 foo")
            VERB("push i 1")
            VERB("ld-reg-d i0 d0")
@@ -567,7 +567,7 @@ deftest(landing_pad_jump_over_init_use_after_yrt) {
     "X9004",
     VERB(FUN_FOO ONE_ARG NO_VAR VERB(
            VERB("push i 1")
-           VERB("try 1")
+           VERB("try true 1")
            VERB("ld-reg-d i0 v0")
            VERB("yrt")
            VERB("ret v0")
@@ -582,7 +582,7 @@ deftest(reg_init_in_try_and_lp) {
   (void)make_xcode_fun(
     VERB(FUN_FOO ONE_ARG NO_VAR VERB(
            VERB("push i 1")
-           VERB("try 1")
+           VERB("try true 1")
            VERB("ld-reg-d i0 v0")
            VERB("yrt")
            VERB("goto 2")
@@ -598,7 +598,7 @@ deftest(reg_init_in_try_and_lp) {
 deftest(yrt_at_end_of_function) {
   (void)make_xcode_fun(
     VERB(FUN_FOO ONE_ARG NO_VAR VERB(
-           VERB("try 1")
+           VERB("try true 1")
            VERB("yrt")
            VERB("ret v0")
            VERB("label 1")

@@ -1982,6 +1982,22 @@ noexcept {
   return ret;
 }
 
+static bool landing_pad_has_cleanup(const ava_xcode_exception_stack* s) {
+  for (; s; s = s->next)
+    if (s->landing_pad_is_cleanup)
+      return true;
+
+  return false;
+}
+
+static bool landing_pad_has_catch(const ava_xcode_exception_stack* s) {
+  for (; s; s = s->next)
+    if (!s->landing_pad_is_cleanup)
+      return true;
+
+  return false;
+}
+
 llvm::Value* ava_xcode_fun_xlate_info::create_call_or_invoke(
   llvm::Value* callee,
   llvm::ArrayRef<llvm::Value*> args)
@@ -2012,6 +2028,9 @@ noexcept {
            */
           1 + bb->exception_stack->current_exception -
           dbb->exception_stack->current_exception,
+          bb->exception_stack->landing_pad_is_cleanup,
+          landing_pad_has_cleanup(dbb->exception_stack),
+          landing_pad_has_catch(dbb->exception_stack),
           context.di);
       } else {
         landing_pads[lp_key] = context.ea.create_cleanup(

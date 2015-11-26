@@ -67,6 +67,15 @@ namespace ava {
      * Note that the generated landing pad catches *all* exceptions (as with
      * `catch (...)` in C++).
      *
+     * The has_* arguments are needed to correctly handle nested
+     * catch/finally/etc. For example, if a catch is nested within a finally,
+     * the catch needs to be declared a cleanup so it gets all exceptions and
+     * can correctly unwind to the finally. Similarly, a finally landing pad
+     * whose body is wrapped in another external try (not a catch) must declare
+     * that it catches ava_exception so that the C++ runtime is aware that it
+     * is productive to unwind to the finally, just so that it can continue
+     * unwinding to the eventual catch.
+     *
      * @param debug_loc Location to use when emitting debug information for the
      * generated landing pad.
      * @param target The target to proceed to after the exception has been
@@ -74,6 +83,17 @@ namespace ava {
      * @param exception_dst Pointer into which the caught exception is copied.
      * @param num_cleanup_exes Number of caught-exceptions to clean up before
      * starting handling of the new exception.
+     * @param is_cleanup Whether this landing pad is a cleanup or a catch. A
+     * cleanup will catch all exceptions but will treat all exceptions as
+     * foreign (as per `cleanup` on the `try` P-Code instruction.)
+     * @param has_cleanup Whether the landing-pad should be tagged as a cleanup
+     * even if it isn't one. That is, whether there are any cleanup
+     * exception-handler entries on the exception stack of the basic block this
+     * landing-pad heads.
+     * @param has_catch Whether the landing-pad should declare that it catches
+     * ava_exception even if it doesn't. That is, whether there is at least one
+     * non-cleanup exception-handler entry on the exception stack of the basic
+     * block this landing-pad heads.
      * @param di The driver_iface used in the current context.
      * @return A basic block which is a landing pad and performs the above
      * setup before proceeding to target.
@@ -83,6 +103,9 @@ namespace ava {
       llvm::BasicBlock* target,
       llvm::Value* exception_dst,
       size_t num_cleanup_exes,
+      bool is_cleanup,
+      bool has_cleanup,
+      bool has_catch,
       const ava::driver_iface& di) const noexcept;
 
     /**

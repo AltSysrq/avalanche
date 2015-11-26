@@ -81,22 +81,33 @@ llvm::BasicBlock* ava::exception_abi::create_landing_pad(
   llvm::BasicBlock* target,
   llvm::Value* exception_dst,
   size_t num_cleanup_exes,
+  bool is_cleanup,
+  bool has_cleanup,
+  bool has_catch,
   const ava::driver_iface& di)
 const noexcept {
   llvm::LLVMContext& context(target->getContext());
   llvm::BasicBlock* bb_lp;
 
   /*
+    Roughly:
+
     %lp:
     %cxxex = landingpad $ex_type catch i8* null
     ; drop cleanup exceptions
+    %cxxex_data = extractvalue $ex_type %cxxex, 0
+    %exptr = call i8* __cxa_begin_catch (%cxxex_data)
+
+    ; if !is_cleanup
     %caught_type = extractvalue $ex_type %cxxex, 1
     %expected_type = tail call i32 $eh_typeid_for ($ex_catch_type)
     %ours_p = icmp eq i32 %caught_type, %expected_type
-    %cxxex_data = extractvalue $ex_type %cxxex, 0
-    %exptr = call i8* __cxa_begin_catch (%cxxex_data)
-    %cpyfun = select %ours_p, isa::copy_exception, isa::foreign_exception
+    %cpyfun = select i1 %ours_p, isa::copy_exception, isa::foreign_exception
     call void %cpyfun ($exception_dst, %exptr)
+    br $target
+
+    ; if is_cleanup
+    call void isa::foreign_exception ($exception_dst, %exptr)
     br $target
    */
 
@@ -107,22 +118,30 @@ const noexcept {
   irb.SetCurrentDebugLocation(debug_loc);
 
   llvm::LandingPadInst* cxxex_lp = irb.CreateLandingPad(ex_type, 1);
-  /* TODO Differentiate between user catches (which should only catch
-   * ava_exception) and cleanups (which should be actual cleanup landingpads
-   * that always eventually resume).
+  if (!is_cleanup || has_catch)
+    cxxex_lp->addClause(ex_catch_type);
+  /* Need to be a cleanup if requested as such or if we have implicit cleanup
+   * to do.
    */
-  cxxex_lp->addClause(ex_catch_type);
+  cxxex_lp->setCleanup(is_cleanup || has_cleanup || num_cleanup_exes > 0);
 
   for (size_t i = 0; i < num_cleanup_exes; ++i)
     drop(irb, di);
 
-  llvm::Value* caught_type = irb.CreateExtractValue(cxxex_lp, { 1 });
-  llvm::Value* expected_type = irb.CreateCall(eh_typeid_for, ex_catch_type);
-  llvm::Value* ours_p = irb.CreateICmpEQ(caught_type, expected_type);
+  llvm::Value* cpyfun;
+
   llvm::Value* cxxex_data = irb.CreateExtractValue(cxxex_lp, { 0 });
+  if (!is_cleanup) {
+    llvm::Value* caught_type = irb.CreateExtractValue(cxxex_lp, { 1 });
+    llvm::Value* expected_type = irb.CreateCall(eh_typeid_for, ex_catch_type);
+    llvm::Value* ours_p = irb.CreateICmpEQ(caught_type, expected_type);
+    cpyfun = irb.CreateSelect(
+      ours_p, di.copy_exception, di.foreign_exception);
+  } else {
+    cpyfun = di.foreign_exception;
+  }
+
   llvm::Value* exptr = irb.CreateCall(cxa_begin_catch, cxxex_data);
-  llvm::Value* cpyfun = irb.CreateSelect(
-    ours_p, di.copy_exception, di.foreign_exception);
   irb.CreateCall(cpyfun, { exception_dst, exptr });
   irb.CreateBr(target);
 
