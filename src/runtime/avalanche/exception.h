@@ -32,8 +32,9 @@
  * All Avalanche exceptions are instances of ava_exception. This structure
  * should not be initialised by clients, but rather by the ava_throw_*()
  * functions or ava_rethrow(). C++ clients may meaningfully catch
- * ava_exception. C clients can use ava_catch() to intercept exceptions, albeit
- * somewhat awkwardly and less efficiently.
+ * ava_exception, and may rethrow it with `throw;`. C clients can use
+ * ava_catch() to intercept exceptions, albeit somewhat awkwardly and less
+ * efficiently.
  *
  * An exception is identified by two fields: type and value. The type is a
  * pointer to a C structure describing the type of the exception, and indicates
@@ -112,6 +113,12 @@ void ava_rethrow(ava_exception handler) AVA_NORETURN;
  *
  * Evaluates (*f)(ud). If it throws, the exception is written into *ex and true
  * is returned. Otherwise, *ex is unchanged and false is returned.
+ *
+ * This does not catch foreign exceptions. There is currently no way for C code
+ * to achieve the equivalent of a finally block in the presence of foreign
+ * exceptions. The Avalanche runtime never throws foreign exceptions, nor is it
+ * possible for Avalanche code to do so unassisted, so in many contexts this
+ * construct should be sufficient anyway.
  */
 ava_bool ava_catch(ava_exception* ex, void (*f)(void*), void* ud);
 

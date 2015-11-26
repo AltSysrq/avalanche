@@ -945,7 +945,9 @@ struct exe x {
   # If cleanup is true, exceptions of any kind (including foreign exceptions)
   # will be caught, and all exceptions will be treated as foreign (eg, ex-type
   # will return ava_pet_other_exception and ex-value will be empty). Otherwise
-  # it is undefined whether foreign exceptions will be caught.
+  # it is undefined whether foreign exceptions will be caught. Code generators
+  # should ensure that foreign exceptions are expediently rethrown if
+  # encountered.
   elt try {
     attr terminal
     attr push-landing-pad
@@ -982,6 +984,10 @@ struct exe x {
   #
   # Semantics: The top of the combined exception stacks, whichever type it is,
   # is dropped. This instruction otherwise does nothing.
+  #
+  # The effect of reaching an yrt instruction after catching a foreign
+  # exception is undefined; the exception may be dropped or rethrown. Code
+  # generators should ensure that foreign exceptions always get rethrown.
   elt yrt {
     # Terminal so that every basic block has at most one exception handling
     # context.
