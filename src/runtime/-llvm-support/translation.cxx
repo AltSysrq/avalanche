@@ -1172,7 +1172,7 @@ noexcept {
   llvm::Value* tmplists[3];
   std::vector<llvm::Value*> caught_exceptions(xfun->num_caught_exceptions);
   char reg_name[16];
-  const char* reg_names[xfun->reg_type_off[ava_prt_function+1]];
+  const char* reg_names[xfun->reg_type_off[ava_prt_var+1]];
 
   dst->setPersonalityFn(context.ea.personality_fn);
 
@@ -1220,16 +1220,8 @@ noexcept {
   }
 #define DEFREG(prefix, i, reg_type, llvm_type, debug_type) do {         \
     std::snprintf(reg_name, sizeof(reg_name), "(" #prefix "%d)", (int)i); \
-    reg_names[i] = strdup(reg_name);                                    \
     regs[i] = irb.CreateAlloca(                                         \
-      context.types.llvm_type, nullptr, reg_names[i]);                  \
-    llvm::DILocalVariable* di_var = context.dib.createLocalVariable(    \
-      llvm::dwarf::DW_TAG_auto_variable, di_fun,                        \
-      reg_names[i], in_file, init_loc.getLine(), context.debug_type,    \
-      false);                                                           \
-    context.dib.insertDeclare(                                          \
-      regs[i], di_var, context.dib.createExpression(),                  \
-      init_loc.get(), init_block);                                      \
+      context.types.llvm_type, nullptr, reg_name);                      \
   } while (0)
 #define DEFREGS(prefix, reg_type, llvm_type, debug_type) do {    \
     for (size_t i = xfun->reg_type_off[reg_type];                \
@@ -1253,17 +1245,8 @@ noexcept {
       "(p*)");
     for (size_t i = xfun->reg_type_off[ava_prt_parm];
          i < xfun->reg_type_off[ava_prt_parm+1]; ++i) {
-      std::snprintf(reg_name, sizeof(reg_name), "(p%d)", (int)i);
-      reg_names[i] = strdup(reg_name);
       regs[i] = irb.CreateConstGEP1_32(
         parm_reg_base, i - xfun->reg_type_off[ava_prt_parm]);
-      llvm::DILocalVariable* di_var = context.dib.createLocalVariable(
-        llvm::dwarf::DW_TAG_auto_variable, di_fun,
-        reg_names[i], in_file, init_loc.getLine(),
-        context.di_ava_function_parameter, false);
-      context.dib.insertDeclare(
-        regs[i], di_var, context.dib.createExpression(),
-        init_loc.get(), init_block);
     }
   }
 
