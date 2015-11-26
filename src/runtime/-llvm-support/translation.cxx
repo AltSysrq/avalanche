@@ -989,7 +989,7 @@ static void build_init_function(
   llvm::Function* init_function,
   const ava_xcode_global_list* xcode)
 noexcept {
-  context.dib.createFunction(
+  llvm::DISubprogram* di_fun = context.dib.createFunction(
     context.di_compile_unit,
     ava::get_unmangled_init_fun_name(
       context.package_prefix, context.module_name),
@@ -1006,6 +1006,13 @@ noexcept {
   llvm::BasicBlock* block = llvm::BasicBlock::Create(
     context.llvm_context, "", init_function);
   llvm::IRBuilder<true> irb(test_block);
+
+  /* While we don't care that much about source locations in the initialisation
+   * function, we still need to set *some* locations, as LLVM produces invalid
+   * debug info (and sometimes crashes) when inlining is enabled and code
+   * without source locations calls a function with source locations.
+   */
+  irb.SetCurrentDebugLocation(llvm::DebugLoc::get(0, 0, di_fun));
 
   llvm::GlobalVariable* module_already_init =
     new llvm::GlobalVariable(
@@ -1095,7 +1102,12 @@ noexcept {
           llvm::ConstantInt::get(context.types.ava_bool, f->publish) });
     } break;
 
-    case ava_pcgt_src_pos:
+    case ava_pcgt_src_pos: {
+      const ava_pcg_src_pos* p = (const ava_pcg_src_pos*)xcode->elts[i].pc;
+      irb.SetCurrentDebugLocation(
+        llvm::DebugLoc::get(p->start_line, p->start_column, di_fun));
+    } break;
+
     case ava_pcgt_export:
     case ava_pcgt_macro:
     case ava_pcgt_load_pkg:

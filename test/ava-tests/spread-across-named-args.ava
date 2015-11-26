@@ -1,0 +1,9 @@
+extern register-test ava_register_test ava pos pos
+extern pass-test pass_test c void [int pos]
+
+fun pass -code -baz = pass-test $code
+
+register-test spread-across-named-args {
+  #set# foo [-baz [] -code 42]
+  pass \*$foo
+}

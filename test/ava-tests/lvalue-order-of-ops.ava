@@ -1,0 +1,11 @@
+extern register-test ava_register_test ava pos pos
+extern pass-test pass_test c void [int pos]
+
+register-test lvalue-order-of-ops {
+  r = "$"
+  x = []
+  x("") = []
+  x("")(4) = []
+  x(r = "")(r = $r `4")(r = $r `2") = plugh
+  pass-test $r
+}

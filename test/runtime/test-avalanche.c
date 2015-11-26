@@ -59,7 +59,7 @@
  */
 
 #define SUITE_NAME "avalanche"
-#define DIRECTORY "runtime/ava-tests"
+#define DIRECTORY "ava-tests"
 
 static void cache_avast_pcode() {
   ava_compenv* compenv;
@@ -103,6 +103,16 @@ ava_value iless(ava_value a, ava_value b) {
 ava_value lnot(ava_value a) {
   return ava_value_of_integer(
     !ava_integer_of_value(a, 0));
+}
+
+ava_value ava_register_test(ava_value name, ava_value function) {
+  ava_function_parameter parm;
+
+  parm.type = ava_fpt_static;
+  parm.value = ava_empty_list().v;
+  (void)ava_function_bind_invoke(
+    ava_function_of_value(function), 1, &parm);
+  return ava_empty_list().v;
 }
 
 static const char** inputs;

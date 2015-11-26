@@ -1,0 +1,8 @@
+extern register-test ava_register_test ava pos pos
+extern pass-test pass_test c void [int pos]
+#set# foo.bar.var 42
+import foo.bar
+
+register-test import-implicit-dest {
+  pass-test $bar.var
+}

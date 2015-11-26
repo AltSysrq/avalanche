@@ -36,7 +36,8 @@ noinst_LTLIBRARIES = libavart-bootstrap.la
 lib_LTLIBRARIES = libavart.la libavart-native.la
 noinst_PROGRAMS = simple-interp llvm-ir-dump.t \
 bootstrap/bin/compile-module bootstrap/bin/link-package \
-bootstrap/bin/make-interface bootstrap/bin/to-asm
+bootstrap/bin/make-interface bootstrap/bin/to-asm \
+bootstrap/bin/compile-module-std
 
 libavart_bootstrap_la_SOURCES = \
 runtime/alloc.c \
@@ -138,6 +139,9 @@ bootstrap_bin_make_interface_SOURCES = \
 bootstrap_bin_make_interface_LDADD = $(BOOTSTRAP_LIBS)
 bootstrap_bin_to_asm_SOURCES = bootstrap/to-asm.cxx
 bootstrap_bin_to_asm_LDADD = libavart-native.la $(BOOTSTRAP_LIBS) $(LLVM_LIBS)
+bootstrap_bin_compile_module_std_SOURCES = \
+	bootstrap/compile-module-std.c bootstrap/dummy.cxx
+bootstrap_bin_compile_module_std_LDADD = libavart.la
 
 runtime/gen-lex.c: runtime/lex.c
 	$(AM_V_GEN)$(RE2C) --input custom -c $(RE2C_FLAGS) \

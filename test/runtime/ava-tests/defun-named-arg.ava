@@ -1,4 +1,0 @@
-extern pass-test pass_test c void [int pos]
-fun pass -code = pass-test $code
-
-pass -code 42

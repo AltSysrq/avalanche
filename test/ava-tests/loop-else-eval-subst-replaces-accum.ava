@@ -1,0 +1,6 @@
+extern register-test ava_register_test ava pos pos
+extern pass-test pass_test c void [int pos]
+
+register-test loop-else-eval-subst-replaces-accum {
+  pass-test (each x in [1 2 3] collect $x else (42))
+}

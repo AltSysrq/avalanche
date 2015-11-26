@@ -1,0 +1,10 @@
+extern register-test ava_register_test ava pos pos
+extern pass-test pass_test c void [int pos]
+
+fun pass -code = pass-test $code
+
+register-test simple-invoke-sd {
+  #set# x -code
+  #set# y 42
+  pass $x $y
+}

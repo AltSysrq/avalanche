@@ -1,0 +1,9 @@
+extern register-test ava_register_test ava pos pos
+extern pass-test pass_test c void [int pos]
+extern lindex lindex ava pos pos
+
+register-test var-semilit {
+  #set# val 42
+  #set# list [0 1 $val 3]
+  pass-test (lindex $list 2)
+}

@@ -1,0 +1,7 @@
+extern register-test ava_register_test ava pos pos
+macro noop fun >
+extern pass-test pass_test c void [int pos]
+
+register-test trivial-user-macro {
+  noop pass-test 42
+}

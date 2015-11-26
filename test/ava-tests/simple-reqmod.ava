@@ -1,0 +1,6 @@
+extern register-test ava_register_test ava pos pos
+reqmod helpers/decl-pass-test
+
+register-test simple-reqmod {
+  pass-test 42
+}

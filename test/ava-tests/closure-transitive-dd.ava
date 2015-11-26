@@ -1,0 +1,13 @@
+extern register-test ava_register_test ava pos pos
+extern pass-test pass_test c void [int pos]
+fun foo code {
+  fun c () = b ()
+  fun a () = pass-test $code
+  fun b () = a ()
+  #set# cc $c
+  $cc ()
+}
+
+register-test closure-transitive-dd {
+  foo 42
+}

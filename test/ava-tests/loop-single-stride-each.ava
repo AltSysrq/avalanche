@@ -1,0 +1,13 @@
+extern register-test ava_register_test ava pos pos
+extern pass-test pass_test c void [int pos]
+extern iadd iadd ava pos pos
+
+register-test loop-single-stride-each {
+  #set# sum 0
+  #set# values [2 10 15 7 8]
+  each value in $values {
+    #set# sum (iadd $sum $value)
+  }
+
+  pass-test $sum
+}

@@ -1,0 +1,7 @@
+extern register-test ava_register_test ava pos pos
+macro def-test-fun control !extern >0 >1 "c" "void" [>2+]
+def-test-fun pass-test pass_test int pos
+
+register-test macro-expand-into-semilit {
+  pass-test 42
+}

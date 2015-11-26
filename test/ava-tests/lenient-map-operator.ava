@@ -1,0 +1,8 @@
+extern register-test ava_register_test ava pos pos
+extern pass-test pass_test c void [int pos]
+
+register-test lenient-map-operator {
+  x = []
+  x(a)?(b)? = 42
+  pass-test : $x(plugh)? + $x(a)(b)
+}

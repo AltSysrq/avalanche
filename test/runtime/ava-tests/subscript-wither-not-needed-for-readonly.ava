@@ -1,4 +1,0 @@
-extern pass-test pass_test c void [int pos]
-alias #name-subscript#get#foo# = #name-subscript#get##
-
-pass-test [foo 42](foo)foo

@@ -1,6 +1,0 @@
-fun doit x {
-  pass-test $x
-}
-
-doit \*[42]
-extern pass-test pass_test c void [int pos]

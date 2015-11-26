@@ -1,0 +1,7 @@
+extern register-test ava_register_test ava pos pos
+extern pass-test pass_test c void [int pos]
+fun pass [code 42] () = pass-test $code
+
+register-test defun-opt-arg-explicit {
+  pass ()
+}

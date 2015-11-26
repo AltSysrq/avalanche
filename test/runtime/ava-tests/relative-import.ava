@@ -1,5 +1,0 @@
-#set# foo.bar.baz 42
-import foo *
-import bar *
-extern pass-test pass_test c void [int pos]
-pass-test $baz

@@ -1,5 +1,0 @@
-macro in-block op 1 < { > }
-macro nsfun fun %namespace >
-nsfun foo in-block #set# a 42
-extern pass-test pass_test c void [int pos]
-pass-test $foo.a

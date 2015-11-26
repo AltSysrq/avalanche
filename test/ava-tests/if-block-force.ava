@@ -1,0 +1,8 @@
+extern register-test ava_register_test ava pos pos
+fun do-nothing () = _
+fun foo () = { if (1) { do-nothing () } }
+
+extern pass-test pass_test c void [int pos]
+register-test if-block-force {
+  pass-test \*((foo ()) ()) 42
+}

@@ -1,0 +1,8 @@
+extern pass-test pass_test c void [int pos]
+extern register-test ava_register_test ava pos pos
+; Need an arbitrary function to call with a lone string argument
+extern strlen strlen c size [string pos 123456789012345678901234567890123456789012]
+
+register-test variadic-spread-to-no-args {
+  pass-test (strlen \*[])
+}

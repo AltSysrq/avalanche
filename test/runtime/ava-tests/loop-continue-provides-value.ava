@@ -1,3 +1,0 @@
-extern pass-test pass_test c void [int pos]
-
-pass-test (each x in [42] collecting do { continue $x })

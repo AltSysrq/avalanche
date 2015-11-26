@@ -1,0 +1,12 @@
+extern register-test ava_register_test ava pos pos
+extern pass-test pass_test c void [int pos]
+
+register-test loop-parallel-for {
+  #set# test-value 99
+  for { #set# i 0 } (true) { #set# test-value $i } \
+  for { #set# first true } ($first) { #set# i 42 } {
+    #set# first false
+  }
+
+  pass-test $test-value
+}

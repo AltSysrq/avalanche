@@ -1,5 +1,0 @@
-extern pass-test pass_test c void [int named -code]
-
-#set# x -code
-#set# y 42
-pass-test $x $y

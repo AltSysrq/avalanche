@@ -1,0 +1,10 @@
+extern register-test ava_register_test ava pos pos
+extern pass-test pass_test c void [int pos]
+extern lindex lindex ava varargs pos
+
+register-test nested-spread {
+  #set# foo [0 1 2]
+  #set# bar [42 4 5]
+  #set# foobar [$foo $bar]
+  pass-test (lindex \*\*$foobar 3)
+}
