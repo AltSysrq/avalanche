@@ -189,6 +189,7 @@ static ava_bool read_source_mask_filename(
 
 static ava_value run_test_impl(void* arg) {
   AVA_STATIC_STRING(prefix, DIRECTORY "/");
+  AVA_STATIC_STRING(package, "ava-tests:");
 
   unsigned ix = *(int*)arg;
   ava_compile_error_list errors;
@@ -200,7 +201,7 @@ static ava_value run_test_impl(void* arg) {
 
   TAILQ_INIT(&errors);
 
-  compenv = ava_compenv_new(AVA_ASCII9_STRING("input:"));
+  compenv = ava_compenv_new(package);
   ava_compenv_use_simple_source_reader(compenv, prefix);
   compenv->read_source = read_source_mask_filename;
   ava_compenv_use_standard_macsub(compenv);

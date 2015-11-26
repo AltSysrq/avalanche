@@ -9,4 +9,5 @@ find ava-tests -name \*.ava -not -name \*_\* | \
 ../src/bootstrap/bin/to-asm \
     ../src/runtime/-llvm-support/drivers/isa-unchecked.bc \
     ../src/runtime/-llvm-support/drivers/avast-unchecked.bc \
-    ava-tests.avap >ava-tests.S
+    ava-tests.avap >.ava-tests.S
+mv .ava-tests.S ava-tests.S

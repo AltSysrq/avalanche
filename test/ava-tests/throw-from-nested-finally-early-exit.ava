@@ -1,0 +1,30 @@
+reqmod helpers/test
+
+fun doit a b c d {
+  r = 0
+  try {
+    try {
+      try {
+        try {
+          ret $r
+        } finally {
+          r = + $a
+        }
+      } finally {
+        r = + $b
+      }
+    } finally {
+      r = + $c
+    }
+  } finally {
+    r = + $d
+  }
+}
+
+test.register throw-from-nested-finally-early-exit {
+  try {
+    doit foo bar baz quux
+  } on-any-bad-format _ {
+    test.pass 42
+  }
+}

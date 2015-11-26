@@ -1,0 +1,21 @@
+reqmod helpers/test
+
+test.register nested-finally {
+  try {
+    try {
+      try {
+        try {
+          ret ()
+        } finally {
+          x = 20
+        }
+      } finally {
+        x = $x * 2
+      }
+    } finally {
+      x = $x + 2
+    }
+  } finally {
+    test.pass $x
+  }
+}

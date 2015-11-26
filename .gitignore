@@ -43,3 +43,4 @@ src/bootstrap/bin
 org.*.S
 *.avapi.c
 test/*.S
+vgcore.*

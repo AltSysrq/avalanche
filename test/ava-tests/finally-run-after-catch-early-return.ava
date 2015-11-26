@@ -1,0 +1,13 @@
+reqmod helpers/test
+
+test.register finally-run-after-catch-early-return {
+  x = 0
+  try {
+    x = + blah
+  } on-any-bad-format _ {
+    x = 42
+    ret $x
+  } finally {
+    test.pass $x
+  }
+}

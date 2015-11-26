@@ -1,0 +1,12 @@
+extern register-test ava_register_test ava pos pos
+extern pass-test pass_test c void [int pos]
+
+register-test catch-filter-second-match {
+  try {
+    x = + blah
+  } catch something {
+    pass-test 56
+  } on-any-bad-format x {
+    pass-test 42
+  }
+}
