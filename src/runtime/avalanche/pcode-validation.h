@@ -62,8 +62,8 @@ typedef struct ava_xcode_exception_stack_s {
   /**
    * If the current location has a caught-exception, the index of that
    * exception. -1 indicates there is no caught-exception. An operation which
-   * pushes onto the caught-exception stack uses the index one greater than
-   * this value.
+   * pushes onto the caught-exception stack this value from the destination
+   * landing-pad block.
    */
   signed current_exception;
   /**

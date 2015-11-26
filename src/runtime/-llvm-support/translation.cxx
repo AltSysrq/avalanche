@@ -2006,7 +2006,7 @@ noexcept {
         landing_pads[lp_key] = context.ea.create_landing_pad(
           irb.getCurrentDebugLocation(),
           basic_blocks[lp_ix],
-          caught_exceptions[bb->exception_stack->current_exception+1],
+          caught_exceptions[dbb->exception_stack->current_exception],
           /* Need to clean up all exceptions between that of the new target and
            * the location, inclusive.
            */
