@@ -93,7 +93,87 @@ void ava_throw(const ava_exception_type* type, ava_value value) {
   ex.type = type;
   ex.throw_info = throw_info;
   memcpy(&ex.value, &value, sizeof(value));
-  throw ex;
+
+  /*
+    This strange-looking construction is needed to work around what appears to
+    be a bug in Clang 3.5's AMD64 code generation (which is used to build
+    libgcc_s on FreeBSD).
+
+    In libcxxrt's exception.cc, we have at the end of throw_exception
+
+      _Unwind_Reason_Code err = _Unwind_RaiseException(...);
+      report_failure(err, ex);
+
+    and report_failure does
+
+      switch (err) {
+        case _URC_END_OF_STACK:
+          __cxa_begin_throw(...);
+          std::terminate();
+
+        (* other cases we don't care about *)
+        default: std::terminate();
+      }
+
+    Note that _URC_END_OF_STACK is 5.
+
+    An abridged version of libgcc_s's _Unwind_RaiseException() from unwind.inc:
+
+      (* lots of stuff *)
+
+      while (1) {
+        (* snip *)
+        if (code == _URC_END_OF_STACK)
+          return _URC_END_OF_STACK;
+        (* snip *)
+      }
+
+      (* snip *)
+
+      uw_install_context(...);
+      (* unreachable *)
+
+    However, the code Clang generates for this is
+
+      mov ecx, eax ; eax = err
+      mov eax, 0x5 ; eventual return value
+      cmp ecx, 0x5 ; case _URC_END_OF_STACK
+      je do_return
+
+      do_return:
+      add rsp, 0x368
+      pop rax ; there goes the return value
+      ; pop more registers
+      ret
+
+    This means that _Unwind_RaiseException always returns a garbage value when
+    it does return, preserving whatever it happened to be when the function was
+    called (it appears to balance a `push rax`). This in turn is generally a
+    pointer with eax overwritten with a smaller integer.
+
+    The end result is that report_failure() always takes the default case,
+    which calls std::terminate() without making the uncaught exception the
+    current exception.
+
+    This hack works because `throw;` maps to __cxa_rethrow(), which rethrows
+    the exception without dropping its status as the "current exception". The
+    latter normally happens via __cxa_end_throw() which occurs at the end of
+    the catch block in a cleanup handler. However, if there are *only* cleanup
+    handlers available (ie, the exception is uncaught), libcxxrt (and G++'s C++
+    runtime, for what it's worth) calls std::terminate() without running the
+    cleanup handlers, primarily so that the stack is still in-tact for debugger
+    inspection.
+
+    This *also* means, though, that std::terminate() will be called between the
+    __cxa_begin_throw() and __cxa_end_throw() of this catch block, and thus we
+    can access the exception in our terminate handler.
+
+   */
+  try {
+    throw ex;
+  } catch (const ava_exception& e) {
+    throw;
+  }
 }
 
 void ava_throw_str(const ava_exception_type* type, ava_string str) {
