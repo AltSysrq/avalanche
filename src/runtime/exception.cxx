@@ -17,23 +17,67 @@
 #include <config.h>
 #endif
 
+/* So we get access to the G++/Clang extensions to the Itanium unwinding ABI
+ * (necessary just so we can inspect the stack ourselves).
+ */
+#define _GNU_SOURCE
+
 #include <stdio.h>
 #include <string.h>
+#include <unwind.h>
 
 #define AVA__INTERNAL_INCLUDE 1
 #include "avalanche/defs.h"
 AVA_BEGIN_DECLS
+#include "avalanche/alloc.h"
 #include "avalanche/string.h"
 #include "avalanche/value.h"
 #include "avalanche/list.h"
 #include "avalanche/exception.h"
 
+/**
+ * Information about a single frame in an exception backtrace.
+ */
+typedef struct {
+  /**
+   * The IP/PC of the function at the point where the exception was thrown.
+   */
+  const void* ip;
+  /**
+   * The pointer to the Language-Specific Data Area for this function, or NULL
+   * if unavailable.
+   */
+  const void* lsda;
+} ava_exception_frame;
+
+struct ava_exception_throw_info_s {
+  /**
+   * The number of entries in the bt array and its capacity, respectively.
+   */
+  size_t bt_len, bt_cap;
+  /**
+   * An array of stack elements comprising the stack trace, where the zeroth
+   * element is the most recent frame in the call chain. The first bt_len
+   * elements are initialised; there is space for bt_cap elements.
+   */
+  ava_exception_frame* bt;
+};
+
+static void ava_exception_make_backtrace(ava_exception_throw_info* info);
+static _Unwind_Reason_Code ava_exception_trace(
+  struct _Unwind_Context* context, void* vinfo);
+
 /* Stay inside `extern "C"` */
 
 void ava_throw(const ava_exception_type* type, ava_value value) {
   ava_exception ex;
+  ava_exception_throw_info* throw_info;
+
+  throw_info = AVA_NEW(ava_exception_throw_info);
+  ava_exception_make_backtrace(throw_info);
 
   ex.type = type;
+  ex.throw_info = throw_info;
   memcpy(&ex.value, &value, sizeof(value));
   throw ex;
 }
@@ -78,6 +122,41 @@ ava_value ava_exception_get_value(const ava_exception* ex) {
 
   memcpy(&dst, ex->value, sizeof(ava_value));
   return dst;
+}
+
+static void ava_exception_make_backtrace(ava_exception_throw_info* info) {
+  info->bt_len = 0;
+  info->bt_cap = 8;
+  info->bt = (ava_exception_frame*)
+    ava_alloc_atomic(sizeof(ava_exception_frame) * info->bt_cap);
+
+  /* We don't care about the return value; if anything breaks, it just means
+   * the trace is truncated.
+   */
+  (void)_Unwind_Backtrace(ava_exception_trace, info);
+}
+
+static _Unwind_Reason_Code ava_exception_trace(
+  struct _Unwind_Context* context, void* vinfo
+) {
+  ava_exception_throw_info* info = (ava_exception_throw_info*)vinfo;
+  ava_exception_frame* neu;
+
+  if (info->bt_len == info->bt_cap) {
+    neu = (ava_exception_frame*)
+      ava_alloc_atomic(sizeof(ava_exception_frame) * 2 * info->bt_cap);
+    memcpy(neu, info->bt, sizeof(ava_exception_frame) * info->bt_cap);
+    info->bt_cap *= 2;
+    info->bt = neu;
+  }
+
+  info->bt[info->bt_len].ip =
+    (const void*)_Unwind_GetIP(context);
+  info->bt[info->bt_len].lsda =
+    (const void*)_Unwind_GetLanguageSpecificData(context);
+  ++info->bt_len;
+
+  return _URC_NO_REASON;
 }
 
 const ava_exception_type ava_user_exception = {

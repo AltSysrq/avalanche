@@ -63,6 +63,12 @@ typedef struct {
 } ava_exception_type;
 
 /**
+ * Opaque type storing extra information about an exception at the point it was
+ * thrown.
+ */
+typedef struct ava_exception_throw_info_s ava_exception_throw_info;
+
+/**
  * An exception.
  *
  * This struct is not normally initialised by clients; use ava_throw() and
@@ -77,11 +83,16 @@ typedef struct {
   /**
    * The Avalanche-visibile high-level exception value.
    *
-   * This is not an actual ava_value because the C++ exception ABI might no
+   * This is not an actual ava_value because the C++ exception ABI might not
    * produce a suitably-aligned allocation, which would lead to a bus error
    * when attempting to write into it.
    */
   void* value[sizeof(ava_value) / sizeof(void*)];
+
+  /**
+   * Information about the exception at the point where it was thrown.
+   */
+  const ava_exception_throw_info* throw_info;
 } ava_exception;
 
 /**

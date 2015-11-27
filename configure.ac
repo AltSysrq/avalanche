@@ -47,6 +47,7 @@ AC_CHECK_HEADERS([sys/queue.h bsd/sys/queue.h])
 AC_CHECK_HEADERS([sys/tree.h bsd/sys/tree.h])
 AC_CHECK_HEADERS([sys/types.h sys/resource.h])
 AC_CHECK_HEADERS([nmmintrin.h])
+AC_CHECK_HEADERS([unwind.h])
 
 # Checks for typedefs, structures, and compiler characteristics.
 AC_HEADER_STDBOOL
