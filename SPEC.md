@@ -370,13 +370,11 @@ applied:
 
 For example, the bareword `pre$a$mid$x$post` is equivalent to the input string
 ```
-  ("pre` (#var# "a") `mid` (#var# "x") `post")
+  ("pre` (#var# a) `mid` (#var# x) `post")
 ```
 
-The bareword `$1` is equivalent to the input string
-```
-  ((#var# "*")[0])
-```
+As a special exception to the above, the bareword `$` is expanded to the
+expression `((#var# $))`, called the "context variable".
 
 Next, the parser performs string regrouping on the direct contents of each
 Semiliteral. Units are first grouped into sequences of contiguous units where
