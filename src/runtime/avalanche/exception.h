@@ -22,6 +22,7 @@
 
 #include "defs.h"
 #include "value.h"
+#include "name-mangle.h"
 
 /**
  * @file
@@ -43,6 +44,8 @@
  * type, but it is generally an exception message, or a structure identifying
  * higher-level information about the exception.
  */
+
+struct ava_demangled_name_s;
 
 /**
  * Used by identity to describe an exception type. These usually are statically
@@ -96,6 +99,36 @@ typedef struct {
 } ava_exception;
 
 /**
+ * Contains the location information for a frame of an exception trace.
+ */
+typedef struct {
+  /**
+   * The IP/PC at the callsite, or 0 if unavailable.
+   */
+  ava_intptr ip;
+  /**
+   * The filename. Always set to a present string.
+   */
+  ava_string filename;
+  /**
+   * Whether the filename is actually known.
+   */
+  ava_bool filename_known;
+  /**
+   * The function in which the IP is found. Always set to a valid value.
+   */
+  ava_demangled_name function;
+  /**
+   * Whether the function name is actually known.
+   */
+  ava_bool function_known;
+  /**
+   * The source line number, or -1 if unavailable.
+   */
+  signed lineno;
+} ava_exception_location;
+
+/**
  * Throws an exception of the given type and with the given value up the stack,
  * to the first available handler.
  *
@@ -139,10 +172,56 @@ ava_bool ava_catch(ava_exception* ex, void (*f)(void*), void* ud);
 ava_value ava_exception_get_value(const ava_exception* ex);
 
 /**
+ * Returns the number of stack frames captured in the given exception.
+ *
+ * This can always at least 1.
+ *
+ * The stack trace on an exception is a snapshot of the full return chain
+ * between the point where the exception was thrown and the initial function on
+ * the thread's stack. Stack trace elements are ordered with callee before
+ * caller.
+ */
+size_t ava_exception_get_trace_length(const ava_exception* ex);
+/**
+ * Returns the IP/PC of the stack frame at the given index captured by the
+ * given exception.
+ *
+ * This may return 0 if the IP is unavailable for some reason.
+ *
+ * frame must be less than ava_exception_get_trace_length().
+ */
+ava_intptr ava_exception_get_trace_ip(const ava_exception* ex, size_t frame);
+/**
+ * Obtains the location information for a frame in the given exception's trace.
+ *
+ * @param location The location structure. Always fully initialised by this
+ * call, even on error.
+ * @param ex The exception whose frame information is to be read.
+ * @param frame The index of the frame to read. Must be less than
+ * ava_exception_get_trace_length().
+ * @return The absent string if the call succeed; a present string containing
+ * an error message on error.
+ */
+ava_string ava_exception_get_trace_location(
+  ava_exception_location* location,
+  const ava_exception* ex, size_t frame);
+
+/**
+ * Converts the full trace of the given exception to a string of unspecified
+ * format, intended for human consumption. The result is always terminated with
+ * a line feed.
+ */
+ava_string ava_exception_trace_to_string(const ava_exception* ex);
+
+/**
  * Initialises global state needed by the exception system.
  *
  * This must be called exactly once at process startup. Most programs will want
  * to use ava_init() instead of calling this directly.
+ *
+ * Note that this installs a std::terminate handler which prints a diagnostic
+ * about an uncaught ava_exception to stderr before delegating to the prior
+ * terminate handler.
  */
 void ava_exception_init(void);
 

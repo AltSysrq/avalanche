@@ -72,7 +72,7 @@ typedef enum {
 /**
  * A name split into its mangling scheme and its unmangled form.
  */
-typedef struct {
+typedef struct ava_demangled_name_s {
   /**
    * The way in which the name is to be / was mangled.
    */

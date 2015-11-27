@@ -180,6 +180,10 @@ AVA_BEGIN_DECLS
  * Initialises the avalanche runtime.
  *
  * This should be called exactly once at process startup.
+ *
+ * @see ava_heap_init()
+ * @see ava_value_hash_init()
+ * @see ava_exception_init()
  */
 void ava_init(void);
 AVA_END_DECLS

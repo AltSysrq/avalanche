@@ -17,8 +17,12 @@
 #include <config.h>
 #endif
 
+#include <exception>
+
 #include <stdio.h>
 #include <string.h>
+#include <assert.h>
+
 #include "../../contrib/libbacktrace/backtrace.h"
 #include "../../contrib/libbacktrace/backtrace-supported.h"
 
@@ -54,12 +58,25 @@ struct ava_exception_throw_info_s {
   ava_exception_frame* bt;
 };
 
+typedef struct {
+  ava_exception_location* dst;
+  ava_string error;
+} ava_exception_get_trace_context;
+
 /* Stay inside `extern "C"` */
 
 static void ava_exception_make_backtrace(ava_exception_throw_info* info);
 static int ava_exception_trace(void* vinfo, uintptr_t ip);
 static void ava_exception_init_error_callback(
   void* ignored, const char* msg, int errnum) AVA_UNUSED;
+static int ava_exception_get_trace_success(
+  void* vcxt, uintptr_t ip,
+  const char* filename, int lineno, const char* function) AVA_UNUSED;
+static void ava_exception_get_trace_error(
+  void* vcxt, const char* msg, int code) AVA_UNUSED;
+
+static void ava_exception_terminate_handler(void);
+static std::terminate_handler ava_next_terminate_handler;
 
 #if BACKTRACE_SUPPORTED
 static struct backtrace_state* ava_exception_backtrace_context;
@@ -135,6 +152,9 @@ void ava_exception_init(void) {
 #endif
   ava_exception_why_backtrace_unavailable = msg;
 #endif
+
+  ava_next_terminate_handler =
+    std::set_terminate(ava_exception_terminate_handler);
 }
 
 static void ava_exception_init_error_callback(
@@ -180,6 +200,155 @@ static int ava_exception_trace(void* vinfo, uintptr_t ip) {
   ++info->bt_len;
 
   return 0;
+}
+
+size_t ava_exception_get_trace_length(const ava_exception* ex) {
+  return ex->throw_info->bt_len;
+}
+
+ava_intptr ava_exception_get_trace_ip(const ava_exception* ex, size_t frame) {
+  assert(frame < ex->throw_info->bt_len);
+  return ex->throw_info->bt[frame].ip;
+}
+
+ava_string ava_exception_get_trace_location(
+  ava_exception_location* dst, const ava_exception* ex, size_t frame
+) {
+  AVA_STATIC_STRING(unknown_source, "<unknown-source>");
+  AVA_STATIC_STRING(unknown_function, "<unknown-function>");
+  ava_exception_get_trace_context cxt = {
+    .dst = dst,
+    .error = ava_exception_why_backtrace_unavailable,
+  };
+
+  assert(frame < ex->throw_info->bt_len);
+
+  dst->ip = 0;
+  dst->filename = unknown_source;
+  dst->filename_known = ava_false;
+  dst->function.scheme = ava_nms_none;
+  dst->function.name = unknown_function;
+  dst->function_known = ava_false;
+  dst->lineno = -1;
+
+#if BACKTRACE_SUPPORTED
+  if (ava_exception_backtrace_context) {
+    backtrace_pcinfo(ava_exception_backtrace_context,
+                     ex->throw_info->bt[frame].ip,
+                     ava_exception_get_trace_success,
+                     ava_exception_get_trace_error,
+                     &cxt);
+  }
+#endif
+
+  return cxt.error;
+}
+
+static int ava_exception_get_trace_success(
+  void* vcxt, uintptr_t ip,
+  const char* filename, int lineno, const char* function
+) {
+  ava_exception_get_trace_context* cxt = (ava_exception_get_trace_context*)vcxt;
+
+  cxt->dst->ip = ip;
+  if (filename) {
+    cxt->dst->filename = ava_string_of_cstring(filename);
+    cxt->dst->filename_known = ava_true;
+  }
+
+  if (function) {
+    cxt->dst->function = ava_name_demangle(ava_string_of_cstring(function));
+    cxt->dst->function_known = ava_true;
+  }
+
+  cxt->dst->lineno = lineno? lineno : -1;
+
+  return 0;
+}
+
+static void ava_exception_get_trace_error(
+  void* vcxt, const char* msg, int code
+) {
+  ava_exception_get_trace_context* cxt = (ava_exception_get_trace_context*)vcxt;
+
+  cxt->error = ava_string_of_cstring(msg);
+}
+
+ava_string ava_exception_trace_to_string(const ava_exception* ex) {
+  AVA_STATIC_STRING(at_line_prefix, "\tat line\t");
+  AVA_STATIC_STRING(in_fun_prefix, "\tin fun\t\t");
+  const ava_string lf = AVA_ASCII9_STRING("\n");
+
+  ava_string accum, error;
+  size_t frame, n;
+  ava_exception_location loc;
+  char tmp[32];
+
+  accum = AVA_EMPTY_STRING;
+  n = ava_exception_get_trace_length(ex);
+  for (frame = 0; frame < n; ++frame) {
+    error = ava_exception_get_trace_location(&loc, ex, frame);
+
+    /*
+      The most important part of the trace is the line numbers, so place them
+      first, make sure they line up, and that nothing interferes with that
+      column.
+
+      When line numbers are available, format as (">" = tab)
+        0.......1.......2.......3........4
+        at line> LINENO FILENAME...
+        in fun> >       FUNCTION...
+
+      When not available:
+        0.......1.......2.......3........4
+        in fun> >       FUNCTION @ IP (ERROR)
+     */
+    if (-1 != loc.lineno) {
+      accum = ava_strcat(accum, at_line_prefix);
+      snprintf(tmp, sizeof(tmp), "%7d ", loc.lineno);
+      accum = ava_strcat(accum, ava_string_of_cstring(tmp));
+      accum = ava_strcat(accum, loc.filename);
+      accum = ava_strcat(accum, lf);
+    }
+    accum = ava_strcat(accum, in_fun_prefix);
+    accum = ava_strcat(accum, loc.function.name);
+    if (-1 == loc.lineno) {
+      accum = ava_strcat(accum, AVA_ASCII9_STRING(" @ "));
+      snprintf(tmp, sizeof(tmp), "%p", (void*)loc.ip);
+      accum = ava_strcat(accum, ava_string_of_cstring(tmp));
+    }
+
+    if (ava_string_is_present(error)) {
+      accum = ava_strcat(accum, AVA_ASCII9_STRING(" ("));
+      accum = ava_strcat(accum, error);
+      accum = ava_strcat(accum, AVA_ASCII9_STRING(")"));
+    }
+
+    accum = ava_strcat(accum, lf);
+  }
+
+  return accum;
+}
+
+static void ava_exception_terminate_handler(void) {
+  std::exception_ptr ex = std::current_exception();
+
+  if (ex) {
+    try {
+      std::rethrow_exception(ex);
+    } catch (ava_exception ae) {
+      fprintf(stderr, "Uncaught %s: %s\n%s", ae.type->uncaught_description,
+              ava_string_to_cstring(
+                ava_to_string(ava_exception_get_value(&ae))),
+              ava_string_to_cstring(
+                ava_exception_trace_to_string(&ae)));
+      fflush(stderr);
+    } catch (...) {
+      /* Not ours, fall through */
+    }
+  }
+
+  (*ava_next_terminate_handler)();
 }
 
 const ava_exception_type ava_user_exception = {
