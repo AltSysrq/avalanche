@@ -576,6 +576,21 @@ ava_macsub_context* ava_macsub_context_push_minor(
   const ava_macsub_context* parent, ava_string interfix);
 
 /**
+ * Returns the symbol (always type ava_st_local_variable) representing the
+ * context variable "$" in the current context, or NULL if there is no current
+ * context variable.
+ */
+struct ava_symbol_s* ava_macsub_get_context_var(
+  const ava_macsub_context* context);
+
+/**
+ * Returns a child macro substitution context identical to the parent except
+ * that it has the given symbol as the context variable.
+ */
+ava_macsub_context* ava_macsub_context_with_context_var(
+  const ava_macsub_context* parent, struct ava_symbol_s* symbol);
+
+/**
  * Adds the given symbol to the context's symbol table.
  *
  * If an error occurs, either due to an issue with the symbol table or an

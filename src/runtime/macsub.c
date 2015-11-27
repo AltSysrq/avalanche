@@ -54,6 +54,7 @@ struct ava_macsub_context_s {
   ava_bool* panic;
   ava_string symbol_prefix;
   unsigned level;
+  ava_symbol* context_var;
 
   ava_macsub_gensym_status* gensym;
 };
@@ -205,15 +206,11 @@ ava_macsub_context* ava_macsub_context_push_major(
 ) {
   ava_macsub_context* this;
 
-  this = AVA_NEW(ava_macsub_context);
+  this = AVA_CLONE(*parent);
   this->symbol_table = ava_symtab_new(parent->symbol_table);
-  this->compenv = parent->compenv;
   this->varscope = ava_varscope_new();
-  this->errors = parent->errors;
   this->symbol_prefix = ava_strcat(parent->symbol_prefix, interfix);
-  this->panic = parent->panic;
   this->level = parent->level + 1;
-  this->gensym = parent->gensym;
 
   return this;
 }
@@ -224,15 +221,24 @@ ava_macsub_context* ava_macsub_context_push_minor(
 ) {
   ava_macsub_context* this;
 
-  this = AVA_NEW(ava_macsub_context);
-  this->symbol_table = parent->symbol_table;
-  this->compenv = parent->compenv;
-  this->varscope = parent->varscope;
-  this->errors = parent->errors;
+  this = AVA_CLONE(*parent);
   this->symbol_prefix = ava_strcat(parent->symbol_prefix, interfix);
-  this->panic = parent->panic;
-  this->level = parent->level;
-  this->gensym = parent->gensym;
+
+  return this;
+}
+
+ava_symbol* ava_macsub_get_context_var(const ava_macsub_context* context) {
+  return context->context_var;
+}
+
+ava_macsub_context* ava_macsub_context_with_context_var(
+  const ava_macsub_context* parent, ava_symbol* context_var
+) {
+  ava_macsub_context* this;
+
+  assert(!context_var || ava_st_local_variable == context_var->type);
+  this = AVA_CLONE(*parent);
+  this->context_var = context_var;
 
   return this;
 }

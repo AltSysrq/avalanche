@@ -257,6 +257,7 @@ ava_ast_node* ava_intr_var_read_new(
   this->header.context = context;
   this->header.location = *location;
   this->var = symbol;
+  this->postprocessed = ava_true;
   return (ava_ast_node*)this;
 }
 
@@ -277,6 +278,14 @@ ava_macro_subst_result ava_intr_var_subst(
   AVA_MACRO_ARG_PARSE {
     AVA_MACRO_ARG_FROM_RIGHT_BEGIN {
       AVA_MACRO_ARG_BAREWORD(this->name, "variable name");
+    }
+  }
+
+  if (ava_string_equal(AVA_ASCII9_STRING("$"), this->name)) {
+    this->var = ava_macsub_get_context_var(context);
+    if (!this->var) {
+      return ava_macsub_error_result(
+        context, ava_error_no_context_var(&this->header.location));
     }
   }
 
@@ -314,23 +323,28 @@ static void ava_intr_var_read_postprocess(ava_intr_var_read* node) {
   const ava_symbol** results;
   size_t num_results;
 
-  if (node->postprocessed || node->var) return;
+  if (node->postprocessed) return;
   node->postprocessed = ava_true;
 
-  num_results = ava_symtab_get(&results, node->symtab, node->name);
+  /* Variable already provided if this is the reader of an lvalue or if this is
+   * the context variable.
+   */
+  if (!node->var) {
+    num_results = ava_symtab_get(&results, node->symtab, node->name);
 
-  if (0 == num_results) {
-    ava_macsub_record_error(node->header.context,
-                            ava_error_no_such_var(
-                              &node->header.location, node->name));
-    return;
-  } else if (num_results > 1) {
-    ava_macsub_record_error(node->header.context,
-                            ava_error_ambiguous_var(
-                              &node->header.location, node->name));
-    return;
-  } else {
-    node->var = results[0];
+    if (0 == num_results) {
+      ava_macsub_record_error(node->header.context,
+                              ava_error_no_such_var(
+                                &node->header.location, node->name));
+      return;
+    } else if (num_results > 1) {
+      ava_macsub_record_error(node->header.context,
+                              ava_error_ambiguous_var(
+                                &node->header.location, node->name));
+      return;
+    } else {
+      node->var = results[0];
+    }
   }
 
   switch (node->var->type) {

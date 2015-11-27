@@ -1985,6 +1985,19 @@ set defs {
     }
   }
 
+  cerror C5120 no_context_var {} {
+    msg "Context variable does not exist here."
+    explanation {
+      The context variable ($) was used in a location where it is not defined.
+
+      Context variables are normally available in very limited scopes; for
+      example, on the right-hand side of a compound assignment.
+
+      This error may result if a space was accidentally inserted between the $
+      and a variable name, eg if "$ foo" was written instead of "$foo".
+    }
+  }
+
   cerror X9000 xcode_dupe_label {{ava_value label}} {
     msg "P-Code label present in function more than once: %label%"
     explanation {
