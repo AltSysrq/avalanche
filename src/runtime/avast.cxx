@@ -698,7 +698,7 @@ defun(real__of)(ava_value a, ava_value b) {
  */
 
 defun(map__npairs)(ava_value m) {
-  return ava_value_of_integer(ava_map_npairs(m));
+  return ava_value_of_integer(ava_map_npairs_v(m));
 }
 
 defun(map__get_last_impl)
@@ -714,16 +714,16 @@ AVA_STATIC_STRING(no_such_key_type, "no-such-key");
 defun(map__get_last_impl)(ava_map_value map, ava_value key) {
   ava_map_cursor cursor, next_cursor;
 
-  cursor = ava_map_find(map, key);
+  cursor = ava_map_find_f(map, key);
   if (AVA_MAP_CURSOR_NONE == cursor)
     ava_throw_uex(&ava_error_exception, no_such_key_type,
                   ava_error_map_no_such_key(key));
 
   while (AVA_MAP_CURSOR_NONE !=
-         (next_cursor = ava_map_next(map, cursor)))
+         (next_cursor = ava_map_next_f(map, cursor)))
     cursor = next_cursor;
 
-  return ava_map_get(map, cursor);
+  return ava_map_get_f(map, cursor);
 }
 #endif
 
@@ -738,15 +738,15 @@ defun(map__get_last_or_empty)(ava_value map, ava_value key) {
 defun(map__get_last_or_empty_impl)(ava_map_value map, ava_value key) {
   ava_map_cursor cursor, next_cursor;
 
-  cursor = ava_map_find(map, key);
+  cursor = ava_map_find_f(map, key);
   if (AVA_MAP_CURSOR_NONE == cursor)
     return ava_value_of_string(AVA_EMPTY_STRING);
 
   while (AVA_MAP_CURSOR_NONE !=
-         (next_cursor = ava_map_next(map, cursor)))
+         (next_cursor = ava_map_next_f(map, cursor)))
     cursor = next_cursor;
 
-  return ava_map_get(map, cursor);
+  return ava_map_get_f(map, cursor);
 }
 #endif
 
@@ -763,17 +763,17 @@ defun(map__get_all_impl)(ava_map_value map, ava_value key) {
   ava_map_cursor cursor;
 
   ret = ava_empty_list();
-  for (cursor = ava_map_find(map, key);
+  for (cursor = ava_map_find_f(map, key);
        AVA_MAP_CURSOR_NONE != cursor;
-       cursor = ava_map_next(map, cursor))
-    ret = ava_list_append(ret, ava_map_get(map, cursor));
+       cursor = ava_map_next_f(map, cursor))
+    ret = ava_list_append_f(ret, ava_map_get_f(map, cursor));
 
   return ret.v;
 }
 #endif
 
 defun(map__add)(ava_value map, ava_value key, ava_value value) {
-  return ava_map_add(map, key, value);
+  return ava_map_add_v(map, key, value);
 }
 
 defun(map__remap_one_impl)
@@ -788,16 +788,16 @@ defun(map__remap_one)(ava_value map, ava_value key, ava_value value) {
 defun(map__remap_one_impl)(ava_map_value map, ava_value key, ava_value value) {
   ava_map_cursor cursor;
 
-  cursor = ava_map_find(map, key);
+  cursor = ava_map_find_f(map, key);
   if (AVA_MAP_CURSOR_NONE == cursor) {
-    map = ava_map_add(map, key, value);
+    map = ava_map_add_f(map, key, value);
   } else {
-    while (AVA_MAP_CURSOR_NONE != ava_map_next(map, cursor)) {
-      map = ava_map_remove(map, cursor);
-      cursor = ava_map_find(map, key);
+    while (AVA_MAP_CURSOR_NONE != ava_map_next_f(map, cursor)) {
+      map = ava_map_remove_f(map, cursor);
+      cursor = ava_map_find_f(map, key);
     }
 
-    map = ava_map_set(map, cursor, value);
+    map = ava_map_set_f(map, cursor, value);
   }
 
   return map.v;
@@ -820,25 +820,25 @@ defun(map__remap_all_impl)(
   ava_map_cursor cursor;
 
   ix = 0;
-  in_list = ava_list_length(values);
+  in_list = ava_list_length_f(values);
   in_map = 0;
-  for (cursor = ava_map_find(map, key);
+  for (cursor = ava_map_find_f(map, key);
        AVA_MAP_CURSOR_NONE != cursor;
-       cursor = ava_map_next(map, cursor))
+       cursor = ava_map_next_f(map, cursor))
     ++in_map;
 
   while (in_map > in_list) {
-    map = ava_map_remove(map, ava_map_find(map, key));
+    map = ava_map_remove_f(map, ava_map_find_f(map, key));
     --in_map;
   }
 
-  for (cursor = ava_map_find(map, key);
+  for (cursor = ava_map_find_f(map, key);
        AVA_MAP_CURSOR_NONE != cursor;
-       cursor = ava_map_next(map, cursor))
-    map = ava_map_set(map, cursor, ava_list_index(values, ix++));
+       cursor = ava_map_next_f(map, cursor))
+    map = ava_map_set_f(map, cursor, ava_list_index_f(values, ix++));
 
   while (ix < in_list)
-    map = ava_map_add(map, key, ava_list_index(values, ix++));
+    map = ava_map_add_f(map, key, ava_list_index_f(values, ix++));
 
   return map.v;
 }
@@ -857,9 +857,9 @@ size_t fun(map__count_impl)(ava_map_value map, ava_value key) {
   size_t count;
   ava_map_cursor cursor;
 
-  for (count = 0, cursor = ava_map_find(map, key);
+  for (count = 0, cursor = ava_map_find_f(map, key);
        AVA_MAP_CURSOR_NONE != cursor;
-       cursor = ava_map_next(map, cursor))
+       cursor = ava_map_next_f(map, cursor))
     ++count;
 
   return count;
@@ -875,7 +875,7 @@ defun(interval__of)(ava_value begin, ava_value end) {
 /******************** LIST OPERATIONS ********************/
 
 defun(list__length)(ava_value list) {
-  return ava_value_of_integer(ava_list_length(list));
+  return ava_value_of_integer(ava_list_length_v(list));
 }
 
 defun(list__index)(ava_value raw_list, ava_value index) {
@@ -884,18 +884,18 @@ defun(list__index)(ava_value raw_list, ava_value index) {
   ava_interval_value ival;
 
   list = ava_list_value_of(raw_list);
-  max = ava_list_length(list);
+  max = ava_list_length_f(list);
 
   ival = ava_interval_value_of(index);
   if (ava_interval_is_singular(ival)) {
     begin = ava_interval_get_singular(ival, max);
     strict_index_check(begin, max);
-    return ava_list_index(list, begin);
+    return ava_list_index_f(list, begin);
   } else {
     begin = ava_interval_get_begin(ival, max);
     end = ava_interval_get_end(ival, max);
     strict_range_check(begin, end, max);
-    return ava_list_slice(list, begin, end).v;
+    return ava_list_slice_f(list, begin, end).v;
   }
 }
 
@@ -905,19 +905,19 @@ defun(list__index_lenient)(ava_value raw_list, ava_value index) {
   ava_interval_value ival;
 
   list = ava_list_value_of(raw_list);
-  max = ava_list_length(list);
+  max = ava_list_length_f(list);
 
   ival = ava_interval_value_of(index);
   if (ava_interval_is_singular(ival)) {
     begin = ava_interval_get_singular(ival, max);
     if (!lenient_index_check(begin, max))
       return ava_value_of_string(AVA_EMPTY_STRING);
-    return ava_list_index(list, begin);
+    return ava_list_index_f(list, begin);
   } else {
     begin = ava_interval_get_begin(ival, max);
     end = ava_interval_get_end(ival, max);
     lenient_range_check(&begin, &end, max);
-    return ava_list_slice(list, begin, end).v;
+    return ava_list_slice_f(list, begin, end).v;
   }
 }
 
@@ -931,7 +931,7 @@ defun(list__set)(ava_value raw_list, ava_value index, ava_value val) {
   ava_interval_value ival;
 
   list = ava_list_value_of(raw_list);
-  max = ava_list_length(list);
+  max = ava_list_length_f(list);
 
   ival = ava_interval_value_of(index);
   if (ava_interval_is_singular(ival)) {
@@ -939,9 +939,9 @@ defun(list__set)(ava_value raw_list, ava_value index, ava_value val) {
     strict_index_check(begin, max + 1);
 
     if (begin == max)
-      return ava_list_append(list, val).v;
+      return ava_list_append_f(list, val).v;
     else
-      return ava_list_set(list, begin, val).v;
+      return ava_list_set_f(list, begin, val).v;
   } else {
     begin = ava_interval_get_begin(ival, max);
     end = ava_interval_get_end(ival, max);
@@ -959,32 +959,32 @@ ava_value fun(list__set_range)
   size_t repl_len, i;
 
   if (0 == begin && end == listlen) return repl.v;
-  if (begin == listlen) return ava_list_concat(list, repl).v;
-  if (end == 0) return ava_list_concat(repl, list).v;
+  if (begin == listlen) return ava_list_concat_f(list, repl).v;
+  if (end == 0) return ava_list_concat_f(repl, list).v;
 
-  repl_len = ava_list_length(repl);
+  repl_len = ava_list_length_f(repl);
 
   /* If we have to do an insertion, just rebuild the whole list */
   if (repl_len > end - begin)
-    return ava_list_concat(
-      ava_list_concat(
-        ava_list_slice(list, 0, begin), repl),
-      ava_list_slice(list, end, listlen)).v;
+    return ava_list_concat_f(
+      ava_list_concat_f(
+        ava_list_slice_f(list, 0, begin), repl),
+      ava_list_slice_f(list, end, listlen)).v;
 
   /* Delete elements as necessary */
   if (repl_len < end - begin)
-    list = ava_list_remove(list, begin + repl_len, end);
+    list = ava_list_remove_f(list, begin + repl_len, end);
 
   /* Replace what remain */
   for (i = 0; i < repl_len; ++i)
-    list = ava_list_set(list, begin + i, ava_list_index(repl, i));
+    list = ava_list_set_f(list, begin + i, ava_list_index_f(repl, i));
 
   return list.v;
 }
 #endif
 
 defun(list__concat)(ava_value a, ava_value b) {
-  return ava_list_concat(a, b);
+  return ava_list_concat_v(a, b);
 }
 
 defun(list__interleave)
@@ -1000,20 +1000,20 @@ defun(list__interleave)(ava_value raw_lists) {
 
   ava_list_value* array, on_stack[16];
   ava_list_value lists = ava_list_value_of(raw_lists), l;
-  size_t num_lists = ava_list_length(lists), i, list_length;
+  size_t num_lists = ava_list_length_f(lists), i, list_length;
 
   array = num_lists < 16? on_stack :
     (ava_list_value*)ava_alloc(sizeof(ava_list_value) * num_lists);
 
   for (i = 0; i < num_lists; ++i) {
-    l = ava_list_value_of(ava_list_index(lists, i));
+    l = ava_list_value_of(ava_list_index_f(lists, i));
     if (0 == i) {
-      list_length = ava_list_length(l);
+      list_length = ava_list_length_f(l);
     } else {
-      if (list_length != ava_list_length(l))
+      if (list_length != ava_list_length_f(l))
         ava_throw_uex(&ava_error_exception, illegal_argument,
                       ava_error_interleaved_lists_not_of_same_length(
-                        i, list_length, ava_list_length(l)));
+                        i, list_length, ava_list_length_f(l)));
     }
     array[i] = l;
   }
@@ -1068,38 +1068,38 @@ defun(list__flatten)(ava_value list) {
 
 defun(pointer__is_null)(ava_value pointer) {
   return ava_value_of_integer(
-    !ava_pointer_get_const(pointer, AVA_EMPTY_STRING));
+    !ava_pointer_get_const_v(pointer, AVA_EMPTY_STRING));
 }
 
 defun(pointer__address)(ava_value pointer) {
   return ava_value_of_integer(
-    (ava_intptr)ava_pointer_get_const(pointer, AVA_EMPTY_STRING));
+    (ava_intptr)ava_pointer_get_const_v(pointer, AVA_EMPTY_STRING));
 }
 
 defun(pointer__is_const)(ava_value pointer) {
-  return ava_value_of_integer(ava_pointer_is_const(pointer));
+  return ava_value_of_integer(ava_pointer_is_const_v(pointer));
 }
 
 defun(pointer__tag)(ava_value pointer) {
-  return ava_value_of_string(ava_pointer_get_tag(pointer));
+  return ava_value_of_string(ava_pointer_get_tag_v(pointer));
 }
 
 defun(pointer__const_cast)(ava_value pointer, ava_value is_const) {
-  return ava_pointer_const_cast_to(
+  return ava_pointer_const_cast_to_v(
     pointer, !!ava_integer_of_value(is_const, 1));
 }
 
 defun(pointer__reinterpret_cast)(ava_value pointer, ava_value tag) {
-  return ava_pointer_reinterpret_cast_to(
+  return ava_pointer_reinterpret_cast_to_v(
     pointer, ava_to_string(tag));
 }
 
 defun(pointer__add)(ava_value pointer, ava_value offset) {
-  return ava_pointer_adjust(pointer, ava_integer_of_value(offset, 0));
+  return ava_pointer_adjust_v(pointer, ava_integer_of_value(offset, 0));
 }
 
 defun(pointer__sub)(ava_value pointer, ava_value offset) {
-  return ava_pointer_adjust(pointer, -ava_integer_of_value(offset, 0));
+  return ava_pointer_adjust_v(pointer, -ava_integer_of_value(offset, 0));
 }
 
 AVA_END_DECLS
