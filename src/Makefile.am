@@ -100,6 +100,9 @@ runtime/-intrinsics/subscript.c \
 runtime/-intrinsics/user-macro.c \
 runtime/-intrinsics/variable.c
 
+libavart_bootstrap_la_LIBADD = \
+$(top_srcdir)/contrib/libbacktrace/libbacktrace.la
+
 libavart_la_SOURCES = \
 org.ava-lang.avast.S \
 org.ava-lang.avast.avapi.c \

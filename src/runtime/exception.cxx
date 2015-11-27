@@ -17,14 +17,10 @@
 #include <config.h>
 #endif
 
-/* So we get access to the G++/Clang extensions to the Itanium unwinding ABI
- * (necessary just so we can inspect the stack ourselves).
- */
-#define _GNU_SOURCE
-
 #include <stdio.h>
 #include <string.h>
-#include <unwind.h>
+#include "../../contrib/libbacktrace/backtrace.h"
+#include "../../contrib/libbacktrace/backtrace-supported.h"
 
 #define AVA__INTERNAL_INCLUDE 1
 #include "avalanche/defs.h"
@@ -42,12 +38,7 @@ typedef struct {
   /**
    * The IP/PC of the function at the point where the exception was thrown.
    */
-  const void* ip;
-  /**
-   * The pointer to the Language-Specific Data Area for this function, or NULL
-   * if unavailable.
-   */
-  const void* lsda;
+  uintptr_t ip;
 } ava_exception_frame;
 
 struct ava_exception_throw_info_s {
@@ -63,11 +54,17 @@ struct ava_exception_throw_info_s {
   ava_exception_frame* bt;
 };
 
-static void ava_exception_make_backtrace(ava_exception_throw_info* info);
-static _Unwind_Reason_Code ava_exception_trace(
-  struct _Unwind_Context* context, void* vinfo);
-
 /* Stay inside `extern "C"` */
+
+static void ava_exception_make_backtrace(ava_exception_throw_info* info);
+static int ava_exception_trace(void* vinfo, uintptr_t ip);
+static void ava_exception_init_error_callback(
+  void* ignored, const char* msg, int errnum) AVA_UNUSED;
+
+#if BACKTRACE_SUPPORTED
+static struct backtrace_state* ava_exception_backtrace_context;
+#endif
+static ava_string ava_exception_why_backtrace_unavailable;
 
 void ava_throw(const ava_exception_type* type, ava_value value) {
   ava_exception ex;
@@ -124,21 +121,50 @@ ava_value ava_exception_get_value(const ava_exception* ex) {
   return dst;
 }
 
+void ava_exception_init(void) {
+#if BACKTRACE_SUPPORTED && BACKTRACE_SUPPORTS_THREADS
+  ava_exception_backtrace_context = backtrace_create_state(
+    NULL, ava_true, ava_exception_init_error_callback, NULL);
+#else
+#if BACKTRACE_SUPPORTED
+  AVA_STATIC_STRING(
+    msg, "libbacktrace doesn't support multi-threaded applications");
+#else
+  AVA_STATIC_STRING(
+    msg, "libbacktrace not supported on this system.");
+#endif
+  ava_exception_why_backtrace_unavailable = msg;
+#endif
+}
+
+static void ava_exception_init_error_callback(
+  void* ignored, const char* msg, int errnum
+) {
+  ava_exception_why_backtrace_unavailable = ava_string_of_cstring(msg);
+}
+
 static void ava_exception_make_backtrace(ava_exception_throw_info* info) {
   info->bt_len = 0;
   info->bt_cap = 8;
   info->bt = (ava_exception_frame*)
     ava_alloc_atomic(sizeof(ava_exception_frame) * info->bt_cap);
 
-  /* We don't care about the return value; if anything breaks, it just means
-   * the trace is truncated.
-   */
-  (void)_Unwind_Backtrace(ava_exception_trace, info);
+#if BACKTRACE_SUPPORTED
+  if (ava_exception_backtrace_context) {
+    /* We don't care about the return value; if anything breaks, it just means
+     * the trace is truncated.
+     */
+    (void)backtrace_simple(ava_exception_backtrace_context,
+                           1, ava_exception_trace, NULL, info);
+  } else
+#endif
+  {
+    /* Backtrace unavailable; push back one placeholder slot */
+    info->bt[info->bt_len++].ip = 0;
+  }
 }
 
-static _Unwind_Reason_Code ava_exception_trace(
-  struct _Unwind_Context* context, void* vinfo
-) {
+static int ava_exception_trace(void* vinfo, uintptr_t ip) {
   ava_exception_throw_info* info = (ava_exception_throw_info*)vinfo;
   ava_exception_frame* neu;
 
@@ -150,13 +176,10 @@ static _Unwind_Reason_Code ava_exception_trace(
     info->bt = neu;
   }
 
-  info->bt[info->bt_len].ip =
-    (const void*)_Unwind_GetIP(context);
-  info->bt[info->bt_len].lsda =
-    (const void*)_Unwind_GetLanguageSpecificData(context);
+  info->bt[info->bt_len].ip = ip;
   ++info->bt_len;
 
-  return _URC_NO_REASON;
+  return 0;
 }
 
 const ava_exception_type ava_user_exception = {

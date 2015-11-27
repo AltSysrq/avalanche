@@ -139,6 +139,14 @@ ava_bool ava_catch(ava_exception* ex, void (*f)(void*), void* ud);
 ava_value ava_exception_get_value(const ava_exception* ex);
 
 /**
+ * Initialises global state needed by the exception system.
+ *
+ * This must be called exactly once at process startup. Most programs will want
+ * to use ava_init() instead of calling this directly.
+ */
+void ava_exception_init(void);
+
+/**
  * Standard exception type for user exceptions.
  *
  * User exceptions are the normal exception type that user code throws and

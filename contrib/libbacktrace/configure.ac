@@ -154,10 +154,8 @@ fi
 # When building as a target library, shared libraries may want to link
 # this in.  We don't want to provide another shared library to
 # complicate dependencies.  Instead, we just compile with -fPIC.
-PIC_FLAG=
-if test -n "${with_target_subdir}"; then
-  PIC_FLAG=-fPIC
-fi
+PIC_FLAG=-fPIC
+
 # Similarly, use -fPIC with --enable-host-shared:
 AC_ARG_ENABLE(host-shared,
 [AS_HELP_STRING([--enable-host-shared],
