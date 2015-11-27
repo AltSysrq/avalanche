@@ -42,3 +42,6 @@ src/bootstrap/bin
 *.avapi
 org.*.S
 *.avapi.c
+test/*.S
+vgcore.*
+contrib/libbacktrace/backtrace-supported.h

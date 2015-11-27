@@ -138,38 +138,38 @@ deftest(simple_reg_rename) {
 
   fun = make_xcode_fun(
     VERB(FUN_FOO ONE_ARG VERB("x") VERB(
-           VERB("push d 1")             /* 0 */
+           VERB("push d 1")             /* 0,0 */
            VERB("push i 1")
            VERB("push l 1")
            VERB("push p 1")
            VERB("push f 1")
-           VERB("ld-reg d0 v0")         /* 5 */
-           VERB("ld-reg i0 d0")
-           VERB("ld-reg l0 d0")
-           VERB("ld-parm p0 d0 false")
-           VERB("ld-reg f0 d0")
-           VERB("invoke-dd d0 f0 0 1")  /* 10 */
+           VERB("ld-reg-s d0 v0")       /* 0,5 */
+           VERB("ld-reg-d i0 d0")       /* 1,0 ! */
+           VERB("ld-reg-d l0 d0")       /* 2,0 ! */
+           VERB("ld-parm p0 d0 false")  /* 2,1 */
+           VERB("ld-reg-d f0 d0")       /* 3,0 ! */
+           VERB("invoke-dd d0 f0 0 1")  /* 4,0 ! */
            VERB("ret d0")
            VERB("pop f 1")
            VERB("pop p 1")
            VERB("pop l 1")
-           VERB("pop i 1")
+           VERB("pop i 1")              /* 4,5 */
            VERB("pop d 1"))));
 
-  ck_assert_int_eq(0, INSTR(ld_reg, 0, 5)->src.index);
-  ck_assert_int_eq(1, INSTR(ld_reg, 0, 5)->dst.index);
-  ck_assert_int_eq(1, INSTR(ld_reg, 0, 6)->src.index);
-  ck_assert_int_eq(2, INSTR(ld_reg, 0, 6)->dst.index);
-  ck_assert_int_eq(1, INSTR(ld_reg, 0, 7)->src.index);
-  ck_assert_int_eq(3, INSTR(ld_reg, 0, 7)->dst.index);
-  ck_assert_int_eq(1, INSTR(ld_parm, 0, 8)->src.index);
-  ck_assert_int_eq(4, INSTR(ld_parm, 0, 8)->dst.index);
-  ck_assert_int_eq(1, INSTR(ld_reg, 0, 9)->src.index);
-  ck_assert_int_eq(5, INSTR(ld_reg, 0, 9)->dst.index);
-  ck_assert_int_eq(5, INSTR(invoke_dd, 0, 10)->fun.index);
-  ck_assert_int_eq(4, INSTR(invoke_dd, 0, 10)->base);
-  ck_assert_int_eq(1, INSTR(invoke_dd, 0, 10)->dst.index);
-  ck_assert_int_eq(1, INSTR(ret, 0, 11)->return_value.index);
+  ck_assert_int_eq(0, INSTR(ld_reg_s, 0, 5)->src.index);
+  ck_assert_int_eq(1, INSTR(ld_reg_s, 0, 5)->dst.index);
+  ck_assert_int_eq(1, INSTR(ld_reg_d, 1, 0)->src.index);
+  ck_assert_int_eq(2, INSTR(ld_reg_d, 1, 0)->dst.index);
+  ck_assert_int_eq(1, INSTR(ld_reg_d, 2, 0)->src.index);
+  ck_assert_int_eq(3, INSTR(ld_reg_d, 2, 0)->dst.index);
+  ck_assert_int_eq(1, INSTR(ld_parm, 2, 1)->src.index);
+  ck_assert_int_eq(4, INSTR(ld_parm, 2, 1)->dst.index);
+  ck_assert_int_eq(1, INSTR(ld_reg_d, 3, 0)->src.index);
+  ck_assert_int_eq(5, INSTR(ld_reg_d, 3, 0)->dst.index);
+  ck_assert_int_eq(5, INSTR(invoke_dd, 4, 0)->fun.index);
+  ck_assert_int_eq(4, INSTR(invoke_dd, 4, 0)->base);
+  ck_assert_int_eq(1, INSTR(invoke_dd, 4, 0)->dst.index);
+  ck_assert_int_eq(1, INSTR(ret, 4, 1)->return_value.index);
 }
 
 deftest(sectioned_reg_rename) {
@@ -264,7 +264,7 @@ deftest(local_uninit_reg) {
     "X9004",
     VERB(FUN_FOO ONE_ARG NO_VAR VERB(
            VERB("push d 1")
-           VERB("ld-reg d0 d0")
+           VERB("ld-reg-s d0 d0")
            VERB("pop d 1"))));
 }
 
@@ -275,7 +275,7 @@ deftest(block_fallthrough_uninit_reg) {
            VERB("push d 1")
            VERB("goto 1")
            VERB("label 1")
-           VERB("ld-reg d0 d0")
+           VERB("ld-reg-s d0 d0")
            VERB("pop d 1"))));
 }
 
@@ -288,7 +288,7 @@ deftest(maybe_uninit_reg) {
            VERB("branch i0 42 false 1")
            VERB("ld-imm-i i1 0")
            VERB("label 1")
-           VERB("ld-reg i0 i1")
+           VERB("ld-reg-s i0 i1")
            VERB("pop i 2"))));
 }
 
@@ -297,17 +297,6 @@ deftest(uninit_var) {
     "X9005",
     VERB(FUN_FOO ONE_ARG VERB("foo bar") VERB(
            VERB("ret v1"))));
-}
-
-deftest(uninit_due_to_p_range) {
-  xcode_fail_with(
-    "X9004",
-    VERB(FUN_FOO ONE_ARG VERB("foo") VERB(
-           VERB("push p 1")
-           VERB("ld-parm p0 v0 false")
-           VERB("invoke-sd v0 0 0 1")
-           VERB("invoke-sd v0 0 0 1")
-           VERB("pop p 1"))));
 }
 
 deftest(missing_pop) {
@@ -400,4 +389,218 @@ deftest(invoke_ss_with_wrong_arg_count) {
            VERB("ld-imm-vd d1 bar")
            VERB("invoke-ss d0 0 0 2")
            VERB("pop d 2"))));
+}
+
+deftest(try_nxlabel) {
+  xcode_fail_with(
+    "X9003",
+    VERB(FUN_FOO ONE_ARG NO_VAR VERB(
+           VERB("try true 99")
+           VERB("yrt"))));
+}
+
+deftest(unclosed_try_at_ret) {
+  xcode_fail_with(
+    "X9015",
+    VERB(FUN_FOO ONE_ARG NO_VAR VERB(
+           VERB("try true 1")
+           VERB("ret v0")
+           VERB("label 1"))));
+}
+
+deftest(unclosed_try_at_fall_off) {
+  xcode_fail_with(
+    "X9015",
+    VERB(FUN_FOO ONE_ARG NO_VAR VERB(
+           VERB("try true 1")
+           VERB("goto 2")
+           VERB("label 1")
+           VERB("yrt")
+           VERB("ret v0")
+           VERB("label 2"))));
+}
+
+deftest(yrt_underflow) {
+  xcode_fail_with(
+    "X9014",
+    VERB(FUN_FOO ONE_ARG NO_VAR VERB(
+           VERB("yrt"))));
+}
+
+deftest(rethrow_without_exception) {
+  xcode_fail_with(
+    "X9016",
+    VERB(FUN_FOO ONE_ARG NO_VAR VERB(
+           VERB("try true 1")
+           VERB("rethrow")
+           VERB("yrt")
+           VERB("ret v0")
+           VERB("label 1")
+           VERB("yrt"))));
+}
+
+deftest(exception_conflict_lp_vs_ce) {
+  xcode_fail_with(
+    "X9013",
+    VERB(FUN_FOO ONE_ARG NO_VAR VERB(
+           VERB("try true 1")
+           VERB("label 1")
+           VERB("ret v0"))));
+}
+
+deftest(exception_conflict_sibling_tries_same_lp) {
+  xcode_fail_with(
+    "X9013",
+    VERB(FUN_FOO ONE_ARG NO_VAR VERB(
+           VERB("try true 1")
+           VERB("yrt")
+           VERB("try true 1")
+           VERB("yrt")
+           VERB("ret v0")
+           VERB("label 1")
+           VERB("yrt"))));
+}
+
+deftest(exception_conflict_nested_tries_same_lp) {
+  xcode_fail_with(
+    "X9013",
+    VERB(FUN_FOO ONE_ARG NO_VAR VERB(
+           VERB("try true 1")
+           VERB("try true 1")
+           VERB("yrt")
+           VERB("yrt")
+           VERB("ret v0")
+           VERB("label 1")
+           VERB("yrt"))));
+}
+
+deftest(exception_conflict_colliding_tries) {
+  xcode_fail_with(
+    "X9013",
+    VERB(FUN_FOO ONE_ARG NO_VAR VERB(
+           VERB("push i 1")
+           VERB("ld-reg-d i0 v0")
+           VERB("branch i0 0 false 1")
+           VERB("try true 2")
+           VERB("goto 3")
+           VERB("label 1")
+           VERB("try true 4")
+           VERB("goto 3")
+           VERB("label 3")
+           VERB("yrt")
+           VERB("ret v0")
+           VERB("label 2")
+           VERB("yrt")
+           VERB("ret v0")
+           VERB("label 4")
+           VERB("yrt")
+           VERB("ret v0")
+           VERB("pop i 1"))));
+}
+
+deftest(exception_conflict_infinite_try) {
+  xcode_fail_with(
+    "X9013",
+    VERB(FUN_FOO ONE_ARG NO_VAR VERB(
+           VERB("label 0")
+           VERB("try true 1")
+           VERB("goto 0")
+           VERB("label 1")
+           VERB("yrt"))));
+}
+
+deftest(exception_conflict_infinite_catch) {
+  xcode_fail_with(
+    "X9013",
+    VERB(FUN_FOO ONE_ARG NO_VAR VERB(
+           VERB("label 0")
+           VERB("try true 1")
+           VERB("yrt")
+           VERB("ret v0")
+           VERB("label 1")
+           VERB("goto 0"))));
+}
+
+deftest(accepts_try_join) {
+  (void)make_xcode_fun(
+    VERB(FUN_FOO ONE_ARG NO_VAR VERB(
+           VERB("push i 1")
+           VERB("ld-reg-d i0 v0")
+           VERB("branch i0 0 false 1")
+           VERB("try true 2")
+           VERB("yrt")
+           VERB("goto 3")
+           VERB("label 2")
+           VERB("yrt")
+           VERB("goto 3")
+           VERB("label 1")
+           VERB("try true 4")
+           VERB("yrt")
+           VERB("goto 3")
+           VERB("label 4")
+           VERB("yrt")
+           VERB("label 3")
+           VERB("pop i 1")
+           VERB("ret v0"))));
+}
+
+deftest(try_not_phi_to_catch) {
+  (void)make_xcode_fun(
+    VERB(FUN_FOO ONE_ARG NO_VAR VERB(
+           VERB("push d 1")
+           VERB("try true 1")
+           VERB("ld-imm-vd d0 foo")
+           VERB("push i 1")
+           VERB("ld-reg-d i0 d0")
+           VERB("yrt")
+           VERB("goto 2")
+           VERB("label 1")
+           VERB("yrt")
+           VERB("label 2")
+           VERB("ret d0")
+           VERB("pop i 1")
+           VERB("pop d 1"))));
+}
+
+deftest(landing_pad_jump_over_init_use_after_yrt) {
+  xcode_fail_with(
+    "X9004",
+    VERB(FUN_FOO ONE_ARG NO_VAR VERB(
+           VERB("push i 1")
+           VERB("try true 1")
+           VERB("ld-reg-d i0 v0")
+           VERB("yrt")
+           VERB("ret v0")
+           VERB("label 1")
+           VERB("yrt")
+           VERB("ld-reg-u v0 i0")
+           VERB("ret v0")
+           VERB("pop i 1"))));
+}
+
+deftest(reg_init_in_try_and_lp) {
+  (void)make_xcode_fun(
+    VERB(FUN_FOO ONE_ARG NO_VAR VERB(
+           VERB("push i 1")
+           VERB("try true 1")
+           VERB("ld-reg-d i0 v0")
+           VERB("yrt")
+           VERB("goto 2")
+           VERB("label 1")
+           VERB("ld-imm-i i0 42")
+           VERB("yrt")
+           VERB("label 2")
+           VERB("ld-reg-u v0 i0")
+           VERB("ret v0")
+           VERB("pop i 1"))));
+}
+
+deftest(yrt_at_end_of_function) {
+  (void)make_xcode_fun(
+    VERB(FUN_FOO ONE_ARG NO_VAR VERB(
+           VERB("try true 1")
+           VERB("yrt")
+           VERB("ret v0")
+           VERB("label 1")
+           VERB("yrt"))));
 }

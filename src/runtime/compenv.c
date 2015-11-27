@@ -106,7 +106,7 @@ ava_bool ava_compenv_compile_file(
       dst_errors,
       ava_error_cannot_read_module_source(
         base_location, filename, error_message));
-    return ava_false;
+    goto error;
   }
 
   len = ava_list_length(sources);

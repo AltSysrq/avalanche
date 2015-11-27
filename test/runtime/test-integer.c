@@ -46,6 +46,21 @@ static int str_is_int(const char* s) {
   return ava_string_is_integer(ava_string_of_cstring(s));
 }
 
+static void do_assert_rejects(void* d) {
+  (void)ava_integer_of_value(
+    ava_value_of_string(ava_string_of_cstring(d)), 0);
+}
+
+static void assert_rejects(const char* str) {
+  ava_exception ex;
+
+  if (ava_catch(&ex, do_assert_rejects, (void*)str)) {
+    ck_assert_ptr_eq(&ava_format_exception, ex.type);
+  } else {
+    ck_abort_msg("no exception thrown");
+  }
+}
+
 deftest(integer_zero_to_string) {
   ck_assert_str_eq("0", int_to_str(0));
 }
@@ -129,27 +144,11 @@ deftest(decimal_unsigned_max_to_integer) {
 }
 
 deftest(decimal_to_integer_overflow_by_one) {
-  ava_exception_handler handler;
-  ava_try (handler) {
-    str_to_int("18446744073709551616", 42);
-    ck_abort_msg("no exception thrown");
-  } ava_catch (handler, ava_format_exception) {
-    /* ok */
-  } ava_catch_all {
-    ava_rethrow(&handler);
-  }
+  assert_rejects("18446744073709551616");
 }
 
 deftest(decimal_to_integer_overflow_by_ten) {
-  ava_exception_handler handler;
-  ava_try (handler) {
-    str_to_int("18446744073709551625", 42);
-    ck_abort_msg("no exception thrown");
-  } ava_catch (handler, ava_format_exception) {
-    /* ok */
-  } ava_catch_all {
-    ava_rethrow(&handler);
-  }
+  assert_rejects("18446744073709551625");
 }
 
 deftest(binary_zero_to_integer) {
@@ -257,15 +256,7 @@ deftest(octal_unsigned_max_to_integer) {
 }
 
 deftest(octal_overflow) {
-  ava_exception_handler handler;
-  ava_try (handler) {
-    str_to_int("o2000000000000000000000", 42);
-    ck_abort_msg("no nexception thrown");
-  } ava_catch (handler, ava_format_exception) {
-    /* ok */
-  } ava_catch_all {
-    ava_rethrow(&handler);
-  }
+  assert_rejects("o2000000000000000000000");
 }
 
 deftest(hex_zero_to_integer) {
@@ -328,15 +319,7 @@ deftest(hex_unsigned_max_to_integer) {
 }
 
 deftest(hex_overflow) {
-  ava_exception_handler handler;
-  ava_try (handler) {
-    str_to_int("x10000000000000000", 42);
-    ck_abort_msg("no exception thrown");
-  } ava_catch (handler, ava_format_exception) {
-    /* ok */
-  } ava_catch_all {
-    ava_rethrow(&handler);
-  }
+  assert_rejects("x10000000000000000");
 }
 
 deftest(hex_leading_zeros_dont_overflow) {
@@ -347,27 +330,11 @@ deftest(hex_leading_zeros_dont_overflow) {
 }
 
 deftest(leading_garbage) {
-  ava_exception_handler handler;
-  ava_try (handler) {
-    str_to_int("~ 0", 42);
-    ck_abort_msg("no exception thrown");
-  } ava_catch (handler, ava_format_exception) {
-    /* ok */
-  } ava_catch_all {
-    ava_rethrow(&handler);
-  }
+  assert_rejects("~ 0");
 }
 
 deftest(trailing_garbage) {
-  ava_exception_handler handler;
-  ava_try (handler) {
-    str_to_int("0 x", 42);
-    ck_abort_msg("no exception thrown");
-  } ava_catch (handler, ava_format_exception) {
-    /* ok */
-  } ava_catch_all {
-    ava_rethrow(&handler);
-  }
+  assert_rejects("0 x");
 }
 
 deftest(surrounding_whitespace) {
@@ -375,15 +342,7 @@ deftest(surrounding_whitespace) {
 }
 
 deftest(isolated_radix_mark) {
-  ava_exception_handler handler;
-  ava_try (handler) {
-    str_to_int("x", 42);
-    ck_abort_msg("no exception thrown");
-  } ava_catch (handler, ava_format_exception) {
-    /* ok */
-  } ava_catch_all {
-    ava_rethrow(&handler);
-  }
+  assert_rejects("x");
 }
 
 deftest(truthy_to_integer_one) {

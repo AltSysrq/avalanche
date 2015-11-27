@@ -1,0 +1,7 @@
+extern register-test ava_register_test ava pos pos
+reqmod helpers/fourty-two
+reqmod helpers/decl-pass-test
+
+register-test dependent-module-inits-are-run {
+  pass-test $Fourty-Two
+}

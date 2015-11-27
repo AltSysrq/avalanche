@@ -1,0 +1,7 @@
+extern register-test ava_register_test ava pos pos
+macro chop op 1 >1
+extern pass-test pass_test c void [int pos]
+
+register-test macro-slice-single-right-from-left {
+  pass-test (1 2 3 chop 5 42 6 7)
+}

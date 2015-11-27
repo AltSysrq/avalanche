@@ -25,7 +25,6 @@
 #include <glob.h>
 
 #include "runtime/avalanche.h"
-#include "runtime/-llvm-support/drivers.h"
 #include "bsd.h"
 
 /*
@@ -59,7 +58,18 @@
  */
 
 #define SUITE_NAME "avalanche"
-#define DIRECTORY "runtime/ava-tests"
+#define DIRECTORY "ava-tests"
+
+static void cache_avast_pcode() {
+  ava_compenv* compenv;
+  ava_compile_error_list errors;
+
+  compenv = ava_compenv_new(AVA_ASCII9_STRING("input:"));
+  ava_compenv_use_simple_source_reader(compenv, AVA_EMPTY_STRING);
+  ava_compenv_use_standard_macsub(compenv);
+
+  (void)ava_compenv_standard_new_macsub(compenv, &errors);
+}
 
 static ava_bool test_passed;
 void pass_test(int i) {
@@ -94,11 +104,19 @@ ava_value lnot(ava_value a) {
     !ava_integer_of_value(a, 0));
 }
 
+ava_value ava_register_test(ava_value name, ava_value function) {
+  ava_function_parameter parm;
+
+  parm.type = ava_fpt_static;
+  parm.value = ava_empty_list().v;
+  (void)ava_function_bind_invoke(
+    ava_function_of_value(function), 1, &parm);
+  return ava_empty_list().v;
+}
+
 static const char** inputs;
 static void run_test(int ix);
 static ava_value run_test_impl(void* arg);
-static void execute_xcode(ava_compenv* compenv,
-                          const ava_xcode_global_list* xcode);
 
 static void nop(void) { }
 
@@ -111,6 +129,7 @@ int main(void) {
   unsigned failures, i;
 
   ava_init();
+  cache_avast_pcode();
 
   /* If being run from the project root, change to the correct directory */
   (void)chdir("test");
@@ -169,6 +188,9 @@ static ava_bool read_source_mask_filename(
 }
 
 static ava_value run_test_impl(void* arg) {
+  AVA_STATIC_STRING(prefix, DIRECTORY "/");
+  AVA_STATIC_STRING(package, "ava-tests:");
+
   unsigned ix = *(int*)arg;
   ava_compile_error_list errors;
   ava_compenv* compenv;
@@ -179,18 +201,20 @@ static ava_value run_test_impl(void* arg) {
 
   TAILQ_INIT(&errors);
 
-  compenv = ava_compenv_new(AVA_ASCII9_STRING("input:"));
-  ava_compenv_use_simple_source_reader(compenv, AVA_EMPTY_STRING);
+  compenv = ava_compenv_new(package);
+  ava_compenv_use_simple_source_reader(compenv, prefix);
   compenv->read_source = read_source_mask_filename;
   ava_compenv_use_standard_macsub(compenv);
 
   if (!ava_compenv_compile_file(&pcode, &xcode, compenv,
-                                ava_string_of_cstring(inputs[ix]),
+                                ava_string_of_cstring(
+                                  inputs[ix] + ava_strlen(prefix)),
                                 &errors, NULL))
     goto done;
 
-  test_passed = ava_false;
-  execute_xcode(compenv, xcode);
+  /* TODO: Once we support execution of runtime-generated code, run whatever
+   * the above produced.
+   */
 
   done:
   name = strrchr(inputs[ix], '/') + 1;
@@ -213,76 +237,11 @@ static ava_value run_test_impl(void* arg) {
       TAILQ_EMPTY(&errors), "Compilation failed unexpectedly.\n%s",
       ava_string_to_cstring(
         ava_error_list_to_string(&errors, 50, ava_false)));
+    /* We don't actually run anything right now.
     ck_assert_msg(
       test_passed, "Test failed to call test_passed().");
+    */
   }
 
   return ava_empty_list().v;
-}
-
-static void add_dependent_modules(
-  ava_jit_context* jit,
-  ava_compenv* compenv,
-  const ava_xcode_global_list* xcode,
-  ava_map_value* loaded_modules
-) {
-  size_t i;
-  const ava_pcg_load_mod* lm;
-  ava_value mnv;
-  ava_map_cursor cursor;
-  ava_compile_error_list errors;
-  ava_xcode_global_list* submod;
-
-  for (i = 0; i < xcode->length; ++i) {
-    if (ava_pcgt_load_mod == xcode->elts[i].pc->type) {
-      lm = (const ava_pcg_load_mod*)xcode->elts[i].pc;
-      mnv = ava_value_of_string(lm->name);
-      cursor = ava_map_find(*loaded_modules, mnv);
-      if (AVA_MAP_CURSOR_NONE == cursor) {
-        TAILQ_INIT(&errors);
-        if (!ava_compenv_compile_file(
-              NULL, &submod, compenv,
-              ava_strcat(lm->name, AVA_ASCII9_STRING(".ava")),
-              &errors, NULL)) {
-          ck_abort_msg("Compilation of submodule %s failed:\n%s",
-                       ava_string_to_cstring(lm->name),
-                       ava_string_to_cstring(
-                         ava_error_list_to_string(
-                           &errors, 50, ava_false)));
-        }
-
-        ava_jit_add_module(jit, submod, lm->name, lm->name,
-                           AVA_ASCII9_STRING("input:"));
-        *loaded_modules = ava_map_add(*loaded_modules,
-                                      mnv, ava_empty_map().v);
-        add_dependent_modules(jit, compenv, submod, loaded_modules);
-      }
-    }
-  }
-}
-
-static void execute_xcode(ava_compenv* compenv,
-                          const ava_xcode_global_list* xcode) {
-  ava_string jit_error;
-  ava_jit_context* jit;
-  ava_map_value loaded_modules;
-
-  loaded_modules = ava_empty_map();
-
-  jit = ava_jit_context_new();
-  ava_jit_add_driver(jit, ava_driver_isa_unchecked_data,
-                     ava_driver_isa_unchecked_size);
-  ava_jit_add_driver(jit, ava_driver_avast_checked_2_data,
-                     ava_driver_avast_checked_2_size);
-  add_dependent_modules(jit, compenv, xcode, &loaded_modules);
-  jit_error = ava_jit_run_module(
-    jit, xcode,
-    AVA_ASCII9_STRING("testinput"),
-    AVA_ASCII9_STRING("main"),
-    AVA_ASCII9_STRING("input:"));
-
-  if (ava_string_is_present(jit_error))
-    ck_abort_msg("JIT failed: %s", ava_string_to_cstring(jit_error));
-
-  ava_jit_context_delete(jit);
 }

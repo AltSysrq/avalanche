@@ -286,18 +286,76 @@ struct global g {
 struct exe x {
   parent global g
 
+  # Terminal instructions terminate basic blocks naturally.
   attr terminal
+  # Terminal-no-fallthrough instructions cannot proceed to the
+  # immediately-following instruction. All terminal-no-fallthrough should be
+  # terminal.
   attr terminal-no-fallthrough
+  # special-reg-read-d instructions read a range of D-registers identified by
+  # the 0th reg-read-base and reg-read-count properties.
   attr special-reg-read-d
+  # special-reg-read-p instructions read a range of P-registers identifiied by
+  # the 0th reg-read-base and reg-read-count properties.
   attr special-reg-read-p
+  # can-throw instructions terminate basic blocks at the instruction *preceding
+  # them* (even if not marked terminal) and may branch to the current landing
+  # pad, if any.
+  #
+  # The landing-pad branch logically happens *before* the instruction because,
+  # if the instruction does throw, any registers written by the instruction are
+  # not actually modified.
+  attr can-throw
+  # push-landing-pad instructions push an exception-handler onto the stack
+  # which establishes their 0th landing-pad property as the landing pad for
+  # can-throw instructions. Additinoally, they push a caught-exception when
+  # transfering to their 0th landing-pad.
+  #
+  # All such instructions must be terminal.
+  attr push-landing-pad
+  # pop-exception instructions pop an item from the combined exception stack.
+  #
+  # All such instructions must be terminal.
+  attr pop-exception
+  # require-caught-exception instructions require at least one element to exist
+  # on the caught-exception stack.
+  attr require-caught-exception
+  # require-empty-exception instructions require the combined exception stack
+  # to be totally empty.
+  attr require-empty-exception
+  # Identifies fields which are registers that the instruction reads, thereby
+  # requiring them to be initialised.
   prop register reg-read
+  # Identifies fields which are registers that the instruction writes, thereby
+  # initialising them.
   prop register reg-write
+  # Identifies a label that the instruction may jump to. There is never more
+  # than one jump-target.
   prop int jump-target
+  # Identifies a label that the instruction uses as a landing pad (with
+  # push-landing-pad).
+  prop int landing-pad
+  # Indicates whether the landing-pad pushed by a push-landing-pad instruction
+  # is a cleanup or a catch.
+  prop bool landing-pad-is-cleanup
+  # Identifies a field which must refer to a variable-like global entity.
   prop int global-var-ref
+  # Identifies a field which must refer to a function-like global entity.
   prop int global-fun-ref
+  # Identifies a field which must refer to some global entity. This must be
+  # given in addition to global-var-ref and global-fun-ref.
   prop int global-ref
+  # Identifies the first register, inclusive, read by a special-reg-read-*
+  # attributed instruction. There is never more than one of these properties on
+  # an instruction.
   prop int reg-read-base
+  # Identifies the number of registers read by a special-reg-read-* attributed
+  # instruction. There is never more than one of these properties on an
+  # instruction.
   prop int reg-read-count
+  # Indicates the number of arguments statically passed to any functions
+  # referenced via global-fun-ref. There is never more than one of these
+  # properties on an instruction.
   prop int static-arg-count
 
   # Records the source position in effect until the next declaration indicating
@@ -399,28 +457,9 @@ struct exe x {
 
   # Copies the value of one register to another.
   #
-  # Semantics: dst is set to the value stored in src, possibly after
-  # conversion. The following table lists legal dst/src type pairs where dst
-  # and src are different. D- and V-registers are considered equivalent here
-  # and are not noted separately.
-  #
-  #   dv->i      Parsed as integer, default 0
-  #   i->dv      Integer stringified
-  #   dv->f      Parsed as ava_function
-  #   f->dv      Function stringified
-  #   dv->l      Parsed as list
-  #   l->dv      List stringified
-  #
-  # Exceptions may be thrown by parsing conversions.
-  #
-  # Note that conversions between types means that sequences like
-  #   ld-reg i0 d0
-  #   ld-reg d0 i0
-  # result in changing *both* registers.
-  #
-  # This instruction cannot operate on P-registers at all, see ld-parm for
-  # that.
-  elt ld-reg {
+  # Semantics: dst is set to the value stored in src. Both registers must be of
+  # the same type, or must both be D- or V-registers.
+  elt ld-reg-s {
     register dvifl dst {
       prop reg-write
     }
@@ -430,10 +469,37 @@ struct exe x {
 
     constraint {
       @.dst.type == @.src.type ||
-      @.dst.type == ava_prt_var ||
-      @.dst.type == ava_prt_data ||
-      @.src.type == ava_prt_var ||
-      @.src.type == ava_prt_data
+      ((@.dst.type == ava_prt_data || @.dst.type == ava_prt_var) &&
+       (@.src.type == ava_prt_data || @.src.type == ava_prt_var))
+    }
+  }
+
+  # Widens a typed register to an untyped register.
+  #
+  # Semantics: dst is set to the normal form of the value stored in src.
+  elt ld-reg-u {
+    register dv dst {
+      prop reg-write
+    }
+    register ifl src {
+      prop reg-read
+    }
+  }
+
+  # Narrows an untyped register to a typed register.
+  #
+  # Semantics: dst is set to the typed value represented by the value stored in
+  # src. If the value is not interpretable as dst's type, a format exception is
+  # thrown.
+  elt ld-reg-d {
+    attr can-throw
+
+    register ifl dst {
+      prop reg-write
+    }
+
+    register dv src {
+      prop reg-read
     }
   }
 
@@ -484,6 +550,7 @@ struct exe x {
   # Semantics: The L-register dst is set to the value of the L-register in lsrc
   # with the element read from esrc appended.
   elt lappend {
+    attr can-throw ;# Eg, OOM, max list length exceeded
     register l dst {
       prop reg-write
     }
@@ -500,6 +567,7 @@ struct exe x {
   # Semantics: The L-register dst is set to the concatenation of the lists in
   # the L-registers left and right, in that order.
   elt lcat {
+    attr can-throw ;# Eg, OOM, max list length exceeded
     register l dst {
       prop reg-write
     }
@@ -517,6 +585,7 @@ struct exe x {
   # L-register src. If src is the empty list, an error_exception of type
   # empty-list is thrown.
   elt lhead {
+    attr can-throw
     register dv dst {
       prop reg-write
     }
@@ -531,6 +600,7 @@ struct exe x {
   # with the first element deleted. If src is the empty list, an
   # error_exception of type empty-list is thrown.
   elt lbehead {
+    attr can-throw
     register l dst {
       prop reg-write
     }
@@ -544,6 +614,7 @@ struct exe x {
   # Semantics: Every element in L-register src is interpreted as a list, and
   # all are concatenated into one list, which is stored in L-register dst.
   elt lflatten {
+    attr can-throw
     register l dst {
       prop reg-write
     }
@@ -559,6 +630,7 @@ struct exe x {
   # error_exception whose user type and message is given by extype and
   # exmessage is thrown.
   elt lindex {
+    attr can-throw
     register dv dst {
       prop reg-write
     }
@@ -636,6 +708,7 @@ struct exe x {
   # arguments are indeed empty. Implementations which throw exceptions in
   # response to the assertion failure should indicate that.
   elt aaempty {
+    attr can-throw
     register v src {
       prop reg-read
     }
@@ -657,6 +730,7 @@ struct exe x {
   # taken by the function.
   elt invoke-ss {
     attr special-reg-read-d
+    attr can-throw
 
     register dv dst {
       prop reg-write
@@ -694,6 +768,7 @@ struct exe x {
   # Any exceptions resulting from marshalling the function call propagate.
   elt invoke-sd {
     attr special-reg-read-p
+    attr can-throw
 
     register dv dst {
       prop reg-write
@@ -731,6 +806,7 @@ struct exe x {
   # Any exceptions resulting from marshalling the function call propagate.
   elt invoke-dd {
     attr special-reg-read-p
+    attr can-throw
 
     register dv dst {
       prop reg-write
@@ -768,6 +844,7 @@ struct exe x {
   # non-pos arguments.
   elt partial {
     attr special-reg-read-d
+    attr can-throw
 
     register f dst {
       prop reg-write
@@ -795,6 +872,7 @@ struct exe x {
   elt ret {
     attr terminal
     attr terminal-no-fallthrough
+    attr require-empty-exception
     register dv return-value {
       prop reg-read
     }
@@ -839,6 +917,113 @@ struct exe x {
   # the branch instruction.
   elt label {
     int name
+  }
+
+  # The primary instruction for exception handling.
+  #
+  # Semantics: An exception handler is pushed onto the logical exception
+  # handler stack. Control proceeds to the next instruction. If any exception
+  # is thrown while this handler is at the top of the stack, the stack is
+  # unwound to this function frame, the exception handler is popped from the
+  # exception-handler stack, the caught exception pushed onto the
+  # caught-exception stack, and control transfers to the label identified by
+  # target (as per goto).
+  #
+  # Note that the exception-handler and caught-exception stacks are conceptual
+  # only. All static paths through the function must have the same stack
+  # configurations for every instruction. The identity of the try instruction
+  # that pushed each element is considered part of the configuration for this
+  # purpose.
+  #
+  # The exception-handler and caught-exception stacks share the concept of
+  # ordering, in that it is meaningful to refer to the single top of the
+  # collective exception stacks.
+  #
+  # The exception stacks must be empty at any point where the function might
+  # return.
+  #
+  # If cleanup is true, exceptions of any kind (including foreign exceptions)
+  # will be caught, and all exceptions will be treated as foreign (eg, ex-type
+  # will return ava_pet_other_exception and ex-value will be empty). Otherwise
+  # it is undefined whether foreign exceptions will be caught. Code generators
+  # should ensure that foreign exceptions are expediently rethrown if
+  # encountered.
+  elt try {
+    attr terminal
+    attr push-landing-pad
+    bool cleanup {
+      prop landing-pad-is-cleanup
+    }
+    int target {
+      prop landing-pad
+    }
+  }
+
+  # Extracts the type of the current exception.
+  #
+  # Semantics: dst is set to the integer representing the type of the top-most
+  # caught-exception.
+  elt ex-type {
+    attr require-caught-exception
+    register i dst {
+      prop reg-write
+    }
+  }
+
+  # Extracts the value of the current exception.
+  #
+  # Semantics: dst is set to the value of the top-most caught-exception.
+  elt ex-value {
+    attr require-caught-exception
+    register dv dst {
+      prop reg-write
+    }
+  }
+
+  # Ends an exception-handling context.
+  #
+  # Semantics: The top of the combined exception stacks, whichever type it is,
+  # is dropped. This instruction otherwise does nothing.
+  #
+  # The effect of reaching an yrt instruction after catching a foreign
+  # exception is undefined; the exception may be dropped or rethrown. Code
+  # generators should ensure that foreign exceptions always get rethrown.
+  elt yrt {
+    # Terminal so that every basic block has at most one exception handling
+    # context.
+    attr terminal
+    attr pop-exception
+  }
+
+  # Throws a new exception.
+  #
+  # Semantics: An exception whose type is identified by ex-type and whose value
+  # is identified by ex-value is thrown from the current location, as per
+  # ava_throw().
+  elt throw {
+    attr terminal
+    attr terminal-no-fallthrough
+    attr can-throw
+
+    int ex-type
+    register dv ex-value {
+      prop reg-read
+    }
+
+    constraint {
+      ava_pcode_is_valid_ex_type(@.ex_type)
+    }
+  }
+
+  # Rethrows a caught exception.
+  #
+  # Semantics: The exception at the top of the caught-exception is thrown, as
+  # per ava_rethrow().
+  elt rethrow {
+    attr terminal
+    attr terminal-no-fallthrough
+    attr can-throw
+    attr require-caught-exception
   }
 }
 

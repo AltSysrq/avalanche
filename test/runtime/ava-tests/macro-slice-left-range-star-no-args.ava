@@ -1,3 +1,0 @@
-macro chop op 1 <1-1* >
-extern pass-test pass_test c void [int pos]
-a b chop pass-test 42

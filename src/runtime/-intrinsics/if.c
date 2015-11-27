@@ -132,7 +132,7 @@ ava_macro_subst_result ava_intr_if_subst(
     if (ava_put_substitution == res->type) {
       if (!this->expression_form)
         return ava_macsub_error_result(
-          context, ava_error_if_inconsistent_result_form(
+          context, ava_error_structure_inconsistent_result_form(
             &res->location));
 
       this->clauses[ix].result = ava_macsub_run(
@@ -140,7 +140,7 @@ ava_macro_subst_result ava_intr_if_subst(
     } else if (ava_put_block == res->type) {
       if (this->expression_form)
         return ava_macsub_error_result(
-          context, ava_error_if_inconsistent_result_form(
+          context, ava_error_structure_inconsistent_result_form(
             &res->location));
 
       this->clauses[ix].result = ava_macsub_run(
@@ -219,7 +219,7 @@ static void ava_intr_if_cg_common(
     elselbl = ava_codegen_genlabel(context);
     if (this->clauses[i].condition) {
       ava_ast_node_cg_evaluate(this->clauses[i].condition, &dreg, context);
-      AVA_PCXB(ld_reg, creg, dreg);
+      AVA_PCXB(ld_reg_d, creg, dreg);
       AVA_PCXB(bool, creg, creg);
       ava_codegen_branch(context, &this->header.location,
                          creg, 0, ava_false, elselbl);

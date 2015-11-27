@@ -85,6 +85,18 @@ static const ava_ast_node_vtable ava_intr_user_macro_vtable = {
   .cg_define = (ava_ast_node_cg_define_f)ava_intr_user_macro_cg_define,
 };
 
+typedef struct {
+  ava_string str;
+  ava_integer ret;
+} ava_intr_user_macro_cvt_prec_data;
+
+static void ava_intr_user_macro_cvt_prec(void* d) {
+  ava_intr_user_macro_cvt_prec_data* data = d;
+
+  data->ret = ava_integer_of_value(
+    ava_value_of_string(data->str), -1);
+}
+
 ava_macro_subst_result ava_intr_user_macro_subst(
   const ava_symbol* self,
   ava_macsub_context* context,
@@ -93,7 +105,7 @@ ava_macro_subst_result ava_intr_user_macro_subst(
   ava_bool* consumed_other_statements
 ) {
   AVA_STATIC_STRING(out_of_range, "Out of legal range.");
-  ava_exception_handler handler;
+  ava_exception ex;
   const ava_parse_unit* name_unit = NULL, * type_unit, * precedence_unit;
   const ava_parse_unit* definition_begin = NULL;
   ava_string name, type_str, precedence_str;
@@ -133,19 +145,23 @@ ava_macro_subst_result ava_intr_user_macro_subst(
       }
 
       if (ava_st_operator_macro == type) {
+        ava_intr_user_macro_cvt_prec_data data;
         AVA_MACRO_ARG_CURRENT_UNIT(precedence_unit, "precedence");
         AVA_MACRO_ARG_BAREWORD(precedence_str, "precedence");
-        ava_try (handler) {
-          precedence = ava_integer_of_value(
-            ava_value_of_string(precedence_str), -1);
-        } ava_catch (handler, ava_format_exception) {
-          return ava_macsub_error_result(
-            context, ava_error_bad_macro_precedence(
-              &precedence_unit->location, precedence_str,
-              ava_to_string(handler.value)));
-        } ava_catch_all {
-          ava_rethrow(&handler);
+
+        data.str = precedence_str;
+        if (ava_catch(&ex, ava_intr_user_macro_cvt_prec, &data)) {
+          if (&ava_format_exception == ex.type) {
+            return ava_macsub_error_result(
+              context, ava_error_bad_macro_precedence(
+                &precedence_unit->location, precedence_str,
+                ava_to_string(ava_exception_get_value(&ex))));
+          } else {
+            ava_rethrow(ex);
+          }
         }
+        precedence = data.ret;
+
         if (precedence < 1 || precedence > AVA_MAX_OPERATOR_MACRO_PRECEDENCE)
           return ava_macsub_error_result(
             context, ava_error_bad_macro_precedence(

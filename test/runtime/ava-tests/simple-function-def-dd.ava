@@ -1,5 +1,0 @@
-extern pass-test pass_test c void [int pos]
-fun doit x = pass-test $x
-
-#set# f $doit
-$f 42

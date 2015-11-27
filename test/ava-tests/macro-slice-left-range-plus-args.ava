@@ -1,0 +1,7 @@
+extern register-test ava_register_test ava pos pos
+macro chop op 1 <1-1+
+extern pass-test pass_test c void [int pos]
+
+register-test macro-slice-left-range-plus-args {
+  foo pass-test 42 bar chop
+}

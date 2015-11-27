@@ -1,0 +1,13 @@
+reqmod helpers/test
+
+fun doit () {
+  #throw# error 42
+}
+
+test.register direct-throw-error {
+  try {
+    doit ()
+  } workaround x {
+    test.pass $x
+  }
+}

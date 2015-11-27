@@ -582,7 +582,7 @@ static void ava_intr_loop_cg_evaluate(
       tmp.index = ava_codegen_push_reg(context, ava_prt_data, 1);
       ava_ast_node_cg_evaluate(
         loop->clauses[clause].v.each.rvalue, &tmp, context);
-      AVA_PCXB(ld_reg, loop->clauses[clause].v.each.reg_list, tmp);
+      AVA_PCXB(ld_reg_d, loop->clauses[clause].v.each.reg_list, tmp);
       AVA_PCXB(llength, loop->clauses[clause].v.each.reg_length,
                loop->clauses[clause].v.each.reg_list);
       AVA_PCXB(ld_imm_i, loop->clauses[clause].v.each.reg_index, 0);
@@ -658,7 +658,7 @@ static void ava_intr_loop_cg_evaluate(
 
       ava_ast_node_cg_evaluate(
         loop->clauses[clause].v.vor.cond, &tmp, context);
-      AVA_PCXB(ld_reg, condres, tmp);
+      AVA_PCXB(ld_reg_d, condres, tmp);
       ava_codegen_branch(context, &loop->header.location,
                          condres, 0, ava_false, completion_label);
 
@@ -676,7 +676,7 @@ static void ava_intr_loop_cg_evaluate(
 
       ava_ast_node_cg_evaluate(
         loop->clauses[clause].v.vhile.cond, &tmp, context);
-      AVA_PCXB(ld_reg, condres, tmp);
+      AVA_PCXB(ld_reg_d, condres, tmp);
       ava_codegen_branch(context, &loop->header.location,
                          condres, 0,
                          loop->clauses[clause].v.vhile.invert,
@@ -731,7 +731,7 @@ static void ava_intr_loop_cg_evaluate(
       ltmp.type = ava_prt_list;
       ltmp.index = ava_codegen_push_reg(context, ava_prt_list, 1);
 
-      AVA_PCXB(ld_reg, ltmp, accum);
+      AVA_PCXB(ld_reg_d, ltmp, accum);
       if (loop->clauses[clause].v.collect.expression) {
         if (loop->clauses[clause].v.collect.expression->v->cg_spread) {
           etmp.type = ava_prt_list;
@@ -752,7 +752,7 @@ static void ava_intr_loop_cg_evaluate(
         AVA_PCXB(lappend, ltmp, ltmp, iterval);
       }
 
-      AVA_PCXB(ld_reg, accum, ltmp);
+      AVA_PCXB(ld_reg_u, accum, ltmp);
 
       ava_codegen_pop_reg(context, ava_prt_list, 1);
     } break;
@@ -793,7 +793,7 @@ static void ava_intr_loop_cg_evaluate(
   AVA_PCXB(label, exit_label);
 
   if (dst)
-    AVA_PCXB(ld_reg, *dst, accum);
+    AVA_PCXB(ld_reg_s, *dst, accum);
 
   ava_codegen_pop_reg(context, ava_prt_data, 2);
 }
@@ -814,7 +814,7 @@ static void ava_intr_leach_pnode_cg_evaluate(
 ) {
   const ava_intr_loop* loop = (const ava_intr_loop*)
     ((char*)node - offsetof(ava_intr_loop, each_pnode));
-  AVA_PCXB(ld_reg, *dst, loop->each_data_reg);
+  AVA_PCXB(ld_reg_s, *dst, loop->each_data_reg);
 }
 
 typedef struct {

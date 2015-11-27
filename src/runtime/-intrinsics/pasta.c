@@ -207,7 +207,7 @@ ava_macro_subst_result ava_intr_goto_subst(
   ava_bool* consumed_other_statements
 ) {
   ava_intr_goto* this;
-  const ava_parse_unit* target_unit;
+  const ava_parse_unit* target_unit = NULL;
   ava_string target_name;
 
   AVA_MACRO_ARG_PARSE {

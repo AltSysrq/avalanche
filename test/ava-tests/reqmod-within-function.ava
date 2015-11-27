@@ -1,0 +1,16 @@
+extern register-test ava_register_test ava pos pos
+
+fun doit () {
+  reqmod helpers/decl-pass-test
+  pass-test 42
+}
+
+fun unrelated () {
+  ; Also can require here
+  reqmod helpers/decl-pass-test
+  pass-test 42
+}
+
+register-test reqmod-within-function {
+  doit ()
+}

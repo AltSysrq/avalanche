@@ -1,0 +1,9 @@
+extern pass-test pass_test c void [int pos]
+extern register-test ava_register_test ava pos pos
+
+macro foo control %pass-test "42"
+alias bar = foo
+
+register-test alias-macro {
+  bar ()
+}

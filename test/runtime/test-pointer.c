@@ -32,18 +32,19 @@ static void force(const void* ptr) {
   printf("%p\n", ptr);
 }
 
-static void assert_format_exception(const char* in) {
-  ava_exception_handler h;
+static void do_assert_format_exception(void* v) {
+  ava_pointer_value p = ava_pointer_value_of(
+    ava_value_of_cstring(v));
+  force(ava_pointer_get_const(p, AVA_EMPTY_STRING));
+}
 
-  ava_try (h) {
-    ava_pointer_value p = ava_pointer_value_of(
-      ava_value_of_cstring(in));
-    force(ava_pointer_get_const(p, AVA_EMPTY_STRING));
+static void assert_format_exception(const char* in) {
+  ava_exception ex;
+
+  if (ava_catch(&ex, do_assert_format_exception, (void*)in)) {
+    ck_assert_ptr_eq(&ava_format_exception, ex.type);
+  } else {
     ck_abort_msg("no exception thrown");
-  } ava_catch (h, ava_format_exception) {
-    /* OK */
-  } ava_catch_all {
-    ava_rethrow(&h);
   }
 }
 
@@ -73,23 +74,19 @@ deftest(const_void_null_pointer) {
   ck_assert_ptr_eq(NULL, ava_pointer_get_const(p, AVA_ASCII9_STRING("foo")));
 }
 
-deftest(mutable_access_to_const_throws) {
-  ava_exception_handler handler;
+static void do_mutable_access_to_const_throws(void* ignore) {
   ava_pointer_value p = ava_pointer_of_proto(
     &ava_pointer_proto_const_void, NULL);
+  force(ava_pointer_get_mutable(p, AVA_EMPTY_STRING));
+}
 
-  ava_try (handler) {
-    force(ava_pointer_get_mutable(p, AVA_EMPTY_STRING));
+deftest(mutable_access_to_const_throws) {
+  ava_exception ex;
+
+  if (ava_catch(&ex, do_mutable_access_to_const_throws, NULL))
+    ck_assert_ptr_eq(&ava_error_exception, ex.type);
+  else
     ck_abort_msg("no exception thrown");
-  } ava_catch (handler, ava_error_exception) {
-    ck_assert_int_eq(2, ava_list_length(handler.value));
-    assert_value_equals_str("const-pointer",
-                            ava_list_index(handler.value, 0));
-    ck_assert_int_eq(2, ava_list_length(
-                       ava_list_index(handler.value, 1)));
-  } ava_catch_all {
-    ava_rethrow(&handler);
-  }
 }
 
 deftest(correct_use_of_typed_pointer) {
@@ -104,23 +101,19 @@ deftest(correct_use_of_typed_pointer) {
                      p, AVA_ASCII9_STRING("FILE")));
 }
 
-deftest(incompatible_use_of_typed_pointer_throws) {
-  ava_exception_handler handler;
+static void do_incompatible_use_of_typed_pointer_throws(void* ignored) {
   ava_pointer_value p = of_cstring("FILE* null");
-
   assert_value_equals_str("FILE* null", p.v);
-  ava_try (handler) {
-    force(ava_pointer_get_mutable(p, AVA_ASCII9_STRING("bar")));
+  force(ava_pointer_get_mutable(p, AVA_ASCII9_STRING("bar")));
+}
+
+deftest(incompatible_use_of_typed_pointer_throws) {
+  ava_exception ex;
+
+  if (ava_catch(&ex, do_incompatible_use_of_typed_pointer_throws, NULL))
+    ck_assert_ptr_eq(&ava_error_exception, ex.type);
+  else
     ck_abort_msg("no exception thrown");
-  } ava_catch (handler, ava_error_exception) {
-    ck_assert_int_eq(2, ava_list_length(handler.value));
-    assert_value_equals_str("incompatible-pointer",
-                            ava_list_index(handler.value, 0));
-    ck_assert_int_eq(2, ava_list_length(
-                       ava_list_index(handler.value, 1)));
-  } ava_catch_all {
-    ava_rethrow(&handler);
-  }
 }
 
 deftest(pointer_value_survives_stringification) {

@@ -28,14 +28,38 @@
 (add-to-list 'auto-mode-alist '("\\.ava\\'" . ava-mode))
 (defconst ava-font-lock-keywords
   (list
-   (cons (regexp-opt (list
-                      "alias" "Alias" "ALIAS"
-                      "break" "collect" "collecting" "continue" "do" "each"
-                      "else" "extern" "Extern" "EXTERN"
-                      "for" "fun" "Fun" "FUN" "goto"
-                      "in" "if" "import" "macro" "Macro" "MACRO" "namespace"
-                      "pasta" "reqmod" "reqpkg" "ret" "until" "while")
-                     'symbols)
+   (cons (regexp-opt
+          (list
+           "alias" "Alias" "ALIAS"
+           "break"
+           "collect" "collecting"
+           "continue"
+           "catch"
+           "defer"
+           "do"
+           "each"
+           "else"
+           "extern" "Extern" "EXTERN"
+           "finally"
+           "for"
+           "fun" "Fun" "FUN"
+           "goto"
+           "in"
+           "if"
+           "import"
+           "macro" "Macro" "MACRO"
+           "namespace"
+           "on-any-bad-format"
+           "pasta"
+           "reqmod" "reqpkg"
+           "ret"
+           "throw" "throw-err" "throw-fmt"
+           "try"
+           "unreachable"
+           "until"
+           "while"
+           "workaround" "workaround-undefined")
+          'symbols)
          'font-lock-keyword-face)
    (cons "\\$\\(\\s_\\|\\w\\)+\\$?" 'font-lock-variable-name-face)))
 

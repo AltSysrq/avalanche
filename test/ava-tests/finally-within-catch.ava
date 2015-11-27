@@ -1,0 +1,15 @@
+reqmod helpers/test
+
+test.register finally-within-catch {
+  try {
+    ; If the code-generator incorrectly tags this as a simple cleanup, the
+    ; process aborts because the unwinder can't see the other catch.
+    try {
+      x = + blah
+    } finally {
+      x = 42
+    }
+  } on-any-bad-format _ {
+    test.pass $x
+  }
+}

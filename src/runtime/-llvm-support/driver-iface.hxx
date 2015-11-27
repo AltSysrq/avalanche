@@ -478,6 +478,24 @@ namespace ava {
      * Returns !!i
      */
     F x_bool;
+    /**
+     * Implements the throw P-Code exe.
+     *
+     * Signature: void (ava_integer type, ava_value value) AVA_NORETURN
+     */
+    F x_throw;
+    /**
+     * Implements the ex-type P-Code exe.
+     *
+     * Signature: ava_integer (const ava_exception* ex)
+     */
+    F x_ex_type;
+    /**
+     * Implements the ex-value P-Code exe.
+     *
+     * Signature: ava_value (const ava_exception* ex)
+     */
+    F x_ex_value;
 
     /**
      * Marshalling functions, for invoke-ss and invoke-sd.
@@ -495,6 +513,29 @@ namespace ava {
      */
     F marshal_to[ava_cmpt_pointer+1];
     F marshal_from[ava_cmpt_pointer+1];
+
+    /**
+     * Signature: void (ava_exception* dst, const exception*)
+     *
+     * Sets *dst to a pseudo-exception representing a foreign exception type.
+     * The second argument is ignored, and is only present so that this
+     * function has the same signature as copy_exception.
+     */
+    F foreign_exception;
+
+    /**
+     * Signature: void (ava_exception* dst, const ava_exception* src)
+     *
+     * Copies *src to *dst
+     */
+    F copy_exception;
+
+    /**
+     * Signature: void (void)
+     *
+     * Does nothing.
+     */
+    F nop;
 
     /**
      * If the module defines a `\program-entry`, a pointer to that function;

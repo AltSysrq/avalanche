@@ -15,7 +15,6 @@ avalanche/function.h \
 avalanche/integer.h \
 avalanche/interval.h \
 avalanche/intrinsics.h \
-avalanche/jit.h \
 avalanche/lex.h \
 avalanche/list.h \
 avalanche/list-proj.h \

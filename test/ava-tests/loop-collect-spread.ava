@@ -1,0 +1,8 @@
+extern register-test ava_register_test ava pos pos
+extern pass-test pass_test c void [int pos]
+extern lindex lindex ava pos pos
+
+register-test loop-collect-spread {
+  #set# result (each x in [[36 45 1] [56 42 99]] collect \*$x)
+  pass-test (lindex $result 4)
+}

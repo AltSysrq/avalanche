@@ -1,0 +1,21 @@
+extern register-test ava_register_test ava pos pos
+extern pass-test pass_test c void [int pos]
+fun foo code {
+  fun a () {
+    b ()
+    fun b () {
+      fun c () {
+        fun d () {
+          pass-test $code
+        }
+        d ()
+      }
+      c ()
+    }
+  }
+  a ()
+}
+
+register-test closure-nested-ss {
+  foo 42
+}

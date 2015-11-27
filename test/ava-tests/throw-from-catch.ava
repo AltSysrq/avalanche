@@ -1,0 +1,13 @@
+reqmod helpers/test
+
+test.register throw-from-catch {
+  try {
+    try {
+      test.pass : + foo
+    } on-any-bad-format x {
+      test.pass : + bar
+    }
+  } on-any-bad-format x {
+    test.pass 42
+  }
+}

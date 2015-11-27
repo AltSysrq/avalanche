@@ -1,0 +1,14 @@
+extern register-test ava_register_test ava pos pos
+extern pass-test pass_test c void [int pos]
+
+fun doit () {
+  try {
+    x = + blah
+  } on-any-bad-format x {
+    pass-test 42
+  }
+}
+
+register-test catch-format-ex {
+  doit ()
+}

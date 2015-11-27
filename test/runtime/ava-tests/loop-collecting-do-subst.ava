@@ -1,6 +1,0 @@
-extern pass-test pass_test c void [int pos]
-extern iadd iadd ava pos pos
-extern lindex lindex ava pos pos
-
-#set# result (each x y in [0 1 40 2 5 6] do (iadd $x $y) collecting)
-pass-test (lindex $result 1)

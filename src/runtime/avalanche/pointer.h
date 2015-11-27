@@ -94,8 +94,8 @@ ava_pointer_value ava_pointer_of_proto(
  * Parses the given string into a pointer prototype.
  *
  * @param protostr The string to parse.
- * @return A prototype parsed from the string.
- * @throw ava_format_exception if protostr is not a valid prototype.
+ * @return A prototype parsed from the string, or NULL if protostr is not a
+ * valid prototype string.
  */
 const ava_pointer_prototype* ava_pointer_prototype_parse(ava_string protostr);
 

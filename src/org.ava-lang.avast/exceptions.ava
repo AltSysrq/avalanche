@@ -1,0 +1,50 @@
+reqmod builtins
+reqmod operators
+
+; Formats a value appropriate for a standard user or error exception.
+;
+; :arg type The user type of the exception.
+;
+; :arg message The message for the exception, if any.
+;
+; :arg cause The exception causing this exception, if any. This should be
+; another string in user exception format.
+;
+; :arg extra A map of extra key/value pairs to append to the standard exception
+; format.
+;
+; :return The formatted exception
+FUN format-user-exception type [message] [-cause] [-extra] {
+  map = []
+  if (b# $message) {
+    map(message) = $message
+  }
+  if (b# $cause) {
+    map(cause) = $cause
+  }
+  map = [\*$map \*$extra]
+  ret [$type $map]
+}
+
+; Throws a standard user exception.
+;
+; All arguments to the right are passed verbatim to $format-user-exception to
+; produce the exception value.
+MACRO throw control     #throw# !user  (%format-user-exception >)
+; Throws a standard error exception.
+;
+; All arguments to the right are passed verbatim to $format-user-exception to
+; produce the exception value.
+MACRO throw-err control #throw# !error (%format-user-exception >)
+; Throws a format exception.
+;
+; The arguments to the right are an expression which evaluates to the exception
+; value.
+MACRO throw-fmt control #throw# !format (>)
+
+; Asserts that it is not reached, throwing an error exception if it is.
+;
+; The arguments to the right are passed to the -extra parameter to
+; $format-user-exception within a semiliteral.
+MACRO unreachable control %throw-err "unreachable-reached"
+\ "Supposedly unreachable location reached." "-extra" [>]

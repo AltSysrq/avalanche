@@ -297,6 +297,7 @@ ava_ast_node* ava_macsub_run_units(ava_macsub_context* context,
   TAILQ_INIT(&statement_list);
   TAILQ_INIT(&statement.units);
   TAILQ_INSERT_TAIL(&statement_list, &statement, next);
+  consumed_rest = ava_false;
 
   for (src = first, keep_going = ava_true; keep_going;
        keep_going = src != last, src = TAILQ_NEXT(src, next)) {

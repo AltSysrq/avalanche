@@ -429,6 +429,8 @@ ava_pcx_builder* ava_codegen_get_builder(
  */
 #define AVA_PCXB(op, ...)                                               \
   (ava_pcxb_##op(ava_codegen_get_builder(context), __VA_ARGS__))
+#define AVA_PCXB0(op)                                                   \
+  (ava_pcxb_##op(ava_codegen_get_builder(context)))
 /**
  * Convenience for writing
  *   ava_pcgb_OP(ava_pcx_builder_get_parent(

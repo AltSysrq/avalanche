@@ -21,8 +21,10 @@
 #include "avalanche/defs.h"
 #include "avalanche/alloc.h"
 #include "avalanche/value.h"
+#include "avalanche/exception.h"
 
 void ava_init(void) {
   ava_heap_init();
   ava_value_hash_init();
+  ava_exception_init();
 }

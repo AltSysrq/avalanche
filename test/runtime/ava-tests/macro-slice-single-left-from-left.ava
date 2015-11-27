@@ -1,3 +1,0 @@
-macro chop op 1 <-2
-extern pass-test pass_test c void [int pos]
-pass-test (1 2 42 3 chop 5 6)

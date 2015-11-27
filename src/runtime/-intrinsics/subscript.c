@@ -80,7 +80,8 @@ ava_macro_subst_result ava_intr_subscript_subst(
   ava_bool* consumed_other_statements
 ) {
   ava_intr_subscript* this;
-  const ava_parse_unit* type_unit, * composite_unit, * key_unit;
+  const ava_parse_unit* type_unit = NULL, * composite_unit = NULL,
+                      * key_unit = NULL;
   ava_parse_unit* getter_name_unit, * wither_name_unit;
   ava_string type_prefix, type_suffix;
   ava_ast_node* getter_fun_parms[3];

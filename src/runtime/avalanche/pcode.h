@@ -204,6 +204,27 @@ typedef struct ava_pcode_register_s {
   ava_pcode_register_index index;
 } ava_pcode_register;
 
+/**
+ * Identifies a type of exception visible to P-Code.
+ */
+typedef enum {
+  /** @see ava_user_exception */
+  ava_pet_user_exception = 0,
+  /** @see ava_error_exception */
+  ava_pet_error_exception,
+  /** @see ava_undefined_behaviour_exception */
+  ava_pet_undefined_behaviour_exception,
+  /** @see ava_format_exception */
+  ava_pet_format_exception,
+  /**
+   * Value used for other exception types.
+   *
+   * This is not a permissible thrown exception type, but is simply used as a
+   * stand-in when indicating to P-Code what exception type has been caught.
+   */
+  ava_pet_other_exception
+} ava_pcode_exception_type;
+
 #define AVA__IN_PCODE_H_ 1
 #include "gen-pcode.h"
 #undef AVA__IN_PCODE_H_

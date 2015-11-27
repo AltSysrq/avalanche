@@ -62,18 +62,18 @@ deftest(integer_literals_accepted) {
   assert_real_eq(1.0, of_cstring(" on ", 3.14));
 }
 
-deftest(throws_on_illegal_string) {
-  ava_exception_handler h;
-  ava_real r;
+static void do_throws_on_illegal_string(void* ignored) {
+  ava_real r = of_cstring("3.14 foo", 0);
+  ck_abort_msg("unexpectedly parsed %f", r);
+}
 
-  ava_try (h) {
-    r = of_cstring("3.14 foo", 0);
-    ck_abort_msg("unexpectedly parsed %f", r);
-  } ava_catch (h, ava_format_exception) {
-    /* OK */
-  } ava_catch_all {
-    ava_rethrow(&h);
-  }
+deftest(throws_on_illegal_string) {
+  ava_exception ex;
+
+  if (ava_catch(&ex, do_throws_on_illegal_string, NULL))
+    ck_assert_ptr_eq(&ava_format_exception, ex.type);
+  else
+    ck_abort_msg("no exception thrown");
 }
 
 deftest(accepts_nan) {

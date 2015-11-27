@@ -1,0 +1,10 @@
+extern register-test ava_register_test ava pos pos
+extern pass-test pass_test c void [int pos]
+
+register-test finally-run-at-end-of-nothrow-try {
+  try {
+    x = 42
+  } finally {
+    pass-test $x
+  }
+}

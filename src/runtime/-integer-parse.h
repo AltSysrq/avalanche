@@ -55,11 +55,9 @@ static const char* consume_sign_and_radix(
 
 static void throw_overflow(const char*restrict begin,
                            const char*restrict end) {
-  ava_throw(&ava_format_exception,
-            ava_value_of_string(
-              ava_error_integer_overflow(
-                ava_string_of_bytes(begin, end - begin))),
-            NULL);
+  ava_throw_str(&ava_format_exception,
+                ava_error_integer_overflow(
+                  ava_string_of_bytes(begin, end - begin)));
 }
 
 /* All of the parse_*() functions get strings that are already known to be

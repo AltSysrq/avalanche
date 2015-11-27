@@ -1,0 +1,12 @@
+extern register-test ava_register_test ava pos pos
+extern pass-test pass_test c void [int pos]
+
+register-test compound-subscript-write {
+  x = []
+  x(foo) = []
+  x(foo)(bar) = 20
+  x(foo)(baz) = 21
+  x(plugh) = 1
+
+  pass-test : $x(foo)(bar) + $x(foo)(baz) + $x(plugh)
+}

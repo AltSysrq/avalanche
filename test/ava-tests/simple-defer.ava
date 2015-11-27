@@ -1,0 +1,6 @@
+reqmod helpers/test
+
+test.register simple-defer {
+  defer test.pass $x
+  x = 42
+}

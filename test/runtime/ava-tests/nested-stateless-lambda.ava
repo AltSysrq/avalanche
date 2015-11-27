@@ -1,3 +1,0 @@
-extern pass-test pass_test c void [int pos]
-fun foo () = { pass-test $1 }
-(foo ()) 42

@@ -1,0 +1,13 @@
+extern register-test ava_register_test ava pos pos
+extern pass-test pass_test c void [int pos]
+fun foo code {
+  fun bar () {
+    pass-test $code
+  }
+
+  bar \*[()]
+}
+
+register-test closure-direct-sd {
+  foo 42
+}

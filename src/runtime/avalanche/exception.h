@@ -22,6 +22,30 @@
 
 #include "defs.h"
 #include "value.h"
+#include "name-mangle.h"
+
+/**
+ * @file
+ *
+ * Avalanche's exception system is built on top of the host's C++ exception
+ * handling mechanism.
+ *
+ * All Avalanche exceptions are instances of ava_exception. This structure
+ * should not be initialised by clients, but rather by the ava_throw_*()
+ * functions or ava_rethrow(). C++ clients may meaningfully catch
+ * ava_exception, and may rethrow it with `throw;`. C clients can use
+ * ava_catch() to intercept exceptions, albeit somewhat awkwardly and less
+ * efficiently.
+ *
+ * An exception is identified by two fields: type and value. The type is a
+ * pointer to a C structure describing the type of the exception, and indicates
+ * the low-level category of the exception, such as a normal user exception, a
+ * programming error, etc. The exact meaning of the value varies based on the
+ * type, but it is generally an exception message, or a structure identifying
+ * higher-level information about the exception.
+ */
+
+struct ava_demangled_name_s;
 
 /**
  * Used by identity to describe an exception type. These usually are statically
@@ -42,107 +66,76 @@ typedef struct {
 } ava_exception_type;
 
 /**
- * A list of stack frames at which an exception occurred, for debugging
- * purposes.
+ * Opaque type storing extra information about an exception at the point it was
+ * thrown.
  */
-typedef struct ava_stack_trace_s ava_stack_trace;
-struct ava_stack_trace_s {
-  /**
-   * The "type" of function of this frame, based on the name mangling (or lack
-   * thereof) in the function name.
-   */
-  const char* function_type;
-  /**
-   * The demangled function name of this frame.
-   */
-  char in_function[256];
-
-  /**
-   * The position of the instruction pointer in this frame.
-   */
-  const void* ip;
-  /**
-   * The offset of ip from the start of the function.
-   */
-  size_t ip_offset;
-
-  /**
-   * The next frame *down* the stack, or NULL if this is the final callee.
-   */
-  ava_stack_trace* next;
-};
+typedef struct ava_exception_throw_info_s ava_exception_throw_info;
 
 /**
- * Stores information on a level of exception handling.
+ * An exception.
  *
- * The mechanism by which Avalanche handles exceptions is not defined.
- *
- * When a handler catches an exception, the public fields of this struct are
- * populated with the exception information.
+ * This struct is not normally initialised by clients; use ava_throw() and
+ * friends to do that.
  */
-typedef struct ava_exception_handler_s ava_exception_handler;
-struct ava_exception_handler_s {
+typedef struct {
   /**
-   * After an exception has been caught, the type of exception that was caught.
+   * The low-level type of this exception, as far as native libraries usually
+   * care about it.
    */
-  const ava_exception_type* exception_type;
+  const ava_exception_type* type;
   /**
-   * After an exception has been caught, the value that was thrown.
+   * The Avalanche-visibile high-level exception value.
+   *
+   * This is not an actual ava_value because the C++ exception ABI might not
+   * produce a suitably-aligned allocation, which would lead to a bus error
+   * when attempting to write into it.
    */
-  ava_value value;
-  /**
-   * After an exception has been caught, the (heap-allocated) stack trace
-   * between the throw point and the catch point. *stack_trace indicates the
-   * direct callee of the catcher; ava_next_frame(stack_trace->next) is
-   * the callee's callee, and so on.
-   */
-  ava_stack_trace* stack_trace;
+  void* value[sizeof(ava_value) / sizeof(void*)];
 
   /**
-   * Implementation detail: Executions are implemented by setjmp()ing into this
-   * buffer, then longjmp()ing back up the stack on a throw.
+   * Information about the exception at the point where it was thrown.
    */
-  jmp_buf resume_point;
-
-  /**
-   * The next handler in the context's exception handler context.
-   */
-  ava_exception_handler* next;
-};
+  const ava_exception_throw_info* throw_info;
+} ava_exception;
 
 /**
- * This is an internal function.
- *
- * *dst is initialised to be a valid exception handler element, except that the
- * jump buffer is not populated, and the handler is pushed to the top of the
- * stack for the current context. Returns a pointer to the jump buffer, so that
- * ava_try() can setjmp() it in the same expression.
- *
- * @param dst The handler to initialise.
+ * Contains the location information for a frame of an exception trace.
  */
-jmp_buf* ava_push_handler(ava_exception_handler*restrict dst);
-/**
- * This is an internal function.
- *
- * If do_pop is true, pops a handler from the top of the exception handler
- * stack for the current context.
- *
- * @return do_pop
- */
-ava_bool ava_pop_handler(ava_bool do_pop);
+typedef struct {
+  /**
+   * The IP/PC at the callsite, or 0 if unavailable.
+   */
+  ava_intptr ip;
+  /**
+   * The filename. Always set to a present string.
+   */
+  ava_string filename;
+  /**
+   * Whether the filename is actually known.
+   */
+  ava_bool filename_known;
+  /**
+   * The function in which the IP is found. Always set to a valid value.
+   */
+  ava_demangled_name function;
+  /**
+   * Whether the function name is actually known.
+   */
+  ava_bool function_known;
+  /**
+   * The source line number, or -1 if unavailable.
+   */
+  signed lineno;
+} ava_exception_location;
+
 /**
  * Throws an exception of the given type and with the given value up the stack,
  * to the first available handler.
  *
  * @param type The exception type being thrown.
  * @param value The value being thrown.
- * @param trace A heap-allocated series of stack frames as in
- * ava_exception_handler.stack_trace. Usually NULL, indicating that this
- * is the original throw point. If non-NULL, this value will be used as the
- * stack trace instead of the current trace.
  */
-void ava_throw(const ava_exception_type* type, ava_value value,
-               ava_stack_trace* trace) AVA_NORETURN;
+void ava_throw(const ava_exception_type* type, ava_value value) AVA_NORETURN;
 /**
  * Convenience for ava_throw(type, ava_value_of_string(str), NULL).
  */
@@ -154,67 +147,83 @@ void ava_throw_str(const ava_exception_type* type, ava_string str) AVA_NORETURN;
 void ava_throw_uex(const ava_exception_type* type, ava_string user_type,
                    ava_string message) AVA_NORETURN;
 /**
- * Convenience for ava_throw(handler->exception_type, handler->value,
- *                           handler->next, handler->stack_trace);
+ * Rethrows the given exception, without regenerating any debug information,
+ * etc.
  */
-void ava_rethrow(ava_exception_handler*restrict handler)
-AVA_NORETURN;
+void ava_rethrow(ava_exception handler) AVA_NORETURN;
 
 /**
- * Executes its body; if the body throws an exception, the handler will be
- * populated and control transfers into catch blocks.
+ * Wrapper function permitting C code to catch Avalanche exceptions.
  *
- * Typical usage:
+ * Evaluates (*f)(ud). If it throws, the exception is written into *ex and true
+ * is returned. Otherwise, *ex is unchanged and false is returned.
  *
- *   ava_exception_handler handler
- *   ava_try (handler) {
- *     call_some_functions();
- *   } ava_catch (handler, ava_user_exception) {
- *     handle_exception();
- *   } ava_catch_all {
- *     ava_rethrow(&handler);
- *   }
- *
- * Note that failing to have an ava_catch_all block that rethrows any handled
- * exception will *cause exceptions to be silently swallowed*.
- *
- * Semantics: ava_try initialises the given handler and pushes it onto the
- * exception handler stack of the current context. When the try body completes
- * or an exception is thrown within it, the handler is popped off the exception
- * handler stack. In the case of an exception, control passes to the catch
- * blocks in sequence, and control falls into the first whose type matches the
- * exception type that was caught.
- *
- * @param handler The exception handler struct to initialise and which will
- * receive any thrown data. Within the try block, this should be used as the
- * top-of-stack instead of stack.
- * @param stack The top-of-stack outside the try block.
+ * This does not catch foreign exceptions. There is currently no way for C code
+ * to achieve the equivalent of a finally block in the presence of foreign
+ * exceptions. The Avalanche runtime never throws foreign exceptions, nor is it
+ * possible for Avalanche code to do so unassisted, so in many contexts this
+ * construct should be sufficient anyway.
  */
-#define ava_try(handler)                                        \
-  if (!ava_pop_handler(setjmp(*ava_push_handler(&(handler)))))  \
-    for (unsigned AVA_GLUE(i,__LINE__) = 0;                     \
-         AVA_GLUE(i,__LINE__) < 1;                              \
-         ava_pop_handler(++AVA_GLUE(i,__LINE__)))
+ava_bool ava_catch(ava_exception* ex, void (*f)(void*), void* ud);
+
 /**
- * Handles a single exception type.
- *
- * @see ava_try
- * @param handler The handler that caught an exception
- * @param expected_type If the handler caught an exception of this type, the
- * body of this block is executed. Otherwise, control transfers to the next
- * block.
+ * Returns the value embedded in the given exception.
  */
-#define ava_catch(handler, expected_type)                       \
-  else if ((handler).exception_type == &(expected_type))
+ava_value ava_exception_get_value(const ava_exception* ex);
+
 /**
- * Handles all exception types.
+ * Returns the number of stack frames captured in the given exception.
  *
- * This is always used as the last clause in an ava_try, usually to rethrow the
- * exception.
+ * This can always at least 1.
  *
- * @see ava_try
+ * The stack trace on an exception is a snapshot of the full return chain
+ * between the point where the exception was thrown and the initial function on
+ * the thread's stack. Stack trace elements are ordered with callee before
+ * caller.
  */
-#define ava_catch_all else
+size_t ava_exception_get_trace_length(const ava_exception* ex);
+/**
+ * Returns the IP/PC of the stack frame at the given index captured by the
+ * given exception.
+ *
+ * This may return 0 if the IP is unavailable for some reason.
+ *
+ * frame must be less than ava_exception_get_trace_length().
+ */
+ava_intptr ava_exception_get_trace_ip(const ava_exception* ex, size_t frame);
+/**
+ * Obtains the location information for a frame in the given exception's trace.
+ *
+ * @param location The location structure. Always fully initialised by this
+ * call, even on error.
+ * @param ex The exception whose frame information is to be read.
+ * @param frame The index of the frame to read. Must be less than
+ * ava_exception_get_trace_length().
+ * @return The absent string if the call succeed; a present string containing
+ * an error message on error.
+ */
+ava_string ava_exception_get_trace_location(
+  ava_exception_location* location,
+  const ava_exception* ex, size_t frame);
+
+/**
+ * Converts the full trace of the given exception to a string of unspecified
+ * format, intended for human consumption. The result is always terminated with
+ * a line feed.
+ */
+ava_string ava_exception_trace_to_string(const ava_exception* ex);
+
+/**
+ * Initialises global state needed by the exception system.
+ *
+ * This must be called exactly once at process startup. Most programs will want
+ * to use ava_init() instead of calling this directly.
+ *
+ * Note that this installs a std::terminate handler which prints a diagnostic
+ * about an uncaught ava_exception to stderr before delegating to the prior
+ * terminate handler.
+ */
+void ava_exception_init(void);
 
 /**
  * Standard exception type for user exceptions.

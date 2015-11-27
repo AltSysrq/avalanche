@@ -1,0 +1,9 @@
+fun doit () {
+  do {
+    try {
+      break ()
+    } finally {
+      continue ()
+    }
+  }
+}

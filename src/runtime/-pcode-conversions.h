@@ -18,7 +18,7 @@
 
 static void format_error(ava_string message) AVA_NORETURN;
 static void format_error(ava_string message) {
-  ava_throw(&ava_format_exception, ava_value_of_string(message), NULL);
+  ava_throw_str(&ava_format_exception, message);
 }
 
 #define FORMAT_ERROR(message) do {                      \
@@ -205,4 +205,8 @@ static ava_string ava_pcode_elt_escape(ava_string elt_string) {
     ava_strcat(
       elt_string,
       AVA_ASCII9_STRING("]")));
+}
+
+static ava_bool ava_pcode_is_valid_ex_type(ava_integer type) {
+  return type >= 0 && type < ava_pet_other_exception;
 }

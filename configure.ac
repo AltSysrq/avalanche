@@ -8,6 +8,7 @@ LT_PREREQ([1.5])
 LT_INIT()
 AM_CONFIG_HEADER([config.h])
 PKG_PROG_PKG_CONFIG()
+AC_CONFIG_SUBDIRS([contrib/libbacktrace])
 
 : ${AVA_BOOTSTRAP_TOOLCHAIN_DIR:=bootstrap/bin}
 AC_ARG_VAR([AVA_BOOTSTRAP_TOOLCHAIN_DIR],
@@ -21,18 +22,18 @@ AC_PROG_CXX
 AM_PROG_AS
 AC_CHECK_PROG([RE2C], [re2c], [re2c], [])
 AC_CHECK_PROGS([TCLSH], [tclsh8.6 tclsh8.5 tclsh])
-AC_CHECK_PROGS([CLANG], [clang])
+# See the diatribe below on LLVM versioning for why we check for clang and
+# clang++ this way.
+# Note that these are used only for compiling the native code generation
+# drivers, not the library proper.
+AC_CHECK_PROGS([CLANG], [clang37 clang-3.7 clang])
+AC_CHECK_PROGS([CLANGXX], [clang++37 clang++-3.7 clang++])
 AC_PROG_SED
 
 # Checks for libraries.
 PKG_CHECK_MODULES([CHECK], [check], [], [:])
-PKG_CHECK_MODULES([LIBUNWIND], [libunwind], [], [AC_MSG_ERROR(
-[libunwind could not be found. Make sure libunwind[-dev] is installed.])])
 PKG_CHECK_MODULES([LIBFFI], [libffi], [], [AC_MSG_ERROR(
 [libffi could not be found. Make sure libffi[-dev] is installed.])])
-# While faster setjmp() would be nice, the way this library attempts to operate
-# by redifining setjmp() and longjmp() is a bit problematic.
-# PKG_CHECK_MODULES([LIBUNWIND_SETJMP], [libunwind-setjmp], [], [:])
 AC_SEARCH_LIBS([sin], [c m])
 AC_SEARCH_LIBS([strlcpy], [c bsd])
 AC_SEARCH_LIBS([dlopen], [c dl])
@@ -98,32 +99,13 @@ AC_CHECK_DECLS([FFI_THISCALL, FFI_STDCALL], [], [], [
 # It also appears the versioning is like `llvm-config35` on FreeBSD and
 # `llim-config-3.5` on Debian.
 #
-# So basically check for every possible llvm-config from 3.5 through 4.9, as
-# well as unversioned since that appears to be a thing too, and hope it works
-# out. We'll also be assembling the *FLAGS by hand to avoid the ridiculous
-# stuff the recommended approach adds.
-#
-# (Regarding the choice of 4.9, 5.0 seems far enough into the future that we
-# don't need to worry about it yet, just as y2k will never be upon us.)
+# We used to also permit future versions, but since LLVM breaks compatibility
+# on minor releases, there's no point.
 #
 # It may end up being better to just vendor llvm into the Avalanche build
 # system, but that would make clean builds take painfully longer.
 AC_CHECK_PROGS([LLVM_CONFIG],
-               [llvm-config35 llvm-config-3.5 \
-                llvm-config36 llvm-config-3.6 \
-                llvm-config37 llvm-config-3.7 \
-                llvm-config38 llvm-config-3.8 \
-                llvm-config39 llvm-config-3.9 \
-                llvm-config40 llvm-config-4.0 \
-                llvm-config41 llvm-config-4.1 \
-                llvm-config42 llvm-config-4.2 \
-                llvm-config43 llvm-config-4.3 \
-                llvm-config44 llvm-config-4.4 \
-                llvm-config45 llvm-config-4.5 \
-                llvm-config46 llvm-config-4.6 \
-                llvm-config47 llvm-config-4.7 \
-                llvm-config48 llvm-config-4.8 \
-                llvm-config49 llvm-config-4.9 \
+               [llvm-config37 llvm-config-3.7 \
                 llvm-config])
 AS_IF([test -z "$LLVM_CONFIG"],
       [AC_MSG_ERROR([could not find any version of llvm-config])])

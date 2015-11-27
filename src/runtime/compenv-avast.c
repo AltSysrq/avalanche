@@ -20,6 +20,8 @@
 #include <string.h>
 #include <stdlib.h>
 
+#include <atomic_ops.h>
+
 #define AVA__INTERNAL_INCLUDE 1
 #include "avalanche/defs.h"
 #include "avalanche/string.h"
@@ -43,8 +45,11 @@ ava_macsub_context* ava_compenv_standard_new_macsub(
   ava_compenv* compenv,
   struct ava_compile_error_list_s* errors
 ) {
+  static AO_t avast_pcode;
+
   ava_macsub_context* context;
   ava_compile_location location;
+  const ava_pcode_global_list* cached;
 
   location.filename = AVA_ASCII9_STRING("<none>");
   location.source = AVA_ABSENT_STRING;
@@ -55,10 +60,16 @@ ava_macsub_context* ava_compenv_standard_new_macsub(
   location.end_column = 1;
 
   context = ava_compenv_minimal_new_macsub(compenv, errors);
-  ava_macsub_insert_module(
-    context, ava_pcode_global_list_of_string(
+
+  cached = (const ava_pcode_global_list*)AO_load_acquire_read(&avast_pcode);
+  if (!cached) {
+    cached = ava_pcode_global_list_of_string(
       ava_string_of_bytes(ava_org_ava_lang_avast_avapi_data,
-                          ava_org_ava_lang_avast_avapi_size)),
+                          ava_org_ava_lang_avast_avapi_size));
+    AO_store_release_write(&avast_pcode, (AO_t)cached);
+  }
+  ava_macsub_insert_module(
+    context, cached,
     ava_compenv_avast_name, &location, ava_true);
   return context;
 }

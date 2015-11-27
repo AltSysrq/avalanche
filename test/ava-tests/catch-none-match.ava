@@ -1,0 +1,13 @@
+reqmod helpers/test
+
+test.register catch-none-match {
+  try {
+    try {
+      x = + blah
+    } catch something {
+      test.pass 0
+    }
+  } on-any-bad-format x {
+    test.pass 42
+  }
+}

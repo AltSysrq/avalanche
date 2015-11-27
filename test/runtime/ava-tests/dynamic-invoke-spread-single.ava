@@ -1,5 +1,0 @@
-extern pass-test pass_test c void [int pos]
-#set# f [$pass-test]
-#set# g 42
-
-\*$f $g

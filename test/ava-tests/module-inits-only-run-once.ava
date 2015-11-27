@@ -1,0 +1,9 @@
+extern register-test ava_register_test ava pos pos
+
+reqmod helpers/fourty-two
+\      helpers/require-fourty-two
+\      helpers/decl-pass-test
+
+register-test module-inits-only-run-once {
+  pass-test $Fourty-Two
+}

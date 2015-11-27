@@ -1,0 +1,12 @@
+extern register-test ava_register_test ava pos pos
+extern pass-test pass_test c void [int pos]
+fun plugh () = plugh
+fun identity x = $x
+#set# foo {
+  plugh ()
+  identity 56
+}
+
+register-test multi-statement-lambda-returns-nothing {
+  pass-test 42 \*($foo ())
+}

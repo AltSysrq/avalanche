@@ -1,0 +1,13 @@
+reqmod helpers/test
+
+fun doit () {
+  #throw# format 42
+}
+
+test.register direct-throw-format {
+  try {
+    doit ()
+  } on-any-bad-format x {
+    test.pass $x
+  }
+}

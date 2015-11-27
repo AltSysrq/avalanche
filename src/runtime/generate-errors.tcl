@@ -1491,14 +1491,14 @@ set defs {
     }
   }
 
-  cerror C5074 if_inconsistent_result_form {} {
-    msg "Inconsistent expression/statement-form results in if."
+  cerror C5074 structure_inconsistent_result_form {} {
+    msg "Inconsistent expression/statement-form results in control structure."
     explanation {
-      All result arguments for an "if" usage must be blocks (brace-enclosed, no
-      value returned) or substitutions (parenthesis-enclosed, result returned).
-      The expected form for a single "if" usage is decided by the first result
-      argument; this error is raised if another result block differs from the
-      first result argument.
+      All result arguments for a acontrol structure must be blocks
+      (brace-enclosed, no value returned) or substitutions
+      (parenthesis-enclosed, result returned). The expected form for a single
+      control structure is decided by the first result argument; this error is
+      raised if another result block differs from the first result argument.
     }
   }
 
@@ -1933,6 +1933,58 @@ set defs {
     }
   }
 
+  cerror C5116 try_without_catch_or_finally {} {
+    msg "\"try\" without any catch or finally clauses."
+    explanation {
+      The given "try" usage has no catch clauses nor a finally block, and thus
+      does not describe any behaviour at all.
+    }
+  }
+
+  cerror C5117 jump_out_of_finally {} {
+    msg "Attempt to jump out of finally block."
+    explanation {
+      The given location attempts to directly transfer control out of the
+      "finally" block of a "try" statement.
+
+      Jumps (including returns) out of a finally block in a "try" statement
+      almost never behave intuitively, having bizarre effects such as silently
+      discarding exceptions or vetoing direct control transfers in other parts
+      of the function. Therefore, they are explicitly unsupported in Avalanche.
+    }
+  }
+
+  cerror C5118 illegal_alias {{ava_string name}} {
+    msg "Cannot make non-private alias of symbol %name%"
+    explanation {
+      The indicated symbol is a type which cannot be assigned an
+      externally-visible alias, even though the thing it aliases may be
+      globally visible.
+    }
+  }
+
+  cerror C5119 exported_alias_of_intrinsic {{ava_string name}} {
+    msg "Cannot make non-private alias of intrinsic macro %name%"
+    explanation {
+      The given alias attempts to make an intrinsic macro externally-visible
+      under a different name, which is not permitted.
+
+      The semantics of an externally-visible alias require any dependent
+      modules to be able to fully reconstruct the symbol from the module which
+      declares the alias, but this is impossible for macros intrinsic to the
+      runtime or native language extensions.
+
+      In most cases, the desired effect can be achieved via a macro. For
+      example, instead of
+
+        ALIAS fn = fun
+
+      write
+
+        MACRO fn control %fun >
+    }
+  }
+
   cerror X9000 xcode_dupe_label {{ava_value label}} {
     msg "P-Code label present in function more than once: %label%"
     explanation {
@@ -2113,6 +2165,48 @@ set defs {
       Avalanche normally prevents such cycles from being created at
       compile-time, so this error can generally only occur if inputs are mixed
       from different compile runs.
+    }
+  }
+
+  cerror X9013 xcode_exception_conflict {
+    {ava_integer lp1} {ava_integer ce1} {ava_integer lp2} {ava_integer ce2}
+  } {
+    msg "Exception stack mismatch: (%lp1%,%ce1%) vs (%lp2%,%ce2%)."
+    explanation {
+      A single P-Code basic block can be reached with at least two distinct
+      exception stack configurations.
+
+      This is an error in whatever software generated the P-Code.
+    }
+  }
+
+  cerror X9014 xcode_exception_underflow {} {
+    msg "Exception stack underflow."
+    explanation {
+      An exception-popping P-Code instruction was encountered in a location
+      where the exception stack is empty.
+
+      This is an error in whatever software generated the P-Code.
+    }
+  }
+
+  cerror X9015 xcode_expected_empty_exception {} {
+    msg "Require-empty-exception instruction with non-empty exception stack."
+    explanation {
+      An instruction which requires the exception stack to be empty was found
+      in a basic block with a non-empty exception stack.
+
+      This is an error in whatever software generated the P-Code.
+    }
+  }
+
+  cerror X9016 xcode_expected_caught_exception {} {
+    msg "Require-caught-exception instruction with no caught-exception."
+    explanation {
+      An instruction which requires a caught-exception was found in a basic
+      block with an empty caught-exception stack.
+
+      This is an error in whatever software generated the P-Code.
     }
   }
 }

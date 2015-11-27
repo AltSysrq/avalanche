@@ -1,0 +1,25 @@
+reqmod helpers/test
+
+fun doit a b c d {
+  try {
+    ret + $a
+  } on-any-bad-format _ {
+    try {
+      ret + $b
+    } on-any-bad-format _ {
+      try {
+        ret + $c
+      } on-any-bad-format _ {
+        try {
+          ret + $d
+        } on-any-bad-format _ {
+          ret 42
+        }
+      }
+    }
+  }
+}
+
+test.register return-from-nested-catch {
+  test.pass : doit foo bar baz quux
+}

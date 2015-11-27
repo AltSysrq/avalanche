@@ -1,0 +1,7 @@
+extern register-test ava_register_test ava pos pos
+macro !! op 1 < >+
+extern pass-test pass_test c void [int pos]
+
+register-test macro-right-angle-plus-some-args {
+  pass-test !! 42
+}

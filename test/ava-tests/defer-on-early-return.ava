@@ -1,0 +1,7 @@
+reqmod helpers/test
+
+test.register defer-on-early-return {
+  defer test.pass $x
+  x = 42
+  ret ()
+}

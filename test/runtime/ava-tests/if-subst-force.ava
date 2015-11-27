@@ -1,3 +1,0 @@
-fun select x y z = { if ($x) ($y) else ($z) }
-extern pass-test pass_test c void [int pos]
-pass-test ((select 1 42 56) ())

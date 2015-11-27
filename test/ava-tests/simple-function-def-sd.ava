@@ -1,0 +1,11 @@
+extern register-test ava_register_test ava pos pos
+
+fun doit x {
+  pass-test $x
+}
+
+register-test simple-function-def-sd {
+  doit \*[42]
+}
+
+extern pass-test pass_test c void [int pos]

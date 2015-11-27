@@ -1,0 +1,13 @@
+reqmod helpers/test
+
+test.register defer-on-throw {
+  try {
+    doit ()
+  } on-any-bad-format _ { }
+}
+
+fun doit () {
+  defer test.pass $x
+  x = 42
+  x = $x + blah
+}

@@ -1,0 +1,7 @@
+reqmod helpers/test
+reqmod helpers/alias-test-assert
+
+test.register cross-module-macro-alias {
+  aliased-assert 42 == 42
+  test.pass 42
+}
