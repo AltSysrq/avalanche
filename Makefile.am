@@ -1,4 +1,4 @@
 .MAKE.JOB.PREFIX=
 
 ACLOCAL_AMFLAGS=-I m4
-SUBDIRS = src test
+SUBDIRS = contrib/libbacktrace src test
