@@ -55,6 +55,7 @@ AM_CFLAGS = $(CHECK_CFLAGS) -I../src $(EXTRA_CFLAGS) -funwind-tables
 AM_CXXFLAGS = $(CHECK_CFLAGS) -I../src $(EXTRA_CFLAGS) -funwind-tables
 AM_LDFLAGS = -export-dynamic $(CHECK_LIBS) \
 	../src/libavart.la ../src/libavart-native.la
+AM_CCASFLAGS = -g0
 
 check_PROGRAMS = $(TESTS)
 noinst_PROGRAMS =  $(BENCHMARKS)
