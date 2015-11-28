@@ -95,64 +95,78 @@ import real r
 ;   :                           LTR             2
 ;   =                           RTL             1
 
-Macro DEFUNARY control       %MACRO >0 !op >1 !<* (>2 (!>))
-Macro DEFBINARY-OPT control  %MACRO >0 !op >1 (>2 (!<*) (!>))
-Macro DEFBINARY-OPT2 control %MACRO >0 !op >1 (>2 (!<*) (!>*))
-Macro DEFBINARY control      %MACRO >0 !op >1 (>2 (!<) (!>))
+Macro DEFUNARY control  %MACRO >0 !op >1 !<* (>2 (!>))
 
-DEFUNARY        !       35      %i.lnot
-DEFUNARY        ~^      35      %i.not
-DEFUNARY        #       35      %list.length
-DEFUNARY        b#      35      %bs.length
-DEFUNARY        m#      35      %map.npairs
-DEFBINARY       .**     31      %r.pow
-DEFBINARY       *       30      %i.mul
-DEFBINARY       u*      30      %u.mul
-DEFBINARY       .*      30      %r.mul
-DEFBINARY       /       30      %i.div
-DEFBINARY       u/      30      %u.div
-DEFBINARY       ./      30      %r.div
-DEFBINARY       %       30      %i.mod
-DEFBINARY       u%      30      %u.mod
-DEFBINARY       .%      30      %r.mod
-DEFBINARY       %%      30      %i.rem
-DEFBINARY       .%%     30      %r.rem
-DEFBINARY-OPT   +       28      %i.add
-DEFBINARY-OPT   u+      28      %u.add
-DEFBINARY-OPT   .+      28      %r.add
-DEFBINARY-OPT   -       28      %i.sub
-DEFBINARY-OPT   u-      28      %u.sub
-DEFBINARY-OPT   .-      28      %r.sub
-DEFBINARY       <<^     24      %i.lsh
-DEFBINARY       >>^     24      %i.rsh
-DEFBINARY       >>-^    24      %i.ash
-DEFBINARY       &^      24      %i.and
-DEFBINARY       |^      24      %i.or
-DEFBINARY       ^^      24      %i.xor
-DEFBINARY       <       14      %i.slt
-DEFBINARY       u<      14      %u.slt
-DEFBINARY       b<      14      %bs.slt
-DEFBINARY       .<      14      %r.slt
-DEFBINARY       <=      14      %i.leq
-DEFBINARY       u<=     14      %u.leq
-DEFBINARY       b<=     14      %bs.leq
-DEFBINARY       .<=     14      %r.leq
-DEFBINARY       ==      14      %i.equ
-DEFBINARY       b==     14      %bs.equ
-DEFBINARY       .==     14      %r.equ
-DEFBINARY       !=      14      %i.neq
-DEFBINARY       b!=     14      %bs.neq
-DEFBINARY       .!=     14      %r.neq
-DEFBINARY       >=      14      %i.geq
-DEFBINARY       u>=     14      %u.geq
-DEFBINARY       b>=     14      %bs.geq
-DEFBINARY       .>=     14      %r.geq
-DEFBINARY       >       14      %i.sgt
-DEFBINARY       u>      14      %u.sgt
-DEFBINARY       b>      14      %bs.sgt
-DEFBINARY       .>      14      %r.sgt
-DEFBINARY-OPT2  ~       12      %interval.of
-DEFBINARY       =       1       #set#
+Macro DEFDEFBINARY-NU control %Macro >0 !control
+\ !%MACRO !>0 !!op !>1 (!>2 (>1) (>2))
+DEFDEFBINARY-NU DEFBINARY-NU !< !>
+DEFDEFBINARY-NU DEFBINARY-NU-OPT !<* !>
+DEFDEFBINARY-NU DEFBINARY-NU-OPT2 !<* !>*
+
+Macro DEFUPDATE control %MACRO >0 !op !1 (#update# (!<) (>1 $ (!>)))
+
+Macro DEFDEFBINARY control %Macro >0 !control !%block-void {
+  >1 !>0 !>2 !>3
+  !%DEFUPDATE !>1 !>3
+}
+
+DEFDEFBINARY DEFBINARY %DEFBINARY-NU
+DEFDEFBINARY DEFBINARY-OPT %DEFBINARY-NU-OPT
+DEFDEFBINARY DEFBINARY-OPT2 %DEFBINARY-NU-OPT2
+
+DEFUNARY        !               35      %i.lnot
+DEFUNARY        ~^              35      %i.not
+DEFUNARY        #               35      %list.length
+DEFUNARY        b#              35      %bs.length
+DEFUNARY        m#              35      %map.npairs
+DEFBINARY       .**     .**=    31      %r.pow
+DEFBINARY       *       *=      30      %i.mul
+DEFBINARY       u*      u*=     30      %u.mul
+DEFBINARY       .*      .*=     30      %r.mul
+DEFBINARY       /       /=      30      %i.div
+DEFBINARY       u/      u/=     30      %u.div
+DEFBINARY       ./      ./=     30      %r.div
+DEFBINARY       %       %=      30      %i.mod
+DEFBINARY       u%      u%=     30      %u.mod
+DEFBINARY       .%      .%=     30      %r.mod
+DEFBINARY       %%      %%=     30      %i.rem
+DEFBINARY       .%%     .%%=    30      %r.rem
+DEFBINARY-OPT   +       +=      28      %i.add
+DEFBINARY-OPT   u+      u+=     28      %u.add
+DEFBINARY-OPT   .+      .+=     28      %r.add
+DEFBINARY-OPT   -       -=      28      %i.sub
+DEFBINARY-OPT   u-      u-=     28      %u.sub
+DEFBINARY-OPT   .-      .-=     28      %r.sub
+DEFBINARY       <<^     <<^=    24      %i.lsh
+DEFBINARY       >>^     >>^=    24      %i.rsh
+DEFBINARY       >>-^    >>-^=   24      %i.ash
+DEFBINARY       &^      &^=     24      %i.and
+DEFBINARY       |^      |^=     24      %i.or
+DEFBINARY       ^^      ^^=     24      %i.xor
+DEFBINARY-NU    <               14      %i.slt
+DEFBINARY-NU    u<              14      %u.slt
+DEFBINARY-NU    b<              14      %bs.slt
+DEFBINARY-NU    .<              14      %r.slt
+DEFBINARY-NU    <=              14      %i.leq
+DEFBINARY-NU    u<=             14      %u.leq
+DEFBINARY-NU    b<=             14      %bs.leq
+DEFBINARY-NU    .<=             14      %r.leq
+DEFBINARY-NU    ==              14      %i.equ
+DEFBINARY-NU    b==             14      %bs.equ
+DEFBINARY-NU    .==             14      %r.equ
+DEFBINARY-NU    !=              14      %i.neq
+DEFBINARY-NU    b!=             14      %bs.neq
+DEFBINARY-NU    .!=             14      %r.neq
+DEFBINARY-NU    >=              14      %i.geq
+DEFBINARY-NU    u>=             14      %u.geq
+DEFBINARY-NU    b>=             14      %bs.geq
+DEFBINARY-NU    .>=             14      %r.geq
+DEFBINARY-NU    >               14      %i.sgt
+DEFBINARY-NU    u>              14      %u.sgt
+DEFBINARY-NU    b>              14      %bs.sgt
+DEFBINARY-NU    .>              14      %r.sgt
+DEFBINARY-NU-OPT2  ~            12      %interval.of
+DEFBINARY-NU    =               1       #set#
 
 ; Encloses everything to its right in parentheses.
 ;

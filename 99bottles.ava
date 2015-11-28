@@ -1,7 +1,7 @@
 import cstdio *
 
 fun song () {
-  for {bottles = 99} ($bottles >= 0) {bottles = $bottles - 1} {
+  for {bottles = 99} ($bottles >= 0) {bottles -= 1} {
     verse ()
   }
 
