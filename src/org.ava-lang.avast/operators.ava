@@ -77,6 +77,13 @@ import real r
 ;   %%          Remainder
 ;   **          Exponentiation
 ;   ~           Interval
+;   =?          Update assignment
+;
+; Update assignment is basically syntax sugar for using #update# directly. The
+; "$" variable is available in the RHS, holding the old value of the variable.
+; This allows expressing more complex accumulations more directly, eg
+;
+;   results($key) =? real.max $ : read-next-value ()
 ;
 ; This gives us
 ;
@@ -93,7 +100,7 @@ import real r
 ;   ||                          LTR             6
 ;   ?                           RTL             5
 ;   :                           LTR             2
-;   =                           RTL             1
+;   = (and compounds)           RTL             1
 
 Macro DEFUNARY control  %MACRO >0 !op >1 !<* (>2 (!>))
 
@@ -167,6 +174,7 @@ DEFBINARY-NU    b>              14      %bs.sgt
 DEFBINARY-NU    .>              14      %r.sgt
 DEFBINARY-NU-OPT2  ~            12      %interval.of
 DEFBINARY-NU    =               1       #set#
+DEFBINARY-NU    =?              1       #update#
 
 ; Encloses everything to its right in parentheses.
 ;
