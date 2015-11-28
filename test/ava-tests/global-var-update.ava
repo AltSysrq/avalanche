@@ -1,0 +1,8 @@
+reqmod helpers/test
+
+x = 40
+#update# x ($ + 2)
+
+test.register global-var-update {
+  test.pass $x
+}

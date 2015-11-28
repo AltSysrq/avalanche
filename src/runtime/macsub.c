@@ -54,6 +54,7 @@ struct ava_macsub_context_s {
   ava_bool* panic;
   ava_string symbol_prefix;
   unsigned level;
+  ava_symbol* context_var;
 
   ava_macsub_gensym_status* gensym;
 };
@@ -67,7 +68,8 @@ typedef enum {
 static ava_ast_node* ava_macsub_run_one_nonempty_statement(
   ava_macsub_context* context,
   ava_parse_statement* statement,
-  ava_bool* consumed_rest);
+  ava_bool* consumed_rest,
+  ava_bool subst_even_on_singleton);
 
 static ava_bool ava_macsub_is_macroid(
   signed* min_precedence, ava_symbol_type* found_type,
@@ -205,15 +207,11 @@ ava_macsub_context* ava_macsub_context_push_major(
 ) {
   ava_macsub_context* this;
 
-  this = AVA_NEW(ava_macsub_context);
+  this = AVA_CLONE(*parent);
   this->symbol_table = ava_symtab_new(parent->symbol_table);
-  this->compenv = parent->compenv;
   this->varscope = ava_varscope_new();
-  this->errors = parent->errors;
   this->symbol_prefix = ava_strcat(parent->symbol_prefix, interfix);
-  this->panic = parent->panic;
   this->level = parent->level + 1;
-  this->gensym = parent->gensym;
 
   return this;
 }
@@ -224,15 +222,25 @@ ava_macsub_context* ava_macsub_context_push_minor(
 ) {
   ava_macsub_context* this;
 
-  this = AVA_NEW(ava_macsub_context);
-  this->symbol_table = parent->symbol_table;
-  this->compenv = parent->compenv;
-  this->varscope = parent->varscope;
-  this->errors = parent->errors;
+  this = AVA_CLONE(*parent);
   this->symbol_prefix = ava_strcat(parent->symbol_prefix, interfix);
-  this->panic = parent->panic;
-  this->level = parent->level;
-  this->gensym = parent->gensym;
+
+  return this;
+}
+
+ava_symbol* ava_macsub_get_context_var(const ava_macsub_context* context) {
+  return context->context_var;
+}
+
+ava_macsub_context* ava_macsub_context_with_context_var(
+  const ava_macsub_context* parent, ava_symbol* context_var
+) {
+  ava_macsub_context* this;
+
+  assert(!context_var || ava_st_local_variable == context_var->type ||
+         ava_st_global_variable == context_var->type);
+  this = AVA_CLONE(*parent);
+  this->context_var = context_var;
 
   return this;
 }
@@ -306,7 +314,7 @@ ava_ast_node* ava_macsub_run_units(ava_macsub_context* context,
   }
 
   return ava_macsub_run_one_nonempty_statement(
-    context, &statement, &consumed_rest);
+    context, &statement, &consumed_rest, ava_false);
 }
 
 ava_ast_node* ava_macsub_run_single(ava_macsub_context* context,
@@ -331,16 +339,21 @@ ava_ast_node* ava_macsub_run_from(ava_macsub_context* context,
                                   ava_parse_statement* statement,
                                   ava_intr_seq_return_policy return_policy) {
   ava_intr_seq* seq;
-  ava_bool consumed_rest = ava_false;
+  ava_bool consumed_rest = ava_false, plural;
 
+  plural = statement && TAILQ_NEXT(statement, next);
   seq = ava_intr_seq_new(context, start, return_policy);
 
   for (; statement && !consumed_rest;
        statement = TAILQ_NEXT(statement, next)) {
     if (TAILQ_EMPTY(&statement->units)) continue;
 
-    ava_intr_seq_add(seq, ava_macsub_run_one_nonempty_statement(
-                       context, statement, &consumed_rest));
+    ava_intr_seq_add(
+      seq,
+      ava_macsub_run_one_nonempty_statement(
+        context, statement, &consumed_rest,
+        ava_isrp_void == return_policy ||
+        (ava_isrp_only == return_policy && plural)));
   }
 
   return ava_intr_seq_to_node(seq);
@@ -349,13 +362,15 @@ ava_ast_node* ava_macsub_run_from(ava_macsub_context* context,
 static ava_ast_node* ava_macsub_run_one_nonempty_statement(
   ava_macsub_context* context,
   ava_parse_statement* statement,
-  ava_bool* consumed_rest
+  ava_bool* consumed_rest,
+  ava_bool subst_even_on_singleton
 ) {
   const ava_symbol* symbol;
   const ava_parse_unit* unit, * candidate;
   ava_macro_subst_result subst_result;
   ava_symbol_type macro_type = ava_st_other, candidate_type;
   signed precedence = -0x7f, candidate_precedence;
+  ava_bool singleton;
 
   tail_call:
 
@@ -369,12 +384,8 @@ static ava_ast_node* ava_macsub_run_one_nonempty_statement(
   /* If there is only one unit, no macro substitution is performed, even if
    * that unit would reference a macro.
    */
-  /* TODO: It may be desirable to permit isolated control macros to be invoked
-   * in certain contexts, such as statement top-level. This would, for example,
-   * permit a lone `ret` bareword return from a function, instead of needing to
-   * write `ret ()`.
-   */
-  if (!TAILQ_NEXT(unit, next)) goto no_macsub;
+  singleton = !TAILQ_NEXT(unit, next);
+  if (singleton && !subst_even_on_singleton) goto no_macsub;
 
   candidate_precedence = 0x7FFFF;
   candidate = NULL;
@@ -393,6 +404,10 @@ static ava_ast_node* ava_macsub_run_one_nonempty_statement(
       }
     }
   }
+
+  /* Singletons can never be anything but control macros */
+  if (singleton && ava_st_control_macro != candidate_type)
+    goto no_macsub;
 
   if (candidate) {
     unit = candidate;

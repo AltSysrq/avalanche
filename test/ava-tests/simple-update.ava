@@ -1,0 +1,7 @@
+reqmod helpers/test
+
+test.register simple-update {
+  x = 40
+  #update# x ($ + 2)
+  test.pass $x
+}

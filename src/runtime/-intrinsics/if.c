@@ -135,16 +135,14 @@ ava_macro_subst_result ava_intr_if_subst(
           context, ava_error_structure_inconsistent_result_form(
             &res->location));
 
-      this->clauses[ix].result = ava_macsub_run(
-        context, &res->location, &res->v.statements, ava_isrp_last);
+      this->clauses[ix].result = ava_macsub_run_contents(context, res);
     } else if (ava_put_block == res->type) {
       if (this->expression_form)
         return ava_macsub_error_result(
           context, ava_error_structure_inconsistent_result_form(
             &res->location));
 
-      this->clauses[ix].result = ava_macsub_run(
-        context, &res->location, &res->v.statements, ava_isrp_void);
+      this->clauses[ix].result = ava_macsub_run_contents(context, res);
     } else {
       return ava_macsub_error_result(
         context, ava_error_macro_arg_must_be_substitution_or_block(

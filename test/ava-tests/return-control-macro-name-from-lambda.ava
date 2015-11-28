@@ -1,0 +1,7 @@
+reqmod helpers/test
+
+test.register return-control-macro-name-from-lambda {
+  x = { continue }
+  test.assert "continue" b== $x ()
+  test.pass 42
+}

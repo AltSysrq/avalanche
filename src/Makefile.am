@@ -84,6 +84,7 @@ runtime/string.c \
 runtime/symtab.c \
 runtime/value.c \
 runtime/varscope.c \
+runtime/-intrinsics/block.c \
 runtime/-intrinsics/defun.c \
 runtime/-intrinsics/eh.c \
 runtime/-intrinsics/extern.c \

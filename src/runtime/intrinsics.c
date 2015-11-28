@@ -26,6 +26,7 @@
 #include "avalanche/macsub.h"
 #include "avalanche/symbol.h"
 #include "avalanche/symtab.h"
+#include "-intrinsics/block.h"
 #include "-intrinsics/defun.h"
 #include "-intrinsics/eh.h"
 #include "-intrinsics/extern.h"
@@ -44,9 +45,17 @@ static const ava_visibility
   ava_visibility_internal = ava_v_internal,
   ava_visibility_public = ava_v_public;
 
+static const ava_intr_seq_return_policy
+  ava_return_policy_void = ava_isrp_void,
+  ava_return_policy_last = ava_isrp_last,
+  ava_return_policy_only = ava_isrp_only;
+
 #define PRIVATE &ava_visibility_private
 #define INTERNAL &ava_visibility_internal
 #define PUBLIC &ava_visibility_public
+#define VOID &ava_return_policy_void
+#define LAST &ava_return_policy_last
+#define ONLY &ava_return_policy_only
 #define CTL ava_st_control_macro, 0
 #define FUN ava_st_function_macro, 0
 #define OP(p) ava_st_operator_macro, p
@@ -70,6 +79,9 @@ void ava_register_intrinsics(ava_macsub_context* context) {
   DEFINE("alias",       CTL,    PRIVATE,        alias);
   DEFINE("Alias",       CTL,    INTERNAL,       alias);
   DEFINE("ALIAS",       CTL,    PUBLIC,         alias);
+  DEFINE("block-last",  CTL,    LAST,           block);
+  DEFINE("block-only",  CTL,    ONLY,           block);
+  DEFINE("block-void",  CTL,    VOID,           block);
   DEFINE("break",       CTL,    NULL,           break);
   DEFINE("continue",    CTL,    NULL,           continue);
   DEFINE("extern",      CTL,    PRIVATE,        extern);
@@ -98,6 +110,7 @@ void ava_register_intrinsics(ava_macsub_context* context) {
   DEFINE("#throw#",     CTL,    NULL,           throw);
   DEFINE("try",         CTL,    NULL,           try);
   DEFINE("#set#",       CTL,    NULL,           set);
+  DEFINE("#update#",    CTL,    "",             set);
   DEFINE("#var#",       CTL,    NULL,           var);
   DEFINE("#name-subscript#", CTL, "#name-subscript#", subscript);
   DEFINE("#numeric-subscript#", CTL, "#numeric-subscript#", subscript);

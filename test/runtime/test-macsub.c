@@ -133,9 +133,14 @@ deftest(isolated_operator_macro_not_invoked) {
   test_macsub("seq(void) { bareword:+ }", "+");
 }
 
-deftest(isolated_control_macro_not_invoked) {
+deftest(isolated_control_macro_is_invoked_at_global) {
   defmacro("foo", ava_st_control_macro, 0, ava_false);
-  test_macsub("seq(void) { bareword:foo }", "foo");
+  test_macsub("seq(void) { foo { } }", "foo");
+}
+
+deftest(isolated_control_macro_not_invoked_in_subst) {
+  defmacro("foo", ava_st_control_macro, 0, ava_false);
+  test_macsub("seq(void) { seq(last) { bareword:foo } }", "(foo)");
 }
 
 deftest(ambiguous_possible_macro_results_in_error) {

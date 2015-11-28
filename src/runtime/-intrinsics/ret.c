@@ -28,6 +28,7 @@
 #include "../avalanche/pcode.h"
 #include "../avalanche/code-gen.h"
 #include "../avalanche/errors.h"
+#include "fundamental.h"
 #include "ret.h"
 
 typedef struct {
@@ -56,8 +57,6 @@ ava_macro_subst_result ava_intr_ret_subst(
 ) {
   ava_intr_ret* node;
 
-  assert(TAILQ_NEXT(provoker, next));
-
   if (0 == ava_macsub_get_level(context))
     return ava_macsub_error_result(
       context, ava_error_ret_at_global_scope(&provoker->location));
@@ -66,10 +65,15 @@ ava_macro_subst_result ava_intr_ret_subst(
   node->header.v = &ava_intr_ret_vtable;
   node->header.location = provoker->location;
   node->header.context = context;
-  node->value = ava_macsub_run_units(
-    context,
-    TAILQ_NEXT(provoker, next),
-    TAILQ_LAST(&statement->units, ava_parse_unit_list_s));
+  if (TAILQ_NEXT(provoker, next)) {
+    node->value = ava_macsub_run_units(
+      context,
+      TAILQ_NEXT(provoker, next),
+      TAILQ_LAST(&statement->units, ava_parse_unit_list_s));
+  } else {
+    node->value = ava_intr_seq_to_node(
+      ava_intr_seq_new(context, &provoker->location, ava_isrp_last));
+  }
 
   return (ava_macro_subst_result) {
     .status = ava_mss_done,

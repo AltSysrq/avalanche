@@ -1,0 +1,12 @@
+reqmod helpers/test
+
+fun nop () = 56
+
+test.register block-only-multi {
+  x = block-only {
+    nop ()
+    nop ()
+  }
+  test.assert () b== $x
+  test.pass 42
+}

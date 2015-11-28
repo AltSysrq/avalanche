@@ -493,7 +493,7 @@ static ava_parse_unit_read_result ava_parse_bareword(
     return ava_purr_ok;
   }
 
-  /* Else, interpolated bareword */
+  /* Else, variable substitution or interpolated bareword */
   unit = AVA_NEW(ava_parse_unit);
   unit->type = ava_put_substitution;
   ava_parse_location_from_lex(&unit->location, context, token);
@@ -506,8 +506,10 @@ static ava_parse_unit_read_result ava_parse_bareword(
   in_var = ava_false;
   for (end = begin = 0; end <= strlen; ++end) {
     if ('$' == content[end] || 0 == content[end]) {
-      /* Variable names cannot be empty */
-      if (end == begin && in_var) {
+      /* Variable names cannot be empty, except for the context variable (ie,
+       * the lone bareword "$").
+       */
+      if (end == begin && in_var && strlen > 1) {
         ava_parse_error_on_lex_off(errors, context, token,
                                    ava_error_empty_variable_name(),
                                    begin-1, end);
@@ -538,7 +540,10 @@ static ava_parse_unit_read_result ava_parse_bareword(
         varword->type = ava_put_bareword;
         ava_parse_location_from_lex_off(
           &varword->location, context, token, begin, end);
-        varword->v.string = ava_string_slice(token->str, begin, end);
+        if (end == begin)
+          varword->v.string = AVA_ASCII9_STRING("$");
+        else
+          varword->v.string = ava_string_slice(token->str, begin, end);
         TAILQ_INSERT_TAIL(&substatement->units, varword, next);
 
         TAILQ_INSERT_TAIL(&statement->units, subunit, next);

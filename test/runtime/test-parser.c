@@ -310,8 +310,8 @@ deftest(variable_simplification_rejects_empty_variable_name_at_end) {
   parse_failure("foo$", "Empty");
 }
 
-deftest(variable_simplification_rejects_single_dollar) {
-  parse_failure("$", "Empty");
+deftest(variable_simplification_context_variable) {
+  parse_like("{((bareword:#var# bareword:$))}", "$");
 }
 
 deftest(parse_empty_substitution) {

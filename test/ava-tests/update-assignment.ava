@@ -1,0 +1,9 @@
+reqmod helpers/test
+
+test.register update-assignment {
+  x = ""
+  each part in [2 4] {
+    x =? $part `` $
+  }
+  test.pass $x
+}

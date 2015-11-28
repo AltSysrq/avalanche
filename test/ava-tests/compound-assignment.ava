@@ -1,0 +1,10 @@
+reqmod helpers/test
+
+test.register compound-assignment {
+  x = 0
+  x += 10
+  x *= 1 + 1
+  x += 1
+  x *= y = 2
+  test.pass $x
+}
