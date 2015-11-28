@@ -98,6 +98,7 @@ void ava_register_intrinsics(ava_macsub_context* context) {
   DEFINE("#throw#",     CTL,    NULL,           throw);
   DEFINE("try",         CTL,    NULL,           try);
   DEFINE("#set#",       CTL,    NULL,           set);
+  DEFINE("#update#",    CTL,    "",             set);
   DEFINE("#var#",       CTL,    NULL,           var);
   DEFINE("#name-subscript#", CTL, "#name-subscript#", subscript);
   DEFINE("#numeric-subscript#", CTL, "#numeric-subscript#", subscript);

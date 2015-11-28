@@ -236,7 +236,8 @@ ava_macsub_context* ava_macsub_context_with_context_var(
 ) {
   ava_macsub_context* this;
 
-  assert(!context_var || ava_st_local_variable == context_var->type);
+  assert(!context_var || ava_st_local_variable == context_var->type ||
+         ava_st_global_variable == context_var->type);
   this = AVA_CLONE(*parent);
   this->context_var = context_var;
 

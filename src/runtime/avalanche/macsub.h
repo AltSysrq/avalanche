@@ -576,9 +576,9 @@ ava_macsub_context* ava_macsub_context_push_minor(
   const ava_macsub_context* parent, ava_string interfix);
 
 /**
- * Returns the symbol (always type ava_st_local_variable) representing the
- * context variable "$" in the current context, or NULL if there is no current
- * context variable.
+ * Returns the symbol (always type ava_st_local_variable or
+ * ava_st_global_variable) representing the context variable "$" in the current
+ * context, or NULL if there is no current context variable.
  */
 struct ava_symbol_s* ava_macsub_get_context_var(
   const ava_macsub_context* context);

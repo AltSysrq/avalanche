@@ -47,14 +47,20 @@ ava_ast_node* ava_intr_var_read_new(
   const ava_compile_location* location);
 
 /**
- * The intrinsic #set# control macro.
+ * The intrinsic #set# and #update# control macros.
  *
  * Syntax:
  *   #set# target expression
+ *   #update# target expression
  *
  * target and expression are indivually macro-substituted in isolation. target
- * is then converted to an lvalue wrapping expression, with the lvalue reader
- * discarded.
+ * is then converted to an lvalue wrapping expression. In the #set# case, the
+ * lvalue reader is discarded. In the #update# case, the lvalue reader is read
+ * and the value stored in a gensymmed variable, which is set as the context
+ * variable within expression.
+ *
+ * The macro userdata differentiates between the two cases. #set# has NULL
+ * userdata, whereas #update# has any non-NULL userdata.
  */
 ava_macro_subst_result ava_intr_set_subst(
   const struct ava_symbol_s* self,
@@ -62,6 +68,21 @@ ava_macro_subst_result ava_intr_set_subst(
   const ava_parse_statement* statement,
   const ava_parse_unit* provoker,
   ava_bool* consumed_other_statements);
+
+/**
+ * Generates a local/global variable symbol with a unique name (using tag
+ * somewhere within the name), adds it to the given macro susbstitution
+ * context, and returns it.
+ *
+ * The resulting variable is always private and mutable. It will be a global
+ * variable if found at global scope.
+ *
+ * Note that it is the caller's responsibility to call ava_macsub_gensym_seed()
+ * as necessary to ensure that the names are actually unique.
+ */
+struct ava_symbol_s* ava_var_gen(
+  ava_macsub_context* context,
+  ava_string tag, const ava_compile_location* location);
 
 /**
  * Returns a variable lvalue.

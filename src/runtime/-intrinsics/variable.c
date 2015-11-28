@@ -50,6 +50,23 @@ typedef struct {
   ava_bool defined;
 } ava_intr_var_write;
 
+/* Pseudo-node to propagate lvalue reader into the context var before
+ * delegating to another node.
+ */
+typedef struct {
+  ava_ast_node header;
+  ava_ast_node* delegate;
+  ava_ast_node* reader;
+  ava_bool postprocessed;
+} ava_intr_var_ucs;
+
+/* Pseudo-node used to define global variables created with ava_var_gen(). */
+typedef struct {
+  ava_ast_node header;
+  ava_symbol* symbol;
+  ava_bool defined;
+} ava_intr_genvar_definer;
+
 typedef enum {
   ava_vc_lower, ava_vc_mixed, ava_vc_upper
 } ava_var_casing;
@@ -96,10 +113,38 @@ static const ava_ast_node_vtable ava_intr_var_write_vtable = {
   .cg_tear_down = (ava_ast_node_cg_tear_down_f)ava_intr_var_write_cg_tear_down,
 };
 
+static ava_string ava_intr_var_ucs_to_string(const ava_intr_var_ucs* node);
+static void ava_intr_var_ucs_postprocess(ava_intr_var_ucs* node);
+static void ava_intr_var_ucs_cg_evaluate(
+  ava_intr_var_ucs* node, const ava_pcode_register* dst,
+  ava_codegen_context* context);
+
+static const ava_ast_node_vtable ava_intr_var_ucs_vtable = {
+  .name = "variable update expression",
+  .to_string = (ava_ast_node_to_string_f)ava_intr_var_ucs_to_string,
+  .postprocess = (ava_ast_node_postprocess_f)ava_intr_var_ucs_postprocess,
+  .cg_evaluate = (ava_ast_node_cg_evaluate_f)ava_intr_var_ucs_cg_evaluate,
+};
+
+static ava_string ava_intr_genvar_definer_to_string(
+  const ava_intr_genvar_definer* node);
+static void ava_intr_genvar_definer_cg_define(
+  ava_intr_genvar_definer* node, ava_codegen_context* context);
+
+static const ava_ast_node_vtable ava_intr_genvar_definer_vtable = {
+  .name = "generated global variable definer",
+  .to_string = (ava_ast_node_to_string_f)ava_intr_genvar_definer_to_string,
+  .cg_define = (ava_ast_node_cg_define_f)ava_intr_genvar_definer_cg_define,
+};
+
 static ava_var_casing ava_var_casing_of(ava_string name);
 static ava_visibility ava_var_visibility_of(
   ava_var_casing casing, ava_uint level);
 static ava_bool ava_var_is_casing_mutable(ava_var_casing casing);
+static ava_intr_var_ucs* ava_intr_var_ucs_new(ava_ast_node* delegate);
+static ava_intr_genvar_definer* ava_intr_genvar_definer_new(
+  ava_macsub_context* context, const ava_compile_location* location,
+  ava_symbol* sym);
 
 ava_ast_node* ava_intr_variable_lvalue(
   ava_macsub_context* context,
@@ -540,7 +585,13 @@ ava_macro_subst_result ava_intr_set_subst(
   ava_bool* consumed_other_statements
 ) {
   const ava_parse_unit* target_unit = NULL, * expression_unit = NULL;
-  ava_ast_node* target, * expression, * reader, * result;
+  ava_ast_node* target, * expression, * ignore_reader, * result, ** reader;
+  ava_intr_var_ucs* ucs;
+  ava_symbol* context_var;
+  ava_macsub_context* expr_context;
+  ava_bool is_update;
+
+  is_update = !!self->v.macro.userdata;
 
   AVA_MACRO_ARG_PARSE {
     AVA_MACRO_ARG_FROM_RIGHT_BEGIN {
@@ -549,12 +600,163 @@ ava_macro_subst_result ava_intr_set_subst(
     }
   }
 
+  if (is_update) {
+    ava_macsub_gensym_seed(context, &provoker->location);
+    context_var = ava_var_gen(
+      context, AVA_ASCII9_STRING("$"), &provoker->location);
+    expr_context = ava_macsub_context_with_context_var(context, context_var);
+  } else {
+    expr_context = context;
+  }
+
   target = ava_macsub_run_units(context, target_unit, target_unit);
-  expression = ava_macsub_run_units(context, expression_unit, expression_unit);
-  result = ava_ast_node_to_lvalue(target, expression, &reader);
+  expression = ava_macsub_run_units(
+    expr_context, expression_unit, expression_unit);
+  if (is_update) {
+    ucs = ava_intr_var_ucs_new(expression);
+    expression = (ava_ast_node*)ucs;
+    reader = &ucs->reader;
+  } else {
+    reader = &ignore_reader;
+  }
+  result = ava_ast_node_to_lvalue(target, expression, reader);
 
   return (ava_macro_subst_result) {
     .status = ava_mss_done,
     .v = { .node = result },
   };
+}
+
+static ava_string ava_intr_var_ucs_to_string(const ava_intr_var_ucs* node) {
+  ava_string accum;
+
+  accum = AVA_ASCII9_STRING("(ucs ");
+  accum = ava_strcat(accum, ava_ast_node_to_string(node->reader));
+  accum = ava_strcat(accum, AVA_ASCII9_STRING(") "));
+  accum = ava_strcat(accum, ava_ast_node_to_string(node->delegate));
+  return accum;
+}
+
+static void ava_intr_var_ucs_postprocess(ava_intr_var_ucs* node) {
+  ava_symbol* context_var;
+
+  if (node->postprocessed) return;
+  node->postprocessed = ava_true;
+
+  context_var = ava_macsub_get_context_var(node->header.context);
+
+  if (ava_st_local_variable == context_var->type) {
+    ava_varscope_ref_var(ava_macsub_get_varscope(node->header.context),
+                         context_var);
+  }
+  ava_ast_node_postprocess(node->reader);
+  ava_ast_node_postprocess(node->delegate);
+}
+
+static void ava_intr_var_ucs_cg_evaluate(
+  ava_intr_var_ucs* node, const ava_pcode_register* dst,
+  ava_codegen_context* context
+) {
+  ava_pcode_register reg;
+  ava_symbol* context_var;
+
+  context_var = ava_macsub_get_context_var(node->header.context);
+
+  if (ava_st_local_variable == context_var->type) {
+    reg.type = ava_prt_var;
+    reg.index = ava_varscope_get_index(
+      ava_macsub_get_varscope(node->header.context),
+      context_var);
+
+    ava_ast_node_cg_evaluate(node->reader, &reg, context);
+  } else {
+    reg.type = ava_prt_data;
+    reg.index = ava_codegen_push_reg(context, ava_prt_data, 1);
+    ava_ast_node_cg_evaluate(node->reader, &reg, context);
+    ava_ast_node_cg_define(context_var->definer, context);
+    AVA_PCXB(set_glob, context_var->pcode_index, reg);
+    ava_codegen_pop_reg(context, ava_prt_data, 1);
+  }
+
+  ava_ast_node_cg_evaluate(node->delegate, dst, context);
+}
+
+static ava_intr_var_ucs* ava_intr_var_ucs_new(ava_ast_node* delegate) {
+  ava_intr_var_ucs* this;
+
+  this = AVA_NEW(ava_intr_var_ucs);
+  this->header.context = delegate->context;
+  this->header.location = delegate->location;
+  this->header.v = &ava_intr_var_ucs_vtable;
+  this->delegate = delegate;
+
+  return this;
+}
+
+ava_symbol* ava_var_gen(
+  ava_macsub_context* context, ava_string key,
+  const ava_compile_location* location
+) {
+  unsigned level;
+  ava_string name;
+  ava_symbol* symbol;
+
+  name = ava_macsub_gensym(context, key);
+  level = ava_macsub_get_level(context);
+
+  symbol = AVA_NEW(ava_symbol);
+  symbol->type = level?
+    ava_st_local_variable : ava_st_global_variable;
+  symbol->level = ava_macsub_get_level(context);
+  symbol->visibility = ava_v_private;
+  symbol->definer = level? NULL :
+    (ava_ast_node*)ava_intr_genvar_definer_new(context, location, symbol);
+  symbol->full_name = ava_macsub_apply_prefix(context, name);
+  symbol->v.var.is_mutable = ava_true;
+  symbol->v.var.name.scheme = ava_nms_ava;
+  symbol->v.var.name.name = symbol->full_name;
+  ava_macsub_put_symbol(context, symbol, location);
+  if (level)
+    ava_varscope_put_local(ava_macsub_get_varscope(context), symbol);
+
+  return symbol;
+}
+
+static ava_string ava_intr_genvar_definer_to_string(
+  const ava_intr_genvar_definer* node
+) {
+  AVA_STATIC_STRING(prefix, "<definer for ");
+
+  return ava_strcat(
+    prefix, ava_strcat(
+      node->symbol->full_name, AVA_ASCII9_STRING(">")));
+}
+
+static void ava_intr_genvar_definer_cg_define(
+  ava_intr_genvar_definer* node, ava_codegen_context* context
+) {
+  if (!node->defined) {
+    node->defined = ava_true;
+
+    ava_codegen_set_global_location(context, &node->header.location);
+    node->symbol->pcode_index =
+      AVA_PCGB(var, ava_false, node->symbol->v.var.name);
+  }
+}
+
+static ava_intr_genvar_definer* ava_intr_genvar_definer_new(
+  ava_macsub_context* context, const ava_compile_location* location,
+  ava_symbol* sym
+) {
+  ava_intr_genvar_definer* this;
+
+  this = AVA_NEW(ava_intr_genvar_definer);
+  this->header.context = context;
+  this->header.location = *location;
+  this->header.v = &ava_intr_genvar_definer_vtable;
+  this->symbol = sym;
+  this->defined = ava_false;
+
+
+  return this;
 }
