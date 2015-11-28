@@ -36,9 +36,9 @@ namespace byte-string {
 
     for {count = $rhs} ($count > 0) {count >>^= 1} {
       if ($count &^ 1) {
-        accum = concat $accum $amount
+        accum =? concat $ $amount
       }
-      amount = concat $amount $amount
+      amount =? concat $ $
     }
 
     ret $accum
