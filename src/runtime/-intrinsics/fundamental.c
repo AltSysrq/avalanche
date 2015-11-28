@@ -244,6 +244,8 @@ static void ava_intr_seq_cg_evaluate(
   ava_codegen_context* context
 ) {
   AVA_STATIC_STRING(block_or_declaration, "Block or declaration");
+  AVA_STATIC_STRING(
+    multi_statement_block, "\"Only\" block with more than one statement");
   const ava_pcode_register* child_dst = NULL;
 
   switch (seq->return_policy) {
@@ -261,11 +263,19 @@ static void ava_intr_seq_cg_evaluate(
     break;
 
   case ava_isrp_only:
-    if (!STAILQ_FIRST(&seq->children) ||
-        STAILQ_NEXT(STAILQ_FIRST(&seq->children), next))
+    if (!STAILQ_FIRST(&seq->children)) {
       child_dst = NULL;
-    else
+    } else if (STAILQ_NEXT(STAILQ_FIRST(&seq->children), next)) {
+      if (!dst) {
+        child_dst = NULL;
+      } else {
+        ava_codegen_error(
+          context, (ava_ast_node*)seq, ava_error_does_not_produce_a_value(
+            &seq->header.location, multi_statement_block));
+      }
+    } else {
       child_dst = dst;
+    }
     break;
   }
 

@@ -1,0 +1,6 @@
+fun foo x = $x
+
+block-last {
+  ret
+  foo 42
+}

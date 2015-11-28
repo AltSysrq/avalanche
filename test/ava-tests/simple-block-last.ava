@@ -1,0 +1,9 @@
+reqmod helpers/test
+
+test.register simple-block-last {
+  x = 40
+  test.pass (block-last {
+    x = $x + 2
+    $x
+  })
+}

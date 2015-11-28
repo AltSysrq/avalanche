@@ -1,0 +1,5 @@
+reqmod helpers/test
+
+test.register block-only-singleton {
+  test.pass : block-only { 42 }
+}
