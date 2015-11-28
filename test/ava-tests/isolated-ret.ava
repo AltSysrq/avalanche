@@ -1,0 +1,11 @@
+reqmod helpers/test
+
+fun doit () {
+  test.pass 42
+  ret
+  test.pass 55
+}
+
+test.register isolated-ret {
+  doit ()
+}

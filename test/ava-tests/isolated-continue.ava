@@ -1,0 +1,11 @@
+reqmod helpers/test
+
+test.register isolated-continue {
+  keep-going = yes
+  while ($keep-going) {
+    test.pass 42
+    keep-going = no
+    continue
+    test.pass 0
+  }
+}

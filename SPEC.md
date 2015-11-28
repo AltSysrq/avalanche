@@ -470,6 +470,11 @@ The macro processing algorithm for a single statement is as follows:
 
 - Macro processing for the statement is complete.
 
+Macro processing generally terminates if the statement is reduced to 0 or 1
+syntax unit, except that control macros may be substituted in a statement
+containing one syntax unit in a location where the result of evaluation would
+cause the result to be discarded.
+
 Every operator macro is associated with a precedence, which is an integer
 between 1 and 40, inclusive. Precedence also dictates associativity; precedence
 levels with an even index have left-to-right associativity, while those with an
@@ -490,6 +495,10 @@ The algorithm for locating an operator macro is as follows:
 
 (Note the perhaps counter-intuitive property that higher-precedence operators
 are processed _after_ lower-precedence operators.)
+
+Barewords which result in ambiguous name lookups only result in errors at
+macro-substitution time if at least one of the symbols would actually cause the
+bareword to be used as a macro.
 
 Aside from certain built-in macros that produce non-denotable results (eg,
 `fun` or `ret`) or perform more complex transformations (eg, `=`), macro

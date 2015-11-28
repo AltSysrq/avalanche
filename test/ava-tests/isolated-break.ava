@@ -1,0 +1,12 @@
+reqmod helpers/test
+
+fun doit () {
+  do {
+    test.pass 42
+    break
+  }
+}
+
+test.register isolated-break {
+  doit ()
+}

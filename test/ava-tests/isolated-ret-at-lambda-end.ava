@@ -1,0 +1,10 @@
+reqmod helpers/test
+
+x = {
+  test.pass 42
+  ret
+}
+
+test.register isolated-ret-at-lambda-end {
+  $x ()
+}
