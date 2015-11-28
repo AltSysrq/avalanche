@@ -337,6 +337,12 @@ static void ava_intr_user_macro_body_translate_bareword(
     ava_pcmb_bareword(builder, value);
     break;
 
+  case '$':
+    /* Only can get this way because the parser decided it should */
+    assert(1 == strlen);
+    ava_pcmb_bareword(builder, value);
+    break;
+
   case '%':
     if (strlen < 2) {
       ava_macsub_record_error(

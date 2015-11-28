@@ -506,6 +506,8 @@ barewords apply equally to variable names.
   verbatim, including the leading `#`. It is an error if the Bareword is only
   one-character long or does not also end in a `#`.
 
+- The Bareword "$" is substituted into the result verbatim.
+
 - A Bareword whose text begins with `%` is replaced at macro-definition time
   with the fully-qualified name of the symbol the remainder of the name
   references; at substitution time, a Bareword containing solely that
