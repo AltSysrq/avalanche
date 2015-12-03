@@ -32,6 +32,7 @@ AVA_BEGIN_DECLS
 #include "avalanche/alloc.h"
 #include "avalanche/string.h"
 #include "avalanche/value.h"
+#include "avalanche/integer.h"
 #include "avalanche/list.h"
 #include "avalanche/exception.h"
 
@@ -355,8 +356,9 @@ static void ava_exception_get_trace_error(
 }
 
 ava_string ava_exception_trace_to_string(const ava_exception* ex) {
-  AVA_STATIC_STRING(at_line_prefix, "\tat line\t");
-  AVA_STATIC_STRING(in_fun_prefix, "\tin fun\t\t");
+  const ava_string native_lead = AVA_ASCII9_STRING("\tnative ");
+  const ava_string fun_lead =    AVA_ASCII9_STRING("\tfun ");
+  const ava_string line_lead =   AVA_ASCII9_STRING("\t  line ");
   const ava_string lf = AVA_ASCII9_STRING("\n");
 
   ava_string accum, error;
@@ -383,16 +385,19 @@ ava_string ava_exception_trace_to_string(const ava_exception* ex) {
         0.......1.......2.......3........4
         in fun> >       FUNCTION @ IP (ERROR)
      */
-    if (-1 != loc.lineno) {
-      accum = ava_strcat(accum, at_line_prefix);
-      snprintf(tmp, sizeof(tmp), "%7d ", loc.lineno);
-      accum = ava_strcat(accum, ava_string_of_cstring(tmp));
-      accum = ava_strcat(accum, loc.filename);
-      accum = ava_strcat(accum, lf);
+    switch (loc.function.scheme) {
+    case ava_nms_none: accum = ava_strcat(accum, native_lead); break;
+    case ava_nms_ava:  accum = ava_strcat(accum, fun_lead); break;
     }
-    accum = ava_strcat(accum, in_fun_prefix);
+
     accum = ava_strcat(accum, loc.function.name);
-    if (-1 == loc.lineno) {
+    if (-1 != loc.lineno) {
+      accum = ava_strcat(accum, lf);
+      accum = ava_strcat(accum, line_lead);
+      accum = ava_strcat(accum, ava_to_string(ava_value_of_integer(loc.lineno)));
+      accum = ava_strcat(accum, AVA_ASCII9_STRING(" of "));
+      accum = ava_strcat(accum, loc.filename);
+    } else {
       accum = ava_strcat(accum, AVA_ASCII9_STRING(" @ "));
       snprintf(tmp, sizeof(tmp), "%p", (void*)loc.ip);
       accum = ava_strcat(accum, ava_string_of_cstring(tmp));
