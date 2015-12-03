@@ -397,6 +397,32 @@ This is intended to be used as a value for `indent-line-function'."
   (when (< (current-column) (current-indentation))
     (back-to-indentation)))
 
+(defun ava-electric-brace (arg)
+  "Insert character and correct indentation.
+
+This function only reindents the line if the character it inserted was a
+consecutive electric character at the start of the line, so that it does not
+continuously override manual indentation."
+  (interactive "p")
+  (self-insert-command arg)
+  (if (<= (save-excursion (while (and (char-before)
+                                      (or (= ?\) (char-syntax (char-before)))
+                                          (= ?   (char-syntax (char-before)))))
+                            (backward-char))
+                          (point))
+          (line-beginning-position))
+      (ava-indent-line)))
+
+(defvar ava-mode-map
+  (let ((map (make-sparse-keymap)))
+    (define-key map "}" 'ava-electric-brace)
+    (define-key map "]" 'ava-electric-brace)
+    (define-key map ")" 'ava-electric-brace)
+    (define-key map "\C-c\177" 'ava-delete-ws-backward)
+    (define-key map "\C-c\C-d" 'ava-delete-ws-forward)
+    map)
+  "Keymap used in `ava-mode'.")
+
 (define-derived-mode ava-mode fundamental-mode "Avalanche"
   "Major mode for editing Avalanche code."
   :abbrev-table nil ; use parent table
