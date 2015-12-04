@@ -1,5 +1,8 @@
 AC_PREREQ([2.6])
 AC_INIT([avalanche], [0.0.0], [jason@lin.gl])
+AC_CANONICAL_TARGET
+AC_CANONICAL_BUILD
+AC_CANONICAL_HOST
 AC_CONFIG_SRCDIR([src/.c])
 AM_INIT_AUTOMAKE([1.11])
 AM_SILENT_RULES(yes)
@@ -21,31 +24,72 @@ AM_PROG_CC_C_O
 AC_PROG_CXX
 AM_PROG_AS
 AC_CHECK_PROG([RE2C], [re2c], [re2c], [])
-AC_CHECK_PROGS([TCLSH], [tclsh8.6 tclsh8.5 tclsh])
+AS_IF([test "x$RE2C" = "x"],
+      [AC_MSG_ERROR([re2c not found; make sure it is installed])])
+AC_CHECK_PROGS([TCLSH], [tclsh8.5 tclsh8.6 tclsh8.7 tclsh])
+AS_IF([test "x$TCLSH" = "x"],
+      [AC_MSG_ERROR([tclsh not found. Make sure Tcl 8.5 or later is installed.])])
 # See the diatribe below on LLVM versioning for why we check for clang and
 # clang++ this way.
 # Note that these are used only for compiling the native code generation
 # drivers, not the library proper.
-AC_CHECK_PROGS([CLANG], [clang37 clang-3.7 clang])
-AC_CHECK_PROGS([CLANGXX], [clang++37 clang++-3.7 clang++])
+AC_CHECK_TARGET_TOOLS([CLANG], [clang37 clang-3.7])
+AS_IF([test "x$CLANG" = "x"],
+      [AC_MSG_ERROR([clang37 not found. Make sure Clang 3.7 configured for your
+desired target is installed.
+
+If your Clang installation uses an unusual version naming convention, specify
+the name of the Clang executable with CLANG=/path/to/clang when you call
+configure.
+
+Note that you cannot use an arbitrary version of Clang; it must match the
+version of LLVM used by Avalanche.])])
+AC_CHECK_TARGET_TOOLS([CLANGXX], [clang++37 clang++-3.7])
+AS_IF([test "x$CLANG" = "x"],
+      [AC_MSG_ERROR([clang++37 not found. Make sure Clang++ 3.7 configured for
+your desired target is installed.
+
+If your Clang++ installation uses an unusual version naming convention, specify
+the name of the Clang++ executable with CLANG=/path/to/clang++ when you call
+configure.
+
+Note that you cannot use an arbitrary version of Clang++; it must batch the
+version of LLVM used by Avalanche.])])
 AC_PROG_SED
 
 # Checks for libraries.
 PKG_CHECK_MODULES([CHECK], [check], [], [:])
 PKG_CHECK_MODULES([LIBFFI], [libffi], [], [AC_MSG_ERROR(
-[libffi could not be found. Make sure libffi[-dev] is installed.])])
+[libffi could not be found. Make sure libffi[[-dev]] is installed.])])
 AC_SEARCH_LIBS([sin], [c m])
 AC_SEARCH_LIBS([strlcpy], [c bsd])
 AC_SEARCH_LIBS([dlopen], [c dl])
 AC_SEARCH_LIBS([GC_init], [gc], [],
                [AC_MSG_ERROR(
-[The gc library could not be found. Make sure libgc[-dev] is installed.])])
+[The gc library could not be found. Make sure boehm-gc[[-dev]] or libgc[[-dev]] is
+installed.])])
 
 # Checks for header files
-AC_CHECK_HEADERS([gc.h gc/gc.h atomic_ops.h])
-AC_CHECK_HEADERS([err.h bsd/err.h sysexits.h bsd/sysexits.h bsd/string.h bsd/stdlib.h])
-AC_CHECK_HEADERS([sys/queue.h bsd/sys/queue.h])
-AC_CHECK_HEADERS([sys/tree.h bsd/sys/tree.h])
+AC_CHECK_HEADERS([gc.h gc/gc.h], [FOUND_GC_H=yes])
+AS_IF([test "x$FOUND_GC_H" = "x"],
+      [AC_MSG_ERROR(
+[Neither gc.h nor gc/gc.h found. Make sure boehm-gc[[-dev]] or libgc-dev is
+installed.])])
+AC_CHECK_HEADERS([atomic_ops.h], [:],
+                 [AC_MSG_ERROR(
+[atomics_ops.h not found. Make sure libatomicops[[-dev]] is installed.])])
+AC_CHECK_HEADERS([err.h bsd/err.h], [FOUND_ERR_H=yes])
+AC_CHECK_HEADERS([sysexits.h bsd/sysexits.h], [FOUND_SYSEXITS_H=yes])
+AC_CHECK_HEADERS([bsd/string.h bsd/stdlib.h])
+AC_CHECK_HEADERS([sys/queue.h bsd/sys/queue.h], [FOUND_SYS_QUEUE_H=yes])
+AC_CHECK_HEADERS([sys/tree.h bsd/sys/tree.h], [FOUND_SYS_TREE_H=yes])
+AS_IF([test "x$FOUND_ERR_H" = "x" ||
+       test "x$FOUND_SYSEXITS_H" = "x" ||
+       test "x$FOUND_SYS_QUEUE_H" = "x" ||
+       test "x$FOUND_SYS_TREE_H" = "x"],
+      [AC_MSG_ERROR(
+[One or more required headers from the BSD standard library was not found. You
+may need to install libsd[[-dev]].])])
 AC_CHECK_HEADERS([sys/types.h sys/resource.h])
 AC_CHECK_HEADERS([nmmintrin.h])
 
@@ -105,10 +149,17 @@ AC_CHECK_DECLS([FFI_THISCALL, FFI_STDCALL], [], [], [
 # It may end up being better to just vendor llvm into the Avalanche build
 # system, but that would make clean builds take painfully longer.
 AC_CHECK_PROGS([LLVM_CONFIG],
-               [llvm-config37 llvm-config-3.7 \
-                llvm-config])
+               [llvm-config37 llvm-config-3.7])
 AS_IF([test -z "$LLVM_CONFIG"],
-      [AC_MSG_ERROR([could not find any version of llvm-config])])
+      [AC_MSG_ERROR([could not find llvm-config37.
+
+Make sure llvm37[[-dev]] / llvm-3.7[[-dev]] is installed.
+
+If your installation uses an unusual version suffix, specify the name of the
+lllvm-config program with LLVM_CONFIG=/path/to/llvm-config when running
+configure.
+
+Note that versions of LLVM other than 3.7 are not supported.])])
 
 # --cppflags is a bunch of defines we definitely don't want plus an addition to
 # the include path.
