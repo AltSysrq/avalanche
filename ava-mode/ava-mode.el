@@ -425,7 +425,7 @@ continuously override manual indentation."
     map)
   "Keymap used in `ava-mode'.")
 
-(define-derived-mode ava-mode fundamental-mode "Avalanche"
+(define-derived-mode ava-mode prog-mode "Avalanche"
   "Major mode for editing Avalanche code."
   :abbrev-table nil ; use parent table
   (setq font-lock-defaults
