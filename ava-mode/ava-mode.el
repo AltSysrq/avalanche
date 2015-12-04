@@ -227,7 +227,9 @@ Avalanche Syntax I rules."
   "Return whether the given word (ie, a bareword) looks like a conventional
 Avalanche operator."
   (and word (> (length word) 0)
-       (ava-string-is-bareword word)
+       (or
+        (ava-string-is-bareword word)
+        (eq ?` (elt word (- (length word) 1))))
        (/= ?$ (elt word (- (length word) 1)))
        (let ((cat (get-char-code-property (elt word (- (length word) 1))
                                           'general-category)))
