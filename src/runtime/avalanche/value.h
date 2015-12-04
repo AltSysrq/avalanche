@@ -433,12 +433,17 @@ ava_string ava_iterate_singleton_string_chunk(ava_datum* rep,
  * Strings store their data in the ulong of the value.
  */
 extern const ava_attribute ava_string_type;
+#else
+extern const ava_value_trait ava_string_type;
 #endif
 
 /**
  * Returns a value which contains the given string, with a string type.
  */
-ava_value ava_value_of_string(ava_string str) AVA_PURE;
+static inline ava_value ava_value_of_string(ava_string str) AVA_CONSTFUN;
+static inline ava_value ava_value_of_string(ava_string str) {
+  return ava_value_with_str(&ava_string_type, str);
+}
 
 /**
  * Convenience for ava_value_of_string(ava_value_of_cstring(str)).

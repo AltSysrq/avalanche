@@ -539,10 +539,7 @@ ava_xcode_translation_context::ava_xcode_translation_context(
   di(module_),
   ea(module_, types)
 {
-  string_type = new llvm::GlobalVariable(
-    module,
-    types.ava_attribute, true, llvm::GlobalValue::ExternalLinkage,
-    nullptr, "ava_string_type");
+  string_type = module.getGlobalVariable("ava_string_type");
 
   empty_string = llvm::ConstantInt::get(types.ava_string, 1);
   empty_string_value = llvm::ConstantVector::get(

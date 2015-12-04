@@ -100,13 +100,6 @@ const ava_value_trait ava_string_type = {
   .iterate_string_chunk = ava_iterate_singleton_string_chunk,
 };
 
-/* The string representation will become a bit more interesting once we have
- * caching for large values.
- */
-ava_value ava_value_of_string(ava_string str) {
-  return ava_value_with_str(&ava_string_type, str);
-}
-
 ava_value ava_value_of_cstring(const char* str) {
   return ava_value_of_string(ava_string_of_cstring(str));
 }
