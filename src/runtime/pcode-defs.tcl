@@ -1209,3 +1209,226 @@ struct macro m {
   # effect a placeholder while the file containing the bad macro is processed.
   elt die { }
 }
+
+# structs are used both for interop with the underlying platform and for
+# describing binary structures.
+#
+# The struct design aims to make it reasonable to support on non-native
+# platforms. As such, it and the operations upon it are somewhat fuzzy when
+# used in the interop form.
+#
+# Certain components of the struct system reference properties of the
+# underlying ABI. If the host platform does not define these, the following are
+# assumed as necessary:
+# - The native byte order is little-endian.
+# - The native word size is 64 bits.
+# - The native alignment of a value is its size.
+#
+# Note that binary usage of a struct is expected to be the same on all
+# underlying platforms, when ABI-relative concepts are not used.
+#
+# There were three types of underlying platform considered for the design of
+# the struct system in native usage:
+#
+# - Direct memory access like C. Structs are layed out sequentially in memory.
+#   There are no runtime types. Access is performed by calculating the offset
+#   of the desired member in a pointer and dereferencing it. A struct can
+#   extend another by having the parent as its first member. There is no
+#   run-time type information; interpreting one struct as another works
+#   silently, even if incompatible.
+#
+# - Managed access like in the JVM or CLR. Structs are statically-typed tuples
+#   with named items. Access is performed by telling the platform to access a
+#   member, usually by name or index. A struct can extend another by using a
+#   first-class concept like subclassing. Run-time types are checked; a struct
+#   can only be interpreted as its actual type or a struct it extends.
+#
+# - Map-based objects like in JavaScript. Structs are maps. Access is performed
+#   by subscripting the map with its name, so names in the struct and everything
+#   it extends must be unique. A struct can extend another by simply adding its
+#   fields to the map of the superstruct. There are no run-time types for the
+#   purposes of structs; if one is interpreted as another, fields which happen
+#   to have the same name will be accessible in the other.
+#
+# Note that the concept of "struct extension" is defined in the struct global
+# rather than as a member within the struct struct.
+#
+# The "natural alignment" of a struct is the greatest alignment of any field it
+# contains.
+#
+# Binary form exactly matches native form on the C backend.
+struct struct s {
+  parent global g
+
+  # Identifies the name of a field in a struct. Each element has exactly one
+  # such member. All elements in a struct and all structs it extends directly
+  # or indirectly must have unique names.
+  #
+  # The underlying platform may restrict what field names are legal. Backends
+  # should try to map names in an Avalanche-like way and produce errors when
+  # this fails.
+  prop str name
+  # Identifies a reference to a struct global by global index.
+  prop int struct-ref
+  # Identifies a reference to a struct global by global index which must also
+  # be composable.
+  prop int struct-compose
+  # Identifies an element which may not be followed by any other elements.
+  attr must-be-at-end
+  # Identifies an element which requires the struct to be non-composable.
+  attr non-composable
+
+  # Describes an integer field.
+  elt int {
+    str name {
+      prop name
+    }
+    # The size of the integer, in bits. A value of 0 indicates the
+    # machine-native word size (eg, 64 on AMD64, even though int is 32 bits).
+    # Negative values select types specific to the underlying platform (on C,
+    # -1 = int, -2 = long, -3 = size_t). Unknown negative values are treated as
+    # if they were 64. If the size is not supported on the platform, the next
+    # larger size is used.
+    #
+    # In binary form, if the backend does not have a concept of the integer
+    # sizes in C, -1 is interpreted as 32 and all other negatives as 64.
+    #
+    # Binary form always rounds up to the next multiple of 8.
+    int size
+    # The alignment of the integer, in bits. A value of 0 indicates the native
+    # alignment. If the given alignment is not supported, the next larger
+    # alignment is used.
+    #
+    # In binary form, only powers of 2 are permitted.
+    int align
+    # Whether this integer is sign-extended when extracted to an Avalanche
+    # integer.
+    bool sign-extend
+    # Whether the integer should be allocated to support atomic operations.
+    # This requires the integer to have native word size, alignment, and
+    # byte-order.
+    #
+    # This is meaningless in binary usage.
+    bool atomic
+    # The byte-order for this integer. -1 is little-endian, 0 is the endianness
+    # of the platform, +1 is big-endian.
+    #
+    # Whether this means anything in native usage is backend-specific. For
+    # example, in the C backend it is useful to be able to declare fields to be
+    # big-endian since some network APIs take integers that way, while a
+    # hypothetical JVM backend would ignore this field.
+    int byte-order
+
+    constraint {
+      @.align >= 0 &&
+      @.size <= (ava_integer)sizeof(ava_integer) * 8 &&
+      @.byte_order >= -1 && @.byte_order <= +1 &&
+      (!@.atomic || (!@.align && !@.size && !@.byte_order))
+    }
+  }
+
+  # Describes a floating-point field.
+  elt real {
+    str name {
+      prop name
+    }
+    # The precision of this floating-point. 1 = single-precision, 2 =
+    # double-precision, 3 = platform-specific value at least as precise as
+    # double-precision (ie, "long double").
+    int precision
+    # The alignment of this field. Equivalent to align on the int element.
+    int align
+    # The byte-order of this field. Equivalent to byte-order on the int
+    # element.
+    int byte-order
+
+    constraint {
+      @.precision >= 1 && @.precision <= 3 &&
+      @.align >= 0 &&
+      @.byte_order >= -1 && @.byte_order <= +1
+    }
+  }
+
+  # Describes a pointer to another struct.
+  #
+  # This type is not meaningful in binary usage.
+  #
+  # Pointers are always aligned natively.
+  elt ptr {
+    str name {
+      prop name
+    }
+    # The "declared type" of this field.
+    #
+    # Depending on the backend, it may only be possible to store structs which
+    # directly or indirectly extend the declared type (including the declared
+    # type itself) in this field.
+    int decl-type {
+      prop struct-ref
+    }
+    # Whether it needs to be possible to perform atomic operations on this
+    # pointer.
+    bool atomic
+  }
+
+  # Describes a field which is a struct nested directly within this struct.
+  #
+  # Unlike with extension, the nested struct and this struct may have
+  # overlapping names.
+  #
+  # In binary usage, this causes the nested struct to be included immediately
+  # at the location of the field.
+  #
+  # The field is aligned to the composed structure's natural alignment.
+  elt compose {
+    str name {
+      prop name
+    }
+    # The identity of the struct being nested here.
+    int of {
+      prop struct-ref
+      prop struct-compose
+    }
+  }
+
+  # Describes a field which is a fixed-length array of another struct.
+  #
+  # This is somewhat equivalent to having $length identical compose elements,
+  # except that it is possible to dynamically index the array.
+  elt array {
+    str name {
+      prop name
+    }
+    # The identity of the struct being nested here.
+    int of {
+      prop struct-ref
+      prop struct-compose
+    }
+    # The number of elements in the array.
+    int length
+
+    constraint {
+      @.length >= 0
+    }
+  }
+
+  # Describes a field which is a fixed-length array of another struct, but
+  # whose length is determined at runtime.
+  #
+  # This is semantically equivalent to the empty-array member syntax in C99. It
+  # must be the final member in the structure. There is no way to determine the
+  # total length of the array unless the length of the whole structure in bytes
+  # is known.
+  elt tail {
+    attr must-be-at-end
+    attr non-composable
+
+    str name {
+      prop name
+    }
+    int of {
+      prop struct-ref
+      prop struct-compose
+    }
+  }
+}
