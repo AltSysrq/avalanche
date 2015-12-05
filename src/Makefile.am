@@ -80,6 +80,7 @@ runtime/pcode-linker.c \
 runtime/pcode-validation.c \
 runtime/pointer.c \
 runtime/real.c \
+runtime/strangelet.c \
 runtime/string.c \
 runtime/symtab.c \
 runtime/value.c \

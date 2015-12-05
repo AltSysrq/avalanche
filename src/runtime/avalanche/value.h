@@ -89,6 +89,12 @@
  * value remains the string "0x01". Functions which return *new* values may
  * (and usually do) define themselves to produce _normalised_ values, in which
  * case this does not apply. (Eg, "0x0a"+"0" produces "10", not "0x0a".)
+ *
+ * It is worth noting here that ava_values are also used to host "stranglets",
+ * non-values used as an escape hatch for native interoperation and similar. No
+ * code needs to be strangelet-aware to operate safely, even though strangelets
+ * are not meaningful as values. See the strangelet.h header for more
+ * information.
  */
 #if AVA_VECTOR_VALUE
 typedef unsigned long long ava_value __attribute__((__vector_size__(16)));

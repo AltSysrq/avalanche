@@ -33,6 +33,7 @@ avalanche/gen-pcode.h \
 avalanche/pointer.h \
 avalanche/pointer-trait.h \
 avalanche/real.h \
+avalanche/strangelet.h \
 avalanche/string.h \
 avalanche/symbol.h \
 avalanche/symtab.h \

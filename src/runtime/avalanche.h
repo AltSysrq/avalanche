@@ -26,6 +26,7 @@ AVA_BEGIN_DECLS
 #include "avalanche/string.h"
 #include "avalanche/lex.h"
 #include "avalanche/value.h"
+#include "avalanche/strangelet.h"
 #include "avalanche/integer.h"
 #include "avalanche/interval.h"
 #include "avalanche/errors.h"
