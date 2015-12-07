@@ -35,6 +35,7 @@ avalanche/pointer-trait.h \
 avalanche/real.h \
 avalanche/strangelet.h \
 avalanche/string.h \
+avalanche/struct.h \
 avalanche/symbol.h \
 avalanche/symtab.h \
 avalanche/value.h \
