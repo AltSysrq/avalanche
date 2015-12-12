@@ -510,6 +510,147 @@ set defs {
     }
   }
 
+  serror R0047 struct_empty_list {} {
+    msg "Empty list is not a valid struct."
+    explanation {
+      An attempt was made to interprete the empty list as a struct.
+    }
+  }
+
+  serror R0048 struct_header_too_short {{ava_integer cnt}} {
+    msg "Struct header block too short; only has %cnt% elements."
+    explanation {
+      An attempt was made to interpret a value as a struct, but the first
+      element (the header block) did not have enough elements.
+
+      The header block must at least define whether the struct is a proper
+      struct or a union, and its name.
+
+      If the stated count is 1, this may be because quotation was forgotten
+      around the header block. For example, using
+
+        [struct foo [...]]
+
+      instead of
+
+        [[struct foo] [...]]
+
+      will produce this error.
+    }
+  }
+
+  serror R0049 struct_header_too_long {{ava_integer cnt}} {
+    msg "Struct header block too long; has %cnt% elements."
+    explanation {
+      An attempt was made to interpret a value as a struct, but the first
+      element (the header block) had too many elements.
+
+      The header block at most defines whether the struct is a proper struct or
+      union, its name, and its parent struct.
+
+      This could be caused if the struct header is missing altogether, i.e., if
+      a field specification is found where the header is supposed to be.
+    }
+  }
+
+  serror R0050 struct_bad_header_type {{ava_string type}} {
+    msg "Bad struct type '%type%', expected 'struct' or 'union'."
+    explanation {
+      A string other than "struct" or "union" was found in the type element of
+      a struct's header block (the first element in the list defining the
+      struct).
+
+      It is possible that the header block is missing, and a field
+      specification is instead found where the header is supposed to be.
+    }
+  }
+
+  serror R0051 struct_field_spec_too_short {{ava_integer cnt}} {
+    msg "Struct field specifier is empty, has only %cnt% elements."
+    explanation {
+      A field specifier within a value to be interpreted as a struct has too
+      few values to be a valid field specifier.
+
+      At the very least, each field needs a type (first element) and name (last
+      element). Most types take additional elements between the two.
+    }
+  }
+
+  serror R0052 struct_bad_type {{ava_string type}} {
+    msg "Bad type for struct field: %type%"
+    explanation {
+      The type in a field specifier in a value interpreted as a struct does not
+      name a known field type.
+    }
+  }
+
+  serror R0053 struct_bad_field_spec_length {
+    {ava_string field} {ava_string type}
+    {ava_integer expected} {ava_integer got}
+  } {
+    msg "Bad %type% spec for field %field%; expected %expected%, got %got% elements"
+    explanation {
+      The given field specifier in a value interpreted as a struct had an
+      unexpected number of elements.
+    }
+  }
+
+  serror R0054 struct_bad_field_spec_element {
+    {ava_string field} {ava_string element} {ava_value value}
+  } {
+    msg "Bad %element% for field %field%: %value%"
+    explanation {
+      The given element of the field specifier for the given field was not a
+      valid value for that field.
+    }
+  }
+
+  serror R0055 struct_nonnative_atomic {{ava_string field}} {
+    msg "Field %field% is atomic but has unnatural properties."
+    explanation {
+      Atomic fields in structs are required to always have natural alignment,
+      word size, and byte order, but the given field violates one of these
+      restrictions.
+    }
+  }
+
+  serror R0056 struct_extends_non_composable {
+    {ava_string child} {ava_string parent}
+  } {
+    msg "Struct %child% extends non-composable struct %parent%."
+    explanation {
+      The named struct extends another struct which is not composable.
+
+      Structs become non-composable if they end with a non-fixed-size field,
+      such as a tail field.
+    }
+  }
+
+  serror R0057 struct_composes_non_composable {
+    {ava_string struct_name} {ava_string field}
+  } {
+    msg "Field %field% of struct %struct_name% is non-composable."
+    explanation {
+      The named field in the given struct attempts to compose the struct with a
+      non-composable struct.
+
+      Structs become non-composable if they end with a non-fixed-size field,
+      such as a tail field. The only way to reference a non-composable struct
+      is with a pointer.
+    }
+  }
+
+  serror R0058 struct_var_length_field_not_at_end {
+    {ava_string struct_name} {ava_string field}
+  } {
+    msg "Field %field% of struct %struct_name% is variable-length, but not at end."
+    explanation {
+      Variable-length fields (such as tail fields) are required to come at the
+      end of the structure that contains them, but the indicated field is
+      followed by one or more other fields.
+    }
+  }
+
   serror U3000 undef_integer_overflow {
     {ava_integer a} {ava_string op} {ava_integer b}
   } {

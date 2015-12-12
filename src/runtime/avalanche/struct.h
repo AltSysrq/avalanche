@@ -127,7 +127,7 @@ typedef struct ava_struct_s ava_struct;
  * The natural alignment of an integer is equal to its size.
  *
  * The string representation of each integer type is the text of the entry name
- * here after "ava_sis_".
+ * here after "ava_sis_", with underscores replaced with hyphens.
  */
 typedef enum {
   /**
@@ -199,13 +199,12 @@ typedef enum {
  * utility since the extra precision gets discarded; the only real use is to
  * interoperate with native APIs that use such fields in structs.
  *
- * The natural alignment of of a real is the largest power of two not greater
- * than the size of the real.
+ * The natural alignment of of a real is 4 bytes in binary mode.
  *
  * Floating-point values are assumed to be in IEEE 754 unless stated otherwise.
  *
  * The string representation of this enum is the text in the each entry's name
- * after "ava_srs_".
+ * after "ava_srs_", with underscores replaced by hyphens.
  */
 typedef enum {
   /**
@@ -488,6 +487,10 @@ typedef struct ava_struct_field_s {
       const ava_struct* member;
       /**
        * For ava_sft_array, the number of members in the array.
+       *
+       * This always indicates the "natural length" of the field, including for
+       * ava_sft_compose (where it is always 1) and ava_sft_tail (where it is
+       * always 0).
        */
       size_t array_length;
     } vcompose;
@@ -518,9 +521,9 @@ struct ava_struct_s {
    */
   size_t size;
   /**
-   * The exponent of 2 of the alignment of this struct in binary mode.
+   * The alignment, in bytes, of this struct in binary mode.
    */
-  unsigned char alignment;
+  unsigned alignment;
   /**
    * Whether it is legal to compose this struct inside another.
    */
