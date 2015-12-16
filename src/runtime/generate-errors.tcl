@@ -617,7 +617,7 @@ set defs {
   serror R0056 struct_extends_non_composable {
     {ava_string child} {ava_string parent}
   } {
-    msg "Struct %child% extends non-composable struct %parent%."
+    msg "Struct %child% extends non-composable struct %parent%"
     explanation {
       The named struct extends another struct which is not composable.
 
@@ -648,6 +648,19 @@ set defs {
       Variable-length fields (such as tail fields) are required to come at the
       end of the structure that contains them, but the indicated field is
       followed by one or more other fields.
+    }
+  }
+
+  serror R0059 struct_union_in_extension {
+    {ava_string child} {ava_string parent}
+  } {
+    msg "Struct %child% extends %parent%, but one of them is a union."
+    explanation {
+      When interpreting a value as a struct, it was found that the struct
+      extends a parent, but either the parent or child is a union.
+
+      Such extension is prohibited since the binary semantics are unclear and
+      it does not correspond to any common native construct.
     }
   }
 

@@ -171,6 +171,10 @@ static void ava_struct_parse_header(ava_struct* this, ava_list_value header) {
   } else {
     this->parent = NULL;
   }
+
+  if (this->parent &&
+      (this->is_union || this->parent->is_union))
+    DIE(union_in_extension, this->name, this->parent->name);
 }
 
 static ava_value ava_struct_stringify_header(const ava_struct* this) {
@@ -272,7 +276,7 @@ static void ava_struct_check_spec_length(
 static void ava_struct_parse_int_field(
   ava_struct_field* dst, ava_list_value spec
 ) {
-  AVA_STATIC_STRING(ava_integer_name, "ava_integer");
+  AVA_STATIC_STRING(ava_integer_name, "ava-integer");
 
   ava_string size_str, byte_order_str;
   ava_integer sign_extend, is_atomic, alignment;
@@ -309,7 +313,7 @@ static void ava_struct_parse_int_field(
   CASE(int      , 'i','n','t');
   CASE(long     , 'l','o','n','g');
   CASE(c_short  , 'c','-','s','h','o','r','t');
-  CASE(c_int    , 'c','-','i','n','n');
+  CASE(c_int    , 'c','-','i','n','t');
   CASE(c_long   , 'c','-','l','o','n','g');
   CASE(c_llong  , 'c','-','l','l','o','n','g');
   CASE(c_size   , 'c','-','s','i','z','e');
@@ -335,7 +339,7 @@ static void ava_struct_parse_int_field(
 }
 
 static ava_value ava_struct_stringify_int_field(const ava_struct_field* field) {
-  AVA_STATIC_STRING(ava_integer_name, "ava_integer");
+  AVA_STATIC_STRING(ava_integer_name, "ava-integer");
 
   ava_value vals[7];
 
@@ -353,6 +357,7 @@ static ava_value ava_struct_stringify_int_field(const ava_struct_field* field) {
   CASE(word,word);
   CASE(byte,byte);
   CASE(short,short);
+  CASE(int,int);
   CASE(long,long);
   CASE(c_short,c-short);
   CASE(c_int,c-int);
@@ -575,7 +580,7 @@ static void ava_struct_parse_tail_field(
   ava_struct_check_spec_length(
     dst->name, AVA_ASCII9_STRING("tail"), spec, 3);
 
-  dst->type = ava_sft_compose;
+  dst->type = ava_sft_tail;
   dst->v.vcompose.member = ava_struct_of_value(
     ava_list_index(spec, 1));
   dst->v.vcompose.array_length = 0;
@@ -756,6 +761,9 @@ static void ava_struct_lay_out(ava_struct* this) {
     } break;
     }
 
+    if (field_alignment > this->alignment)
+      this->alignment = field_alignment;
+
     field_offset = (offset + field_alignment - 1) /
       field_alignment * field_alignment;
     this->fields[i].offset = field_offset;
@@ -766,4 +774,7 @@ static void ava_struct_lay_out(ava_struct* this) {
     if (!this->is_union)
       offset = field_offset + field_size;
   }
+
+  this->size = (this->size + this->alignment - 1)
+    / this->alignment * this->alignment;
 }

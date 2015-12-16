@@ -34,6 +34,7 @@ runtime/test-pcode-validation.t \
 runtime/test-pointer.t \
 runtime/test-real.t \
 runtime/test-string.t \
+runtime/test-struct.t \
 runtime/test-symtab.t \
 runtime/test-value.t \
 runtime/test-varscope.t \

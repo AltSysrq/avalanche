@@ -90,7 +90,9 @@ struct ava_pointer_prototype_s;
  * is either the keyword "struct" or "union", which dictates the is_union field
  * of ava_struct. Next is the name of the struct (ava_struct.name). If the next
  * element is present, it is interpreted as an ava_struct describing the parent
- * struct.
+ * struct. Unions cannot extend other structs or be themselves extended since
+ * the meaning in binary form is unclear and they may not be representable in
+ * certain native backends.
  *
  * Each field descriptor begins with a keyword indicating the type and ends
  * with the field name. Elements between are particular to each type and
