@@ -52,11 +52,19 @@ struct global g {
   # Property which is a reference, by absolute index, to an element with the
   # fun attribute in the same P-Code object.
   prop int global-fun-ref
+  # Property which is a reference, by absolute index, to an element with the
+  # struct-def property in the same P-Code object.
+  prop int global-sxt-ref
   # Property indicating that the element describes a function with the given
   # prototype.
   #
   # Always singular.
   prop function prototype
+  # Property indicating that the element declares or defines a struct with the
+  # given struct definition.
+  #
+  # Always singular.
+  prop sxt struct-def
   # Property on elements with no semantics besides symbol exporting (ie, to the
   # Avalanche compiler). If false, such entries do not survive linking.
   #
@@ -67,7 +75,7 @@ struct global g {
   #
   # Always singular.
   prop bool publish
-  # Property on elements  which may participate in linking, indicating the name
+  # Property on elements which may participate in linking, indicating the name
   # that is used for linkage purposes.
   #
   # Always singular.
@@ -186,6 +194,40 @@ struct global g {
     }
     constraint {
       ava_cc_ava == @.prototype->calling_convention
+    }
+  }
+
+  # Declares the existence of a struct which can be used with native-interop
+  # instructions.
+  #
+  # Struct declarations do not participate in linkage at the P-Code level.
+  # Whether any such linkage occurs at platform level is entirely
+  # platform-dependent.
+  #
+  # In a fully-assembled program, there should be exactly one decl-sxt which
+  # has define set to true (including any parent or composed structures
+  # implicitly declared by the definition in this instruction). The effect of
+  # failing to meet this requirement is undefined. Similarly, the effect of
+  # having multiple decl-sxts defining structures with the same name (including
+  # implicitly via extension or composition) but different contents is
+  # undefined.
+  #
+  # Despite the "undefined" statemements above, a program does not become
+  # unsafe simply by virtue of having a decl-sxt instruction; the worst that
+  # may happen is that the final result fail to compile or link. However,
+  # should linking succeed, the behaviour of the unsafe exe instructions
+  # becomes far less well-defined.
+  elt decl-sxt {
+    attr entity
+
+    # Whether the back-end should emit any code that may be necessary to
+    # concretely "define" the struct on the platform. Note that this is not
+    # recursive; structs implicitly declared by extension or composition are
+    # not affected by this flag, only the top-level struct in def itself.
+    bool define
+    # The ava_struct describing this structure.
+    sxt def {
+      prop struct-def
     }
   }
 

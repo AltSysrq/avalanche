@@ -114,6 +114,10 @@ proc ava-list {args} {
   add-field list {*}$args
 }
 
+proc sxt {args} {
+  add-field sxt {*}$args
+}
+
 proc register-type {types name args} {
   add-field register-type $name {*}$args
   add-register-type-constraint $types $name
@@ -196,6 +200,7 @@ set SIMPLE_TYPES {
   function {const ava_function*}
   list ava_list_value
   bool ava_bool
+  sxt {const struct ava_struct_s*}
 }
 
 proc ctype-field {type} {
@@ -379,6 +384,7 @@ proc gen-impl {} {
 #include "avalanche/exception.h"
 #include "avalanche/name-mangle.h"
 #include "avalanche/symbol.h"
+#include "avalanche/struct.h"
 #include "avalanche/pcode.h"
 
 #include "-pcode-conversions.h"

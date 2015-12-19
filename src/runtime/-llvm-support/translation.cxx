@@ -58,8 +58,10 @@ AVA_BEGIN_DECLS
 #include "../avalanche/pcode-validation.h"
 #include "../avalanche/errors.h"
 #include "../avalanche/name-mangle.h"
+#include "../avalanche/struct.h"
 AVA_END_DECLS
 #include "../../bsd.h"
+#include "../-internal-defs.h"
 
 #include "driver-iface.hxx"
 #include "exception-abi.hxx"
@@ -107,6 +109,17 @@ struct ava_xcode_translation_context {
 
   std::map<size_t,llvm::GlobalVariable*> global_vars;
   std::map<size_t,llvm::Function*> global_funs;
+  /* Maps from global indices to types for structs declared with decl-sxt. Both
+   * structs and unions are entered into the structs map; for unions, this just
+   * acts as a container for the sub-types, to determine required alignment,
+   * and simplifies some of the code. Unions are also entered into the unions
+   * map, which holds arrays of size equal to the largest member in the
+   * corresponding struct and with a type appropriate to force LLVM to consider
+   * it to have the required alignment, since there's strangely no other way to
+   * express this.
+   */
+  std::map<size_t,llvm::StructType*> global_sxt_structs;
+  std::map<size_t,llvm::ArrayType*> global_sxt_unions;
 
   llvm::DIFile* get_di_file(const std::string& name) noexcept;
 };
@@ -141,6 +154,23 @@ static bool ava_xcode_to_ir_declare_fun(
   llvm::GlobalValue::LinkageTypes linkage,
   bool will_be_defined, size_t ix,
   std::string& error) noexcept;
+
+static bool ava_xcode_to_ir_declare_sxt(
+  ava_xcode_translation_context& context,
+  size_t ix, const ava_struct* sxt,
+  std::string& error) noexcept;
+static llvm::StructType* ava_xcode_to_ir_make_struct_type(
+  ava_xcode_translation_context& context,
+  const ava_struct* sxt,
+  std::string& error) noexcept;
+static llvm::Type* ava_xcode_to_ir_make_struct_member(
+  ava_xcode_translation_context& context,
+  ava_string struct_name,
+  const ava_struct_field* field,
+  std::string& error) noexcept;
+static llvm::ArrayType* ava_xcode_to_ir_make_union_type(
+  ava_xcode_translation_context& context,
+  llvm::StructType* sxt) noexcept;
 
 static llvm::Type* translate_marshalling_type(
   const ava_xcode_translation_context& context,
@@ -513,6 +543,13 @@ noexcept {
       true, ix, error);
   } break;
 
+  case ava_pcgt_decl_sxt: {
+    const ava_pcg_decl_sxt* v = (const ava_pcg_decl_sxt*)pcode;
+
+    return ava_xcode_to_ir_declare_sxt(
+      context, ix, v->def, error);
+  } break;
+
   case ava_pcgt_load_pkg:
   case ava_pcgt_load_mod:
   case ava_pcgt_src_pos:
@@ -805,6 +842,201 @@ noexcept {
   context.global_vars[ix] = funvar;
 
   return true;
+}
+
+static bool ava_xcode_to_ir_declare_sxt(
+  ava_xcode_translation_context& context,
+  size_t ix, const ava_struct* sxt,
+  std::string& error)
+noexcept {
+  llvm::StructType* struct_type;
+  llvm::ArrayType* union_type;
+
+  if (!(struct_type = ava_xcode_to_ir_make_struct_type(
+          context, sxt, error)))
+    return false;
+
+  context.global_sxt_structs[ix] = struct_type;
+
+  if (sxt->is_union) {
+    union_type = ava_xcode_to_ir_make_union_type(
+      context, struct_type);
+    context.global_sxt_unions[ix] = union_type;
+  }
+
+  return true;
+}
+
+static llvm::StructType* ava_xcode_to_ir_make_struct_type(
+  ava_xcode_translation_context& context,
+  const ava_struct* sxt,
+  std::string& error)
+noexcept {
+  llvm::Type* members[sxt->num_fields + !!sxt->parent];
+  size_t i;
+
+  if (sxt->parent) {
+    if (!(members[0] = ava_xcode_to_ir_make_struct_type(
+            context, sxt->parent, error)))
+      return nullptr;
+  }
+
+  for (i = 0; i < sxt->num_fields; ++i) {
+    if (!(members[i + !!sxt->parent] =
+          ava_xcode_to_ir_make_struct_member(
+            context, sxt->name, sxt->fields + i, error)))
+      return nullptr;
+  }
+
+  return llvm::StructType::get(
+    context.llvm_context,
+    llvm::ArrayRef<llvm::Type*>(members, ava_lenof(members)));
+}
+
+static llvm::Type* ava_xcode_to_ir_make_struct_member(
+  ava_xcode_translation_context& context,
+  ava_string struct_name,
+  const ava_struct_field* field,
+  std::string& error)
+noexcept {
+  switch (field->type) {
+  case ava_sft_int: {
+    if (AVA_STRUCT_NATURAL_ALIGNMENT != field->v.vint.alignment &&
+        AVA_STRUCT_NATIVE_ALIGNMENT != field->v.vint.alignment) {
+      error = ava_string_to_cstring(
+        ava_error_native_field_with_unnatural_alignment_unsupported(
+          struct_name, field->name));
+      return nullptr;
+    }
+
+    switch (field->v.vint.size) {
+    case ava_sis_ava_integer:
+      return context.types.ava_integer;
+    case ava_sis_word:
+      return context.types.c_atomic;
+    case ava_sis_byte:
+      return context.types.ava_bool;
+    case ava_sis_short:
+      return context.types.ava_short;
+    case ava_sis_int:
+      return context.types.ava_int;
+    case ava_sis_long:
+      return context.types.ava_long;
+    case ava_sis_c_short:
+      return context.types.c_short;
+    case ava_sis_c_int:
+      return context.types.c_int;
+    case ava_sis_c_long:
+      return context.types.c_long;
+    case ava_sis_c_llong:
+      return context.types.c_llong;
+    case ava_sis_c_size:
+      return context.types.c_size;
+    case ava_sis_c_intptr:
+      return context.types.c_intptr;
+    }
+
+    /* unreachable */
+    abort();
+  } break;
+
+  case ava_sft_real: {
+    if (AVA_STRUCT_NATURAL_ALIGNMENT != field->v.vreal.alignment &&
+        AVA_STRUCT_NATIVE_ALIGNMENT != field->v.vreal.alignment) {
+      error = ava_string_to_cstring(
+        ava_error_native_field_with_unnatural_alignment_unsupported(
+          struct_name, field->name));
+      return nullptr;
+    }
+
+    switch (field->v.vreal.size) {
+    case ava_srs_ava_real: return context.types.ava_real;
+    case ava_srs_single: return context.types.c_float;
+    case ava_srs_double: return context.types.c_double;
+    case ava_srs_extended: return context.types.c_ldouble;
+    }
+
+    /* unreachable */
+    abort();
+  } break;
+
+  case ava_sft_ptr: {
+    return context.types.general_pointer;
+  } break;
+
+  case ava_sft_hybrid: {
+    /* ava_string is the canonical hybrid type in the C API */
+    return context.types.ava_string;
+  } break;
+
+  case ava_sft_value: {
+    return context.types.ava_value;
+  } break;
+
+  case ava_sft_compose:
+  case ava_sft_array:
+  case ava_sft_tail: {
+    llvm::StructType* struct_type = ava_xcode_to_ir_make_struct_type(
+      context, field->v.vcompose.member, error);
+    if (!struct_type) return nullptr;
+
+    llvm::Type* inner;
+    if (field->v.vcompose.member->is_union)
+      inner = ava_xcode_to_ir_make_union_type(
+        context, struct_type);
+    else
+      inner = struct_type;
+
+    return llvm::ArrayType::get(inner, field->v.vcompose.array_length);
+  } break;
+  }
+
+  /* unreachable */
+  abort();
+}
+
+static llvm::ArrayType* ava_xcode_to_ir_make_union_type(
+  ava_xcode_translation_context& context,
+  llvm::StructType* sxt)
+noexcept {
+  size_t max_size = 0, max_align = 1, i, n, size, align;
+  llvm::Type* member, * elt;
+  const llvm::DataLayout& layout(context.module.getDataLayout());
+
+  n = sxt->getStructNumElements();
+  for (i = 0; i < n; ++i) {
+    member = sxt->getStructElementType(i);
+    size = layout.getTypeAllocSize(member);
+    align = layout.getABITypeAlignment(member);
+
+    if (size > max_size) max_size = size;
+    if (align > max_align) max_align = align;
+  }
+
+  max_size = (max_size + max_align - 1) / max_align * max_align;
+  /* Go hunting for a type which happens to have this alignment, since LLVM
+   * doesn't provide any way to say "array of N bytes with alignment X".
+   *
+   * Clang accomplishes this by adding its own padding in the containing
+   * struct...
+   */
+#define TYPE(type)                                                      \
+  if (max_align == layout.getABITypeAlignment(context.types.type))      \
+    elt = context.types.type
+  TYPE(ava_byte);
+  else TYPE(ava_short);
+  else TYPE(ava_int);
+  else TYPE(general_pointer);
+  else TYPE(ava_long);
+  else TYPE(c_atomic);
+  else TYPE(ava_real);
+  else TYPE(ava_value);
+  else abort();
+#undef TYPE
+
+  assert(0 == max_size % layout.getTypeAllocSize(elt));
+
+  return llvm::ArrayType::get(elt, max_size / layout.getTypeAllocSize(elt));
 }
 
 static llvm::Type* translate_marshalling_type(
@@ -1105,6 +1337,7 @@ noexcept {
         llvm::DebugLoc::get(p->start_line, p->start_column, di_fun));
     } break;
 
+    case ava_pcgt_decl_sxt:
     case ava_pcgt_export:
     case ava_pcgt_macro:
     case ava_pcgt_load_pkg:

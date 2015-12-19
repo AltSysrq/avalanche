@@ -32,6 +32,8 @@
 
 #include <stdlib.h>
 
+#include <atomic_ops.h>
+
 #define AVA__INTERNAL_INCLUDE 1
 #include "../../avalanche/defs.h"
 AVA_BEGIN_DECLS
@@ -57,6 +59,8 @@ struct ava_c_abi_info {
   long l;
   long long ll;
   size_t size;
+  AO_t atomic;
+  ava_intptr intptr;
   long double ldouble;
   ava_bool ab;
   ava_function_parameter_type fpt;
@@ -256,7 +260,7 @@ void ava_isa_x_lflatten$(ava_fat_list_value* dst,
 ava_value ava_isa_x_lindex$(const ava_fat_list_value* src,
                             ava_integer ix,
                             ava_string ex_type, ava_string ex_message) {
-  if (ix < 0 || ix >= (*src->v->length)(src->c))
+  if (ix < 0 || ix >= (ava_integer)(*src->v->length)(src->c))
     ava_throw_uex(&ava_error_exception, ex_type, ex_message);
 
   return (*src->v->index)(src->c, ix);

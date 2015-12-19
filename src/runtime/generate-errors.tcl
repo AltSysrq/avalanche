@@ -2376,6 +2376,16 @@ set defs {
       This is an error in whatever software generated the P-Code.
     }
   }
+
+  serror N9900 native_field_with_unnatural_alignment_unsupported {
+    {ava_string struct_name} {ava_string field_name}
+  } {
+    msg "Field %field_name% of struct %struct_name% has unnatural alignment, which is currently unsupported"
+    explanation {
+      Unnatural field alignments are currently unsupported during native code
+      generation.
+    }
+  }
 }
 
 proc ncode {code} {

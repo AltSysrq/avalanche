@@ -28,6 +28,8 @@
 #include "function.h"
 #include "macsub.h"
 
+struct ava_struct_s;
+
 /**
    @file
 

@@ -16,8 +16,10 @@ AM_CCASFLAGS = -g0
 EMIT_LLVM_CFLAGS= -O3 -g0 -fno-caret-diagnostics -fno-diagnostics-fixit-info \
                   -fno-color-diagnostics -c -emit-llvm \
 		  -DNDEBUG -DHAVE_CONFIG_H -Wall $(DEFAULT_INCLUDES)
-EMIT_LLVM = $(AM_V_GEN)$(CLANG) $(EMIT_LLVM_CFLAGS) -o $@
-EMIT_LLVMXX = $(AM_V_GEN)$(CLANGXX) $(EMIT_LLVM_CFLAGS) -o $@
+EMIT_LLVM = $(AM_V_GEN)$(CLANG) $(AM_CPPFLAGS) $(CPPFLAGS) \
+	    $(AM_CFLAGS) $(CFLAGS) $(EMIT_LLVM_CFLAGS) -o $@
+EMIT_LLVMXX = $(AM_V_GEN)$(CLANGXX) $(AM_CPPFLAGS) $(CPPFLAGS) \
+	      $(AM_CXXFLAGS) $(CXXFLAGS) $(EMIT_LLVM_CFLAGS) -o $@
 DAT2C = $(AM_V_GEN)$(TCLSH) dat2c.tcl >$@
 BOOTSTRAP_LIBS = libavart-bootstrap.la $(LIBFFI_LIBS)
 

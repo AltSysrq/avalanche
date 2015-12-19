@@ -189,6 +189,14 @@ static ava_string ava_pcode_list_to_string(ava_list_value list) {
   return ava_to_string(list.v);
 }
 
+static const ava_struct* ava_pcode_parse_sxt(ava_value value) {
+  return ava_struct_of_value(value);
+}
+
+static ava_string ava_pcode_sxt_to_string(const ava_struct* sxt) {
+  return ava_to_string(ava_value_of_struct(sxt));
+}
+
 static ava_string apply_indent(ava_string str, ava_uint indent) {
   ava_string base = AVA_EMPTY_STRING;
   ava_uint i;

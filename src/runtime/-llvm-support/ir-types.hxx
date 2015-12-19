@@ -41,6 +41,8 @@ namespace ava {
     llvm::IntegerType* c_long;
     llvm::IntegerType* c_llong;
     llvm::IntegerType* c_size;
+    llvm::IntegerType* c_atomic;
+    llvm::IntegerType* c_intptr;
     llvm::Type* c_float;
     llvm::Type* c_double;
     llvm::Type* c_ldouble;
