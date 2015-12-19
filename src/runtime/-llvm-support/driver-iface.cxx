@@ -79,6 +79,7 @@ ava::driver_iface::driver_iface(const llvm::Module& module) noexcept {
   ISA(x_throw);
   ISA(x_ex_type);
   ISA(x_ex_value);
+  ISA(x_cpu_pause);
   ISA(foreign_exception);
   ISA(copy_exception);
   ISA(nop);

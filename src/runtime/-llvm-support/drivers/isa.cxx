@@ -48,6 +48,7 @@ AVA_BEGIN_DECLS
 #include "../../avalanche/list-proj.h"
 #include "../../avalanche/pcode.h"
 #include "../../avalanche/errors.h"
+#include "../../-internal-defs.h"
 
 /* Stay in extern "C" so names don't get mangled */
 
@@ -349,6 +350,10 @@ ava_integer ava_isa_x_ex_type$(const ava_exception* ex) {
 
 ava_value ava_isa_x_ex_value$(const ava_exception* ex) {
   return ava_exception_get_value(ex);
+}
+
+void ava_isa_x_cpu_pause$(void) {
+  AVA_SPINLOOP;
 }
 
 void ava_isa_foreign_exception$(ava_exception* dst,

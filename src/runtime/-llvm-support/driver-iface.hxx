@@ -496,6 +496,12 @@ namespace ava {
      * Signature: ava_value (const ava_exception* ex)
      */
     F x_ex_value;
+    /**
+     * Implements the cpu-pause P-Code exe.
+     *
+     * Signature: void (void)
+     */
+    F x_cpu_pause;
 
     /**
      * Marshalling functions, for invoke-ss and invoke-sd.

@@ -1981,6 +1981,10 @@ noexcept {
       caught_exceptions[bb->exception_stack->current_exception]);
     store_register(p->dst, type, pcfun);
   } return false;
+
+  case ava_pcxt_cpu_pause: {
+    irb.CreateCall(context.di.x_cpu_pause);
+  } return false;
   }
 }
 

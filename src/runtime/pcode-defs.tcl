@@ -1067,6 +1067,16 @@ struct exe x {
     attr can-throw
     attr require-caught-exception
   }
+
+  # Hints to the architecture that the code is busy-waiting on a condition.
+  #
+  # This instruction has no observable effect.
+  #
+  # Its semantics are those of the `pause` instruction on AMD64. It should be
+  # used in spinlock-like constructs to prevent the CPU from wasting time and
+  # energy speculating on a lock failure.
+  elt cpu-pause {
+  }
 }
 
 # User macros are implemented by a syntax-unit-manipulating virtual machine of
