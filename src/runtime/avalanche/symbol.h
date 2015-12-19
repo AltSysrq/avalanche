@@ -29,6 +29,7 @@
 #define AVA_MAX_OPERATOR_MACRO_PRECEDENCE 40
 
 struct ava_varscope_s;
+struct ava_struct_s;
 
 /**
  * The type of a symbol in a symbol table.
@@ -57,6 +58,10 @@ typedef enum {
    * All properties valid for a local variable are valid for a local function.
    */
   ava_st_local_function,
+  /**
+   * A symbol which references a global struct.
+   */
+  ava_st_struct,
   /**
    * A symbol which is a control macro.
    *
@@ -201,6 +206,16 @@ struct ava_symbol_s {
     } var;
 
     /**
+     * Information for ava_st_struct symbols.
+     */
+    struct {
+      /**
+       * The definition for this struct.
+       */
+      const struct ava_struct_s* def;
+    } sxt;
+
+    /**
      * Information about macro symbols of all types.
      */
     struct {
@@ -237,5 +252,10 @@ struct ava_symbol_s {
     } other;
   } v;
 };
+
+/**
+ * Returns a human-readable string describing the type of the given symbol.
+ */
+ava_string ava_symbol_type_name(const ava_symbol* sym) AVA_PURE;
 
 #endif /* AVA_RUNTIME_SYMBOL_H_ */

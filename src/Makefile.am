@@ -85,6 +85,7 @@ runtime/real.c \
 runtime/strangelet.c \
 runtime/string.c \
 runtime/struct.c \
+runtime/symbol.c \
 runtime/symtab.c \
 runtime/value.c \
 runtime/varscope.c \

@@ -409,6 +409,13 @@ void ava_macsub_insert_module(
         symbol->v.var.name = v->name;
       } break;
 
+      case ava_pcgt_decl_sxt: {
+        const ava_pcg_decl_sxt* s = (const ava_pcg_decl_sxt*)target;
+
+        symbol->type = ava_st_struct;
+        symbol->v.sxt.def = s->def;
+      } break;
+
       default: abort();
       }
       symbol->level = 0;
