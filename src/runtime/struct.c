@@ -661,6 +661,9 @@ static void ava_struct_check_composition(ava_struct* this) {
         !this->fields[i].v.vcompose.member->is_composable)
       DIE(composes_non_composable, this->name, this->fields[i].name);
 
+    if (this->is_union && ava_sft_tail == this->fields[i].type)
+      DIE(var_length_field_in_union, this->name, this->fields[i].name);
+
     if (i + 1 < this->num_fields && ava_sft_tail == this->fields[i].type)
       DIE(var_length_field_not_at_end, this->name, this->fields[i].name);
   }

@@ -271,6 +271,8 @@ typedef enum {
    *
    * As with pointers, these always use native byte-order and alignment (the
    * greater of the two unioned values), even in binary mode.
+   *
+   * A zero-initialised hybrid is considered to contain a null pointer.
    */
   ava_sft_hybrid,
   /**
@@ -316,7 +318,9 @@ typedef enum {
    * memory-oriented systems.
    *
    * This must be the final element in a struct, and makes the struct
-   * non-composable.
+   * non-composable. It cannot be used in a union, since this is both difficult
+   * to support and can be more flexibly represented as an array of union
+   * instances.
    *
    * Other than length not being meaningful and the restrictions above, this
    * otherwise behaves the same as ava_sft_array.

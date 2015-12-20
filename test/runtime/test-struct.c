@@ -463,3 +463,9 @@ deftest(extend_struct_with_union) {
   assert_rejects("R0059",
                  UNION("foo" EXTENDS(STRUCT("bar"))));
 }
+
+deftest(tail_in_union) {
+  assert_rejects("R0060",
+                 UNION("foo")
+                 TAIL(STRUCT("bar"), bars));
+}
