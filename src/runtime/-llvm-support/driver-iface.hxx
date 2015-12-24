@@ -502,6 +502,12 @@ namespace ava {
      * Signature: void (void)
      */
     F x_cpu_pause;
+    /**
+     * Implements the S-new-h* family of P-Code exes.
+     *
+     * Signature: void* (size_t sz, bool atomic, bool precise, bool zero)
+     */
+    F x_new;
 
     /**
      * Marshalling functions, for invoke-ss and invoke-sd.
@@ -542,6 +548,20 @@ namespace ava {
      * Does nothing.
      */
     F nop;
+
+    /**
+     * Signature: void* (ava_value val)
+     *
+     * Extracts the pointer from strangelet val.
+     */
+    F strangelet_to_pointer;
+
+    /**
+     * Signature: ava_value (const void* ptr)
+     *
+     * Returns a strangelet referencing the given pointer.
+     */
+    F strangelet_of_pointer;
 
     /**
      * If the module defines a `\program-entry`, a pointer to that function;

@@ -664,6 +664,16 @@ set defs {
     }
   }
 
+  serror R0060 struct_var_length_field_in_union {
+    {ava_string sxt} {ava_string field}
+  } {
+    msg "Variable-length field %field% found in union %sxt%."
+    explanation {
+      The given field in a union is variable-length, but variable-length fields
+      are not permitted in unions.
+    }
+  }
+
   serror U3000 undef_integer_overflow {
     {ava_integer a} {ava_string op} {ava_integer b}
   } {

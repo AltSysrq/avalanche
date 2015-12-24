@@ -384,8 +384,13 @@ struct exe x {
   prop int global-var-ref
   # Identifies a field which must refer to a function-like global entity.
   prop int global-fun-ref
+  # Identifies a field which must refer to a struct-like global entity.
+  prop int global-sxt-ref
+  # Identifies a field which must refer to a struct-like global entity which
+  # has a tail field.
+  prop int global-sxt-with-tail-ref
   # Identifies a field which must refer to some global entity. This must be
-  # given in addition to global-var-ref and global-fun-ref.
+  # given in addition to global-var-ref, global-fun-ref, etc.
   prop int global-ref
   # Identifies the first register, inclusive, read by a special-reg-read-*
   # attributed instruction. There is never more than one of these properties on
@@ -399,6 +404,34 @@ struct exe x {
   # referenced via global-fun-ref. There is never more than one of these
   # properties on an instruction.
   prop int static-arg-count
+  # Indicates a field which refers by index to a field within the struct
+  # referenced by the instruction's global-sxt-ref. The field must be an int.
+  prop int sxt-field-ref-int
+  # Indicates a field which refers by index to a field within the struct
+  # referenced by the instruction's global-sxt-ref. The field must be a real.
+  prop int sxt-field-ref-real
+  # Indicates a field which refers by index to a field within the struct
+  # referenced by the instruction's global-sxt-ref. The field must be a value.
+  prop int sxt-field-ref-value
+  # Indicates a field which refers by index to a field within the struct
+  # referenced by the instruction's global-sxt-ref. The field must be a ptr or
+  # hybrid.
+  prop int sxt-field-ref-ptr-hybrid
+  # Indicates a field which refers by index to a field within the struct
+  # referenced by the instruction's global-sxt-ref. The field must be a hybrid.
+  prop int sxt-field-ref-hybrid
+  # Indicates a field which refers by index to a field within the struct
+  # referenced by the instruction's global-sxt-ref. The field must be a
+  # composition (array, compose, or tail).
+  prop int sxt-field-ref-composite
+  # Indicates a field which refers by index to a field within the struct
+  # referenced by the instruction's global-sxt-ref. The field must be an atomic
+  # integer.
+  prop int sxt-field-ref-atomic-int
+  # Indicates a field which refers by index to a field within the struct
+  # referenced by the instruction's global-sxt-ref. The field must be an atomic
+  # ptr.
+  prop int sxt-field-ref-atomic-ptr
 
   # Records the source position in effect until the next declaration indicating
   # otherwise.
@@ -766,8 +799,6 @@ struct exe x {
   # If marshalling the function's arguments or return value fails, the
   # exception propagates.
   #
-  # This instruction uninitialises the D-registers passed as arguments.
-  #
   # The number of arguments given must exactly match the number of arguments
   # taken by the function.
   elt invoke-ss {
@@ -804,9 +835,6 @@ struct exe x {
   # If binding the parameters fails, an ava_error_exception with the type name
   # "bad-arguments" is thrown.
   #
-  # Regardless of whether the statement succeeds, the input P-registers are
-  # uninitialised by this instruction.
-  #
   # Any exceptions resulting from marshalling the function call propagate.
   elt invoke-sd {
     attr special-reg-read-p
@@ -841,9 +869,6 @@ struct exe x {
   #
   # If binding the parameters fails, an ava_error_exception with the type name
   # "bad-arguments" is thrown.
-  #
-  # Regardless of whether the statement succeeds, the input P-registers are
-  # uninitialised by this instruction.
   #
   # Any exceptions resulting from marshalling the function call propagate.
   elt invoke-dd {
@@ -1075,7 +1100,925 @@ struct exe x {
   # Its semantics are those of the `pause` instruction on AMD64. It should be
   # used in spinlock-like constructs to prevent the CPU from wasting time and
   # energy speculating on a lock failure.
+  #
+  # An example of cpu-pause to implement a primitive spinlock follows. Assume
+  # struct 42 has a single atomic integer field and that a strangelet
+  # referencing it is in v0.
+  #
+  #   [push i 4]
+  #   [ld-imm-i i2 0]
+  #   [ld-imm-i i3 1]
+  #
+  #   ; Try to take lock
+  #   [label 1]
+  #   [S-ia-cas i0 i1 v0 42 0 i2 i3 true false seqcst monotonic]
+  #   [branch i0 1 false 3]
+  #
+  #   ; Failed, spin for it to become free
+  #   [label 2]
+  #   [cpu-pause]
+  #   [S-ia-ld i1 v0 42 0 true monotonic]
+  #   [branch i1 0 true 2]
+  #
+  #   ; Free, try to take again
+  #   [goto 1]
+  #
+  #   ; Success
+  #   [label 2]
+  #   [pop i 4]
   elt cpu-pause {
+  }
+
+  # Instructions beginning with "S" operate on strangelets and are inherently
+  # wildly unsafe.
+  #
+  # Since the backend platform may enforce strong typing, a simple notation is
+  # used to describe the behaviour of types on such systems. Note that this
+  # type system does not actually exist at the P-Code level or on backends that
+  # do not target a strongly-typed system.
+  #
+  # The notation `A <- B` means "A assignable from B". A and B may name types,
+  # struct references, or registers referencing strangelets.
+  #
+  # The notation `T[]` means an array containing elements of type T.
+
+  proc S-sxt {{extra {}}} {
+    int sxt "
+      prop global-ref
+      prop global-sxt-ref
+      $extra
+    "
+  }
+
+  # Allocates a structure scoped to the current function call.
+  #
+  # Semantics: dst is set to a strangelet pointing to a single unique instance
+  # of the structure referenced by sxt. If sxt has a tail field, its effective
+  # length is zero. If zero-init is true, the data is zero-initialised,
+  # otherwise its initial contents are undefined.
+  #
+  # Pointers within the structure are visible to the garbage collector. The
+  # strangelet ceases to be valid when the containing function returns, or if
+  # an S-set-sp is used to restore the stack to a position before this
+  # instruction executes.
+  #
+  # Behaviour is undefined if there is insufficient space for the new
+  # structure.
+  #
+  # Types:
+  #   dst <- SXT
+  elt S-new-s {
+    register dv dst {
+      prop reg-write
+    }
+    S-sxt
+    bool zero-init
+  }
+
+  # Like S-new-s, but an array of $length instances is allocated instead.
+  #
+  # Behaviour is undefined if $length is negative.
+  #
+  # Types:
+  #   dst <- SXT[]
+  elt S-new-sa {
+    register dv dst {
+      prop reg-write
+    }
+    S-sxt
+    register i length {
+      prop reg-read
+    }
+    bool zero-init
+  }
+
+  # Like S-new-s, but the length of the tail field is specified in
+  # $tail-length.
+  #
+  # Behaviour is undefined if $tail-length is negative.
+  #
+  # Types:
+  #   dst <- SXT
+  elt S-new-st {
+    register dv dst {
+      prop reg-write
+    }
+    S-sxt {
+      prop global-sxt-with-tail-ref
+    }
+    register i tail-length {
+      prop reg-read
+    }
+    bool zero-init
+  }
+
+  # Allocates a structure with dynamic lifetime.
+  #
+  # Semantics: dst is set to a strangelet pointing to a single unique instance
+  # of the structure referenced by sxt. If sxt has a tail field, its effective
+  # length is zero. If zero-init is true, the data is zero-initialised,
+  # otherwise its initial contents are undefined.
+  #
+  # Pointers within the structure are visible to the garbage collector if the
+  # atomic field is not true. Whether atomic allocations retain pointers is
+  # undefined.
+  #
+  # If precise is true, pointers to composed members in sxt or to any other
+  # location that is not the exact pointer produced by this allocation are not
+  # guaranteed to retain the allocation. Otherwise, any pointer into the
+  # allocated memory will retain the memory. A pointer to one byte past the end
+  # is *not* guaranteed to retain the memory.
+  #
+  # Types:
+  #   dst <- SXT
+  elt S-new-h {
+    attr can-throw
+
+    register dv dst {
+      prop reg-write
+    }
+    S-sxt
+    bool zero-init
+    bool atomic
+    bool precise
+  }
+
+  # Like S-new-h, but an array of $length instances is allocated instead.
+  #
+  # Behaviour is undefined if $length is negative.
+  #
+  # Types:
+  #   dst <- SXT[]
+  elt S-new-ha {
+    attr can-throw
+
+    register dv dst {
+      prop reg-write
+    }
+    S-sxt
+    register i length {
+      prop reg-read
+    }
+    bool zero-init
+    bool atomic
+    bool precise
+  }
+
+  # Like S-new-h, but the length of the tail field (if any) is specified in
+  # $tail-length.
+  #
+  # Behaviour is undefined if $tail-length is negative.
+  #
+  # Types:
+  #   dst <- SXT
+  elt S-new-ht {
+    attr can-throw
+
+    register dv dst {
+      prop reg-write
+    }
+    S-sxt {
+      prop global-sxt-with-tail-ref
+    }
+    register i tail-length {
+      prop reg-read
+    }
+    bool zero-init
+    bool atomic
+    bool precise
+  }
+
+  # Determines the size of a structure.
+  #
+  # Semantics: dst is set to the allocation size of the given structure. If sxt
+  # has a tail field, the size reflects the size of the structure with a tail
+  # length of zero.
+  #
+  # This instruction is intended for interoperation with C APIs that require
+  # passing the size of user structs in and other low-level operations on
+  # memory-oriented systems. The instruction is not defined for backends
+  # which cannot ascribe a byte size to a structure.
+  elt S-sizeof {
+    register i dst {
+      prop reg-write
+    }
+    S-sxt {
+      prop global-sxt-ref
+    }
+  }
+
+  # Determines the ABI alignment of a structure.
+  #
+  # Semantics: dst is set to the ABI alignment of the given structure.
+  #
+  # This instruction is intended for low-level operations on memory-oriented
+  # systems. It is not defined for backends which do not have a concept of
+  # memory alignment.
+  elt S-alignof {
+    register i dst {
+      prop reg-write
+    }
+    S-sxt {
+      prop global-sxt-ref
+    }
+  }
+
+  # Gets the current stack-pointer.
+  #
+  # Semantics: dst is set to a strangelet that in some unspecified manner
+  # represents the current stack pointer, such that S-set-sp can restore the
+  # stack to that location.
+  #
+  # Platforms with no notion of a stack pointer need not provide any meaningful
+  # value in dst.
+  #
+  # Types:
+  #   dst <- platform-dependentent-stack-pointer-type
+  elt S-get-sp {
+    register dv dst {
+      prop reg-write
+    }
+  }
+
+  # Resets the current stack-pointer.
+  #
+  # Semantics: src is assumed to be a strangelet containing a valid stack
+  # pointer produced by a call to S-get-sp in the current function. The stack
+  # pointer is reset to that value, invalidating any function-scoped
+  # allocations and any stack-pointer references that occurred between the
+  # S-get-sp that produced the value in src and this instruction.
+  #
+  # Behaviour is undefined if src was not produced by an S-get-sp instruction,
+  # was not produced in the current function invocation, or if another S-set-sp
+  # instruction has since invalidated the reference.
+  #
+  # On platforms with no notion of a stack pointer, this may simply be a no-op.
+  # Such platforms must ensure that function-scoped memory can be automatically
+  # reclaimed before the function returns, however.
+  #
+  # Types:
+  #   platform-dependentent-stack-pointer-type <- src
+  elt S-set-sp {
+    register dv src {
+      prop reg-read
+    }
+  }
+
+  # Copies one instance of a structure to another.
+  #
+  # Semantics: dst and src are both assumed to be strangelets referencing an
+  # instance of sxt. The immediate values in src are copied atop those in dst,
+  # such that the two structures are fully independent copies at the end.
+  #
+  # If sxt has a tail field, its contents in dst are not affected.
+  #
+  # If preserve-src is false, the value referenced by src is destroyed by the
+  # operation, and any further attempt to use that memory has undefined
+  # behaviour.
+  #
+  # Types:
+  #   SXT <- dst
+  #   SXT <- src
+  elt S-cpy {
+    register dv dst {
+      prop reg-read ;# mutable destination
+    }
+    register dv src {
+      prop reg-read
+    }
+    S-sxt
+    bool preserve-src
+  }
+
+  # Copies an array slice of structure instances to another.
+  #
+  # Semantics: Each element in dst, from dst-off, inclusive, to
+  # (dst-off+count), exclusive, is copied from corresponding elements in src
+  # starting at src-off as with S-cpy.
+  #
+  # Behaviour is undefined if either array is not sufficiently sized for the
+  # operation, or if count, dst-off, or src-off is negative.
+  #
+  # Types:
+  #   SXT[] <- dst
+  #   SXT[] <- src
+  elt S-cpy-a {
+    register dv dst {
+      prop reg-read ;# mutable destination
+    }
+    register i dst-off {
+      prop reg-read
+    }
+    register dv src {
+      prop reg-read
+    }
+    register i src-off {
+      prop reg-read
+    }
+    register i count {
+      prop reg-read
+    }
+    S-sxt
+    bool preserve-src
+  }
+
+  # Like S-cpy, but the first $tail-length elements from src's tail are also
+  # copied into dst's tail.
+  #
+  # Behaviour is undefined if tail-length is negative or if it is greater than
+  # the tail length used to allocate either src or dst.
+  #
+  # Types:
+  #   SXT <- dst
+  #   SXT <- src
+  elt S-cpy-t {
+    register dv dst {
+      prop reg-read ;# mutable destination
+    }
+    register dv src {
+      prop reg-read
+    }
+    register i tail-length {
+      prop reg-read
+    }
+    S-sxt {
+      prop global-sxt-with-tail-ref
+    }
+    bool preserve-src
+  }
+
+  # Reads an integer field from a struct.
+  #
+  # Semantics: src is assumed to be a strangelet referencing an instance of the
+  # given struct. The integer field identified by field is read non-atomically
+  # and the value stored in dst.
+  #
+  # Types:
+  #   SXT <- src
+  elt S-i-ld {
+    register i dst {
+      prop reg-write
+    }
+    register dv src {
+      prop reg-read
+    }
+    S-sxt
+    int field {
+      prop sxt-field-ref-int
+    }
+    bool volatil
+  }
+
+  # Writes an integer field in a struct.
+  #
+  # Semantics: dst is assumed to be a strangelet referencing an instance of
+  # sxt. src is truncated to the size of the integer field identified by $field
+  # and then written into it non-atomically.
+  #
+  # Types:
+  #   SXT <- dst
+  elt S-i-st {
+    register dv dst {
+      prop reg-read ;# mutable destination
+    }
+    S-sxt
+    int field {
+      prop sxt-field-ref-int
+    }
+    register i src {
+      prop reg-read
+    }
+    bool volatil
+  }
+
+  # Atomically reads an integer field in a struct.
+  #
+  # Semantics: dst is set to the possibly-sign-extended value of the select
+  # integer field in src (assumed to be a strangelet referencing an instance of
+  # sxt), which is read atomically with the given memory order.
+  #
+  # Types:
+  #   SXT <- src
+  elt S-ia-ld {
+    register i dst {
+      prop reg-write
+    }
+    register dv src {
+      prop reg-read
+    }
+    S-sxt
+    int field {
+      prop sxt-field-ref-atomic-int
+    }
+    bool volatil
+    memory-order order
+  }
+
+  # Atomically stores an integer into a field in a struct.
+  #
+  # Semantics: dst is assumed to be a strangelet referencing an instance of
+  # sxt. The chosen atomic integer field is atomically set to the value of src
+  # with the given memory order.
+  #
+  # Types:
+  #   SXT <- dst
+  elt S-ia-st {
+    register dv dst {
+      prop reg-read ;# mutable destination
+    }
+    S-sxt
+    int field {
+      prop sxt-field-ref-atomic-int
+    }
+    register i src {
+      prop reg-read
+    }
+    bool volatil
+    memory-order order
+  }
+
+  # Performs an atomic compare-and-swap operation on an atomic integer in a
+  # struct.
+  #
+  # Semantics: dst is assumed to be a strangelet referencing an instance of
+  # sxt. from and to are both truncated as necessary to the size of that field.
+  # The operation will not succeed if the current value of the field is not
+  # equal to $from, and may succeed if it is equal to $from. If $weak is false,
+  # the operation always succeds if the initial comparison passes.
+  #
+  # On success, the truncated value from $to is written into the field and
+  # $success is set to 1. The overall memory ordering of the operation is
+  # dictated by at least success-order.
+  #
+  # On failure, $success is set to 0, and the overall memory ordering of the
+  # operation is dictated by at least failure-order.
+  #
+  # In either case, $actual is set to the possibly-sign-extended value of the
+  # field prior to the operation.
+  #
+  # Types:
+  #   SXT <- dst
+  elt S-ia-cas {
+    register i success {
+      prop reg-write
+    }
+    register i actual {
+      prop reg-write
+    }
+    register dv dst {
+      prop reg-read ;# mutable destination
+    }
+    S-sxt
+    int field {
+      prop sxt-field-ref-atomic-int
+    }
+    register i from {
+      prop reg-read
+    }
+    register i to {
+      prop reg-read
+    }
+    bool volatil
+    bool weak
+    memory-order success-order
+    memory-order failure-order
+  }
+
+  # Performs an atomic read-modify-write operation on an atomic integer in a
+  # struct.
+  #
+  # Semantics: dst is assumed to be a strangelet referencing an instance of
+  # sxt. The indicated atomic integer field is read (and possibly
+  # sign-extended) and the old value written to $old. $src is truncated to the
+  # size of the field, and then combined with the old value as dictated by $op,
+  # and the result written back into the field.
+  #
+  # Types:
+  #   SXT <- dst
+  elt S-ia-rmw {
+    register i old {
+      prop reg-write
+    }
+    register dv dst {
+      prop reg-read ;# mutable destination
+    }
+    S-sxt
+    int field {
+      prop sxt-field-ref-atomic-int
+    }
+    register i src {
+      prop reg-read
+    }
+    rmw-op op
+    bool volatil
+    memory-order order
+  }
+
+  # Loads a value from a real field of a struct.
+  #
+  # Semantics: src is assumed to be a strangelet referencing an instance of
+  # sxt. The chosen field is read, expanded or truncated to an ava_real, then
+  # stored in dst.
+  #
+  # Types:
+  #   SXT <- src
+  elt S-r-ld {
+    register dv dst {
+      prop reg-write
+    }
+    register dv src {
+      prop reg-read
+    }
+    S-sxt
+    int field {
+      prop sxt-field-ref-real
+    }
+    bool volatil
+  }
+
+  # Writes a value into a real field of a struct.
+  #
+  # Semantics: dst is assumed to be a strangelet referencing an instance of
+  # sxt. src is converted to an ava_real, then expanded or truncated to the
+  # appropriate size, then stored in that field of dst.
+  #
+  # Types:
+  #   SXT <- dst
+  elt S-r-st {
+    attr can-throw
+
+    register dv dst {
+      prop reg-read ;# mutable destination
+    }
+    S-sxt
+    int field {
+      prop sxt-field-ref-real
+    }
+    register dv src  {
+      prop reg-read
+    }
+    bool volatil
+  }
+
+  # Reads a pointer field in a struct into a strangelet.
+  #
+  # Semantics: src is assumed to be a strangelet referencing an instance of
+  # sxt. The pointer in the selected field is read non-atomically, wrapped in a
+  # strangelet, and stored in dst.
+  #
+  # Behaviour is undefined if executed on an uninitialised hybrid field or a
+  # hybrid field that holds an integer.
+  #
+  # Types:
+  #   SXT <- src
+  #   dst <- SXT.field
+  elt S-p-ld {
+    register dv dst {
+      prop reg-write
+    }
+    register dv src {
+      prop reg-read
+    }
+    S-sxt
+    int field {
+      prop sxt-field-ref-ptr-hybrid
+    }
+    bool volatil
+  }
+
+  # Writes a pointer field in a struct.
+  #
+  # Semantics: src is assumed to be a strangelet, and its pointer is extracted.
+  # dst is assumed to be a strangelet referencing an instance of sxt. The
+  # pointer from src is written non-atomically into the selected pointer field.
+  #
+  # If executed on a hybrid field, the field will then be considered to hold a
+  # pointer. If field names a hybrid field, behaviour is undefined if the
+  # pointer in src does not have at least 2-byte alignment.
+  #
+  # Types:
+  #   SXT <- dst
+  #   SXT.field <- src
+  elt S-p-st {
+    register dv dst {
+      prop reg-read ;# mutable destination
+    }
+    S-sxt
+    int field {
+      prop sxt-field-ref-ptr-hybrid
+    }
+    register dv src {
+      prop reg-read
+    }
+    bool volatil
+  }
+
+  # Atomically reads a pointer field in a struct.
+  #
+  # Semantics: dst is set to a strangelet containing the value in the pointer
+  # field in src (assumed to be a strangelet referencing an instance of sxt),
+  # which is read atomically with the given memory order.
+  #
+  # Types:
+  #   SXT <- src
+  #   dst <- SXT.field
+  elt S-pa-ld {
+    register dv dst {
+      prop reg-write
+    }
+    register dv src {
+      prop reg-read
+    }
+    S-sxt
+    int field {
+      prop sxt-field-ref-atomic-ptr
+    }
+    bool volatil
+    memory-order order
+  }
+
+  # Atomically stores a pointer into a field in a struct.
+  #
+  # Semantics: dst is assumed to be a strangelet referencing an instance of
+  # sxt. The chosen atomic pointer field is atomically set to the pointer in
+  # strangelet src with the given memory order.
+  #
+  # Types:
+  #   SXT <- dst
+  #   SXT.field <- src
+  elt S-pa-st {
+    register dv dst {
+      prop reg-read ;# mutable destination
+    }
+    S-sxt
+    int field {
+      prop sxt-field-ref-atomic-ptr
+    }
+    register dv src {
+      prop reg-read
+    }
+    bool volatil
+    memory-order order
+  }
+
+  # Performs an atomic compare-and-swap operation on an atomic pointer in a
+  # struct.
+  #
+  # Semantics: dst is assumed to be a strangelet referencing an instance of
+  # sxt. from and to are both assumed to be strangelets; operations involve the
+  # pointers stored therein. The operation will not succeed if the current
+  # value of the field is not equal to $from, and may succeed if it is equal to
+  # $from. If $weak is false, the operation always succeds if the initial
+  # comparison passes.
+  #
+  # On success, the pointer in $to is written into the field and $success is
+  # set to 1. The overall memory ordering of the operation is dictated by at
+  # least success-order.
+  #
+  # On failure, $success is set to 0, and the overall memory ordering of the
+  # operation is dictated by at least failure-order.
+  #
+  # In either case, $actual is set to a strangelet holding the pointer that was
+  # originally in that location.
+  #
+  # Types:
+  #   SXT <- dst
+  #   actual <- SXT.field
+  #   SXT.field <- from
+  #   SXT.field <- to
+  elt S-pa-cas {
+    register i success {
+      prop reg-write
+    }
+    register dv actual {
+      prop reg-write
+    }
+    register dv dst {
+      prop reg-read ;# mutable destination
+    }
+    S-sxt
+    int field {
+      prop sxt-field-ref-atomic-ptr
+    }
+    register dv from {
+      prop reg-read
+    }
+    register dv to {
+      prop reg-read
+    }
+    bool volatil
+    bool weak
+    memory-order success-order
+    memory-order failure-order
+  }
+
+  # Atomically sets a pointer field, providing the old value.
+  #
+  # Semantics: dst is assumed to be a strangelet referencing an instance of
+  # sxt. The pointer in the chosen field is read and stored in a strangelet in
+  # old. The chosen field is then set to the pointer stored in src, which is
+  # assumed to be a strangelet.
+  #
+  # Types:
+  #   SXT <- dst
+  #   old <- SXT.field
+  #   SXT.field <- src
+  elt S-pa-xch {
+    register dv old {
+      prop reg-write
+    }
+    register dv dst {
+      prop reg-read ;# mutable destination
+    }
+    S-sxt
+    int field {
+      prop sxt-field-ref-atomic-ptr
+    }
+    register dv src {
+      prop reg-read
+    }
+    bool volatil
+    memory-order order
+  }
+
+  # Loads the integer value stored in a hybrid field of a struct.
+  #
+  # Semantics: src is assumed to be a strangelet referencing an instance of
+  # sxt. The integer in the selected hybrid field is written into dst.
+  #
+  # Behaviour is undefined if the field is uninitialised or currently holds a
+  # pointer.
+  #
+  # Types:
+  #   SXT <- src
+  elt S-hi-ld {
+    register i dst {
+      prop reg-write
+    }
+    register dv src {
+      prop reg-read
+    }
+    S-sxt
+    int field {
+      prop sxt-field-ref-hybrid
+    }
+    bool volatil
+  }
+
+  # Writes an integer into a hybrid field of a struct.
+  #
+  # Semantics: dst is assumed to be a strangelet referencing an instance of
+  # sxt. The selected hybrid field is set to the integer in src.
+  #
+  # Behaviour is undefined if the value in src is even.
+  #
+  # Types:
+  #   SXT <- dst
+  elt S-hi-st {
+    register dv dst {
+      prop reg-read ;# mutable destination
+    }
+    S-sxt
+    int field {
+      prop sxt-field-ref-hybrid
+    }
+    register i src {
+      prop reg-read
+    }
+    bool volatil
+  }
+
+  # Determines whether a hybrid field holds an integer.
+  #
+  # Semantics: src is assumed to be a strangelet referencing an instance of
+  # sxt. The selected hybrid field is inspected. If it contains an integer, dst
+  # is set to 1. Otherwise, dst is set to 0.
+  #
+  # Behaviour is undefined if executed on an uninitialised field.
+  #
+  # Types:
+  #   SXT <- src
+  elt S-hy-intp {
+    register i dst {
+      prop reg-write
+    }
+    register dv src {
+      prop reg-read
+    }
+    S-sxt
+    int field {
+      prop sxt-field-ref-hybrid
+    }
+    bool volatil
+  }
+
+  # Loads a value field from a struct.
+  #
+  # Semantics: src is assumed to be a strangelet referencing an instance of
+  # sxt. The given value field is read non-atomically and stored in dst.
+  #
+  # Types:
+  #   SXT <- src
+  elt S-v-ld {
+    register dv dst {
+      prop reg-write
+    }
+    register dv src {
+      prop reg-read
+    }
+    S-sxt
+    int field {
+      prop sxt-field-ref-value
+    }
+    bool volatil
+  }
+
+  # Stores a value into a field in a struct.
+  #
+  # Semantics: dst is assumed to be a strangelet referencing an instance of
+  # sxt. The value in src is written into the selected value field of dst.
+  #
+  # Types:
+  #   SXT <- dst
+  elt S-v-st {
+    register dv dst {
+      prop reg-read ;# mutable destination
+    }
+    S-sxt
+    int field {
+      prop sxt-field-ref-value
+    }
+    register dv src {
+      prop reg-read
+    }
+    bool volatil
+  }
+
+  # Obtains a pointer to a composed field.
+  #
+  # Semantics: dst is set to a strangelet containing a pointer to the
+  # identified field in src, which is assumed to be a strangelet referencing an
+  # instance of sxt.
+  #
+  # On strongly-typed platforms, dst will point to a raw instance of sxt for
+  # compose fields, and to an array/list/etc for array and tail fields.
+  #
+  # Types:
+  #   SXT <- src
+  #   dst <- SXT.field
+  elt S-gfp {
+    register dv dst {
+      prop reg-write
+    }
+    register dv src {
+      prop reg-read
+    }
+    S-sxt
+    int field {
+      prop sxt-field-ref-composite
+    }
+  }
+
+  # Selects an element from an array.
+  #
+  # Semantics: dst is set to a strangelet containing a pointer to the indexth
+  # element in an array of sxt instances referenced by assumed strangelet src.
+  #
+  # Behaviour is undefined if index is negative or greater than or equal to the
+  # actual length of the array.
+  #
+  # On strongly-typed platforms, this reduces the dimensionality of the array
+  # types by 1.
+  #
+  # Types:
+  #   SXT[] <- src
+  #   dst <- SXT
+  elt S-gap {
+    register dv dst {
+      prop reg-write
+    }
+    register dv src {
+      prop reg-read
+    }
+    S-sxt
+    register i index {
+      prop reg-read
+    }
+  }
+
+  # Inserts a memory barrier (or "fence") at the given location.
+  #
+  # Semantics: This instruction does nothing by itself, but introduces a
+  # barrier restricting the ordering of memory operations relative to the
+  # membar itself.
+  #
+  # More information can be found in the LLVM documentation for the fence
+  # instruction. http://llvm.org/docs/LangRef.html#fence-instruction
+  #
+  # This instruction is not actually unsafe, but is not useful except when used
+  # with the unsafe strangelet operations, and so is similarly prefixed.
+  elt S-membar {
+    memory-order order
   }
 }
 

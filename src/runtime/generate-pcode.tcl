@@ -118,6 +118,14 @@ proc sxt {args} {
   add-field sxt {*}$args
 }
 
+proc rmw-op {args} {
+  add-field rmw-op {*}$args
+}
+
+proc memory-order {args} {
+  add-field memory-order {*}$args
+}
+
 proc register-type {types name args} {
   add-field register-type $name {*}$args
   add-register-type-constraint $types $name
@@ -201,6 +209,8 @@ set SIMPLE_TYPES {
   list ava_list_value
   bool ava_bool
   sxt {const struct ava_struct_s*}
+  rmw-op {ava_pcode_rmw_op}
+  memory-order {ava_pcode_memory_order}
 }
 
 proc ctype-field {type} {

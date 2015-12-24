@@ -48,6 +48,7 @@ AVA_BEGIN_DECLS
 #include "../../avalanche/list-proj.h"
 #include "../../avalanche/pcode.h"
 #include "../../avalanche/errors.h"
+#include "../../avalanche/strangelet.h"
 #include "../../-internal-defs.h"
 
 /* Stay in extern "C" so names don't get mangled */
@@ -356,6 +357,26 @@ void ava_isa_x_cpu_pause$(void) {
   AVA_SPINLOOP;
 }
 
+void* ava_isa_x_new$(size_t sz, ava_bool atomic, ava_bool precise,
+                     ava_bool zero) {
+  if (atomic)
+    if (precise)
+      if (zero)
+        return ava_alloc_atomic_precise_zero(sz);
+      else
+        return ava_alloc_atomic_precise(sz);
+    else
+      if (zero)
+        return ava_alloc_atomic_zero(sz);
+      else
+        return ava_alloc_atomic(sz);
+  else
+    if (precise)
+      return ava_alloc_precise(sz);
+    else
+      return ava_alloc(sz);
+}
+
 void ava_isa_foreign_exception$(ava_exception* dst,
                                 const ava_exception* ignore) {
   ava_value empty;
@@ -370,6 +391,15 @@ void ava_isa_copy_exception$(ava_exception* dst, const ava_exception* src) {
 }
 
 void ava_isa_nop$(void) { }
+
+void* ava_isa_strangelet_to_pointer$(ava_value val) {
+  /* TODO: Checked build should assert val is a strangelet */
+  return (void*)ava_value_ptr(val);
+}
+
+ava_value ava_isa_strangelet_of_pointer$(const void* ptr) {
+  return ava_strange_ptr(ptr);
+}
 
 void ava_isa_m_to_void$(ava_value v) {
   if (!ava_string_is_empty(ava_to_string(v)))

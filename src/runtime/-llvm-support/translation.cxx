@@ -37,6 +37,7 @@
 #include <llvm/IR/DIBuilder.h>
 #include <llvm/IR/Function.h>
 #include <llvm/IR/GlobalValue.h>
+#include <llvm/IR/Intrinsics.h>
 #include <llvm/IR/IRBuilder.h>
 #include <llvm/IR/LLVMContext.h>
 #include <llvm/IR/Module.h>
@@ -267,16 +268,58 @@ struct ava_xcode_fun_xlate_info {
     llvm::Value* src,
     const ava_pcg_fun* pcfun) noexcept;
 
+  void store_strangelet(
+    ava_pcode_register dst,
+    llvm::Value* src,
+    const ava_pcg_fun* pcfun) noexcept;
+
   llvm::Value* load_register(
     ava_pcode_register src,
     const ava_pcg_fun* pcfun,
     llvm::Value* tmplist) noexcept;
+
+  llvm::Value* load_strangelet(
+    ava_pcode_register src,
+    const ava_pcg_fun* pcfun) noexcept;
 
   llvm::Value* convert_register(
     llvm::Value* src,
     ava_pcode_register_type dst_type,
     ava_pcode_register_type src_type,
     llvm::Value* tmplist) noexcept;
+
+  llvm::Type* get_sxt_type(
+    const ava_xcode_global_list* xcode,
+    size_t struct_ix) noexcept;
+
+  llvm::Type* get_sxt_field_type(
+    size_t struct_ix, size_t field_ix) noexcept;
+
+  const ava_struct* get_sxt_def(
+    const ava_xcode_global_list* xcode,
+    size_t struct_ix) noexcept;
+
+  const ava_struct_field* get_sxt_field_def(
+    const ava_xcode_global_list* xcode,
+    size_t struct_ix, size_t field_ix) noexcept;
+
+  llvm::Value* get_sxt_field_ptr(
+    llvm::Value* base,
+    const ava_xcode_global_list* xcode,
+    size_t struct_ix,
+    size_t field_ix) noexcept;
+
+  llvm::AtomicOrdering get_llvm_ordering(
+    ava_pcode_memory_order pco) noexcept;
+
+  void figure_cas_orderings(
+    llvm::AtomicOrdering* succ_dst,
+    llvm::AtomicOrdering* fail_dst,
+    ava_pcode_memory_order succ_src,
+    ava_pcode_memory_order fail_src) noexcept;
+
+  llvm::Value* expand_to_ava_integer(
+    llvm::Value* base, const ava_struct_field* fdef) noexcept;
 
   llvm::Value* invoke_s(
     const ava_xcode_global* target,
@@ -1606,6 +1649,7 @@ bool ava_xcode_fun_xlate_info::translate_instruction(
   llvm::DISubprogram* scope)
 noexcept {
   const ava_pcg_fun* pcfun = (const ava_pcg_fun*)container->pc;
+  const llvm::DataLayout& layout(context.module.getDataLayout());
 
   switch (exe->type) {
   case ava_pcxt_src_pos: {
@@ -1985,6 +2029,598 @@ noexcept {
   case ava_pcxt_cpu_pause: {
     irb.CreateCall(context.di.x_cpu_pause);
   } return false;
+
+  case ava_pcxt_S_new_s: {
+    const ava_pcx_S_new_s* p = (const ava_pcx_S_new_s*)exe;
+    llvm::Type* type = get_sxt_type(xcode, p->sxt);
+    llvm::Value* allocated = irb.CreateAlloca(type);
+    if (p->zero_init) {
+      irb.CreateStore(llvm::ConstantAggregateZero::get(type), allocated);
+    }
+    store_strangelet(p->dst, allocated, pcfun);
+  } return false;
+
+  case ava_pcxt_S_new_sa: {
+    const ava_pcx_S_new_sa* p = (const ava_pcx_S_new_sa*)exe;
+    llvm::Type* type = get_sxt_type(xcode, p->sxt);
+    llvm::Value* length = load_register(p->length, pcfun, nullptr);
+    llvm::Value* allocated = irb.CreateAlloca(type, length);
+    if (p->zero_init) {
+      llvm::Constant* struct_size = llvm::ConstantInt::get(
+        context.types.ava_integer, layout.getTypeAllocSize(type));
+      irb.CreateMemSet(
+        allocated, llvm::ConstantInt::get(
+          context.types.ava_byte, 0),
+        irb.CreateNUWMul(length, struct_size),
+        layout.getABITypeAlignment(type));
+    }
+    store_strangelet(p->dst, allocated, pcfun);
+  } return false;
+
+  case ava_pcxt_S_new_st: {
+    const ava_pcx_S_new_st* p = (const ava_pcx_S_new_st*)exe;
+    llvm::Type* type = get_sxt_type(xcode, p->sxt);
+    llvm::Type* struct_type = context.global_sxt_structs[p->sxt];
+    llvm::Type* tail_type = struct_type->getStructElementType(
+      struct_type->getStructNumElements() - 1)
+      ->getArrayElementType();
+
+    llvm::Value* length = load_register(p->tail_length, pcfun, nullptr);
+    llvm::Value* base_size = llvm::ConstantInt::get(
+      context.types.ava_integer, layout.getTypeAllocSize(type));
+    llvm::Value* tail_elt_size = llvm::ConstantInt::get(
+      context.types.ava_integer, layout.getTypeAllocSize(tail_type));
+    llvm::Value* total_size = irb.CreateNUWAdd(
+      base_size, irb.CreateNUWMul(tail_elt_size, length));
+    llvm::Value* allocated = irb.CreateAlloca(
+      context.types.ava_byte, total_size);
+    if (p->zero_init) {
+      irb.CreateMemSet(
+        allocated, llvm::ConstantInt::get(
+          context.types.ava_byte, 0), total_size,
+        layout.getABITypeAlignment(type));
+    }
+    store_strangelet(p->dst, allocated, pcfun);
+  } return false;
+
+  case ava_pcxt_S_new_h: {
+    const ava_pcx_S_new_h* p = (const ava_pcx_S_new_h*)exe;
+    llvm::Type* type = get_sxt_type(xcode, p->sxt);
+    llvm::Value* size = llvm::ConstantInt::get(
+      context.types.c_size, layout.getTypeAllocSize(type));
+    llvm::Value* allocated = INVOKE(
+      context.di.x_new,
+      size,
+      llvm::ConstantInt::get(context.types.ava_bool, p->atomic),
+      llvm::ConstantInt::get(context.types.ava_bool, p->precise),
+      llvm::ConstantInt::get(context.types.ava_bool, p->zero_init));
+    store_strangelet(p->dst, allocated, pcfun);
+  } return false;
+
+  case ava_pcxt_S_new_ha: {
+    const ava_pcx_S_new_ha* p = (const ava_pcx_S_new_ha*)exe;
+    llvm::Type* type = get_sxt_type(xcode, p->sxt);
+    llvm::Value* struct_size = llvm::ConstantInt::get(
+      context.types.c_size, layout.getTypeAllocSize(type));
+    llvm::Value* length =
+      irb.CreateTrunc(load_register(p->length, pcfun, nullptr),
+                      context.types.c_size);
+    llvm::Value* total_size = irb.CreateNUWMul(struct_size, length);
+    llvm::Value* allocated = INVOKE(
+      context.di.x_new,
+      total_size,
+      llvm::ConstantInt::get(context.types.ava_bool, p->atomic),
+      llvm::ConstantInt::get(context.types.ava_bool, p->precise),
+      llvm::ConstantInt::get(context.types.ava_bool, p->zero_init));
+    store_strangelet(p->dst, allocated, pcfun);
+  } return false;
+
+  case ava_pcxt_S_new_ht: {
+    const ava_pcx_S_new_ht* p = (const ava_pcx_S_new_ht*)exe;
+    llvm::Type* type = get_sxt_type(xcode, p->sxt);
+    llvm::Type* struct_type = context.global_sxt_structs[p->sxt];
+    llvm::Type* tail_type = struct_type->getStructElementType(
+      struct_type->getStructNumElements() - 1)
+      ->getArrayElementType();
+
+    llvm::Value* length = load_register(p->tail_length, pcfun, nullptr);
+    llvm::Value* base_size = llvm::ConstantInt::get(
+      context.types.ava_integer, layout.getTypeAllocSize(type));
+    llvm::Value* tail_elt_size = llvm::ConstantInt::get(
+      context.types.ava_integer, layout.getTypeAllocSize(tail_type));
+    llvm::Value* total_size = irb.CreateNUWAdd(
+      base_size, irb.CreateNUWMul(tail_elt_size, length));
+    llvm::Value* allocated = INVOKE(
+      context.di.x_new,
+      total_size,
+      llvm::ConstantInt::get(context.types.ava_bool, p->atomic),
+      llvm::ConstantInt::get(context.types.ava_bool, p->precise),
+      llvm::ConstantInt::get(context.types.ava_bool, p->zero_init));
+    store_strangelet(p->dst, allocated, pcfun);
+  } return false;
+
+  case ava_pcxt_S_sizeof: {
+    const ava_pcx_S_sizeof* p = (const ava_pcx_S_sizeof*)exe;
+    llvm::Type* type = get_sxt_type(xcode, p->sxt);
+    llvm::Value* size_val = llvm::ConstantInt::get(
+      context.types.ava_integer, layout.getTypeAllocSize(type));
+    store_register(p->dst, size_val, pcfun);
+  } return false;
+
+  case ava_pcxt_S_alignof: {
+    const ava_pcx_S_alignof* p = (const ava_pcx_S_alignof*)exe;
+    llvm::Type* type = get_sxt_type(xcode, p->sxt);
+    llvm::Value* align_val = llvm::ConstantInt::get(
+      context.types.ava_integer, layout.getABITypeAlignment(type));
+    store_register(p->dst, align_val, pcfun);
+  } return false;
+
+  case ava_pcxt_S_get_sp: {
+    const ava_pcx_S_get_sp* p = (const ava_pcx_S_get_sp*)exe;
+    llvm::Function* stacksave = llvm::Intrinsic::getDeclaration(
+      &context.module, llvm::Intrinsic::stacksave);
+    llvm::Value* ptr = irb.CreateCall(stacksave);
+    store_strangelet(p->dst, ptr, pcfun);
+  } return false;
+
+  case ava_pcxt_S_set_sp: {
+    const ava_pcx_S_set_sp* p = (const ava_pcx_S_set_sp*)exe;
+    llvm::Function* stackrestore = llvm::Intrinsic::getDeclaration(
+      &context.module, llvm::Intrinsic::stackrestore);
+    llvm::Value* ptr = load_strangelet(p->src, pcfun);
+    irb.CreateCall(stackrestore, { ptr });
+  } return false;
+
+  case ava_pcxt_S_cpy: {
+    const ava_pcx_S_cpy* p = (const ava_pcx_S_cpy*)exe;
+    llvm::Type* type = get_sxt_type(xcode, p->sxt);
+    llvm::Value* src_ptr = irb.CreateBitCast(
+      load_strangelet(p->src, pcfun), type);
+    llvm::Value* dst_ptr = irb.CreateBitCast(
+      load_strangelet(p->dst, pcfun), type);
+    llvm::Value* value = irb.CreateLoad(src_ptr);
+    irb.CreateStore(value, dst_ptr);
+  } return false;
+
+  case ava_pcxt_S_cpy_a: {
+    const ava_pcx_S_cpy_a* p = (const ava_pcx_S_cpy_a*)exe;
+    llvm::Type* type = get_sxt_type(xcode, p->sxt);
+    llvm::Value* struct_size = llvm::ConstantInt::get(
+      context.types.ava_integer, layout.getTypeAllocSize(type));
+    llvm::Value* count = load_register(p->count, pcfun, nullptr);
+    llvm::Value* size = irb.CreateNUWMul(struct_size, count);
+
+    llvm::Value* src_base = irb.CreateBitCast(
+      load_strangelet(p->src, pcfun), type);
+    llvm::Value* src_off = load_register(p->src_off, pcfun, nullptr);
+    llvm::Value* src = irb.CreateInBoundsGEP(src_base, { src_off });
+
+    llvm::Value* dst_base = irb.CreateBitCast(
+      load_strangelet(p->dst, pcfun), type);
+    llvm::Value* dst_off = load_register(p->dst_off, pcfun, nullptr);
+    llvm::Value* dst = irb.CreateInBoundsGEP(dst_base, { dst_off });
+
+    irb.CreateMemCpy(dst, src, size, layout.getABITypeAlignment(type));
+  } return false;
+
+  case ava_pcxt_S_cpy_t: {
+    const ava_pcx_S_cpy_t* p = (const ava_pcx_S_cpy_t*)exe;
+    llvm::Type* type = get_sxt_type(xcode, p->sxt);
+    llvm::Type* tail_type = type->getStructElementType(
+      type->getStructNumElements() - 1)
+      ->getArrayElementType();
+    llvm::Value* struct_size = llvm::ConstantInt::get(
+      context.types.ava_integer, layout.getTypeAllocSize(type));
+    llvm::Value* tail_size = llvm::ConstantInt::get(
+      context.types.ava_integer, layout.getTypeAllocSize(tail_type));
+    llvm::Value* tail_length = load_register(p->tail_length, pcfun, nullptr);
+    llvm::Value* size = irb.CreateNUWAdd(
+      struct_size, irb.CreateNUWMul(tail_size, tail_length));
+
+    llvm::Value* src = load_strangelet(p->src, pcfun);
+    llvm::Value* dst = load_strangelet(p->dst, pcfun);
+    irb.CreateMemCpy(dst, src, size, layout.getABITypeAlignment(type));
+  } return false;
+
+  case ava_pcxt_S_i_ld: {
+    const ava_pcx_S_i_ld* p = (const ava_pcx_S_i_ld*)exe;
+    const ava_struct_field* fdef = get_sxt_field_def(xcode, p->sxt, p->field);
+    llvm::Value* src = load_strangelet(p->src, pcfun);
+    llvm::Value* field_ptr = get_sxt_field_ptr(src, xcode, p->sxt, p->field);
+    llvm::Value* value = irb.CreateLoad(field_ptr, p->volatil);
+    /* We support unnatural byte orders for integer fields here since some
+     * network APIs insist on using big-endian integers instead of native
+     * integers (*cough* Berkley sockets).
+     */
+    if (ava_sbo_native != fdef->v.vint.byte_order &&
+        ava_sbo_preferred != fdef->v.vint.byte_order &&
+        ava_sbo_little == fdef->v.vint.byte_order != layout.isLittleEndian())
+      value = irb.CreateCall(llvm::Intrinsic::getDeclaration(
+                               &context.module,
+                               llvm::Intrinsic::bswap, { value->getType() }),
+                             { value });
+    value = expand_to_ava_integer(value, fdef);
+    store_register(p->dst, value, pcfun);
+  } return false;
+
+  case ava_pcxt_S_i_st: {
+    const ava_pcx_S_i_st* p = (const ava_pcx_S_i_st*)exe;
+    const ava_struct_field* fdef = get_sxt_field_def(xcode, p->sxt, p->field);
+
+    llvm::Value* value = load_register(p->src, pcfun, nullptr);
+    value = irb.CreateTrunc(value, get_sxt_field_type(p->sxt, p->field));
+    if (ava_sbo_native != fdef->v.vint.byte_order &&
+        ava_sbo_preferred != fdef->v.vint.byte_order &&
+        ava_sbo_little == fdef->v.vint.byte_order != layout.isLittleEndian())
+      value = irb.CreateCall(llvm::Intrinsic::getDeclaration(
+                               &context.module,
+                               llvm::Intrinsic::bswap, { value->getType() }),
+                             { value });
+
+    llvm::Value* dst = load_strangelet(p->dst, pcfun);
+    llvm::Value* field_ptr = get_sxt_field_ptr(dst, xcode, p->sxt, p->field);
+    irb.CreateStore(value, field_ptr, p->volatil);
+  } return false;
+
+  case ava_pcxt_S_ia_ld: {
+    const ava_pcx_S_ia_ld* p = (const ava_pcx_S_ia_ld*)exe;
+    const ava_struct_field* fdef = get_sxt_field_def(xcode, p->sxt, p->field);
+
+    llvm::AtomicOrdering order = get_llvm_ordering(p->order);
+    switch (order) {
+    case llvm::Release:
+    case llvm::AcquireRelease:
+      /* Not supported, promote to cstseq */
+      order = llvm::SequentiallyConsistent;
+      break;
+
+    default: /* OK */ break;
+    }
+
+    llvm::Value* src = load_strangelet(p->src, pcfun);
+    llvm::Value* field_ptr = get_sxt_field_ptr(src, xcode, p->sxt, p->field);
+    llvm::LoadInst* loaded = irb.CreateLoad(field_ptr, p->volatil);
+    loaded->setOrdering(order);
+    llvm::Value* value = expand_to_ava_integer(loaded, fdef);
+    store_register(p->dst, value, pcfun);
+  } return false;
+
+  case ava_pcxt_S_ia_st: {
+    const ava_pcx_S_ia_st* p = (const ava_pcx_S_ia_st*)exe;
+
+    llvm::AtomicOrdering order = get_llvm_ordering(p->order);
+    switch (order) {
+    case llvm::Acquire:
+    case llvm::AcquireRelease:
+      /* Not supported, promote to cstseq */
+      order = llvm::SequentiallyConsistent;
+      break;
+
+    default: /* OK */ break;
+    }
+
+    llvm::Value* value = load_register(p->src, pcfun, nullptr);
+    value = irb.CreateTrunc(value, get_sxt_field_type(p->sxt, p->field));
+
+    llvm::Value* dst = load_strangelet(p->dst, pcfun);
+    llvm::Value* field_ptr = get_sxt_field_ptr(dst, xcode, p->sxt, p->field);
+    llvm::StoreInst* store = irb.CreateStore(value, field_ptr, p->volatil);
+    store->setOrdering(order);
+  } return false;
+
+  case ava_pcxt_S_ia_cas: {
+    const ava_pcx_S_ia_cas* p = (const ava_pcx_S_ia_cas*)exe;
+    const ava_struct_field* fdef = get_sxt_field_def(xcode, p->sxt, p->field);
+    llvm::Type* field_type = get_sxt_field_type(p->sxt, p->field);
+
+    llvm::AtomicOrdering succ_order, fail_order;
+    figure_cas_orderings(&succ_order, &fail_order,
+                         p->success_order, p->failure_order);
+
+    llvm::Value* from_val = load_register(p->from, pcfun, nullptr);
+    from_val = irb.CreateTrunc(from_val, field_type);
+    llvm::Value* to_val = load_register(p->to, pcfun, nullptr);
+    to_val = irb.CreateTrunc(to_val, field_type);
+
+    llvm::Value* dst = load_strangelet(p->dst, pcfun);
+    llvm::Value* field_ptr = get_sxt_field_ptr(dst, xcode, p->sxt, p->field);
+    llvm::AtomicCmpXchgInst* result = irb.CreateAtomicCmpXchg(
+      field_ptr, from_val, to_val, succ_order, fail_order);
+    result->setVolatile(p->volatil);
+    result->setWeak(p->weak);
+
+    llvm::Value* succeeded = irb.CreateZExt(
+      irb.CreateExtractValue(result, { 0 }), context.types.ava_integer);
+    store_register(p->success, succeeded, pcfun);
+
+    llvm::Value* old = irb.CreateExtractValue(result, { 1 });
+    old = expand_to_ava_integer(old, fdef);
+    store_register(p->actual, old, pcfun);
+  } return false;
+
+  case ava_pcxt_S_ia_rmw: {
+    const ava_pcx_S_ia_rmw* p = (const ava_pcx_S_ia_rmw*)exe;
+    const ava_struct_field* fdef = get_sxt_field_def(xcode, p->sxt, p->field);
+    llvm::Type* field_type = get_sxt_field_type(p->sxt, p->field);
+
+    llvm::AtomicRMWInst::BinOp op;
+    switch (p->op) {
+    case ava_pro_xchg:  op = llvm::AtomicRMWInst::Xchg; break;
+    case ava_pro_add:   op = llvm::AtomicRMWInst::Add;  break;
+    case ava_pro_sub:   op = llvm::AtomicRMWInst::Sub;  break;
+    case ava_pro_and:   op = llvm::AtomicRMWInst::And;  break;
+    case ava_pro_nand:  op = llvm::AtomicRMWInst::Nand; break;
+    case ava_pro_or:    op = llvm::AtomicRMWInst::Or;   break;
+    case ava_pro_xor:   op = llvm::AtomicRMWInst::Xor;  break;
+    case ava_pro_smax:  op = llvm::AtomicRMWInst::Max;  break;
+    case ava_pro_smin:  op = llvm::AtomicRMWInst::Min;  break;
+    case ava_pro_umax:  op = llvm::AtomicRMWInst::UMax; break;
+    case ava_pro_umin:  op = llvm::AtomicRMWInst::UMin; break;
+    }
+
+    llvm::Value* neu = load_register(p->src, pcfun, nullptr);
+    neu = irb.CreateTrunc(neu, field_type);
+
+    llvm::Value* dst = load_strangelet(p->dst, pcfun);
+    llvm::Value* field_ptr = get_sxt_field_ptr(dst, xcode, p->sxt, p->field);
+    llvm::AtomicRMWInst* rmw = irb.CreateAtomicRMW(
+      op, field_ptr, neu,
+      /* All orderings supported */
+      get_llvm_ordering(p->order));
+    rmw->setVolatile(p->volatil);
+
+    llvm::Value* result = expand_to_ava_integer(rmw, fdef);
+    store_register(p->old, result, pcfun);
+  } return false;
+
+  case ava_pcxt_S_r_ld: {
+    const ava_pcx_S_r_ld* p = (const ava_pcx_S_r_ld*)exe;
+    const ava_struct_field* fdef = get_sxt_field_def(xcode, p->sxt, p->field);
+
+    llvm::Value* src = load_strangelet(p->src, pcfun);
+    llvm::Value* field_ptr = get_sxt_field_ptr(src, xcode, p->sxt, p->field);
+    llvm::Value* loaded = irb.CreateLoad(field_ptr, p->volatil);
+    /* No support for unnatural byte orders, since there's no precedent of any
+     * API using them.
+     */
+    llvm::Function* cvt = nullptr;
+    switch (fdef->v.vreal.size) {
+    case ava_srs_single: cvt = context.di.marshal_from[ava_cmpt_float]; break;
+    case ava_srs_double: cvt = context.di.marshal_from[ava_cmpt_double]; break;
+    case ava_srs_ava_real: cvt = context.di.marshal_from[ava_cmpt_ava_real]; break;
+    case ava_srs_extended: cvt = context.di.marshal_from[ava_cmpt_ldouble]; break;
+    }
+    llvm::Value* converted = irb.CreateCall(cvt, { loaded });
+    store_register(p->dst, converted, pcfun);
+  } return false;
+
+  case ava_pcxt_S_r_st: {
+    const ava_pcx_S_r_ld* p = (const ava_pcx_S_r_ld*)exe;
+    const ava_struct_field* fdef = get_sxt_field_def(xcode, p->sxt, p->field);
+
+    llvm::Value* src = load_register(p->src, pcfun, nullptr);
+    llvm::Function* cvt = nullptr;
+    switch (fdef->v.vreal.size) {
+    case ava_srs_single: cvt = context.di.marshal_to[ava_cmpt_float]; break;
+    case ava_srs_double: cvt = context.di.marshal_to[ava_cmpt_double]; break;
+    case ava_srs_ava_real: cvt = context.di.marshal_to[ava_cmpt_ava_real]; break;
+    case ava_srs_extended: cvt = context.di.marshal_to[ava_cmpt_ldouble]; break;
+    }
+    llvm::Value* converted = INVOKE(cvt, src);
+
+    llvm::Value* dst = load_strangelet(p->src, pcfun);
+    llvm::Value* field_ptr = get_sxt_field_ptr(dst, xcode, p->sxt, p->field);
+    irb.CreateStore(converted, field_ptr, p->volatil);
+  } return false;
+
+  case ava_pcxt_S_p_ld: {
+    const ava_pcx_S_p_ld* p = (const ava_pcx_S_p_ld*)exe;
+    const ava_struct_field* fdef = get_sxt_field_def(xcode, p->sxt, p->field);
+
+    llvm::Value* src = load_strangelet(p->src, pcfun);
+    /* Bitcast since we get an i64* instead of i8** for hybrids */
+    llvm::Value* field_ptr = irb.CreateBitCast(
+      get_sxt_field_ptr(src, xcode, p->sxt, p->field),
+      context.types.general_pointer);
+
+    llvm::Value* ptr;
+    if (ava_sft_ptr == fdef->type) {
+      ptr = irb.CreateLoad(field_ptr, p->volatil);
+    } else {
+      assert(ava_sft_hybrid == fdef->type);
+      ptr = irb.CreateLoad(field_ptr, p->volatil);
+      ptr = irb.CreateTrunc(ptr, context.types.c_intptr);
+      ptr = irb.CreateIntToPtr(ptr, context.types.general_pointer);
+    }
+    store_strangelet(p->dst, ptr, pcfun);
+  } return false;
+
+  case ava_pcxt_S_p_st: {
+    const ava_pcx_S_p_st* p = (const ava_pcx_S_p_st*)exe;
+    const ava_struct_field* fdef = get_sxt_field_def(xcode, p->sxt, p->field);
+
+    llvm::Value* src = load_strangelet(p->src, pcfun);
+    llvm::Value* dst = load_strangelet(p->dst, pcfun);
+    llvm::Value* field_ptr = get_sxt_field_ptr(dst, xcode, p->sxt, p->field);
+
+    if (ava_sft_ptr == fdef->type) {
+      irb.CreateStore(src, field_ptr, p->volatil);
+    } else {
+      assert(ava_sft_hybrid == fdef->type);
+      llvm::Value* h = irb.CreatePtrToInt(src, context.types.c_intptr);
+      h = irb.CreateZExt(src, context.types.ava_string);
+      irb.CreateStore(h, field_ptr, p->volatil);
+    }
+  } return false;
+
+  case ava_pcxt_S_pa_ld: {
+    const ava_pcx_S_pa_ld* p = (const ava_pcx_S_pa_ld*)exe;
+
+    llvm::AtomicOrdering order = get_llvm_ordering(p->order);
+    switch (order) {
+    case llvm::Release:
+    case llvm::AcquireRelease:
+      /* Not supported, promote to cstseq */
+      order = llvm::SequentiallyConsistent;
+      break;
+
+    default: /* OK */ break;
+    }
+
+    llvm::Value* src = load_strangelet(p->src, pcfun);
+    llvm::Value* field_ptr = get_sxt_field_ptr(src, xcode, p->sxt, p->field);
+    llvm::LoadInst* loaded = irb.CreateLoad(field_ptr, p->volatil);
+    loaded->setOrdering(order);
+    store_strangelet(p->dst, loaded, pcfun);
+  } return false;
+
+  case ava_pcxt_S_pa_st: {
+    const ava_pcx_S_pa_st* p = (const ava_pcx_S_pa_st*)exe;
+
+    llvm::AtomicOrdering order = get_llvm_ordering(p->order);
+    switch (order) {
+    case llvm::Acquire:
+    case llvm::AcquireRelease:
+      /* Not supported, promote to cstseq */
+      order = llvm::SequentiallyConsistent;
+      break;
+
+    default: /* OK */ break;
+    }
+
+    llvm::Value* value = load_strangelet(p->src, pcfun);
+    llvm::Value* dst = load_strangelet(p->dst, pcfun);
+    llvm::Value* field_ptr = get_sxt_field_ptr(dst, xcode, p->sxt, p->field);
+    llvm::StoreInst* store = irb.CreateStore(value, field_ptr, p->volatil);
+    store->setOrdering(order);
+  } return false;
+
+  case ava_pcxt_S_pa_cas: {
+    const ava_pcx_S_pa_cas* p = (const ava_pcx_S_pa_cas*)exe;
+
+    llvm::AtomicOrdering succ_order, fail_order;
+    figure_cas_orderings(&succ_order, &fail_order,
+                         p->success_order, p->failure_order);
+
+    llvm::Value* from_val = load_strangelet(p->from, pcfun);
+    from_val = irb.CreatePtrToInt(from_val, context.types.c_intptr);
+    llvm::Value* to_val = load_strangelet(p->to, pcfun);
+    to_val = irb.CreatePtrToInt(to_val, context.types.c_intptr);
+
+    llvm::Value* dst = load_strangelet(p->dst, pcfun);
+    llvm::Value* field_ptr = get_sxt_field_ptr(dst, xcode, p->sxt, p->field);
+    field_ptr = irb.CreateBitCast(
+      field_ptr, context.types.c_intptr->getPointerTo());
+    llvm::AtomicCmpXchgInst* result = irb.CreateAtomicCmpXchg(
+      field_ptr, from_val, to_val, succ_order, fail_order);
+    result->setVolatile(p->volatil);
+    result->setWeak(p->weak);
+
+    llvm::Value* succeeded = irb.CreateZExt(
+      irb.CreateExtractValue(result, { 0 }), context.types.ava_integer);
+    store_register(p->success, succeeded, pcfun);
+
+    llvm::Value* old = irb.CreateExtractValue(result, { 1 });
+    old = irb.CreateIntToPtr(old, context.types.general_pointer);
+    store_strangelet(p->actual, old, pcfun);
+  } return false;
+
+  case ava_pcxt_S_pa_xch: {
+    const ava_pcx_S_pa_xch* p = (const ava_pcx_S_pa_xch*)exe;
+
+    llvm::Value* src = load_strangelet(p->src, pcfun);
+    src = irb.CreatePtrToInt(src, context.types.c_intptr);
+    llvm::Value* dst = load_strangelet(p->dst, pcfun);
+    llvm::Value* field_ptr = get_sxt_field_ptr(dst, xcode, p->sxt, p->field);
+
+    llvm::AtomicRMWInst* xch = irb.CreateAtomicRMW(
+      llvm::AtomicRMWInst::Xchg, field_ptr, src,
+      /* All orderings supported */
+      get_llvm_ordering(p->order));
+    xch->setVolatile(p->volatil);
+
+    llvm::Value* result = irb.CreateIntToPtr(
+      xch, context.types.general_pointer);
+    store_strangelet(p->old, result, pcfun);
+  } return false;
+
+  case ava_pcxt_S_hi_ld: {
+    const ava_pcx_S_hi_ld* p = (const ava_pcx_S_hi_ld*)exe;
+
+    llvm::Value* src = load_strangelet(p->src, pcfun);
+    llvm::Value* field_ptr = get_sxt_field_ptr(src, xcode, p->sxt, p->field);
+    llvm::Value* loaded = irb.CreateLoad(field_ptr, p->volatil);
+    store_register(p->dst, loaded, pcfun);
+  } return false;
+
+  case ava_pcxt_S_hi_st: {
+    const ava_pcx_S_hi_st* p = (const ava_pcx_S_hi_st*)exe;
+
+    llvm::Value* src = load_register(p->src, pcfun, nullptr);
+    llvm::Value* dst = load_strangelet(p->dst, pcfun);
+    llvm::Value* field_ptr = get_sxt_field_ptr(dst, xcode, p->sxt, p->field);
+    irb.CreateStore(src, field_ptr, p->volatil);
+  } return false;
+
+  case ava_pcxt_S_hy_intp: {
+    const ava_pcx_S_hy_intp* p = (const ava_pcx_S_hy_intp*)exe;
+
+    llvm::Value* src = load_strangelet(p->src, pcfun);
+    llvm::Value* field_ptr = get_sxt_field_ptr(src, xcode, p->sxt, p->field);
+    llvm::Value* loaded = irb.CreateLoad(field_ptr, p->volatil);
+    llvm::Value* result = irb.CreateAnd(
+      loaded, llvm::ConstantInt::get(context.types.ava_integer, 1));
+    store_register(p->dst, result, pcfun);
+  } return false;
+
+  case ava_pcxt_S_v_ld: {
+    const ava_pcx_S_v_ld* p = (const ava_pcx_S_v_ld*)exe;
+
+    llvm::Value* src = load_strangelet(p->src, pcfun);
+    llvm::Value* field_ptr = get_sxt_field_ptr(src, xcode, p->sxt, p->field);
+    llvm::Value* loaded = irb.CreateLoad(field_ptr, p->volatil);
+    store_register(p->dst, loaded, pcfun);
+  } return false;
+
+  case ava_pcxt_S_v_st: {
+    const ava_pcx_S_v_st* p = (const ava_pcx_S_v_st*)exe;
+
+    llvm::Value* src = load_register(p->src, pcfun, nullptr);
+    llvm::Value* dst = load_strangelet(p->dst, pcfun);
+    llvm::Value* field_ptr = get_sxt_field_ptr(dst, xcode, p->sxt, p->field);
+    irb.CreateStore(src, field_ptr, p->volatil);
+  } return false;
+
+  case ava_pcxt_S_gfp: {
+    const ava_pcx_S_gfp* p = (const ava_pcx_S_gfp*)exe;
+
+    llvm::Value* src = load_strangelet(p->src, pcfun);
+    llvm::Value* result = get_sxt_field_ptr(src, xcode, p->sxt, p->field);
+    store_strangelet(p->dst, result, pcfun);
+  } return false;
+
+  case ava_pcxt_S_gap: {
+    const ava_pcx_S_gap* p = (const ava_pcx_S_gap*)exe;
+
+    llvm::Value* base = load_strangelet(p->src, pcfun);
+    base = irb.CreateBitCast(
+      base, get_sxt_type(xcode, p->sxt)->getPointerTo());
+    llvm::Value* index = load_register(p->index, pcfun, nullptr);
+    llvm::Value* result = irb.CreateInBoundsGEP(base, { index });
+    store_strangelet(p->dst, result, pcfun);
+  } return false;
+
+  case ava_pcxt_S_membar: {
+    const ava_pcx_S_membar* p = (const ava_pcx_S_membar*)exe;
+
+    llvm::AtomicOrdering order = get_llvm_ordering(p->order);
+    /* Unordered and monotonic not allowed, promote to acqrel */
+    if (llvm::Unordered == order || llvm::Monotonic == order)
+      order = llvm::AcquireRelease;
+
+    irb.CreateFence(order);
+  } return false;
+
   }
 }
 
@@ -2035,6 +2671,17 @@ noexcept {
   }
 }
 
+void ava_xcode_fun_xlate_info::store_strangelet(
+  ava_pcode_register dst,
+  llvm::Value* src,
+  const ava_pcg_fun* pcfun)
+noexcept {
+  llvm::Value* cast = irb.CreateBitCast(src, context.types.general_pointer);
+  llvm::Value* strangelet = irb.CreateCall(
+    context.di.strangelet_of_pointer, { cast });
+  store_register(dst, strangelet, pcfun);
+}
+
 llvm::Value* ava_xcode_fun_xlate_info::load_register(
   ava_pcode_register src,
   const ava_pcg_fun* pcfun,
@@ -2076,6 +2723,15 @@ noexcept {
 
   case ava_prt_parm: abort();
   }
+}
+
+llvm::Value* ava_xcode_fun_xlate_info::load_strangelet(
+  ava_pcode_register src,
+  const ava_pcg_fun* pcfun)
+noexcept {
+  llvm::Value* strangelet = load_register(src, pcfun, nullptr);
+  return irb.CreateCall(
+    context.di.strangelet_to_pointer, { strangelet });
 }
 
 llvm::Value* ava_xcode_fun_xlate_info::convert_register(
@@ -2125,6 +2781,143 @@ noexcept {
     case ava_prt_parm: abort();
     }
   }
+}
+
+llvm::Type* ava_xcode_fun_xlate_info::get_sxt_type(
+  const ava_xcode_global_list* xcode,
+  size_t struct_ix)
+noexcept {
+  const ava_struct* def;
+
+  if (!ava_pcode_global_get_struct_def(&def, xcode->elts[struct_ix].pc, 0))
+    abort();
+
+  if (def->is_union)
+    return context.global_sxt_unions[struct_ix];
+  else
+    return context.global_sxt_structs[struct_ix];
+}
+
+llvm::Type* ava_xcode_fun_xlate_info::get_sxt_field_type(
+  size_t struct_ix, size_t field_ix)
+noexcept {
+  return context.global_sxt_structs[struct_ix]
+    ->getStructElementType(field_ix);
+}
+
+const ava_struct* ava_xcode_fun_xlate_info::get_sxt_def(
+  const ava_xcode_global_list* xcode,
+  size_t struct_ix)
+noexcept {
+  const ava_struct* def;
+
+  if (!ava_pcode_global_get_struct_def(&def, xcode->elts[struct_ix].pc, 0))
+    abort();
+
+  return def;
+}
+
+const ava_struct_field* ava_xcode_fun_xlate_info::get_sxt_field_def(
+  const ava_xcode_global_list* xcode,
+  size_t struct_ix,
+  size_t field_ix)
+noexcept {
+  return get_sxt_def(xcode, struct_ix)->fields + field_ix;
+}
+
+llvm::Value* ava_xcode_fun_xlate_info::get_sxt_field_ptr(
+  llvm::Value* base,
+  const ava_xcode_global_list* xcode,
+  size_t struct_ix,
+  size_t field_ix)
+noexcept {
+  const ava_struct* def;
+
+  if (!ava_pcode_global_get_struct_def(&def, xcode->elts[struct_ix].pc, 0))
+    abort();
+
+  if (def->is_union)
+    return irb.CreateBitCast(
+      base, context.global_sxt_structs[struct_ix]
+      ->getStructElementType(field_ix)->getPointerTo());
+  else
+    return irb.CreateConstInBoundsGEP2_64(
+      irb.CreateBitCast(
+        base, context.global_sxt_structs[struct_ix]->getPointerTo()),
+      0, field_ix + !!def->parent);
+}
+
+llvm::Value* ava_xcode_fun_xlate_info::expand_to_ava_integer(
+  llvm::Value* base, const ava_struct_field* fdef)
+noexcept {
+  if (fdef->v.vint.sign_extend)
+    return irb.CreateSExt(base, context.types.ava_integer);
+  else
+    return irb.CreateZExt(base, context.types.ava_integer);
+}
+
+llvm::AtomicOrdering ava_xcode_fun_xlate_info::get_llvm_ordering(
+  ava_pcode_memory_order pco)
+noexcept {
+  switch (pco) {
+  case ava_pmo_unordered: return llvm::Unordered;
+  case ava_pmo_monotonic: return llvm::Monotonic;
+  case ava_pmo_acquire:   return llvm::Acquire;
+  case ava_pmo_release:   return llvm::Release;
+  case ava_pmo_acqrel:    return llvm::AcquireRelease;
+  case ava_pmo_seqcst:    return llvm::SequentiallyConsistent;
+  }
+
+  /* unreachable */
+  abort();
+}
+
+void ava_xcode_fun_xlate_info::figure_cas_orderings(
+  llvm::AtomicOrdering* succ_dst, llvm::AtomicOrdering* fail_dst,
+  ava_pcode_memory_order succ_src, ava_pcode_memory_order fail_src)
+noexcept {
+    llvm::AtomicOrdering fail_order = get_llvm_ordering(fail_src);
+    switch (fail_order) {
+    case llvm::Unordered:
+      /* Not permitted, promote to Monotonic */
+      fail_order = llvm::Monotonic;
+      break;
+
+    case llvm::Release:
+    case llvm::AcquireRelease:
+      /* Not permitted, promote to SequentiallyConsistent */
+      fail_order = llvm::SequentiallyConsistent;
+      break;
+
+    default: /* OK */ break;
+    }
+
+    llvm::AtomicOrdering succ_order = get_llvm_ordering(succ_src);
+    if (llvm::Unordered == succ_order)
+      /* Not permitted, promote to Monotonic */
+      succ_order = llvm::Monotonic;
+    /* "the constraint on failure must be no stronger than that on success".
+     * Failure is one of monotonic, acquire, or seqcst at this point. If it's
+     * monotonic, the above clause is trivial, since success is already at
+     * least monotonic. If it is seqcst, so must success be, for it is the
+     * strongest order.
+     *
+     * For acquire, it seems debatable whether success may be set to release.
+     * While acquire provides guarantees that release does not, the converse is
+     * also true, so neither is stronger than the other.
+     *
+     * The actual assertion in the LLVM source is that (success >= failure),
+     * based on the enum values, and this does in fact permit success of
+     * release and failure of acquire. Thus, monotonic is the only thing that
+     * need be promoted for success if failure is acquire.
+     */
+    if (llvm::SequentiallyConsistent == fail_order)
+      succ_order = llvm::SequentiallyConsistent;
+    else if (llvm::Acquire == fail_order && llvm::Monotonic == succ_order)
+      succ_order = llvm::Release;
+
+    *succ_dst = succ_order;
+    *fail_dst = fail_order;
 }
 
 llvm::Value* ava_xcode_fun_xlate_info::invoke_s(

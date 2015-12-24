@@ -80,9 +80,12 @@ ava::driver_iface::driver_iface(const llvm::Module& module) noexcept {
   ISA(x_ex_type);
   ISA(x_ex_value);
   ISA(x_cpu_pause);
+  ISA(x_new);
   ISA(foreign_exception);
   ISA(copy_exception);
   ISA(nop);
+  ISA(strangelet_to_pointer);
+  ISA(strangelet_of_pointer);
 #undef ISA
 
 #define MAR(type) do {                                            \
