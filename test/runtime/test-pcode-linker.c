@@ -219,6 +219,22 @@ deftest(interface_deletes_src_pos_at_eof) {
     "[var false [ava private]]\n");
 }
 
+deftest(interface_deletes_unreference_struct) {
+  to_interface_like(
+    "",
+
+    "[decl-sxt true [[struct foo]]]\n");
+}
+
+deftest(interface_keeps_exported_struct) {
+  to_interface_like(
+    "[decl-sxt true [[struct foo]]]\n"
+    "[export 0 true foo]\n",
+
+    "[decl-sxt true [[struct foo]]]\n"
+    "[export 0 true foo]\n");
+}
+
 deftest(linker_emits_error_on_module_conflict) {
   ava_compile_error_list errors;
   ava_pcode_linker* linker = ava_pcode_linker_new();
@@ -396,6 +412,38 @@ deftest(globals_refs_relinked_after_cannonicalisation) {
     "[fun true [ava doit] [ava pos] [x] [\n"
     "  [ret v0]\n"
     "]]\n");
+}
+
+deftest(struct_refs_relinked) {
+  link_modules_like(
+    "[ext-var [ava some-var]]\n"
+    "[decl-sxt true [[struct foo] [value v]]]\n"
+    "[fun false [ava init] [ava pos] [\"\"] [\n"
+    "  [S-v-ld v0 v0 2 0 false]\n"
+    "  [ret v0]\n"
+    "]]\n",
+    ava_false,
+
+    "module",
+    /* So some collapse happens before the refs */
+    "[ext-var [ava some-var]]\n"
+    "[ext-var [ava some-var]]\n"
+    "[decl-sxt true [[struct foo] [value v]]]\n"
+    "[fun false [ava init] [ava pos] [\"\"] [\n"
+    "  [S-v-ld v0 v0 3 0 false]\n"
+    "  [ret v0]\n"
+    "]]\n");
+}
+
+deftest(structs_not_deduped) {
+  link_modules_like(
+    "[decl-sxt true [[struct foo] [value v]]]\n"
+    "[decl-sxt false [[struct foo] [value v]]]\n",
+    ava_false,
+
+    "module",
+    "[decl-sxt true [[struct foo] [value v]]]\n"
+    "[decl-sxt false [[struct foo] [value v]]]\n");
 }
 
 deftest(nondependent_modules_concatenated) {

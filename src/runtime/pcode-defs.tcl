@@ -52,9 +52,6 @@ struct global g {
   # Property which is a reference, by absolute index, to an element with the
   # fun attribute in the same P-Code object.
   prop int global-fun-ref
-  # Property which is a reference, by absolute index, to an element with the
-  # struct-def property in the same P-Code object.
-  prop int global-sxt-ref
   # Property indicating that the element describes a function with the given
   # prototype.
   #
