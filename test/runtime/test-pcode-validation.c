@@ -604,3 +604,214 @@ deftest(yrt_at_end_of_function) {
            VERB("label 1")
            VERB("yrt"))));
 }
+
+deftest(negative_struct_ref) {
+  xcode_fail_with(
+    "X9007",
+    VERB(FUN_FOO ONE_ARG NO_VAR VERB(
+           VERB("S-new-s v0 -1 true"))));
+}
+
+deftest(oob_struct_ref) {
+  xcode_fail_with(
+    "X9007",
+    VERB(FUN_FOO ONE_ARG NO_VAR VERB(
+           VERB("S-new-s v0 99 true"))));
+}
+
+deftest(struct_ref_to_non_struct) {
+  xcode_fail_with(
+    "X9008",
+    VERB(FUN_FOO ONE_ARG NO_VAR VERB(
+           VERB("S-new-s v0 0 true"))));
+}
+
+#define STRUCT_FOO(body) VERB("decl-sxt true [[struct foo] " body "]")
+
+deftest(tail_ref_to_struct_with_no_fields) {
+  xcode_fail_with(
+    "X9008",
+    STRUCT_FOO("")
+    VERB(FUN_FOO ONE_ARG NO_VAR VERB(
+           VERB("push i 1")
+           VERB("ld-imm-i i0 0")
+           VERB("S-new-st v0 0 i0 true")
+           VERB("pop i 1"))));
+}
+
+deftest(tail_ref_to_struct_with_non_tail) {
+  xcode_fail_with(
+    "X9008",
+    STRUCT_FOO("[value v]")
+    VERB(FUN_FOO ONE_ARG NO_VAR VERB(
+           VERB("push i 1")
+           VERB("ld-imm-i i0 0")
+           VERB("S-new-st v0 0 i0 true")
+           VERB("pop i 1"))));
+}
+
+deftest(tail_ref_to_struct_with_tail) {
+  (void)make_xcode_ok(
+    STRUCT_FOO("[tail [[struct bar]] t]")
+    VERB(FUN_FOO ONE_ARG NO_VAR VERB(
+           VERB("push i 1")
+           VERB("ld-imm-i i0 0")
+           VERB("S-new-st v0 0 i0 true")
+           VERB("pop i 1"))));
+}
+
+deftest(negative_struct_field_ref) {
+  xcode_fail_with(
+    "X9017",
+    STRUCT_FOO("[value v]")
+    VERB(FUN_FOO ONE_ARG NO_VAR VERB(
+           VERB("S-v-st v0 0 -1 v0 false"))));
+}
+
+deftest(oob_struct_field_ref) {
+  xcode_fail_with(
+    "X9017",
+    STRUCT_FOO("[value v]")
+    VERB(FUN_FOO ONE_ARG NO_VAR VERB(
+           VERB("S-v-st v0 0 99 v0 false"))));
+}
+
+deftest(int_ref_to_non_int_struct_field) {
+  xcode_fail_with(
+    "X9018",
+    STRUCT_FOO("[value v]")
+    VERB(FUN_FOO ONE_ARG NO_VAR VERB(
+           VERB("push i 1")
+           VERB("S-i-ld i0 v0 0 0 false")
+           VERB("pop i 1"))));
+}
+
+deftest(real_ref_to_non_real_struct_field) {
+  xcode_fail_with(
+    "X9018",
+    STRUCT_FOO("[value v]")
+    VERB(FUN_FOO ONE_ARG NO_VAR VERB(
+           VERB("S-r-ld v0 v0 0 0 false"))));
+}
+
+deftest(value_ref_to_non_value_struct_field) {
+  xcode_fail_with(
+    "X9018",
+    STRUCT_FOO("[hybrid FILE* v]")
+    VERB(FUN_FOO ONE_ARG NO_VAR VERB(
+           VERB("S-v-ld v0 v0 0 0 false"))));
+}
+
+deftest(ph_ref_to_non_ph_struct_field) {
+  xcode_fail_with(
+    "X9018",
+    STRUCT_FOO("[value v]")
+    VERB(FUN_FOO ONE_ARG NO_VAR VERB(
+           VERB("S-p-ld v0 v0 0 0 false"))));
+}
+
+deftest(ph_ref_to_pointer_struct_field) {
+  (void)make_xcode_ok(
+    STRUCT_FOO("[ptr FILE* true v]")
+    VERB(FUN_FOO ONE_ARG NO_VAR VERB(
+           VERB("S-p-ld v0 v0 0 0 false"))));
+}
+
+deftest(ph_ref_to_hybrid_struct_field) {
+  (void)make_xcode_ok(
+    STRUCT_FOO("[hybrid FILE* v]")
+    VERB(FUN_FOO ONE_ARG NO_VAR VERB(
+           VERB("S-p-ld v0 v0 0 0 false"))));
+}
+
+deftest(hybrid_ref_to_non_hybrid_struct_field) {
+  xcode_fail_with(
+    "X9018",
+    STRUCT_FOO("[ptr FILE* false v]")
+    VERB(FUN_FOO ONE_ARG NO_VAR VERB(
+           VERB("push i 1")
+           VERB("S-hy-intp i0 v0 0 0 false")
+           VERB("pop i 1"))));
+}
+
+deftest(composite_ref_to_noncomposite_struct_field) {
+  xcode_fail_with(
+    "X9018",
+    STRUCT_FOO("[value v]")
+    VERB(FUN_FOO ONE_ARG NO_VAR VERB(
+           VERB("S-gfp v0 v0 0 0"))));
+}
+
+deftest(composite_ref_to_compose_struct_field) {
+  (void)make_xcode_ok(
+    STRUCT_FOO("[compose [[struct bar]] v]")
+    VERB(FUN_FOO ONE_ARG NO_VAR VERB(
+           VERB("S-gfp v0 v0 0 0"))));
+}
+
+deftest(composite_ref_to_array_struct_field) {
+  (void)make_xcode_ok(
+    STRUCT_FOO("[array [[struct bar]] 1 v]")
+    VERB(FUN_FOO ONE_ARG NO_VAR VERB(
+           VERB("S-gfp v0 v0 0 0"))));
+}
+
+deftest(composite_ref_to_tail_struct_field) {
+  (void)make_xcode_ok(
+    STRUCT_FOO("[tail [[struct bar]] v]")
+    VERB(FUN_FOO ONE_ARG NO_VAR VERB(
+           VERB("S-gfp v0 v0 0 0"))));
+}
+
+deftest(atomic_int_ref_to_non_int_struct_field) {
+  xcode_fail_with(
+    "X9018",
+    STRUCT_FOO("[value v]")
+    VERB(FUN_FOO ONE_ARG NO_VAR VERB(
+           VERB("push i 1")
+           VERB("S-ia-ld i0 v0 0 0 true seqcst")
+           VERB("pop i 1"))));
+}
+
+deftest(atomic_int_ref_to_nonatomic_int_struct_field) {
+  xcode_fail_with(
+    "X9018",
+    STRUCT_FOO("[int word true false 15 native v]")
+    VERB(FUN_FOO ONE_ARG NO_VAR VERB(
+           VERB("push i 1")
+           VERB("S-ia-ld i0 v0 0 0 true seqcst")
+           VERB("pop i 1"))));
+}
+
+deftest(atomic_int_ref_to_atomic_int_struct_field) {
+  (void)make_xcode_ok(
+    STRUCT_FOO("[int word true true 15 native v]")
+    VERB(FUN_FOO ONE_ARG NO_VAR VERB(
+           VERB("push i 1")
+           VERB("S-ia-ld i0 v0 0 0 true seqcst")
+           VERB("pop i 1"))));
+}
+
+deftest(atomic_ptr_ref_to_nonptr_struct_field) {
+  xcode_fail_with(
+    "X9018",
+    STRUCT_FOO("[hybrid FILE* v]")
+    VERB(FUN_FOO ONE_ARG NO_VAR VERB(
+           VERB("S-pa-ld v0 v0 0 0 true seqcst"))));
+}
+
+deftest(atomic_ptr_ref_to_nonatomic_ptr_struct_field) {
+  xcode_fail_with(
+    "X9018",
+    STRUCT_FOO("[ptr FILE* false v]")
+    VERB(FUN_FOO ONE_ARG NO_VAR VERB(
+           VERB("S-pa-ld v0 v0 0 0 true seqcst"))));
+}
+
+
+deftest(atomic_ptr_ref_to_atomic_ptr_struct_field) {
+  (void)make_xcode_ok(
+    STRUCT_FOO("[ptr FILE* true v]")
+    VERB(FUN_FOO ONE_ARG NO_VAR VERB(
+           VERB("S-pa-ld v0 v0 0 0 true seqcst"))));
+}

@@ -38,7 +38,8 @@ static ava_pcode_global_list* parse_pcode(const char* str) {
 
   ck_assert_msg(TAILQ_EMPTY(&errors),
                 "Test source P-Code was invalid.\n%s",
-                ava_error_list_to_string(&errors, 50, ava_false));
+                ava_string_to_cstring(
+                  ava_error_list_to_string(&errors, 50, ava_false)));
 
   return pcode;
 }
@@ -419,7 +420,7 @@ deftest(struct_refs_relinked) {
     "[ext-var [ava some-var]]\n"
     "[decl-sxt true [[struct foo] [value v]]]\n"
     "[fun false [ava init] [ava pos] [\"\"] [\n"
-    "  [S-v-ld v0 v0 2 0 false]\n"
+    "  [S-v-ld v0 v0 1 0 false]\n"
     "  [ret v0]\n"
     "]]\n",
     ava_false,
@@ -430,7 +431,7 @@ deftest(struct_refs_relinked) {
     "[ext-var [ava some-var]]\n"
     "[decl-sxt true [[struct foo] [value v]]]\n"
     "[fun false [ava init] [ava pos] [\"\"] [\n"
-    "  [S-v-ld v0 v0 3 0 false]\n"
+    "  [S-v-ld v0 v0 2 0 false]\n"
     "  [ret v0]\n"
     "]]\n");
 }

@@ -2387,6 +2387,26 @@ set defs {
     }
   }
 
+  cerror X9017 xcode_oob_sxt_field {{ava_integer ix}} {
+    msg "P-Code references out-of-bounds struct field index %ix%"
+    explanation {
+      An instruction referencing a struct field has a field index which is
+      negative or greater than the index of the last field in the struct.
+
+      This is an error in whatever software generated the P-Code.
+    }
+  }
+
+  cerror X9018 xcode_bad_sxt_field {{ava_integer ix}} {
+    msg "P-Code references struct field of incorrect type at index %ix%"
+    explanation {
+      An instruction references a struct field which is not a suitable type for
+      that instruction.
+
+      This is an error in whatever software generated the P-Code.
+    }
+  }
+
   serror N9900 native_field_with_unnatural_alignment_unsupported {
     {ava_string struct_name} {ava_string field_name}
   } {
