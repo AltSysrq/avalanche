@@ -263,6 +263,8 @@
  */
 #define AVA_CC_AVA_MAX_INLINE_ARGS 8
 
+typedef struct ava_function_s ava_function;
+
 /**
  * Indicates the calling convention used by a function.
  */
@@ -457,7 +459,7 @@ typedef struct {
  * dynamically invoked until ava_function_init_ffi() is called on it, so care
  * must be taken when statically declaring functions.
  */
-typedef struct {
+struct ava_function_s {
   /**
    * The address of the function to call.
    *
@@ -492,7 +494,7 @@ typedef struct {
    * FFI unless otherwise noted.
    */
   char ffi[AVA_SIZEOF_FFI_CIF];
-} ava_function;
+};
 
 /**
  * Indicates ways in which an argument can be bound to a value.
