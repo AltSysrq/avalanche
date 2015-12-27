@@ -274,6 +274,12 @@ static void ava_intr_require_import_cg_define(
     node->symbol->pcode_index = AVA_PCGB(ext_var, v->name);
   } break;
 
+  case ava_pcgt_decl_sxt: {
+    const ava_pcg_decl_sxt* v = (const ava_pcg_decl_sxt*)node->target;
+    node->symbol->pcode_index =
+      AVA_PCGB(decl_sxt, ava_false, v->def);
+  } break;
+
   default: abort();
   }
 }

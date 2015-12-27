@@ -396,18 +396,18 @@ typedef struct ava_struct_field_s {
       /**
        * The ava_struct_int_size identifying the size of this integer.
        */
-      /* ava_struct_int_size */ unsigned size : 4;
+      ava_struct_int_size size;
       /**
        * Whether the integer should be size-extended when expanded to an
        * ava_integer.
        */
-      unsigned sign_extend : 1;
+      ava_bool sign_extend;
       /**
        * Whether the integer needs to support atomic operations in native mode.
        * This requires alignment to be natural or native, byte_order to be
        * preferred or native, and size to be ava_sis_word.
        */
-      unsigned is_atomic : 1;
+      ava_bool is_atomic;
       /**
        * Indicates the exponent (applied to 2) for the byte alignment of this
        * field.
@@ -416,14 +416,14 @@ typedef struct ava_struct_field_s {
        * special values. Note that this means alignments greater than 2**13
        * (8192 bytes) are not supported.
        */
-      unsigned alignment : 4;
+      unsigned char alignment;
       /**
        * The byte (ava_struct_byte_order) order for this field.
        *
        * This value is not meaningful in native mode if the platform does not
        * expose byte-order.
        */
-      /* ava_struct_byte_order */ unsigned byte_order : 2;
+      ava_struct_byte_order byte_order;
     } vint;
     /**
      * Information for ava_sft_real.
@@ -438,20 +438,20 @@ typedef struct ava_struct_field_s {
       /**
        * The size (ava_struct_real_size) of this field.
        */
-      /* ava_struct_real_size */ unsigned size : 2;
+      ava_struct_real_size size;
       /**
        * The alignment of this field.
        *
        * @see ava_struct_field.v.vint.alignment
        */
-      unsigned alignment : 4;
+      unsigned char alignment;
       /**
        * The byte-order for this field.
        *
        * This value is not meaningful in native mode if the platform does not
        * expose byte-order.
        */
-      /* ava_struct_byte_order */ unsigned byte_order : 2;
+      ava_struct_byte_order byte_order;
     } vreal;
     /**
      * Information for ava_sft_ptr and ava_sft_hybrid.

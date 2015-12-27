@@ -159,4 +159,35 @@ static ava_integer ava_integer_parse_dec(const char*restrict begin,
   return negative? -accum : accum;
 }
 
+typedef struct {
+  ava_integer* dst;
+  ava_string str;
+  ava_integer dfault;
+} ava_integer_try_parse_data;
+
+static void ava_integer_try_parse_impl(void* vdata) {
+  ava_integer_try_parse_data* data = vdata;
+
+  *data->dst = ava_integer_of_value(
+    ava_value_of_string(data->str), data->dfault);
+}
+
+ava_bool ava_integer_try_parse(
+  ava_integer* dst, ava_string str, ava_integer dfault
+) {
+  ava_exception caught;
+  ava_integer_try_parse_data data = {
+    .dst = dst, .str = str, .dfault = dfault
+  };
+
+  if (ava_catch(&caught, ava_integer_try_parse_impl, &data)) {
+    if (&ava_format_exception == caught.type)
+      return ava_false;
+    else
+      ava_rethrow(caught);
+  } else {
+    return ava_true;
+  }
+}
+
 #endif /* AVA_RUNTIME__INTEGER_PARSE_H_ */

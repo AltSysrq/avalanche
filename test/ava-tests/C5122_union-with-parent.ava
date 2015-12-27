@@ -1,0 +1,8 @@
+struct parent {
+  integer foo
+}
+
+union child extends parent {
+  integer bar
+  real quux
+}

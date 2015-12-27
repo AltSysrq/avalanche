@@ -79,11 +79,17 @@
         &_ama_right_begin->location, self->full_name));                \
   } else /* user body */
 
-#define AVA__MACRO_ARG_FROM_DIR(cursor, end, dir)       \
-  for (const ava_parse_unit** _ama_cursor = &(cursor),  \
-                           * _ama_cursor_end = (end);   \
-       _ama_cursor; _ama_cursor = NULL)                 \
-    for (signed _ama_direction = (dir); _ama_direction; \
+#define AVA__MACRO_ARG_FROM_DIR(cursor, end, nullterm, closed, dir)     \
+  for (const ava_parse_unit** _ama_cursor = &(cursor),                  \
+         * _ama_cursor_end = (end),                                     \
+         * _ama_terminal = (                                            \
+           !_ama_cursor_end? nullterm :                                 \
+           (dir) > 0? TAILQ_NEXT(_ama_cursor_end,next) :                \
+           TAILQ_PREV(_ama_cursor_end, ava_parse_unit_list_s, next));   \
+       _ama_cursor &&                                                   \
+         (((closed) && (*_ama_cursor = NULL)) || 1);                    \
+       _ama_cursor = NULL)                                              \
+    for (signed _ama_direction = (dir); _ama_direction;                 \
          _ama_direction = 0)
 
 /**
@@ -93,31 +99,47 @@
  * A primary cursor is established starting from the left beginning, and moving
  * forward to the left end.
  */
-#define AVA_MACRO_ARG_FROM_LEFT_BEGIN                           \
-  AVA__MACRO_ARG_FROM_DIR(_ama_left_begin, _ama_left_end, +1)
+#define AVA_MACRO_ARG_FROM_LEFT_BEGIN                                   \
+  AVA__MACRO_ARG_FROM_DIR(                                              \
+    _ama_left_begin, _ama_left_end, provoker,                           \
+    (!_ama_left_end || provoker == _ama_left_begin ||                   \
+     _ama_left_begin == TAILQ_NEXT(_ama_left_end, next)),               \
+    +1)
 /**
  * Like AVA_MACRO_ARG_FROM_LEFT_BEGIN, but starts from the left end moving
  * backwards.
  */
-#define AVA_MACRO_ARG_FROM_LEFT_END                             \
-  AVA__MACRO_ARG_FROM_DIR(_ama_left_end, _ama_left_begin, -1)
+#define AVA_MACRO_ARG_FROM_LEFT_END                                     \
+  AVA__MACRO_ARG_FROM_DIR(                                              \
+    _ama_left_end, _ama_left_begin, NULL,                               \
+    (!_ama_left_end || provoker == _ama_left_begin ||                   \
+     TAILQ_NEXT(_ama_left_end, next) == _ama_left_begin),               \
+    -1)
 /**
  * Like AVA_MACRO_ARG_FROM_LEFT_BEGIN, but starts from the right beginning
  * moving forwards.
  */
-#define AVA_MACRO_ARG_FROM_RIGHT_BEGIN                          \
-  AVA__MACRO_ARG_FROM_DIR(_ama_right_begin, _ama_right_end, +1)
+#define AVA_MACRO_ARG_FROM_RIGHT_BEGIN                                  \
+  AVA__MACRO_ARG_FROM_DIR(                                              \
+    _ama_right_begin, _ama_right_end, NULL,                             \
+    (!_ama_right_end || provoker == _ama_right_end ||                   \
+     TAILQ_NEXT(_ama_right_end, next) == _ama_right_begin),             \
+    +1)
 /**
  * Like AVA_MACRO_ARG_FROM_LEFT_BEGIN, but starts from the right end moving
  * backwards.
  */
-#define AVA_MACRO_ARG_FROM_RIGHT_END                            \
-  AVA__MACRO_ARG_FROM_DIR(_ama_right_end, _ama_right_begin, -1)
+#define AVA_MACRO_ARG_FROM_RIGHT_END                                    \
+  AVA__MACRO_ARG_FROM_DIR(                                              \
+    _ama_right_end, _ama_right_begin, provoker,                         \
+    (!_ama_right_end || provoker == _ama_right_end ||                   \
+     TAILQ_NEXT(_ama_right_end, next) == _ama_right_begin),             \
+    -1)
 
 /**
  * Indicates whether the current primary cursor points to a parse unit.
  */
-#define AVA_MACRO_ARG_HAS_ARG() (!!*_ama_cursor)
+#define AVA_MACRO_ARG_HAS_ARG() (*_ama_cursor && *_ama_cursor != _ama_terminal)
 
 /**
  * Usage: AVA_MACRO_ARG_REQUIRE("name");

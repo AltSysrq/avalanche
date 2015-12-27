@@ -1,0 +1,6 @@
+struct bar {
+  int 42
+}
+
+struct foo extends bar blah {
+}

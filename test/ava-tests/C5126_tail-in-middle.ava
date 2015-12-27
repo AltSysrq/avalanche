@@ -1,0 +1,7 @@
+struct bar { }
+
+struct foo {
+  int k
+  struct bar [] bars
+  int j
+}

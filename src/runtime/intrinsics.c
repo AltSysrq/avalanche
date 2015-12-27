@@ -36,6 +36,7 @@
 #include "-intrinsics/pasta.h"
 #include "-intrinsics/require.h"
 #include "-intrinsics/ret.h"
+#include "-intrinsics/structdef.h"
 #include "-intrinsics/subscript.h"
 #include "-intrinsics/user-macro.h"
 #include "-intrinsics/variable.h"
@@ -111,6 +112,12 @@ void ava_register_intrinsics(ava_macsub_context* context) {
   DEFINE("try",         CTL,    NULL,           try);
   DEFINE("#set#",       CTL,    NULL,           set);
   DEFINE("#update#",    CTL,    "",             set);
+  DEFINE("struct",      CTL,    PRIVATE,        struct);
+  DEFINE("Struct",      CTL,    INTERNAL,       struct);
+  DEFINE("STRUCT",      CTL,    PUBLIC,         struct);
+  DEFINE("union",       CTL,    PRIVATE,        union);
+  DEFINE("Union",       CTL,    INTERNAL,       union);
+  DEFINE("UNION",       CTL,    PUBLIC,         union);
   DEFINE("#var#",       CTL,    NULL,           var);
   DEFINE("#name-subscript#", CTL, "#name-subscript#", subscript);
   DEFINE("#numeric-subscript#", CTL, "#numeric-subscript#", subscript);

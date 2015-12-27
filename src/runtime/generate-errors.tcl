@@ -858,6 +858,20 @@ set defs {
     }
   }
 
+  cerror C5134 ambiguous_struct {
+    {ava_string name} {ava_integer count}
+    {ava_string exa} {ava_string exb}
+  } {
+    msg "Struct reference is ambiguous: %name%; found %count% results, including %exa% and %exb%"
+    explanation {
+      The given name used as a struct reference could refer to more than one
+      symbol.
+
+      Structs occupy the same namespace as other symbols, so the conflicting
+      symbols are not necessarily structs.
+    }
+  }
+
   cerror C5003 no_such_function {{ava_string name}} {
     msg "No such function: %name%"
     explanation {
@@ -2159,6 +2173,202 @@ set defs {
 
       This error may result if a space was accidentally inserted between the $
       and a variable name, eg if "$ foo" was written instead of "$foo".
+    }
+  }
+
+  cerror C5121 funmac_bind_impossible {
+    {ava_string macro} {ava_string message}
+  } {
+    msg "Invalid invocation of function-like macro %macro%: %message%"
+    explanation {
+      The arguments for the given function-like macro could not be bound for
+      the reason given.
+
+      Most commonly, this will happen due to passing it the incorrect number of
+      arguments, misspelling a named argument name, or placing an extraneous
+      unnamed argument where a named argument name was expected.
+    }
+  }
+
+  cerror C5122 structdef_union_with_parent {{ava_string sxt}} {
+    msg "Invalid extension of struct by union %sxt%"
+    explanation {
+      Unions are not permitted to extend structs or unions.
+    }
+  }
+
+  cerror C5123 structdef_parent_is_union {
+    {ava_string child} {ava_string parent}
+  } {
+    msg "Invalid extension of union %parent% by struct %child%"
+    explanation {
+      Unions are not permitted to be extended by other structs or unions.
+    }
+  }
+
+  cerror C5124 structdef_duplicate_field_name {
+    {ava_string sxt} {ava_string field}
+  } {
+    msg "Field %field% defined more than once in struct %sxt%"
+    explanation {
+      Struct field names are required to be unique when defined in ordinary
+      ways, but the indicated name was assigned to more than one field in the
+      same struct or union.
+    }
+  }
+
+  cerror C5125 structdef_typeless_field {} {
+    msg "Expected field type before field name."
+    explanation {
+      The indicated statement within a struct or union body has only one token,
+      but a minimum of two are needed to specify the type and name.
+    }
+  }
+
+  cerror C5126 structdef_tail_not_at_end {{ava_string field}} {
+    msg "Tail field %field% not at end of structure."
+    explanation {
+      The noted field is a tail field (an array without a length), but does not
+      occur at the end of its structure, which is the only place where it is
+      allowed.
+    }
+  }
+
+  cerror C5127 structdef_tail_in_union {{ava_string field}} {
+    msg "Tail field %field% within a union."
+    explanation {
+      Tail fields are not permitted in unions, due to their somewhat ambiguous
+      nature. In general, an array of union instances containing that one item
+      is both easier to work with and more flexible anyway.
+    }
+  }
+
+  cerror C5128 structdef_extra_tokens_in_array_length {} {
+    msg "Unexpected additional tokens in array length specifier."
+    explanation {
+      A struct array length specifier must consist of a single bareword.
+    }
+  }
+
+  cerror C5129 structdef_invalid_array_length {
+    {ava_string field} {ava_string len}
+  } {
+    msg "Invalid array length %len% for struct field %field%"
+    explanation {
+      The length of the given array field is an invalid integer, is negative,
+      or is greater than the maximum size integer on the host platform.
+    }
+  }
+
+  cerror C5130 structdef_invalid_type {} {
+    msg "Unknown/unparseable type in struct field declaration."
+    explanation {
+      The indicated bareword does not describe any known struct field type.
+
+      Note that struct composition needs to be indicated explicitly with the
+      "struct" bareword before the composed struct name, and this error will
+      occur if it is missing.
+    }
+  }
+
+  cerror C5131 structdef_composed_noncomposable {
+    {ava_string field} {ava_string member}
+  } {
+    msg "Struct %member% cannot be composed (in field %field%)."
+    explanation {
+      The indicated field indicates to compose a structure, but that structure
+      does not permit composition.
+
+      Variable-length structures cannot be composed, for the same reason that
+      tail fields must come at the end. Instead, a level of indirection must be
+      added by using a pointer to that structure.
+    }
+  }
+
+  cerror C5132 structdef_invalid {{ava_string message}} {
+    msg "BUG: Struct is invalid: %message%"
+    explanation {
+      The struct defined by the indicated construct was in the end invalid.
+
+      This is a bug in the struct definition macro, which is supposed to
+      prevent this condition from occurring.
+    }
+  }
+
+  cerror C5133 no_such_struct {{ava_string name}} {
+    msg "No such struct: %name%"
+    explanation {
+      A reference to a struct or union symbol with the given name was made, but
+      no such symbol could be found.
+    }
+  }
+
+  # cerror C5134 ambiguous_struct with other ambiguous_* errors
+
+  cerror C5135 symbol_not_a_struct {{ava_string name} {ava_string actual}} {
+    msg "Not a struct: %name% (is a(n) %actual%)."
+    explanation {
+      The given bareword is expected to reference a struct or union symbol, but
+      the symbol it references is something else.
+    }
+  }
+
+  cerror C5136 structdef_unexpected_type_modifier {{ava_string mod}} {
+    msg "Unknown/unexpected type modifier: %mod%"
+    explanation {
+      A type modifier which is not known, not supported for this type, or
+      already specified for this field was found.
+    }
+  }
+
+  cerror C5137 structdef_invalid_alignment {{ava_string align}} {
+    msg "Invalid field alignment: %align%"
+    explanation {
+      The given alignment is not one of the special values "native" or
+      "natural", and is either not a valid integer, non-positive, not a power
+      of two, or greater than the maximum permitted alignment.
+    }
+  }
+
+  cerror C5138 structdef_garbage_after_type {} {
+    msg "Unexpected tokens between field type and name."
+    explanation {
+      The type declaration for the indicated field of the containing struct
+      appears to be valid, but unexpected tokens occur between it and the name.
+    }
+  }
+
+  cerror C5139 structdef_invalid_pointer_prototype {{ava_string prot}} {
+    msg "Invalid pointer prototype: %prot%"
+    explanation {
+      The given token was expected to specify a pointer prototype (e.g.,
+      because the struct field is a hybrid field or looks like it should be a
+      pointer field), but the token is not actually a valid prototype.
+    }
+  }
+
+  cerror C5140 structdef_parent_is_noncomposable {
+    {ava_string child} {ava_string parent}
+  } {
+    msg "Struct %child% extends non-composable struct %parent%"
+    explanation {
+      The indicated struct extends another struct, but the latter is
+      non-composable (e.g., ends with a tail field).
+
+      Struct extension is a form of composition and therefore cannot be used
+      with non-composable structs.
+    }
+  }
+
+  cerror C5141 structdef_compose_self {{ava_string name}} {
+    msg "Attempt to compose struct %name% with itself."
+    explanation {
+      The indicated compose/array/tail member of the given struct appears to be
+      composing the struct with itself.
+
+      Self-composition results in an infinitely large type and so is ultimately
+      meaningless. In virtually all cases the true intent is likely to use a
+      pointer instead anyway.
     }
   }
 

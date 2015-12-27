@@ -103,6 +103,7 @@ runtime/-intrinsics/pasta.c \
 runtime/-intrinsics/reg-rvalue.c \
 runtime/-intrinsics/require.c \
 runtime/-intrinsics/ret.c \
+runtime/-intrinsics/structdef.c \
 runtime/-intrinsics/subscript.c \
 runtime/-intrinsics/user-macro.c \
 runtime/-intrinsics/variable.c

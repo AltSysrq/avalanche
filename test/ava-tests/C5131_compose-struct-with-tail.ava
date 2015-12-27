@@ -1,0 +1,9 @@
+struct foo { }
+
+struct bar {
+  struct foo [] tail
+}
+
+struct baz {
+  struct bar bar
+}

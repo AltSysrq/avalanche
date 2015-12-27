@@ -1,0 +1,5 @@
+struct bar { }
+
+struct foo {
+  struct bar [+ 2] bars
+}
