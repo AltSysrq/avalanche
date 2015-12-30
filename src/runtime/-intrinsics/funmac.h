@@ -17,6 +17,7 @@
 #define AVA_RUNTIME__INTRINSICS_FUNMAC_H_
 
 #include "../avalanche/string.h"
+#include "../avalanche/macsub.h"
 
 struct ava_symbol_s;
 struct ava_function_s;
@@ -50,8 +51,8 @@ struct ava_compile_location_s;
 typedef void (*ava_funmac_accept_f)(
   void* userdata,
   void** local_userdata,
-  const struct ava_compile_location_s* location,
   struct ava_macsub_context_s* context,
+  const struct ava_compile_location_s* location,
   struct ava_ast_node_s** args);
 
 /**
@@ -77,7 +78,46 @@ typedef void (*ava_funmac_cg_evaluate_f)(
   struct ava_ast_node_s*const* args);
 
 /**
- * Creates a symbol containing a simplified function-like macro.
+ * Defines the properties of a function-like macro.
+ *
+ * @see ava_funmac_subst().
+ */
+typedef struct ava_funmac_type_s {
+  /**
+   * Function prototype which describes how to bind parameters to arguments.
+   * This also dictates the size of the argument arrays passed to accept and
+   * cg_evaluate.
+   *
+   * The values in defaulted argument specs in the prototype need not be valid
+   * values; values with a NULL attribute chain will be tolerated.
+   */
+  const ava_function* prototype;
+  /**
+   * Constant userdata to pass into all usages of this macro.
+   */
+  void* userdata;
+  /**
+   * Optional function to call immediately after argument binding, in case the
+   * macro wishes to inspect or modify the arguments during macro substitution.
+   * This may be NULL, indicating to do nothing.
+   */
+  ava_funmac_accept_f accept;
+  /**
+   * Function to call to generate the actual code for the macro and produce a
+   * value. If NULL, the macro is considered to produce no value.
+   */
+  ava_funmac_cg_evaluate_f cg_evaluate;
+  /**
+   * Function to call to generate the actual code for the macro, producing no
+   * value. If NULL, the macro is considered pure and may not be discarded.
+   * This is of the same type as cg_evaluate to simplify the common case of
+   * impure expression macros.
+   */
+  ava_funmac_cg_evaluate_f cg_discard;
+} ava_funmac_type;
+
+/**
+ * Runs substitution of a function-like macro.
  *
  * Simplified function-like macros are always nominally public and global (as
  * with all intrinsic macros) and of type ava_st_function_macro. On
@@ -99,29 +139,14 @@ typedef void (*ava_funmac_cg_evaluate_f)(
  * "true" being passed from user code), it is represented by the sentinal value
  * AVA_FUNMAC_TRUE rather than a real AST node.
  *
- * @param name The fully-qualified name of the macro.
- * @param prototype Function prototype which describes how to bind parameters
- * to arguments. This also dictates the size of the argument arrays passed to
- * accept and cg_evaluate.
- * @param accept Function to call immediately after argument binding, in case
- * the macro wishes to inspect or modify the arguments during macro
- * substitution. This may be NULL, indicating to do nothing.
- * @param cg_evaluate Function to call to generate the actual code for the
- * macro and produce a value. If NULL, the macro is considered to produce no
- * value.
- * @param cg_discard Function to call to generate the actual code for the
- * macro, producing no value. If NULL, the macro is considered pure and may not
- * be discarded. This is of the same type as cg_evaluate to simplify the common
- * case of impure expression macros.
- * @param userdata Userdata to pass to the callbacks.
- * @return A symbol containing the described function-like macro.
+ * funmac_type describes the function macro itself. All other arguments as per
+ * normal macro substitution functions.
  */
-const struct ava_symbol_s* ava_funmac_of(
-  ava_string name,
-  const struct ava_function_s* prototype,
-  ava_funmac_accept_f accept,
-  ava_funmac_cg_evaluate_f cg_evaluate,
-  ava_funmac_cg_evaluate_f cg_discard,
-  void* userdata);
+ava_macro_subst_result ava_funmac_subst(
+  const ava_funmac_type* funmac_type,
+  const struct ava_symbol_s* self,
+  struct ava_macsub_context_s* context,
+  const struct ava_parse_statement_s* statement,
+  const struct ava_parse_unit_s* provoker);
 
 #endif /* AVA_RUNTIME__INTRINSICS_FUNMAC_H_ */

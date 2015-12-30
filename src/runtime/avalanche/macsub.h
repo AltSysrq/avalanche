@@ -753,4 +753,19 @@ void ava_macsub_insert_module(
  */
 ava_ast_node* ava_macsub_silent_error(const ava_compile_location* location);
 
+/**
+ * Convenience function for declaring/defining standard macro substitution
+ * functions.
+ *
+ * Qualifiers may be placed before the macro, and it may be followed by a body
+ * or a semicolon.
+ */
+#define AVA_DEF_MACRO_SUBST(name)               \
+  ava_macro_subst_result name(                  \
+    const struct ava_symbol_s* self,            \
+    ava_macsub_context* context,                \
+    const ava_parse_statement* statement,       \
+    const ava_parse_unit* provoker,             \
+    ava_bool* consumed_other_statements)
+
 #endif /* AVA_RUNTIME_MACSUB_H_ */

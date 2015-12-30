@@ -37,6 +37,7 @@
 #include "-intrinsics/require.h"
 #include "-intrinsics/ret.h"
 #include "-intrinsics/structdef.h"
+#include "-intrinsics/structops.h"
 #include "-intrinsics/subscript.h"
 #include "-intrinsics/user-macro.h"
 #include "-intrinsics/variable.h"
@@ -60,6 +61,7 @@ static const ava_intr_seq_return_policy
 #define CTL ava_st_control_macro, 0
 #define FUN ava_st_function_macro, 0
 #define OP(p) ava_st_operator_macro, p
+#define EUS "esoterica.unsafe.strangelet."
 #define DEFINE(name, type_and_prec, ud, base)                           \
   ava_register_intrinsic(symtab, AVA_AVAST_INTRINSIC "." name,          \
                          type_and_prec, ud,                             \
@@ -122,6 +124,17 @@ void ava_register_intrinsics(ava_macsub_context* context) {
   DEFINE("#name-subscript#", CTL, "#name-subscript#", subscript);
   DEFINE("#numeric-subscript#", CTL, "#numeric-subscript#", subscript);
   DEFINE("#string-subscript#", CTL, "#string-subscript#", subscript);
+
+  DEFINE(EUS "new",     FUN,    NULL,           S_new);
+  DEFINE(EUS "cpy",     FUN,    NULL,           S_cpy);
+  DEFINE(EUS "arraycpy",FUN,    NULL,           S_arraycpy);
+  DEFINE(EUS "get",     FUN,    NULL,           S_get);
+  DEFINE(EUS "set",     FUN,    NULL,           S_set);
+  DEFINE(EUS "is-int",  FUN,    NULL,           S_is_int);
+  DEFINE(EUS "cas",     FUN,    NULL,           S_cas);
+  DEFINE(EUS "rmw",     FUN,    NULL,           S_rmw);
+  DEFINE(EUS "ix",      FUN,    NULL,           S_ix);
+
   /* Weak absolute imports of the intrinsics and standard library */
   ava_macsub_import(&abs, &amb, context,
                     intrinsic_prefix, AVA_EMPTY_STRING,

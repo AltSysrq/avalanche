@@ -1373,6 +1373,8 @@ struct exe x {
   # operation, and any further attempt to use that memory has undefined
   # behaviour.
   #
+  # Behaviour is undefined if dst and src refer to the same memory.
+  #
   # Types:
   #   SXT <- dst
   #   SXT <- src
@@ -1395,6 +1397,9 @@ struct exe x {
   #
   # Behaviour is undefined if either array is not sufficiently sized for the
   # operation, or if count, dst-off, or src-off is negative.
+  #
+  # Behaviour is undefined if the memory regions in the destination and source
+  # overlap.
   #
   # Types:
   #   SXT[] <- dst

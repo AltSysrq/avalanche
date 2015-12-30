@@ -2372,6 +2372,129 @@ set defs {
     }
   }
 
+  cerror C5142 macro_arg_not_constexpr {{ava_string arg_name}} {
+    msg "Macro argument %arg_name% must be a constant expression."
+    explanation {
+      The indicated macro argument must have a value which can be determined at
+      compile time, but a runtime-only expression was given.
+    }
+  }
+
+  cerror C5143 cannot_operate_array_of_noncomposable {{ava_string sxt}} {
+    msg "Cannot operate on array of non-composable struct %sxt%."
+    explanation {
+      Non-composable structs (such as those with tail fields) cannot be
+      allocated in arrays since they do not have a definite element size.
+    }
+  }
+
+  cerror C5144 tail_operation_on_struct_without_tail {{ava_string sxt}} {
+    msg "Struct %sxt% does not have a tail"
+    explanation {
+      The indicated operation specifies the length of a structure's tail, but
+      the structure in use has no tail.
+    }
+  }
+
+  cerror C5145 struct_field_not_found {
+    {ava_string sxt} {ava_string field}
+  } {
+    msg "Struct %sxt% does not contain a field named %field%"
+    explanation {
+      A reference was made to a field of the given name within a particular
+      struct type, but that type does not directly contain a field of that
+      name.
+
+      Note that child structs do *not* inherit the names of their parent; they
+      must be accessed via the parent type instead.
+    }
+  }
+
+  cerror C5146 nonatomic_operation_cannot_have_memory_order {} {
+    msg "Invalid use of atomic memory order on unatomic operation."
+    explanation {
+      Memory ordering only ever makes sense on operations which are actually
+      atomic. Memory order cannot be specified on uses of non-atomic fields, or
+      on accesses that explicitly specify -unatomic.
+    }
+  }
+
+  cerror C5147 unknown_memory_order {{ava_string str}} {
+    msg "Unknown atomic memory order: %str%"
+    explanation {
+      The given memory order is not known.
+    }
+  }
+
+  cerror C5148 struct_invalid_hybrid_flags {} {
+    msg "Exactly one of -int, -ptr must be specified for hybrid fields only."
+    explanation {
+      A field accessor was passed -int or -ptr when used on a non-hybrid field,
+      was not passed either of them when operating on a hybrid field, or was
+      passed both of them.
+    }
+  }
+
+  cerror C5149 already_unatomic {} {
+    msg "Field is unatomic anyway, passing -unatomic is meaningless."
+    explanation {
+      -unatomic was passed to an access to a struct field which is already
+      unatomic, so the modifier has no meaning.
+    }
+  }
+
+  cerror C5150 non_memory_access_cannot_be_volatile {} {
+    msg "Field access does not access memory, cannot be volatile."
+    explanation {
+      Accesses to composed fields in a struct do not involve any accesses to
+      accessible memory, so making such access volatile is meaningless.
+    }
+  }
+
+  cerror C5151 struct_composed_field_cannot_be_set {} {
+    msg "Composed/array struct field is not settable."
+    explanation {
+      Composed and array fields are not references, and so cannot be set.
+
+      If the intent really is to copy the *contents* of the struct in the
+      composed field, use the cpy or arraycpy macros to copy the result of
+      getting the field instead.
+    }
+  }
+
+  cerror C5152 is_int_on_non_hybrid {} {
+    msg "Field is not a hybrid, cannot query for integer/pointer."
+    explanation {
+      The indicated location queries a field to see whether it holds an integer
+      or a pointer, but the field is not a hybrid, and so does not support this
+      operation.
+    }
+  }
+
+  cerror C5153 operation_only_legal_on_atomic_fields {} {
+    msg "Atomic-only operation used on unatomic field."
+    explanation {
+      Inherently atomic operations, like CaS, may only be performed on struct
+      fields explicitly marked as atomic.
+    }
+  }
+
+  cerror C5154 unknown_rmw_op {{ava_string str}} {
+    msg "Unknown read-modify-write operation: %str%"
+    explanation {
+      The given read-modify-write operation is not known.
+    }
+  }
+
+  cerror C5155 non_xchg_rmw_on_ptr {} {
+    msg "Non-xchg RMW performed against pointer."
+    explanation {
+      Pointer fields support only the xchg (exchange, or
+      set-and-return-prior-value) read-modify-write operation since the other
+      operations are not in general meaningful for pointers.
+    }
+  }
+
   cerror X9000 xcode_dupe_label {{ava_value label}} {
     msg "P-Code label present in function more than once: %label%"
     explanation {

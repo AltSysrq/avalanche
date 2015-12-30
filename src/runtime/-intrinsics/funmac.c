@@ -32,16 +32,6 @@
 #include "../avalanche/errors.h"
 #include "funmac.h"
 
-/**
- * The userdata used in the macro symbols produced by ava_funmac_of().
- */
-typedef struct {
-  const ava_function* prototype;
-  void* userdata;
-  ava_funmac_accept_f accept;
-  ava_funmac_cg_evaluate_f evaluate, discard;
-} ava_funmac_type;
-
 typedef struct {
   ava_ast_node header;
 
@@ -59,13 +49,6 @@ static void ava_funmac_cg_evaluate(
   struct ava_codegen_context_s* context);
 static void ava_funmac_cg_discard(
   ava_funmac* node, struct ava_codegen_context_s* context);
-
-static ava_macro_subst_result ava_funmac_subst(
-  const struct ava_symbol_s* self,
-  ava_macsub_context* context,
-  const ava_parse_statement* statement,
-  const ava_parse_unit* provoker,
-  ava_bool* consumed_other_statements);
 
 /* There are three vtables for funmac, one for each combination of having
  * evaluate and discard. This simplifies the error handling for improper use,
@@ -90,49 +73,16 @@ static const ava_ast_node_vtable ava_funmac_vtable_ed = {
   .cg_discard = (ava_ast_node_cg_discard_f)ava_funmac_cg_discard,
 };
 
-const ava_symbol* ava_funmac_of(
-  ava_string name,
-  const ava_function* prototype,
-  ava_funmac_accept_f accept,
-  ava_funmac_cg_evaluate_f evaluate,
-  ava_funmac_cg_evaluate_f discard,
-  void* userdata
-) {
-  ava_symbol* sym;
-  ava_funmac_type* type;
-
-  assert(evaluate || discard);
-
-  type = AVA_NEW(ava_funmac_type);
-  type->prototype = prototype;
-  type->accept = accept;
-  type->evaluate = evaluate;
-  type->discard = discard;
-  type->userdata = userdata;
-
-  sym = AVA_NEW(ava_symbol);
-  sym->type = ava_st_function_macro;
-  sym->level = 0;
-  sym->visibility = ava_v_public;
-  sym->full_name = name;
-  sym->v.macro.precedence = 0;
-  sym->v.macro.macro_subst = ava_funmac_subst;
-  sym->v.macro.userdata = type;
-
-  return sym;
-}
-
-static ava_macro_subst_result ava_funmac_subst(
+ava_macro_subst_result ava_funmac_subst(
+  const ava_funmac_type* funmac_type,
   const struct ava_symbol_s* self,
   ava_macsub_context* context,
   const ava_parse_statement* statement,
-  const ava_parse_unit* provoker,
-  ava_bool* consumed_other_statements
+  const ava_parse_unit* provoker
 ) {
   AVA_STATIC_STRING(unknown_bind_error_message,
                     "non-constant in place of argument name?");
 
-  const ava_funmac_type* funmac_type = self->v.macro.userdata;
   const size_t num_args = funmac_type->prototype->num_args;
   const ava_parse_unit* parm_unit;
   size_t num_parms, i;
@@ -180,11 +130,11 @@ static ava_macro_subst_result ava_funmac_subst(
   case ava_fbs_unpack: abort(); /* unreachable */
   }
 
-  assert(funmac_type->evaluate || funmac_type->discard);
+  assert(funmac_type->cg_evaluate || funmac_type->cg_discard);
   node = ava_alloc(sizeof(ava_funmac) + sizeof(ava_ast_node*) * num_args);
   node->header.v =
-    funmac_type->evaluate && funmac_type->discard? &ava_funmac_vtable_ed :
-    funmac_type->evaluate ? &ava_funmac_vtable_e : &ava_funmac_vtable_d;
+    funmac_type->cg_evaluate && funmac_type->cg_discard? &ava_funmac_vtable_ed :
+    funmac_type->cg_evaluate ? &ava_funmac_vtable_e : &ava_funmac_vtable_d;
   node->header.context = context;
   node->header.location = provoker->location;
   node->name = self->full_name;
@@ -198,7 +148,11 @@ static ava_macro_subst_result ava_funmac_subst(
       break;
 
     case ava_fbat_implicit:
-      if (ava_string_equal(AVA_ASCII9_STRING("true"),
+      /* Null check the attribute chain since statically declared function
+       * prototypes in C can't specify a valid value at all.
+       */
+      if (ava_value_attr(bound_args[i].v.value) &&
+          ava_string_equal(AVA_ASCII9_STRING("true"),
                            ava_to_string(bound_args[i].v.value)))
         node->args[i] = AVA_FUNMAC_TRUE;
       else
@@ -209,8 +163,7 @@ static ava_macro_subst_result ava_funmac_subst(
 
   if (funmac_type->accept)
     (*funmac_type->accept)(funmac_type->userdata, &node->local_userdata,
-                           &node->header.location,
-                           context, node->args);
+                           context, &node->header.location, node->args);
 
   return (ava_macro_subst_result) {
     .status = ava_mss_done,
@@ -258,7 +211,7 @@ static void ava_funmac_cg_evaluate(
   ava_funmac* node, const struct ava_pcode_register_s* dst,
   struct ava_codegen_context_s* context
 ) {
-  (*node->type->evaluate)(
+  (*node->type->cg_evaluate)(
     node->type->userdata, node->local_userdata, dst, context,
     &node->header.location, node->args);
 }
@@ -266,7 +219,7 @@ static void ava_funmac_cg_evaluate(
 static void ava_funmac_cg_discard(
   ava_funmac* node, struct ava_codegen_context_s* context
 ) {
-  (*node->type->discard)(
+  (*node->type->cg_discard)(
     node->type->userdata, node->local_userdata, NULL, context,
     &node->header.location, node->args);
 }
