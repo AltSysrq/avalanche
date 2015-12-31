@@ -27,12 +27,6 @@ struct ava_ast_node_s;
 struct ava_compile_location_s;
 
 /**
- * Sentinal non-AST-node used to indicate a function-like macro's argument
- * being bound to the constant "true".
- */
-#define AVA_FUNMAC_TRUE ((ava_ast_node*)1)
-
-/**
  * Called by a simplified function-like macro immediately after arguments have
  * been bound.
  *
@@ -132,12 +126,8 @@ typedef struct ava_funmac_type_s {
  *
  * All argument binding forms other than varargs are supported. Macro
  * substitution fails if binding fails, since performing dynamic binding would
- * not make sense.
- *
- * If an argument binds to the constant value "true" (as with the "bool"
- * argument type; note that this cannot result from the constant expression
- * "true" being passed from user code), it is represented by the sentinal value
- * AVA_FUNMAC_TRUE rather than a real AST node.
+ * not make sense. For bool arguments, the triggering parameter is passed in as
+ * the argument when specified, and NULL if unspecified.
  *
  * funmac_type describes the function macro itself. All other arguments as per
  * normal macro substitution functions.

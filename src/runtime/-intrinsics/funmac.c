@@ -148,13 +148,8 @@ ava_macro_subst_result ava_funmac_subst(
       break;
 
     case ava_fbat_implicit:
-      /* Null check the attribute chain since statically declared function
-       * prototypes in C can't specify a valid value at all.
-       */
-      if (ava_value_attr(bound_args[i].v.value) &&
-          ava_string_equal(AVA_ASCII9_STRING("true"),
-                           ava_to_string(bound_args[i].v.value)))
-        node->args[i] = AVA_FUNMAC_TRUE;
+      if (AVA_FUNCTION_NO_PARAMETER != bound_args[i].trigger_parameter_index)
+        node->args[i] = parm_nodes[bound_args[i].trigger_parameter_index];
       else
         node->args[i] = NULL;
       break;
@@ -182,8 +177,6 @@ static ava_string ava_funmac_to_string(const ava_funmac* node) {
   for (i = 0; i < n; ++i) {
     if (NULL == node->args[i])
       arg = AVA_ASCII9_STRING("<NULL>");
-    else if (AVA_FUNMAC_TRUE == node->args[i])
-      arg = AVA_ASCII9_STRING("<TRUE>");
     else
       arg = ava_ast_node_to_string(node->args[i]);
 
@@ -202,7 +195,7 @@ static void ava_funmac_postprocess(ava_funmac* node) {
 
   n = node->type->prototype->num_args;
   for (i = 0; i < n; ++i) {
-    if (node->args[i] > AVA_FUNMAC_TRUE)
+    if (node->args[i])
       ava_ast_node_postprocess(node->args[i]);
   }
 }
