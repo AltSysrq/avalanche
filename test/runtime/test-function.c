@@ -29,6 +29,8 @@
 #include "runtime/avalanche/list.h"
 #include "runtime/avalanche/function.h"
 
+#define NO_PARM AVA_FUNCTION_NO_PARAMETER
+
 defsuite(function);
 
 static const ava_function* of_cstring(const char* str) {
@@ -348,6 +350,7 @@ deftest(simple_bind) {
   ck_assert_int_eq(ava_fbs_bound, status);
   ck_assert_int_eq(ava_fbat_parameter, bound_args[0].type);
   ck_assert_int_eq(0, bound_args[0].v.parameter_index);
+  ck_assert_int_eq(0, bound_args[0].trigger_parameter_index);
 }
 
 deftest(multi_pos_bind) {
@@ -360,8 +363,10 @@ deftest(multi_pos_bind) {
   ck_assert_int_eq(ava_fbs_bound, status);
   ck_assert_int_eq(ava_fbat_parameter, bound_args[0].type);
   ck_assert_int_eq(0, bound_args[0].v.parameter_index);
+  ck_assert_int_eq(0, bound_args[0].trigger_parameter_index);
   ck_assert_int_eq(ava_fbat_parameter, bound_args[1].type);
   ck_assert_int_eq(1, bound_args[1].v.parameter_index);
+  ck_assert_int_eq(1, bound_args[1].trigger_parameter_index);
 }
 
 deftest(simple_pos_accepts_dynamic) {
@@ -373,6 +378,7 @@ deftest(simple_pos_accepts_dynamic) {
   ck_assert_int_eq(ava_fbs_bound, status);
   ck_assert_int_eq(ava_fbat_parameter, bound_args[0].type);
   ck_assert_int_eq(0, bound_args[0].v.parameter_index);
+  ck_assert_int_eq(0, bound_args[0].trigger_parameter_index);
 }
 
 deftest(implicit_bind) {
@@ -384,10 +390,13 @@ deftest(implicit_bind) {
   ck_assert_int_eq(ava_fbs_bound, status);
   ck_assert_int_eq(ava_fbat_implicit, bound_args[0].type);
   assert_value_equals_str("foo", bound_args[0].v.value);
+  ck_assert_int_eq(NO_PARM, bound_args[0].trigger_parameter_index);
   ck_assert_int_eq(ava_fbat_parameter, bound_args[1].type);
   ck_assert_int_eq(0, bound_args[1].v.parameter_index);
+  ck_assert_int_eq(0, bound_args[1].trigger_parameter_index);
   ck_assert_int_eq(ava_fbat_implicit, bound_args[2].type);
   assert_value_equals_str("bar", bound_args[2].v.value);
+  ck_assert_int_eq(NO_PARM, bound_args[2].trigger_parameter_index);
 }
 
 deftest(pos_default_bind_omitted) {
@@ -400,10 +409,13 @@ deftest(pos_default_bind_omitted) {
   ck_assert_int_eq(ava_fbs_bound, status);
   ck_assert_int_eq(ava_fbat_parameter, bound_args[0].type);
   ck_assert_int_eq(0, bound_args[0].v.parameter_index);
+  ck_assert_int_eq(0, bound_args[0].trigger_parameter_index);
   ck_assert_int_eq(ava_fbat_implicit, bound_args[1].type);
   assert_value_equals_str("optional", bound_args[1].v.value);
+  ck_assert_int_eq(NO_PARM, bound_args[1].trigger_parameter_index);
   ck_assert_int_eq(ava_fbat_parameter, bound_args[2].type);
   ck_assert_int_eq(1, bound_args[2].v.parameter_index);
+  ck_assert_int_eq(1, bound_args[2].trigger_parameter_index);
 }
 
 deftest(pos_default_bind_given) {
@@ -417,10 +429,13 @@ deftest(pos_default_bind_given) {
   ck_assert_int_eq(ava_fbs_bound, status);
   ck_assert_int_eq(ava_fbat_parameter, bound_args[0].type);
   ck_assert_int_eq(0, bound_args[0].v.parameter_index);
+  ck_assert_int_eq(0, bound_args[0].trigger_parameter_index);
   ck_assert_int_eq(ava_fbat_parameter, bound_args[1].type);
   ck_assert_int_eq(1, bound_args[1].v.parameter_index);
+  ck_assert_int_eq(1, bound_args[1].trigger_parameter_index);
   ck_assert_int_eq(ava_fbat_parameter, bound_args[2].type);
   ck_assert_int_eq(2, bound_args[2].v.parameter_index);
+  ck_assert_int_eq(2, bound_args[2].trigger_parameter_index);
 }
 
 deftest(pos_default_bind_two_absent) {
@@ -433,12 +448,16 @@ deftest(pos_default_bind_two_absent) {
   ck_assert_int_eq(ava_fbs_bound, status);
   ck_assert_int_eq(ava_fbat_parameter, bound_args[0].type);
   ck_assert_int_eq(0, bound_args[0].v.parameter_index);
+  ck_assert_int_eq(0, bound_args[0].trigger_parameter_index);
   ck_assert_int_eq(ava_fbat_implicit, bound_args[1].type);
   assert_value_equals_str("foo", bound_args[1].v.value);
+  ck_assert_int_eq(NO_PARM, bound_args[1].trigger_parameter_index);
   ck_assert_int_eq(ava_fbat_implicit, bound_args[2].type);
   assert_value_equals_str("bar", bound_args[2].v.value);
+  ck_assert_int_eq(NO_PARM, bound_args[2].trigger_parameter_index);
   ck_assert_int_eq(ava_fbat_parameter, bound_args[3].type);
   ck_assert_int_eq(1, bound_args[3].v.parameter_index);
+  ck_assert_int_eq(1, bound_args[3].trigger_parameter_index);
 }
 
 deftest(pos_default_bind_two_mixed) {
@@ -452,12 +471,16 @@ deftest(pos_default_bind_two_mixed) {
   ck_assert_int_eq(ava_fbs_bound, status);
   ck_assert_int_eq(ava_fbat_parameter, bound_args[0].type);
   ck_assert_int_eq(0, bound_args[0].v.parameter_index);
+  ck_assert_int_eq(0, bound_args[0].trigger_parameter_index);
   ck_assert_int_eq(ava_fbat_parameter, bound_args[1].type);
   ck_assert_int_eq(1, bound_args[1].v.parameter_index);
+  ck_assert_int_eq(1, bound_args[1].trigger_parameter_index);
   ck_assert_int_eq(ava_fbat_implicit, bound_args[2].type);
   assert_value_equals_str("bar", bound_args[2].v.value);
+  ck_assert_int_eq(NO_PARM, bound_args[2].trigger_parameter_index);
   ck_assert_int_eq(ava_fbat_parameter, bound_args[3].type);
   ck_assert_int_eq(2, bound_args[3].v.parameter_index);
+  ck_assert_int_eq(2, bound_args[3].trigger_parameter_index);
 }
 
 deftest(pos_default_bind_two_present) {
@@ -472,12 +495,16 @@ deftest(pos_default_bind_two_present) {
   ck_assert_int_eq(ava_fbs_bound, status);
   ck_assert_int_eq(ava_fbat_parameter, bound_args[0].type);
   ck_assert_int_eq(0, bound_args[0].v.parameter_index);
+  ck_assert_int_eq(0, bound_args[0].trigger_parameter_index);
   ck_assert_int_eq(ava_fbat_parameter, bound_args[1].type);
   ck_assert_int_eq(1, bound_args[1].v.parameter_index);
+  ck_assert_int_eq(1, bound_args[1].trigger_parameter_index);
   ck_assert_int_eq(ava_fbat_parameter, bound_args[2].type);
   ck_assert_int_eq(2, bound_args[2].v.parameter_index);
+  ck_assert_int_eq(2, bound_args[2].trigger_parameter_index);
   ck_assert_int_eq(ava_fbat_parameter, bound_args[3].type);
   ck_assert_int_eq(3, bound_args[3].v.parameter_index);
+  ck_assert_int_eq(3, bound_args[3].trigger_parameter_index);
 }
 
 deftest(pos_default_bind_begin_absent) {
@@ -489,8 +516,10 @@ deftest(pos_default_bind_begin_absent) {
   ck_assert_int_eq(ava_fbs_bound, status);
   ck_assert_int_eq(ava_fbat_implicit, bound_args[0].type);
   assert_value_equals_str("foo", bound_args[0].v.value);
+  ck_assert_int_eq(NO_PARM, bound_args[0].trigger_parameter_index);
   ck_assert_int_eq(ava_fbat_parameter, bound_args[1].type);
   ck_assert_int_eq(0, bound_args[1].v.parameter_index);
+  ck_assert_int_eq(0, bound_args[1].trigger_parameter_index);
 }
 
 deftest(pos_default_bind_begin_present) {
@@ -503,8 +532,10 @@ deftest(pos_default_bind_begin_present) {
   ck_assert_int_eq(ava_fbs_bound, status);
   ck_assert_int_eq(ava_fbat_parameter, bound_args[0].type);
   ck_assert_int_eq(0, bound_args[0].v.parameter_index);
+  ck_assert_int_eq(0, bound_args[0].trigger_parameter_index);
   ck_assert_int_eq(ava_fbat_parameter, bound_args[1].type);
   ck_assert_int_eq(1, bound_args[1].v.parameter_index);
+  ck_assert_int_eq(1, bound_args[1].trigger_parameter_index);
 }
 
 deftest(pos_default_bind_end_absent) {
@@ -516,8 +547,10 @@ deftest(pos_default_bind_end_absent) {
   ck_assert_int_eq(ava_fbs_bound, status);
   ck_assert_int_eq(ava_fbat_parameter, bound_args[0].type);
   ck_assert_int_eq(0, bound_args[0].v.parameter_index);
+  ck_assert_int_eq(0, bound_args[0].trigger_parameter_index);
   ck_assert_int_eq(ava_fbat_implicit, bound_args[1].type);
   assert_value_equals_str("foo", bound_args[1].v.value);
+  ck_assert_int_eq(NO_PARM, bound_args[1].trigger_parameter_index);
 }
 
 deftest(pos_default_bind_end_present) {
@@ -530,8 +563,10 @@ deftest(pos_default_bind_end_present) {
   ck_assert_int_eq(ava_fbs_bound, status);
   ck_assert_int_eq(ava_fbat_parameter, bound_args[0].type);
   ck_assert_int_eq(0, bound_args[0].v.parameter_index);
+  ck_assert_int_eq(0, bound_args[0].trigger_parameter_index);
   ck_assert_int_eq(ava_fbat_parameter, bound_args[1].type);
   ck_assert_int_eq(1, bound_args[1].v.parameter_index);
+  ck_assert_int_eq(1, bound_args[1].trigger_parameter_index);
 }
 
 deftest(varargs_bind_empty) {
@@ -544,10 +579,13 @@ deftest(varargs_bind_empty) {
   ck_assert_int_eq(ava_fbs_bound, status);
   ck_assert_int_eq(ava_fbat_parameter, bound_args[0].type);
   ck_assert_int_eq(0, bound_args[0].v.parameter_index);
+  ck_assert_int_eq(0, bound_args[0].trigger_parameter_index);
   ck_assert_int_eq(ava_fbat_implicit, bound_args[1].type);
   assert_value_equals_str("", bound_args[1].v.value);
+  ck_assert_int_eq(NO_PARM, bound_args[1].trigger_parameter_index);
   ck_assert_int_eq(ava_fbat_parameter, bound_args[2].type);
   ck_assert_int_eq(1, bound_args[2].v.parameter_index);
+  ck_assert_int_eq(1, bound_args[2].trigger_parameter_index);
 }
 
 deftest(varargs_bind_one) {
@@ -561,11 +599,14 @@ deftest(varargs_bind_one) {
   ck_assert_int_eq(ava_fbs_bound, status);
   ck_assert_int_eq(ava_fbat_parameter, bound_args[0].type);
   ck_assert_int_eq(0, bound_args[0].v.parameter_index);
+  ck_assert_int_eq(0, bound_args[0].trigger_parameter_index);
   ck_assert_int_eq(ava_fbat_collect, bound_args[1].type);
   ck_assert_int_eq(1, bound_args[1].v.collection_size);
   ck_assert_int_eq(1, variadic_collection[0]);
+  ck_assert_int_eq(1, bound_args[1].trigger_parameter_index);
   ck_assert_int_eq(ava_fbat_parameter, bound_args[2].type);
   ck_assert_int_eq(2, bound_args[2].v.parameter_index);
+  ck_assert_int_eq(2, bound_args[2].trigger_parameter_index);
 }
 
 deftest(varargs_bind_multiple) {
@@ -581,13 +622,16 @@ deftest(varargs_bind_multiple) {
   ck_assert_int_eq(ava_fbs_bound, status);
   ck_assert_int_eq(ava_fbat_parameter, bound_args[0].type);
   ck_assert_int_eq(0, bound_args[0].v.parameter_index);
+  ck_assert_int_eq(0, bound_args[0].trigger_parameter_index);
   ck_assert_int_eq(ava_fbat_collect, bound_args[1].type);
   ck_assert_int_eq(3, bound_args[1].v.collection_size);
   ck_assert_int_eq(1, variadic_collection[0]);
   ck_assert_int_eq(2, variadic_collection[1]);
   ck_assert_int_eq(3, variadic_collection[2]);
+  ck_assert_int_eq(1, bound_args[1].trigger_parameter_index);
   ck_assert_int_eq(ava_fbat_parameter, bound_args[2].type);
   ck_assert_int_eq(4, bound_args[2].v.parameter_index);
+  ck_assert_int_eq(4, bound_args[2].trigger_parameter_index);
 }
 
 deftest(varargs_bind_begin_zero) {
@@ -599,8 +643,10 @@ deftest(varargs_bind_begin_zero) {
   ck_assert_int_eq(ava_fbs_bound, status);
   ck_assert_int_eq(ava_fbat_implicit, bound_args[0].type);
   assert_value_equals_str("", bound_args[0].v.value);
+  ck_assert_int_eq(NO_PARM, bound_args[0].trigger_parameter_index);
   ck_assert_int_eq(ava_fbat_parameter, bound_args[1].type);
   ck_assert_int_eq(0, bound_args[1].v.parameter_index);
+  ck_assert_int_eq(0, bound_args[1].trigger_parameter_index);
 }
 
 deftest(varargs_bind_begin_one) {
@@ -614,8 +660,10 @@ deftest(varargs_bind_begin_one) {
   ck_assert_int_eq(ava_fbat_collect, bound_args[0].type);
   ck_assert_int_eq(1, bound_args[0].v.collection_size);
   ck_assert_int_eq(0, variadic_collection[0]);
+  ck_assert_int_eq(0, bound_args[0].trigger_parameter_index);
   ck_assert_int_eq(ava_fbat_parameter, bound_args[1].type);
   ck_assert_int_eq(1, bound_args[1].v.parameter_index);
+  ck_assert_int_eq(1, bound_args[1].trigger_parameter_index);
 }
 
 deftest(varargs_bind_end_zero) {
@@ -627,8 +675,10 @@ deftest(varargs_bind_end_zero) {
   ck_assert_int_eq(ava_fbs_bound, status);
   ck_assert_int_eq(ava_fbat_parameter, bound_args[0].type);
   ck_assert_int_eq(0, bound_args[0].v.parameter_index);
+  ck_assert_int_eq(0, bound_args[0].trigger_parameter_index);
   ck_assert_int_eq(ava_fbat_implicit, bound_args[1].type);
   assert_value_equals_str("", bound_args[1].v.value);
+  ck_assert_int_eq(NO_PARM, bound_args[1].trigger_parameter_index);
 }
 
 deftest(varargs_bind_end_one) {
@@ -641,9 +691,11 @@ deftest(varargs_bind_end_one) {
   ck_assert_int_eq(ava_fbs_bound, status);
   ck_assert_int_eq(ava_fbat_parameter, bound_args[0].type);
   ck_assert_int_eq(0, bound_args[0].v.parameter_index);
+  ck_assert_int_eq(0, bound_args[0].trigger_parameter_index);
   ck_assert_int_eq(ava_fbat_collect, bound_args[1].type);
   ck_assert_int_eq(1, bound_args[1].v.collection_size);
   ck_assert_int_eq(1, variadic_collection[0]);
+  ck_assert_int_eq(1, bound_args[1].trigger_parameter_index);
 }
 
 deftest(named_mandatory_bind_one) {
@@ -658,10 +710,13 @@ deftest(named_mandatory_bind_one) {
   ck_assert_int_eq(ava_fbs_bound, status);
   ck_assert_int_eq(ava_fbat_parameter, bound_args[0].type);
   ck_assert_int_eq(0, bound_args[0].v.parameter_index);
+  ck_assert_int_eq(0, bound_args[0].trigger_parameter_index);
   ck_assert_int_eq(ava_fbat_parameter, bound_args[1].type);
   ck_assert_int_eq(2, bound_args[1].v.parameter_index);
+  ck_assert_int_eq(1, bound_args[1].trigger_parameter_index);
   ck_assert_int_eq(ava_fbat_parameter, bound_args[2].type);
   ck_assert_int_eq(3, bound_args[2].v.parameter_index);
+  ck_assert_int_eq(3, bound_args[2].trigger_parameter_index);
 }
 
 deftest(named_mandatory_bind_two_in_order) {
@@ -678,12 +733,16 @@ deftest(named_mandatory_bind_two_in_order) {
   ck_assert_int_eq(ava_fbs_bound, status);
   ck_assert_int_eq(ava_fbat_parameter, bound_args[0].type);
   ck_assert_int_eq(0, bound_args[0].v.parameter_index);
+  ck_assert_int_eq(0, bound_args[0].trigger_parameter_index);
   ck_assert_int_eq(ava_fbat_parameter, bound_args[1].type);
   ck_assert_int_eq(2, bound_args[1].v.parameter_index);
+  ck_assert_int_eq(1, bound_args[1].trigger_parameter_index);
   ck_assert_int_eq(ava_fbat_parameter, bound_args[2].type);
   ck_assert_int_eq(4, bound_args[2].v.parameter_index);
+  ck_assert_int_eq(3, bound_args[2].trigger_parameter_index);
   ck_assert_int_eq(ava_fbat_parameter, bound_args[3].type);
   ck_assert_int_eq(5, bound_args[3].v.parameter_index);
+  ck_assert_int_eq(5, bound_args[3].trigger_parameter_index);
 }
 
 deftest(named_mandatory_bind_two_out_of_order) {
@@ -700,12 +759,16 @@ deftest(named_mandatory_bind_two_out_of_order) {
   ck_assert_int_eq(ava_fbs_bound, status);
   ck_assert_int_eq(ava_fbat_parameter, bound_args[0].type);
   ck_assert_int_eq(0, bound_args[0].v.parameter_index);
+  ck_assert_int_eq(0, bound_args[0].trigger_parameter_index);
   ck_assert_int_eq(ava_fbat_parameter, bound_args[1].type);
   ck_assert_int_eq(4, bound_args[1].v.parameter_index);
+  ck_assert_int_eq(3, bound_args[1].trigger_parameter_index);
   ck_assert_int_eq(ava_fbat_parameter, bound_args[2].type);
   ck_assert_int_eq(2, bound_args[2].v.parameter_index);
+  ck_assert_int_eq(1, bound_args[2].trigger_parameter_index);
   ck_assert_int_eq(ava_fbat_parameter, bound_args[3].type);
   ck_assert_int_eq(5, bound_args[3].v.parameter_index);
+  ck_assert_int_eq(5, bound_args[3].trigger_parameter_index);
 }
 
 deftest(named_mandatory_bind_begin) {
@@ -719,8 +782,10 @@ deftest(named_mandatory_bind_begin) {
   ck_assert_int_eq(ava_fbs_bound, status);
   ck_assert_int_eq(ava_fbat_parameter, bound_args[0].type);
   ck_assert_int_eq(1, bound_args[0].v.parameter_index);
+  ck_assert_int_eq(0, bound_args[0].trigger_parameter_index);
   ck_assert_int_eq(ava_fbat_parameter, bound_args[1].type);
   ck_assert_int_eq(2, bound_args[1].v.parameter_index);
+  ck_assert_int_eq(2, bound_args[1].trigger_parameter_index);
 }
 
 deftest(named_mandatory_bind_end) {
@@ -734,8 +799,10 @@ deftest(named_mandatory_bind_end) {
   ck_assert_int_eq(ava_fbs_bound, status);
   ck_assert_int_eq(ava_fbat_parameter, bound_args[0].type);
   ck_assert_int_eq(0, bound_args[0].v.parameter_index);
+  ck_assert_int_eq(0, bound_args[0].trigger_parameter_index);
   ck_assert_int_eq(ava_fbat_parameter, bound_args[1].type);
   ck_assert_int_eq(2, bound_args[1].v.parameter_index);
+  ck_assert_int_eq(1, bound_args[1].trigger_parameter_index);
 }
 
 deftest(named_default_bind_one_present) {
@@ -750,10 +817,13 @@ deftest(named_default_bind_one_present) {
   ck_assert_int_eq(ava_fbs_bound, status);
   ck_assert_int_eq(ava_fbat_parameter, bound_args[0].type);
   ck_assert_int_eq(0, bound_args[0].v.parameter_index);
+  ck_assert_int_eq(0, bound_args[0].trigger_parameter_index);
   ck_assert_int_eq(ava_fbat_parameter, bound_args[1].type);
   ck_assert_int_eq(2, bound_args[1].v.parameter_index);
+  ck_assert_int_eq(1, bound_args[1].trigger_parameter_index);
   ck_assert_int_eq(ava_fbat_parameter, bound_args[2].type);
   ck_assert_int_eq(3, bound_args[2].v.parameter_index);
+  ck_assert_int_eq(3, bound_args[2].trigger_parameter_index);
 }
 
 deftest(named_default_bind_one_absent) {
@@ -766,10 +836,13 @@ deftest(named_default_bind_one_absent) {
   ck_assert_int_eq(ava_fbs_bound, status);
   ck_assert_int_eq(ava_fbat_parameter, bound_args[0].type);
   ck_assert_int_eq(0, bound_args[0].v.parameter_index);
+  ck_assert_int_eq(0, bound_args[0].trigger_parameter_index);
   ck_assert_int_eq(ava_fbat_implicit, bound_args[1].type);
   assert_value_equals_str("bar", bound_args[1].v.value);
+  ck_assert_int_eq(NO_PARM, bound_args[1].trigger_parameter_index);
   ck_assert_int_eq(ava_fbat_parameter, bound_args[2].type);
   ck_assert_int_eq(1, bound_args[2].v.parameter_index);
+  ck_assert_int_eq(1, bound_args[2].trigger_parameter_index);
 }
 
 deftest(named_default_bind_two_in_order) {
@@ -786,12 +859,16 @@ deftest(named_default_bind_two_in_order) {
   ck_assert_int_eq(ava_fbs_bound, status);
   ck_assert_int_eq(ava_fbat_parameter, bound_args[0].type);
   ck_assert_int_eq(0, bound_args[0].v.parameter_index);
+  ck_assert_int_eq(0, bound_args[0].trigger_parameter_index);
   ck_assert_int_eq(ava_fbat_parameter, bound_args[1].type);
   ck_assert_int_eq(2, bound_args[1].v.parameter_index);
+  ck_assert_int_eq(1, bound_args[1].trigger_parameter_index);
   ck_assert_int_eq(ava_fbat_parameter, bound_args[2].type);
   ck_assert_int_eq(4, bound_args[2].v.parameter_index);
+  ck_assert_int_eq(3, bound_args[2].trigger_parameter_index);
   ck_assert_int_eq(ava_fbat_parameter, bound_args[3].type);
   ck_assert_int_eq(5, bound_args[3].v.parameter_index);
+  ck_assert_int_eq(5, bound_args[3].trigger_parameter_index);
 }
 
 deftest(named_default_bind_two_out_of_order) {
@@ -808,12 +885,16 @@ deftest(named_default_bind_two_out_of_order) {
   ck_assert_int_eq(ava_fbs_bound, status);
   ck_assert_int_eq(ava_fbat_parameter, bound_args[0].type);
   ck_assert_int_eq(0, bound_args[0].v.parameter_index);
+  ck_assert_int_eq(0, bound_args[0].trigger_parameter_index);
   ck_assert_int_eq(ava_fbat_parameter, bound_args[1].type);
   ck_assert_int_eq(4, bound_args[1].v.parameter_index);
+  ck_assert_int_eq(3, bound_args[1].trigger_parameter_index);
   ck_assert_int_eq(ava_fbat_parameter, bound_args[2].type);
   ck_assert_int_eq(2, bound_args[2].v.parameter_index);
+  ck_assert_int_eq(1, bound_args[2].trigger_parameter_index);
   ck_assert_int_eq(ava_fbat_parameter, bound_args[3].type);
   ck_assert_int_eq(5, bound_args[3].v.parameter_index);
+  ck_assert_int_eq(5, bound_args[3].trigger_parameter_index);
 }
 
 deftest(named_default_bind_first) {
@@ -828,12 +909,16 @@ deftest(named_default_bind_first) {
   ck_assert_int_eq(ava_fbs_bound, status);
   ck_assert_int_eq(ava_fbat_parameter, bound_args[0].type);
   ck_assert_int_eq(0, bound_args[0].v.parameter_index);
+  ck_assert_int_eq(0, bound_args[0].trigger_parameter_index);
   ck_assert_int_eq(ava_fbat_parameter, bound_args[1].type);
   ck_assert_int_eq(2, bound_args[1].v.parameter_index);
+  ck_assert_int_eq(1, bound_args[1].trigger_parameter_index);
   ck_assert_int_eq(ava_fbat_implicit, bound_args[2].type);
   assert_value_equals_str("plugh", bound_args[2].v.value);
+  ck_assert_int_eq(NO_PARM, bound_args[2].trigger_parameter_index);
   ck_assert_int_eq(ava_fbat_parameter, bound_args[3].type);
   ck_assert_int_eq(3, bound_args[3].v.parameter_index);
+  ck_assert_int_eq(3, bound_args[3].trigger_parameter_index);
 }
 
 deftest(named_default_bind_second) {
@@ -848,12 +933,16 @@ deftest(named_default_bind_second) {
   ck_assert_int_eq(ava_fbs_bound, status);
   ck_assert_int_eq(ava_fbat_parameter, bound_args[0].type);
   ck_assert_int_eq(0, bound_args[0].v.parameter_index);
+  ck_assert_int_eq(0, bound_args[0].trigger_parameter_index);
   ck_assert_int_eq(ava_fbat_implicit, bound_args[1].type);
   assert_value_equals_str("xyzzy", bound_args[1].v.value);
+  ck_assert_int_eq(NO_PARM, bound_args[1].trigger_parameter_index);
   ck_assert_int_eq(ava_fbat_parameter, bound_args[2].type);
   ck_assert_int_eq(2, bound_args[2].v.parameter_index);
+  ck_assert_int_eq(1, bound_args[2].trigger_parameter_index);
   ck_assert_int_eq(ava_fbat_parameter, bound_args[3].type);
   ck_assert_int_eq(3, bound_args[3].v.parameter_index);
+  ck_assert_int_eq(3, bound_args[3].trigger_parameter_index);
 }
 
 deftest(named_default_bind_begin_present) {
@@ -867,8 +956,10 @@ deftest(named_default_bind_begin_present) {
   ck_assert_int_eq(ava_fbs_bound, status);
   ck_assert_int_eq(ava_fbat_parameter, bound_args[0].type);
   ck_assert_int_eq(1, bound_args[0].v.parameter_index);
+  ck_assert_int_eq(0, bound_args[0].trigger_parameter_index);
   ck_assert_int_eq(ava_fbat_parameter, bound_args[1].type);
   ck_assert_int_eq(2, bound_args[1].v.parameter_index);
+  ck_assert_int_eq(2, bound_args[1].trigger_parameter_index);
 }
 
 deftest(named_default_bind_end_present) {
@@ -882,8 +973,10 @@ deftest(named_default_bind_end_present) {
   ck_assert_int_eq(ava_fbs_bound, status);
   ck_assert_int_eq(ava_fbat_parameter, bound_args[0].type);
   ck_assert_int_eq(0, bound_args[0].v.parameter_index);
+  ck_assert_int_eq(0, bound_args[0].trigger_parameter_index);
   ck_assert_int_eq(ava_fbat_parameter, bound_args[1].type);
   ck_assert_int_eq(2, bound_args[1].v.parameter_index);
+  ck_assert_int_eq(1, bound_args[1].trigger_parameter_index);
 }
 
 deftest(named_default_bind_begin_absent) {
@@ -895,8 +988,10 @@ deftest(named_default_bind_begin_absent) {
   ck_assert_int_eq(ava_fbs_bound, status);
   ck_assert_int_eq(ava_fbat_implicit, bound_args[0].type);
   assert_value_equals_str("bar", bound_args[0].v.value);
+  ck_assert_int_eq(NO_PARM, bound_args[0].trigger_parameter_index);
   ck_assert_int_eq(ava_fbat_parameter, bound_args[1].type);
   ck_assert_int_eq(0, bound_args[1].v.parameter_index);
+  ck_assert_int_eq(0, bound_args[1].trigger_parameter_index);
 }
 
 deftest(named_default_bind_end_absent) {
@@ -908,8 +1003,10 @@ deftest(named_default_bind_end_absent) {
   ck_assert_int_eq(ava_fbs_bound, status);
   ck_assert_int_eq(ava_fbat_parameter, bound_args[0].type);
   ck_assert_int_eq(0, bound_args[0].v.parameter_index);
+  ck_assert_int_eq(0, bound_args[0].trigger_parameter_index);
   ck_assert_int_eq(ava_fbat_implicit, bound_args[1].type);
   assert_value_equals_str("bar", bound_args[1].v.value);
+  ck_assert_int_eq(NO_PARM, bound_args[1].trigger_parameter_index);
 }
 
 deftest(bool_bind_absent) {
@@ -922,10 +1019,13 @@ deftest(bool_bind_absent) {
   ck_assert_int_eq(ava_fbs_bound, status);
   ck_assert_int_eq(ava_fbat_parameter, bound_args[0].type);
   ck_assert_int_eq(0, bound_args[0].v.parameter_index);
+  ck_assert_int_eq(0, bound_args[0].trigger_parameter_index);
   ck_assert_int_eq(ava_fbat_implicit, bound_args[1].type);
   assert_value_equals_str("false", bound_args[1].v.value);
+  ck_assert_int_eq(NO_PARM, bound_args[1].trigger_parameter_index);
   ck_assert_int_eq(ava_fbat_parameter, bound_args[2].type);
   ck_assert_int_eq(1, bound_args[2].v.parameter_index);
+  ck_assert_int_eq(1, bound_args[2].trigger_parameter_index);
 }
 
 deftest(bool_bind_present) {
@@ -939,10 +1039,13 @@ deftest(bool_bind_present) {
   ck_assert_int_eq(ava_fbs_bound, status);
   ck_assert_int_eq(ava_fbat_parameter, bound_args[0].type);
   ck_assert_int_eq(0, bound_args[0].v.parameter_index);
+  ck_assert_int_eq(0, bound_args[0].trigger_parameter_index);
   ck_assert_int_eq(ava_fbat_implicit, bound_args[1].type);
   assert_value_equals_str("true", bound_args[1].v.value);
+  ck_assert_int_eq(1, bound_args[1].trigger_parameter_index);
   ck_assert_int_eq(ava_fbat_parameter, bound_args[2].type);
   ck_assert_int_eq(2, bound_args[2].v.parameter_index);
+  ck_assert_int_eq(2, bound_args[2].trigger_parameter_index);
 }
 
 deftest(bool_bind_begin_absent) {
@@ -954,8 +1057,10 @@ deftest(bool_bind_begin_absent) {
   ck_assert_int_eq(ava_fbs_bound, status);
   ck_assert_int_eq(ava_fbat_implicit, bound_args[0].type);
   assert_value_equals_str("false", bound_args[0].v.value);
+  ck_assert_int_eq(NO_PARM, bound_args[0].trigger_parameter_index);
   ck_assert_int_eq(ava_fbat_parameter, bound_args[1].type);
   ck_assert_int_eq(0, bound_args[1].v.parameter_index);
+  ck_assert_int_eq(0, bound_args[1].trigger_parameter_index);
 }
 
 deftest(bool_bind_begin_present) {
@@ -968,8 +1073,10 @@ deftest(bool_bind_begin_present) {
   ck_assert_int_eq(ava_fbs_bound, status);
   ck_assert_int_eq(ava_fbat_implicit, bound_args[0].type);
   assert_value_equals_str("true", bound_args[0].v.value);
+  ck_assert_int_eq(0, bound_args[0].trigger_parameter_index);
   ck_assert_int_eq(ava_fbat_parameter, bound_args[1].type);
   ck_assert_int_eq(1, bound_args[1].v.parameter_index);
+  ck_assert_int_eq(1, bound_args[1].trigger_parameter_index);
 }
 
 deftest(bool_bind_end_absent) {
@@ -981,8 +1088,10 @@ deftest(bool_bind_end_absent) {
   ck_assert_int_eq(ava_fbs_bound, status);
   ck_assert_int_eq(ava_fbat_parameter, bound_args[0].type);
   ck_assert_int_eq(0, bound_args[0].v.parameter_index);
+  ck_assert_int_eq(0, bound_args[0].trigger_parameter_index);
   ck_assert_int_eq(ava_fbat_implicit, bound_args[1].type);
   assert_value_equals_str("false", bound_args[1].v.value);
+  ck_assert_int_eq(NO_PARM, bound_args[1].trigger_parameter_index);
 }
 
 deftest(bool_bind_end_present) {
@@ -995,8 +1104,10 @@ deftest(bool_bind_end_present) {
   ck_assert_int_eq(ava_fbs_bound, status);
   ck_assert_int_eq(ava_fbat_parameter, bound_args[0].type);
   ck_assert_int_eq(0, bound_args[0].v.parameter_index);
+  ck_assert_int_eq(0, bound_args[0].trigger_parameter_index);
   ck_assert_int_eq(ava_fbat_implicit, bound_args[1].type);
   assert_value_equals_str("true", bound_args[1].v.value);
+  ck_assert_int_eq(1, bound_args[1].trigger_parameter_index);
 }
 
 deftest(bind_impossible_if_insufficient_parms) {

@@ -690,13 +690,15 @@ ava_function_bind_status ava_function_bind(
 
   memset(consumed_args, 0, sizeof(consumed_args));
 
-  /* Bind all implicit arguments */
+  /* Bind all implicit arguments, and reset all triggers to unbound. */
   for (arg = 0; arg < fun->num_args; ++arg) {
     if (ava_abt_implicit == fun->args[arg].binding.type) {
       bound_args[arg].type = ava_fbat_implicit;
       bound_args[arg].v.value = fun->args[arg].binding.value;
       consumed_args[arg] = ava_true;
     }
+
+    bound_args[arg].trigger_parameter_index = AVA_FUNCTION_NO_PARAMETER;
   }
 
   /* Bind pos arguments from left */
@@ -707,6 +709,7 @@ ava_function_bind_status ava_function_bind(
       return ava_fbs_unpack;
 
     bound_args[arg].type = ava_fbat_parameter;
+    bound_args[arg].trigger_parameter_index = parm;
     bound_args[arg].v.parameter_index = parm;
     consumed_args[arg] = ava_true;
     ++parm;
@@ -720,6 +723,7 @@ ava_function_bind_status ava_function_bind(
       return ava_fbs_unpack;
 
     bound_args[arg].type = ava_fbat_parameter;
+    bound_args[arg].trigger_parameter_index = parm_limit - 1;
     bound_args[arg].v.parameter_index = parm_limit - 1;
     consumed_args[arg] = ava_true;
     --parm_limit;
@@ -746,6 +750,7 @@ ava_function_bind_status ava_function_bind(
           /* Matched */
           if (ava_abt_bool == fun->args[other].binding.type) {
             bound_args[other].type = ava_fbat_implicit;
+            bound_args[other].trigger_parameter_index = parm;
             bound_args[other].v.value = ava_value_of_string(
               AVA_ASCII9_STRING("true"));
             consumed_args[other] = ava_true;
@@ -761,6 +766,7 @@ ava_function_bind_status ava_function_bind(
               return ava_fbs_unpack;
 
             bound_args[other].type = ava_fbat_parameter;
+            bound_args[other].trigger_parameter_index = parm;
             bound_args[other].v.parameter_index = parm + 1;
             parm += 2;
           }
@@ -782,6 +788,7 @@ ava_function_bind_status ava_function_bind(
         return ava_fbs_unpack;
 
       bound_args[arg].type = ava_fbat_parameter;
+      bound_args[arg].trigger_parameter_index = parm;
       bound_args[arg].v.parameter_index = parm;
       consumed_args[arg] = ava_true;
       ++parm;
@@ -791,6 +798,8 @@ ava_function_bind_status ava_function_bind(
         variadic_collection[i] = parm + i;
 
       bound_args[arg].type = ava_fbat_collect;
+      if (parm < parm_limit)
+        bound_args[arg].trigger_parameter_index = parm;
       bound_args[arg].v.collection_size = parm_limit - parm;
       consumed_args[arg] = ava_true;
       parm = parm_limit;

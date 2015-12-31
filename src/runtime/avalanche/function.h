@@ -263,6 +263,12 @@
  */
 #define AVA_CC_AVA_MAX_INLINE_ARGS 8
 
+/**
+ * Special value used to indicate that a parameter index points to no parameter
+ * at all.
+ */
+#define AVA_FUNCTION_NO_PARAMETER (~(size_t)0)
+
 typedef struct ava_function_s ava_function;
 
 /**
@@ -531,6 +537,19 @@ typedef struct {
    * The manner in which this argument is bound.
    */
   ava_function_bound_argument_type type;
+  /**
+   * The index of the parameter which triggered this binding, or
+   * AVA_FUNCTION_NO_PARAMETER if the argument is not bound to any parameter.
+   *
+   * This is distinct from parameter_index in that it (a) is set for all
+   * arguments which are bound as a result of parameters, and (b) for named
+   * arguments, it references the parameter that specified the name (including
+   * for bool) rather than the value.
+   *
+   * For varargs, this references the first parameter used as input to the
+   * collection, if any.
+   */
+  size_t trigger_parameter_index;
   /**
    * Type-specific information.
    */
