@@ -1,0 +1,2 @@
+struct foo { foo* ptr }
+esoterica.unsafe.strangelet.rmw foo () ptr xor ()

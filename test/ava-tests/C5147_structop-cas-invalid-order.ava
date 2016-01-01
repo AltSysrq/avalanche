@@ -1,0 +1,2 @@
+struct foo { atomic atom }
+esoterica.unsafe.strangelet.cas foo () atom -order backwards () ()

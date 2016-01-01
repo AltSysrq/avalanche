@@ -1,0 +1,6 @@
+struct foo { }
+struct bar {
+  struct foo x
+}
+
+esoterica.unsafe.strangelet.set bar () x ()

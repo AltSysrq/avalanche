@@ -1,0 +1,2 @@
+struct foo { hybrid foo* x }
+esoterica.unsafe.strangelet.set foo () x ()

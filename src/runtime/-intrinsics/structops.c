@@ -125,11 +125,11 @@ static size_t ava_intr_structop_get_index(
   const ava_intr_structop_instance* this,
   ava_codegen_context* context);
 
-static void ava_intr_structop_check_order_valid(
+static ava_bool ava_intr_structop_check_order_valid(
   ava_macsub_context* context,
   ava_ast_node* order);
 
-static void ava_intr_structop_check_rmw_op_valid(
+static ava_bool ava_intr_structop_check_rmw_op_valid(
   ava_macsub_context* context,
   ava_ast_node* rmw_op);
 
@@ -262,7 +262,7 @@ static ava_bool ava_intr_structop_is_valid_memory_order(ava_value v) {
   return !ava_catch(&caught, ava_intr_structop_try_parse_memory_order, &v);
 }
 
-static void ava_intr_structop_check_order_valid(
+static ava_bool ava_intr_structop_check_order_valid(
   ava_macsub_context* context,
   ava_ast_node* order
 ) {
@@ -273,12 +273,16 @@ static void ava_intr_structop_check_order_valid(
       ava_macsub_record_error(
         context, ava_error_macro_arg_not_constexpr(
           &order->location, AVA_ASCII9_STRING("order")));
+      return ava_false;
     } else if (!ava_intr_structop_is_valid_memory_order(order_value)) {
       ava_macsub_record_error(
         context, ava_error_unknown_memory_order(
           &order->location, ava_to_string(order_value)));
+      return ava_false;
     }
   }
+
+  return ava_true;
 }
 
 static void ava_intr_structop_try_parse_rmw_op(void* v) {
@@ -291,7 +295,7 @@ static ava_bool ava_intr_structop_is_valid_rmw_op(ava_value v) {
   return !ava_catch(&caught, ava_intr_structop_try_parse_rmw_op, &v);
 }
 
-static void ava_intr_structop_check_rmw_op_valid(
+static ava_bool ava_intr_structop_check_rmw_op_valid(
   ava_macsub_context* context,
   ava_ast_node* op
 ) {
@@ -302,12 +306,16 @@ static void ava_intr_structop_check_rmw_op_valid(
       ava_macsub_record_error(
         context, ava_error_macro_arg_not_constexpr(
           &op->location, AVA_ASCII9_STRING("operation")));
+      return ava_false;
     } else if (!ava_intr_structop_is_valid_rmw_op(op_value)) {
       ava_macsub_record_error(
         context, ava_error_unknown_rmw_op(
           &op->location, ava_to_string(op_value)));
+      return ava_false;
     }
   }
+
+  return ava_true;
 }
 
 static void ava_intr_structop_check_atomic_sanity(
@@ -1215,7 +1223,8 @@ static void ava_intr_S_rmw_accept(
   ava_intr_structop_check_atomic_sanity(
     *instance, context, ava_true, args->order, NULL,
     &args->field->location);
-  ava_intr_structop_check_rmw_op_valid(context, args->operation);
+  if (!ava_intr_structop_check_rmw_op_valid(context, args->operation))
+    return;
 
   ava_intr_structop_convert_rmw_op(&op, args->operation);
   if (op != ava_pro_xchg && ava_sft_ptr == (*instance)->field->type)

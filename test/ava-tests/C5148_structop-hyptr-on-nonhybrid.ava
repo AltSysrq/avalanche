@@ -1,0 +1,2 @@
+struct foo { int x }
+esoterica.unsafe.strangelet.set foo () x -ptr ()

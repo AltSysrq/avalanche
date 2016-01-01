@@ -1,0 +1,4 @@
+; Somewhat redundant with the other C5148 tests; this simply checks that S.get
+; uses the same validation.
+struct foo { int x }
+x = esoterica.unsafe.strangelet.get foo () x -ptr

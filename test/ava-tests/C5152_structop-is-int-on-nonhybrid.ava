@@ -1,0 +1,2 @@
+struct foo { int x }
+x = esoterica.unsafe.strangelet.is-int foo () x

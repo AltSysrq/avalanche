@@ -1,0 +1,5 @@
+struct foo {
+  atomic atom
+}
+x = ()
+esoterica.unsafe.strangelet.set foo $x atom -order backwards 42

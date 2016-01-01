@@ -1,0 +1,2 @@
+struct foo { atomic atom }
+esoterica.unsafe.strangelet.set foo () atom -unatomic -order seqcst 42

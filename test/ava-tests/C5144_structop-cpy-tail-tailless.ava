@@ -1,0 +1,2 @@
+struct foo { }
+esoterica.unsafe.strangelet.cpy foo -t 42 () ()
