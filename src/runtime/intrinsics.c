@@ -134,6 +134,7 @@ void ava_register_intrinsics(ava_macsub_context* context) {
   DEFINE(EUS "cas",     FUN,    NULL,           S_cas);
   DEFINE(EUS "rmw",     FUN,    NULL,           S_rmw);
   DEFINE(EUS "ix",      FUN,    NULL,           S_ix);
+  DEFINE(EUS "membar",  FUN,    NULL,           S_membar);
 
   /* Weak absolute imports of the intrinsics and standard library */
   ava_macsub_import(&abs, &amb, context,

@@ -1363,3 +1363,58 @@ static void ava_intr_S_ix_cg_evaluate(
 }
 
 MACRO(ix)
+
+/******************** S.membar ********************/
+
+typedef struct {
+  ava_ast_node* order;
+} ava_intr_S_membar_args;
+
+static void ava_intr_S_membar_accept(
+  void* userdata, ava_intr_structop_instance** instance,
+  ava_macsub_context* context,
+  const ava_compile_location* location,
+  ava_intr_S_membar_args* args);
+static void ava_intr_S_membar_cg_discard(
+  void* userdata, ava_intr_structop_instance* instance,
+  const ava_pcode_register* dst,
+  ava_codegen_context* context,
+  const ava_compile_location* location,
+  const ava_intr_S_membar_args* args);
+
+static const ava_argument_spec ava_intr_S_membar_argspecs[] = { ARG_POS };
+static const ava_function ava_intr_S_membar_prototype = {
+  .args = ava_intr_S_membar_argspecs,
+  .num_args = ava_lenof(ava_intr_S_membar_argspecs),
+};
+
+static const ava_funmac_type ava_intr_S_membar_type = {
+  .prototype = &ava_intr_S_membar_prototype,
+  .accept = (ava_funmac_accept_f)ava_intr_S_membar_accept,
+  .cg_discard = (ava_funmac_cg_evaluate_f)ava_intr_S_membar_cg_discard,
+};
+
+static void ava_intr_S_membar_accept(
+  void* userdata, ava_intr_structop_instance** instance,
+  ava_macsub_context* context,
+  const ava_compile_location* location,
+  ava_intr_S_membar_args* args
+) {
+  ava_intr_structop_check_order_valid(context, args->order);
+}
+
+static void ava_intr_S_membar_cg_discard(
+  void* userdata, ava_intr_structop_instance* instance,
+  const ava_pcode_register* dst,
+  ava_codegen_context* context,
+  const ava_compile_location* location,
+  const ava_intr_S_membar_args* args
+) {
+  ava_pcode_memory_order order;
+
+  ava_intr_structop_convert_order(&order, args->order);
+  ava_codegen_set_location(context, location);
+  AVA_PCXB(S_membar, order);
+}
+
+MACRO(membar)

@@ -231,4 +231,21 @@ AVA_DEF_MACRO_SUBST(ava_intr_S_rmw_subst);
  */
 AVA_DEF_MACRO_SUBST(ava_intr_S_ix_subst);
 
+/**
+ * Macro to errect a hardware memory barrier.
+ *
+ *   membar order
+ *
+ * order is a P-Code memory ordering. This macro expands to exactly one P-Code
+ * membar instruction with that order; the semantics are therefore defined
+ * and documented with that instruction.
+ *
+ * This is not really a strangelet operation and is not itself unsafe, but is
+ * grouped and namespaced with them since it is useless outside of the world of
+ * strangelets.
+ *
+ * This macro produces no value.
+ */
+AVA_DEF_MACRO_SUBST(ava_intr_S_membar_subst);
+
 #endif /* AVA_RUNTIME__INTRINSICS_STRUCTOPS_H_ */
