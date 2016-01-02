@@ -1,0 +1,11 @@
+reqmod helpers/test
+
+fun do-pass () {
+  test.pass 42
+}
+
+fun call fn \*args = $fn \*$args
+
+test.register function-forwarding-to-empty-args-works {
+  call $do-pass ()
+}

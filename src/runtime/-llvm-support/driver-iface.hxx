@@ -397,12 +397,6 @@ namespace ava {
      */
     F x_icmp;
     /**
-     * Implements the aaempty P-Code exe.
-     *
-     * Signature: void (ava_value v)
-     */
-    F x_aaempty;
-    /**
      * Pre-static-invocation hook.
      *
      * Signature: void (const ava_function* f, ava_string name)

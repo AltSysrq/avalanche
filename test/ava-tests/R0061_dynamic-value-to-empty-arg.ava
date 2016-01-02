@@ -1,0 +1,3 @@
+fun doit () = 42
+x = 5
+doit $x

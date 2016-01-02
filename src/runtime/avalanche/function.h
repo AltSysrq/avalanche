@@ -1,5 +1,5 @@
 /*-
- * Copyright (c) 2015, Jason Lingle
+ * Copyright (c) 2015, 2016, Jason Lingle
  *
  * Permission to  use, copy,  modify, and/or distribute  this software  for any
  * purpose  with or  without fee  is hereby  granted, provided  that the  above
@@ -72,6 +72,13 @@
  *
  * - `pos`. The argument is mandatory and derives its value based on absolute
  *   position within the parameter list.
+ *
+ * - `empty`. Exactly like `pos`, but the resulting value is required to be a
+ *   static empty value. Note that unlike other places where a dynamic
+ *   parameter will cause binding to fail with ava_fbs_unknown, empty arguments
+ *   will fail with ava_fbs_impossible since there is never any reason to pass
+ *   a non-constant value in. A spread parameter will still result in
+ *   ava_fbs_unpack in order to support constructs like forwarding.
  *
  * - `pos default`. The argument is optional. If it is specified in the call,
  *   it gains its value based on absolute position within the parameter list;
@@ -404,6 +411,13 @@ typedef enum {
    * The argument binds to exactly one parameter by position.
    */
   ava_abt_pos,
+  /**
+   * The argument binds to exactly one parameter by position, and that
+   * parameter is required to be the empty string. Binding fails with
+   * ava_fbs_impossible if the parameter that would be bound to an empty
+   * argument is dynamic.
+   */
+  ava_abt_empty,
   /**
    * The argument binds to at most one parameter by position, otherwise using
    * the default in the binding.

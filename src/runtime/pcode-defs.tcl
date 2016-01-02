@@ -770,22 +770,6 @@ struct exe x {
     }
   }
 
-  # Asserts that a value (an argument, presumably) is the empty string.
-  #
-  # Semantics: The given V-register is read. If it is the empty string, this
-  # instruction has no effect. If it is not the empty string, behaviour is
-  # undefined.
-  #
-  # This is normally only used on arguments, and is used to assert that ()
-  # arguments are indeed empty. Implementations which throw exceptions in
-  # response to the assertion failure should indicate that.
-  elt aaempty {
-    attr can-throw
-    register v src {
-      prop reg-read
-    }
-  }
-
   # Invokes a statically-known function with statically-bound arguments.
   #
   # Semantics: The given function is invoked with an array of D-registers

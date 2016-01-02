@@ -280,10 +280,6 @@ ava_integer ava_isa_x_icmp$(ava_integer a, ava_integer b) {
   return (a > b) - (a < b);
 }
 
-void ava_isa_x_aaempty$(ava_value val) {
-  /* TODO */
-}
-
 void ava_isa_x_pre_invoke_s$(const ava_function* f, ava_string name) { }
 void ava_isa_x_post_invoke_s$(const ava_function* f, ava_string name,
                               ava_value returned) { }

@@ -1886,14 +1886,6 @@ noexcept {
     store_register(p->dst, val, pcfun);
   } return false;
 
-  case ava_pcxt_aaempty: {
-    const ava_pcx_aaempty* p = (const ava_pcx_aaempty*)exe;
-
-    llvm::Value* src = load_register(
-      p->src, pcfun, nullptr);
-    INVOKE(context.di.x_aaempty, src);
-  } return false;
-
   case ava_pcxt_invoke_ss: {
     const ava_pcx_invoke_ss* p = (const ava_pcx_invoke_ss*)exe;
 

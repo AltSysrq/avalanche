@@ -674,6 +674,28 @@ set defs {
     }
   }
 
+  serror R0061 function_dynamic_value_to_empty {{ava_integer ix}} {
+    msg "Dynamic value passed to required-empty argument #%ix%."
+    explanation {
+      The indicated function argument is required to be empty (e.g., declared
+      with "()"), but the parameter given to it does not have a known value at
+      function binding time.
+
+      While in theory the parameter may very well evaluate to the empty string,
+      there is never any reason to use anything other than a literal "()" when
+      calling the function, so such occurrences are flagged with this error.
+    }
+  }
+
+  serror R0062 function_nonempty_to_empty {{ava_integer ix}} {
+    msg "Non-empty value passed to required-empty argument #%ix%."
+    explanation {
+      The indicated function argument is required to be empty (e.g., declared
+      with "()"), but the parameter given to it is known to be non-empty at
+      function binding time.
+    }
+  }
+
   serror U3000 undef_integer_overflow {
     {ava_integer a} {ava_string op} {ava_integer b}
   } {

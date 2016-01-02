@@ -1,5 +1,5 @@
 /*-
- * Copyright (c) 2015, Jason Lingle
+ * Copyright (c) 2015, 2016, Jason Lingle
  *
  * Permission to  use, copy,  modify, and/or distribute  this software  for any
  * purpose  with or  without fee  is hereby  granted, provided  that the  above
@@ -30,6 +30,7 @@
 #include "runtime/avalanche/function.h"
 
 #define NO_PARM AVA_FUNCTION_NO_PARAMETER
+#define EMPTY ava_value_of_string(AVA_EMPTY_STRING)
 
 defsuite(function);
 
@@ -60,6 +61,13 @@ deftest(simple_parse) {
   ck_assert_int_eq(ava_cc_ava, fun->calling_convention);
   ck_assert_int_eq(1, fun->num_args);
   ck_assert_int_eq(ava_abt_pos, fun->args[0].binding.type);
+}
+
+deftest(parse_binding_empty) {
+  const ava_function* fun = of_cstring("42 ava empty");
+
+  ck_assert_int_eq(1, fun->num_args);
+  ck_assert_int_eq(ava_abt_empty, fun->args[0].binding.type);
 }
 
 deftest(parse_binding_pos_default) {
@@ -322,6 +330,10 @@ deftest(rejects_noncontiguous_varshape) {
 deftest(rejects_varshape_after_varargs) {
   assert_rejects("42 ava varargs \\{named foo\\}");
   assert_rejects("42 ava varargs pos varargs");
+}
+
+deftest(rejects_empty_with_extra_args) {
+  assert_rejects("42 ava [empty foo]");
 }
 
 deftest(rejects_null_function) {
@@ -1110,6 +1122,46 @@ deftest(bool_bind_end_present) {
   ck_assert_int_eq(1, bound_args[1].trigger_parameter_index);
 }
 
+deftest(empty_bind_isolated) {
+  BIND_BOILERPLATE = {
+    { .type = ava_fpt_static, .value = EMPTY },
+  };
+  status = BIND("42 ava empty");
+
+  ck_assert_int_eq(ava_fbs_bound, status);
+  ck_assert_int_eq(ava_fbat_parameter, bound_args[0].type);
+  ck_assert_int_eq(0, bound_args[0].v.parameter_index);
+  ck_assert_int_eq(0, bound_args[0].trigger_parameter_index);
+}
+
+deftest(empty_bind_before_optional) {
+  BIND_BOILERPLATE = {
+    { .type = ava_fpt_static, .value = EMPTY },
+  };
+  status = BIND("42 ava empty [pos foo]");
+
+  ck_assert_int_eq(ava_fbs_bound, status);
+  ck_assert_int_eq(ava_fbat_parameter, bound_args[0].type);
+  ck_assert_int_eq(0, bound_args[0].v.parameter_index);
+  ck_assert_int_eq(0, bound_args[0].trigger_parameter_index);
+  ck_assert_int_eq(ava_fbat_implicit, bound_args[1].type);
+  assert_value_equals_str("foo", bound_args[1].v.value);
+}
+
+deftest(empty_bind_after_optional) {
+  BIND_BOILERPLATE = {
+    { .type = ava_fpt_static, .value = EMPTY },
+  };
+  status = BIND("42 ava [pos foo] empty");
+
+  ck_assert_int_eq(ava_fbs_bound, status);
+  ck_assert_int_eq(ava_fbat_implicit, bound_args[0].type);
+  assert_value_equals_str("foo", bound_args[0].v.value);
+  ck_assert_int_eq(ava_fbat_parameter, bound_args[1].type);
+  ck_assert_int_eq(0, bound_args[1].v.parameter_index);
+  ck_assert_int_eq(0, bound_args[1].trigger_parameter_index);
+}
+
 deftest(bind_impossible_if_insufficient_parms) {
   BIND_BOILERPLATE = {
     { .type = ava_fpt_dynamic },
@@ -1164,6 +1216,24 @@ deftest(bind_impossible_if_mandatory_named_arg_omitted) {
     { .type = ava_fpt_dynamic },
   };
   status = BIND("42 ava pos \\{named -foo\\}");
+
+  ck_assert_int_eq(ava_fbs_impossible, status);
+}
+
+deftest(bind_impossible_if_empty_arg_dynamic) {
+  BIND_BOILERPLATE = {
+    { .type = ava_fpt_dynamic },
+  };
+  status = BIND("42 ava empty");
+
+  ck_assert_int_eq(ava_fbs_impossible, status);
+}
+
+deftest(bind_impossible_if_empty_arg_nonempty) {
+  BIND_BOILERPLATE = {
+    { .type = ava_fpt_static, .value = WORD("foo") },
+  };
+  status = BIND("42 ava empty");
 
   ck_assert_int_eq(ava_fbs_impossible, status);
 }
@@ -1251,6 +1321,15 @@ deftest(bind_is_unpack_if_spread_onto_single_arg) {
     { .type = ava_fpt_spread },
   };
   status = BIND("42 ava \\{pos foo\\}");
+
+  ck_assert_int_eq(ava_fbs_unpack, status);
+}
+
+deftest(bind_is_unpack_if_spread_onto_empty) {
+  BIND_BOILERPLATE = {
+    { .type = ava_fpt_spread },
+  };
+  status = BIND("42 ava empty");
 
   ck_assert_int_eq(ava_fbs_unpack, status);
 }

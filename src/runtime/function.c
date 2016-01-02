@@ -1,5 +1,5 @@
 /*-
- * Copyright (c) 2015, Jason Lingle
+ * Copyright (c) 2015, 2016, Jason Lingle
  *
  * Permission to  use, copy,  modify, and/or distribute  this software  for any
  * purpose  with or  without fee  is hereby  granted, provided  that the  above
@@ -419,6 +419,13 @@ static ava_argument_binding ava_function_parse_binding(ava_list_value argspec,
     }
     break;
 
+  case AVA_ASCII9('e','m','p','t','y'):
+    if (length != start_ix + 1)
+      ava_throw_str(&ava_format_exception,
+                    ava_error_function_argspec_pos_length());
+    ret.type = ava_abt_empty;
+    break;
+
   case AVA_ASCII9('v','a','r','a','r','g','s'):
     if (length != start_ix + 1)
       ava_throw_str(&ava_format_exception,
@@ -567,6 +574,11 @@ static ava_value ava_function_argspec_to_value(
     values[1] = ava_value_of_string(AVA_ASCII9_STRING("pos"));
     goto ok;
 
+  case ava_abt_empty:
+    count = 1;
+    values[1] = ava_value_of_string(AVA_ASCII9_STRING("empty"));
+    goto ok;
+
   case ava_abt_pos_default:
     count = 2;
     values[1] = ava_value_of_string(AVA_ASCII9_STRING("pos"));
@@ -622,6 +634,7 @@ ava_bool ava_function_is_valid(ava_string* message, const ava_function* fun) {
     switch (fun->args[i].binding.type) {
     case ava_abt_implicit:
     case ava_abt_pos:
+    case ava_abt_empty:
       is_var_shape = ava_false;
       goto ok;
 
@@ -704,9 +717,22 @@ ava_function_bind_status ava_function_bind(
   /* Bind pos arguments from left */
   for (arg = parm = 0; arg < fun->num_args && parm < parm_limit; ++arg) {
     if (consumed_args[arg]) continue;
-    if (ava_abt_pos != fun->args[arg].binding.type) break;
+    if (ava_abt_pos != fun->args[arg].binding.type &&
+        ava_abt_empty != fun->args[arg].binding.type) break;
+
     if (ava_fpt_spread == parms[parm].type)
       return ava_fbs_unpack;
+
+    if (ava_abt_empty == fun->args[arg].binding.type) {
+      if (ava_fpt_static != parms[parm].type) {
+        *message = ava_error_function_dynamic_value_to_empty(arg);
+        return ava_fbs_impossible;
+      }
+      if (0 != ava_strlen(ava_to_string(parms[parm].value))) {
+        *message = ava_error_function_nonempty_to_empty(arg);
+        return ava_fbs_impossible;
+      }
+    }
 
     bound_args[arg].type = ava_fbat_parameter;
     bound_args[arg].trigger_parameter_index = parm;
@@ -718,9 +744,22 @@ ava_function_bind_status ava_function_bind(
   for (arg = fun->num_args - 1; arg < fun->num_args &&
          parm < parm_limit; --arg) {
     if (consumed_args[arg]) continue;
-    if (ava_abt_pos != fun->args[arg].binding.type) break;
+    if (ava_abt_pos != fun->args[arg].binding.type &&
+        ava_abt_empty != fun->args[arg].binding.type) break;
+
     if (ava_fpt_spread == parms[parm_limit - 1].type)
       return ava_fbs_unpack;
+
+    if (ava_abt_empty == fun->args[arg].binding.type) {
+      if (ava_fpt_static != parms[parm].type) {
+        *message = ava_error_function_dynamic_value_to_empty(arg);
+        return ava_fbs_impossible;
+      }
+      if (0 != ava_strlen(ava_to_string(parms[parm].value))) {
+        *message = ava_error_function_nonempty_to_empty(arg);
+        return ava_fbs_impossible;
+      }
+    }
 
     bound_args[arg].type = ava_fbat_parameter;
     bound_args[arg].trigger_parameter_index = parm_limit - 1;

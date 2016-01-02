@@ -69,7 +69,6 @@ ava::driver_iface::driver_iface(const llvm::Module& module) noexcept {
   ISA(x_llength);
   ISA(x_iadd);
   ISA(x_icmp);
-  ISA(x_aaempty);
   ISA(x_pre_invoke_s);
   ISA(x_post_invoke_s);
   ISA(x_invoke_sd_bind);

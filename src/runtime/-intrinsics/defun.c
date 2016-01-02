@@ -1,5 +1,5 @@
 /*-
- * Copyright (c) 2015, Jason Lingle
+ * Copyright (c) 2015, 2016, Jason Lingle
  *
  * Permission to  use, copy,  modify, and/or distribute  this software  for any
  * purpose  with or  without fee  is hereby  granted, provided  that the  above
@@ -49,8 +49,6 @@ typedef struct {
 
   ava_macsub_context* subcontext;
   ava_symbol* symbol;
-  size_t num_empty_args;
-  ava_symbol** empty_args;
 
   ava_ast_node* body;
 
@@ -88,11 +86,10 @@ ava_macro_subst_result ava_intr_fun_subst(
   ava_macsub_context* subcontext;
   ava_string name, abs, amb;
   ava_bool is_expression_form;
-  size_t num_args, num_empty_args, arg_ix;
+  size_t num_args, arg_ix;
   ava_function* fun;
   ava_argument_spec* argspecs;
   ava_intr_fun* this;
-  ava_symbol** empty_args;
   ava_bool has_nonoptional_arg = ava_false, expect_valid = ava_true;
   ava_bool has_varargs = ava_false, has_varshape = ava_false;
   ava_bool last_was_varshape = ava_false, is_varshape;
@@ -149,8 +146,6 @@ ava_macro_subst_result ava_intr_fun_subst(
   fun->calling_convention = ava_cc_ava;
   fun->num_args = num_args;
   fun->args = argspecs = ava_alloc(num_args * sizeof(ava_argument_spec));
-  empty_args = ava_alloc(sizeof(ava_symbol*) * num_args);
-  num_empty_args = 0;
 
   for (arg_unit = TAILQ_NEXT(name_unit, next), arg_ix = 0;
        arg_ix < num_args;
@@ -158,7 +153,6 @@ ava_macro_subst_result ava_intr_fun_subst(
     ava_string arg_name;
     ava_value arg_default = ava_value_of_string(AVA_EMPTY_STRING);
     ava_argument_binding_type arg_type;
-    ava_bool require_empty = ava_false;
     ava_symbol* var;
     const ava_parse_unit* subunit, * arg_name_unit = arg_unit, * error_unit;
 
@@ -179,8 +173,7 @@ ava_macro_subst_result ava_intr_fun_subst(
       has_nonoptional_arg = ava_true;
       is_varshape = ava_false;
       arg_name = AVA_EMPTY_STRING;
-      arg_type = ava_abt_pos;
-      require_empty = ava_true;
+      arg_type = ava_abt_empty;
       subunit = first_unit(&arg_unit->v.statements);
       if (subunit)
         ava_macsub_record_error(
@@ -283,9 +276,6 @@ ava_macro_subst_result ava_intr_fun_subst(
 
     ava_varscope_put_local(ava_macsub_get_varscope(subcontext), var);
 
-    if (require_empty)
-      empty_args[num_empty_args++] = var;
-
     if (is_varshape && has_varshape && !last_was_varshape && expect_valid) {
       expect_valid = ava_false;
       ava_macsub_record_error(
@@ -313,8 +303,6 @@ ava_macro_subst_result ava_intr_fun_subst(
   this->header.context = context;
   this->self_name = self->full_name;
   this->subcontext = subcontext;
-  this->num_empty_args = num_empty_args;
-  this->empty_args = empty_args;
   this->symbol = AVA_NEW(ava_symbol);
   this->symbol->type = ava_macsub_get_level(context)?
     ava_st_local_function : ava_st_global_function;
@@ -449,16 +437,8 @@ static void ava_intr_fun_codegen(
   ava_intr_fun* this, ava_codegen_context* context
 ) {
   ava_pcode_register reg;
-  size_t i;
 
   ava_codegen_set_location(context, &this->header.location);
-
-  reg.type = ava_prt_var;
-  for (i = 0; i < this->num_empty_args; ++i) {
-    reg.index = ava_varscope_get_index(
-      ava_macsub_get_varscope(this->subcontext), this->empty_args[i]);
-    AVA_PCXB(aaempty, reg);
-  }
 
   reg.type = ava_prt_data;
   reg.index = ava_codegen_push_reg(context, ava_prt_data, 1);
@@ -529,8 +509,6 @@ ava_ast_node* ava_intr_lambda_expr(
   definition->self_name = AVA_ASCII9_STRING("{}");
   definition->subcontext = subcontext;
   definition->symbol = symbol;
-  definition->num_empty_args = 0;
-  definition->empty_args = NULL;
 
   definition->body = ava_macsub_run(
     subcontext, &lambda->location,
