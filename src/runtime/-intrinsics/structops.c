@@ -1,5 +1,5 @@
 /*-
- * Copyright (c) 2015, Jason Lingle
+ * Copyright (c) 2015, 2016, Jason Lingle
  *
  * Permission to  use, copy,  modify, and/or distribute  this software  for any
  * purpose  with or  without fee  is hereby  granted, provided  that the  above
@@ -1363,6 +1363,75 @@ static void ava_intr_S_ix_cg_evaluate(
 }
 
 MACRO(ix)
+
+/******************** S.sizeof, S.alignof ********************/
+
+typedef struct {
+  ava_ast_node* sxt;
+} ava_intr_S_sizing_args;
+
+static void ava_intr_S_sizing_accept(
+  void* userdata, ava_intr_structop_instance** instance,
+  ava_macsub_context* context,
+  const ava_compile_location* location,
+  ava_intr_S_sizing_args* args);
+static void ava_intr_S_sizing_cg_evaluate(
+  void* userdata, ava_intr_structop_instance* instance,
+  const ava_pcode_register* dst,
+  ava_codegen_context* context,
+  const ava_compile_location* location,
+  const ava_intr_S_sizing_args* args);
+
+static const ava_argument_spec ava_intr_S_sizing_argspecs[] = { ARG_POS };
+static const ava_function ava_intr_S_sizing_prototype = {
+  .args = ava_intr_S_sizing_argspecs,
+  .num_args = ava_lenof(ava_intr_S_sizing_argspecs),
+};
+
+static const ava_funmac_type ava_intr_S_sizeof_type = {
+  .prototype = &ava_intr_S_sizing_prototype,
+  .accept = (ava_funmac_accept_f)ava_intr_S_sizing_accept,
+  .cg_evaluate = (ava_funmac_cg_evaluate_f)ava_intr_S_sizing_cg_evaluate,
+  .userdata = (void*)&ava_intr_S_sizeof_type,
+};
+static const ava_funmac_type ava_intr_S_alignof_type = {
+  .prototype = &ava_intr_S_sizing_prototype,
+  .accept = (ava_funmac_accept_f)ava_intr_S_sizing_accept,
+  .cg_evaluate = (ava_funmac_cg_evaluate_f)ava_intr_S_sizing_cg_evaluate,
+  .userdata = (void*)&ava_intr_S_alignof_type,
+};
+
+static void ava_intr_S_sizing_accept(
+  void* userdata, ava_intr_structop_instance** instance,
+  ava_macsub_context* context,
+  const ava_compile_location* location,
+  ava_intr_S_sizing_args* args
+) {
+  DO_SXT_LOOKUP();
+}
+
+static void ava_intr_S_sizing_cg_evaluate(
+  void* userdata, ava_intr_structop_instance* instance,
+  const ava_pcode_register* dst,
+  ava_codegen_context* context,
+  const ava_compile_location* location,
+  const ava_intr_S_sizing_args* args
+) {
+  ava_pcode_register tmp;
+
+  ava_codegen_set_location(context, location);
+  tmp.type = ava_prt_int;
+  tmp.index = ava_codegen_push_reg(context, ava_prt_int, 1);
+  if (&ava_intr_S_sizeof_type == userdata)
+    AVA_PCXB(S_sizeof, tmp, SXT);
+  else
+    AVA_PCXB(S_alignof, tmp, SXT);
+  AVA_PCXB(ld_reg_u, *dst, tmp);
+  ava_codegen_pop_reg(context, ava_prt_int, 1);
+}
+
+MACRO(sizeof)
+MACRO(alignof)
 
 /******************** S.membar ********************/
 

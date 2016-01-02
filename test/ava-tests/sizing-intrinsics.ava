@@ -1,0 +1,18 @@
+reqmod helpers/test
+reqmod helpers/assert-equals-int
+import esoterica.unsafe.strangelet S
+
+; This test is only meaningful for the LLVM backend
+
+struct sxt {
+  value a
+  value b
+}
+
+test.register sizing-intrinsics {
+  assert-equals-int 32 : S.sizeof sxt
+  ; 16 on AMD64, but definitely architecutre-specific
+  test.assert S.alignof sxt >= 4
+
+  test.pass 42
+}

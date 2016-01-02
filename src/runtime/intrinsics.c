@@ -135,6 +135,8 @@ void ava_register_intrinsics(ava_macsub_context* context) {
   DEFINE(EUS "cas",     FUN,    NULL,           S_cas);
   DEFINE(EUS "rmw",     FUN,    NULL,           S_rmw);
   DEFINE(EUS "ix",      FUN,    NULL,           S_ix);
+  DEFINE(EUS "sizeof",  FUN,    NULL,           S_sizeof);
+  DEFINE(EUS "alignof", FUN,    NULL,           S_alignof);
   DEFINE(EUS "membar",  FUN,    NULL,           S_membar);
   DEFINE(EUS "get-sp",  FUN,    NULL,           S_get_sp);
   DEFINE(EUS "set-sp",  FUN,    NULL,           S_set_sp);

@@ -1,5 +1,5 @@
 /*-
- * Copyright (c) 2015, Jason Lingle
+ * Copyright (c) 2015, 2016, Jason Lingle
  *
  * Permission to  use, copy,  modify, and/or distribute  this software  for any
  * purpose  with or  without fee  is hereby  granted, provided  that the  above
@@ -230,6 +230,33 @@ AVA_DEF_MACRO_SUBST(ava_intr_S_rmw_subst);
  * This macro is pure.
  */
 AVA_DEF_MACRO_SUBST(ava_intr_S_ix_subst);
+
+/**
+ * Macro to get the strangelet allocation size for a structure.
+ *
+ *   sizeof sxt
+ *
+ * If sxt has a tail, its size is assumed zero. There is no -t argument; the
+ * full size including the tail can be found with
+ *
+ *     S.sizeof container-sxt + $tail-len u* S.sizeof tail-sxt
+ *
+ * This is not actually unsafe, but is not useful when not doing unsafe things.
+ *
+ * This macro is pure.
+ */
+AVA_DEF_MACRO_SUBST(ava_intr_S_sizeof_subst);
+
+/**
+ * Macro to get the strangelet alignment for a structure.
+ *
+ *   alignof sxt
+ *
+ * This is not actually unsafe, but is not useful when not doing unsafe things.
+ *
+ * This macro is pure.
+ */
+AVA_DEF_MACRO_SUBST(ava_intr_S_alignof_subst);
 
 /**
  * Macro to errect a hardware memory barrier.
