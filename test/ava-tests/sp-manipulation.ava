@@ -1,0 +1,21 @@
+reqmod helpers/test
+import esoterica.unsafe.strangelet S
+
+struct ih {
+  integer i
+}
+
+fun sp-manipulation () {
+  ; We can't really test the "frees stack-allocations" part portably, but we
+  ; can test that this process doesn't clobber the stack
+  sp = S.get-sp ()
+  x = S.new ih -s
+  S.set ih $x i 42
+
+  S.set-sp $sp
+  x = S.new ih -s
+  S.set ih $x i 56
+  test.assert 56 == S.get ih $x i
+
+  test.pass 42
+}

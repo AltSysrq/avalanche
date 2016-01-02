@@ -1,5 +1,5 @@
 /*-
- * Copyright (c) 2015, Jason Lingle
+ * Copyright (c) 2015, 2016, Jason Lingle
  *
  * Permission to  use, copy,  modify, and/or distribute  this software  for any
  * purpose  with or  without fee  is hereby  granted, provided  that the  above
@@ -29,6 +29,7 @@
 #include "-intrinsics/block.h"
 #include "-intrinsics/defun.h"
 #include "-intrinsics/eh.h"
+#include "-intrinsics/esoterica.h"
 #include "-intrinsics/extern.h"
 #include "-intrinsics/if.h"
 #include "-intrinsics/loop.h"
@@ -135,6 +136,9 @@ void ava_register_intrinsics(ava_macsub_context* context) {
   DEFINE(EUS "rmw",     FUN,    NULL,           S_rmw);
   DEFINE(EUS "ix",      FUN,    NULL,           S_ix);
   DEFINE(EUS "membar",  FUN,    NULL,           S_membar);
+  DEFINE(EUS "get-sp",  FUN,    NULL,           S_get_sp);
+  DEFINE(EUS "set-sp",  FUN,    NULL,           S_set_sp);
+  DEFINE(EUS"cpu-pause",FUN,    NULL,           S_cpu_pause);
 
   /* Weak absolute imports of the intrinsics and standard library */
   ava_macsub_import(&abs, &amb, context,
