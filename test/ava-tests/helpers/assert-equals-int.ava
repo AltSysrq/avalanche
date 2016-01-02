@@ -1,0 +1,6 @@
+Fun assert-equals-int a b {
+  if ($a != $b) {
+    cstdio.puts : "Assertion failed: `$a` != `$b
+    throw-err assertion-failed
+  }
+}

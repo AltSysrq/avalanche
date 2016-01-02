@@ -1,0 +1,21 @@
+reqmod helpers/test
+alias assert = test.assert
+import esoterica.unsafe.strangelet S
+
+struct sxt {
+  value v
+}
+
+test.register struct-value-type {
+  x = S.new sxt -s
+
+  S.set sxt $x v "hello world"
+  assert "hello world" b== S.get sxt $x v
+
+  s = [foo bar]
+  s[] = baz
+  S.set sxt $x v -volatile $s
+  assert $s b== S.get sxt $x v -volatile
+
+  test.pass 42
+}

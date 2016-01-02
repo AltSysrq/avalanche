@@ -473,9 +473,9 @@ static void ava_intr_S_new_cg_evaluate(
     countv.index = ava_codegen_push_reg(context, ava_prt_data, 1);
 
     if (args->array)
-      ava_ast_node_cg_evaluate(args->array, dst, context);
+      ava_ast_node_cg_evaluate(args->array, &countv, context);
     else
-      ava_ast_node_cg_evaluate(args->tail, dst, context);
+      ava_ast_node_cg_evaluate(args->tail, &countv, context);
 
     ava_codegen_set_location(context, location);
     AVA_PCXB(ld_reg_d, counti, countv);
@@ -901,7 +901,7 @@ static void ava_intr_S_set_cg_evaluate(
     value.index = ava_codegen_push_reg(context, ava_prt_data, 1);
   }
 
-  ava_ast_node_cg_evaluate(args->sxt, &dst, context);
+  ava_ast_node_cg_evaluate(args->dst, &dst, context);
   ava_ast_node_cg_evaluate(args->value, &value, context);
 
   ava_codegen_set_location(context, location);
@@ -1095,9 +1095,9 @@ static void ava_intr_S_cas_accept(
     &args->field->location);
   ava_intr_structop_check_order_valid(context, args->forder);
 
-  if (args->old)
-    args->old = ava_ast_node_to_lvalue(
-      args->old, (ava_ast_node*)&(*instance)->reg_rvalue, &ignore);
+  if (args->actual_lvalue)
+    args->actual_lvalue = ava_ast_node_to_lvalue(
+      args->actual_lvalue, (ava_ast_node*)&(*instance)->reg_rvalue, &ignore);
 }
 
 static void ava_intr_S_cas_cg_evaluate(
@@ -1127,7 +1127,9 @@ static void ava_intr_S_cas_cg_evaluate(
     newt.index = oldt.index + 1;
     actualt.index = oldt.index + 2;
   } else {
-    oldv = newv = actualv;
+    oldt = oldv;
+    newt = newv;
+    actualt = actualv;
   }
 
   success.type = ava_prt_int;
@@ -1135,8 +1137,8 @@ static void ava_intr_S_cas_cg_evaluate(
 
   ava_ast_node_cg_evaluate(args->dst, &dst, context);
 
-  if (args->old)
-    ava_ast_node_cg_set_up(args->old, context);
+  if (args->actual_lvalue)
+    ava_ast_node_cg_set_up(args->actual_lvalue, context);
 
   ava_ast_node_cg_evaluate(args->old, &oldv, context);
   ava_ast_node_cg_evaluate(args->new, &newv, context);
@@ -1155,13 +1157,13 @@ static void ava_intr_S_cas_cg_evaluate(
              success_order, failure_order);
   }
 
-  if (args->old) {
+  if (args->actual_lvalue) {
     if (ava_sft_int == instance->field->type)
       AVA_PCXB(ld_reg_u, actualv, actualt);
 
     instance->reg_rvalue.reg = actualv;
-    ava_ast_node_cg_discard(args->old, context);
-    ava_ast_node_cg_tear_down(args->old, context);
+    ava_ast_node_cg_discard(args->actual_lvalue, context);
+    ava_ast_node_cg_tear_down(args->actual_lvalue, context);
   }
 
   if (success_dst)

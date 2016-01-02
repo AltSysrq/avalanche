@@ -958,7 +958,7 @@ noexcept {
     case ava_sis_word:
       return context.types.c_atomic;
     case ava_sis_byte:
-      return context.types.ava_bool;
+      return context.types.ava_byte;
     case ava_sis_short:
       return context.types.ava_short;
     case ava_sis_int:
@@ -2175,9 +2175,9 @@ noexcept {
     const ava_pcx_S_cpy* p = (const ava_pcx_S_cpy*)exe;
     llvm::Type* type = get_sxt_type(xcode, p->sxt);
     llvm::Value* src_ptr = irb.CreateBitCast(
-      load_strangelet(p->src, pcfun), type);
+      load_strangelet(p->src, pcfun), type->getPointerTo());
     llvm::Value* dst_ptr = irb.CreateBitCast(
-      load_strangelet(p->dst, pcfun), type);
+      load_strangelet(p->dst, pcfun), type->getPointerTo());
     llvm::Value* value = irb.CreateLoad(src_ptr);
     irb.CreateStore(value, dst_ptr);
   } return false;
@@ -2191,12 +2191,12 @@ noexcept {
     llvm::Value* size = irb.CreateNUWMul(struct_size, count);
 
     llvm::Value* src_base = irb.CreateBitCast(
-      load_strangelet(p->src, pcfun), type);
+      load_strangelet(p->src, pcfun), type->getPointerTo());
     llvm::Value* src_off = load_register(p->src_off, pcfun, nullptr);
     llvm::Value* src = irb.CreateInBoundsGEP(src_base, { src_off });
 
     llvm::Value* dst_base = irb.CreateBitCast(
-      load_strangelet(p->dst, pcfun), type);
+      load_strangelet(p->dst, pcfun), type->getPointerTo());
     llvm::Value* dst_off = load_register(p->dst_off, pcfun, nullptr);
     llvm::Value* dst = irb.CreateInBoundsGEP(dst_base, { dst_off });
 
@@ -2281,6 +2281,7 @@ noexcept {
     llvm::Value* field_ptr = get_sxt_field_ptr(src, xcode, p->sxt, p->field);
     llvm::LoadInst* loaded = irb.CreateLoad(field_ptr, p->volatil);
     loaded->setOrdering(order);
+    loaded->setAlignment(layout.getABITypeAlignment(context.types.c_atomic));
     llvm::Value* value = expand_to_ava_integer(loaded, fdef);
     store_register(p->dst, value, pcfun);
   } return false;
@@ -2306,6 +2307,7 @@ noexcept {
     llvm::Value* field_ptr = get_sxt_field_ptr(dst, xcode, p->sxt, p->field);
     llvm::StoreInst* store = irb.CreateStore(value, field_ptr, p->volatil);
     store->setOrdering(order);
+    store->setAlignment(layout.getABITypeAlignment(context.types.c_atomic));
   } return false;
 
   case ava_pcxt_S_ia_cas: {
@@ -2330,10 +2332,10 @@ noexcept {
     result->setWeak(p->weak);
 
     llvm::Value* succeeded = irb.CreateZExt(
-      irb.CreateExtractValue(result, { 0 }), context.types.ava_integer);
+      irb.CreateExtractValue(result, { 1 }), context.types.ava_integer);
     store_register(p->success, succeeded, pcfun);
 
-    llvm::Value* old = irb.CreateExtractValue(result, { 1 });
+    llvm::Value* old = irb.CreateExtractValue(result, { 0 });
     old = expand_to_ava_integer(old, fdef);
     store_register(p->actual, old, pcfun);
   } return false;
@@ -2358,15 +2360,16 @@ noexcept {
     case ava_pro_umin:  op = llvm::AtomicRMWInst::UMin; break;
     }
 
+    llvm::AtomicOrdering order = get_llvm_ordering(p->order);
+    /* Undocumented, but LLVM requires the order to be at least monotonic */
+    if (llvm::Unordered == order) order = llvm::Monotonic;
+
     llvm::Value* neu = load_register(p->src, pcfun, nullptr);
     neu = irb.CreateTrunc(neu, field_type);
 
     llvm::Value* dst = load_strangelet(p->dst, pcfun);
     llvm::Value* field_ptr = get_sxt_field_ptr(dst, xcode, p->sxt, p->field);
-    llvm::AtomicRMWInst* rmw = irb.CreateAtomicRMW(
-      op, field_ptr, neu,
-      /* All orderings supported */
-      get_llvm_ordering(p->order));
+    llvm::AtomicRMWInst* rmw = irb.CreateAtomicRMW(op, field_ptr, neu, order);
     rmw->setVolatile(p->volatil);
 
     llvm::Value* result = expand_to_ava_integer(rmw, fdef);
@@ -2395,7 +2398,7 @@ noexcept {
   } return false;
 
   case ava_pcxt_S_r_st: {
-    const ava_pcx_S_r_ld* p = (const ava_pcx_S_r_ld*)exe;
+    const ava_pcx_S_r_st* p = (const ava_pcx_S_r_st*)exe;
     const ava_struct_field* fdef = get_sxt_field_def(xcode, p->sxt, p->field);
 
     llvm::Value* src = load_register(p->src, pcfun, nullptr);
@@ -2408,7 +2411,7 @@ noexcept {
     }
     llvm::Value* converted = INVOKE(cvt, src);
 
-    llvm::Value* dst = load_strangelet(p->src, pcfun);
+    llvm::Value* dst = load_strangelet(p->dst, pcfun);
     llvm::Value* field_ptr = get_sxt_field_ptr(dst, xcode, p->sxt, p->field);
     irb.CreateStore(converted, field_ptr, p->volatil);
   } return false;
@@ -2418,10 +2421,7 @@ noexcept {
     const ava_struct_field* fdef = get_sxt_field_def(xcode, p->sxt, p->field);
 
     llvm::Value* src = load_strangelet(p->src, pcfun);
-    /* Bitcast since we get an i64* instead of i8** for hybrids */
-    llvm::Value* field_ptr = irb.CreateBitCast(
-      get_sxt_field_ptr(src, xcode, p->sxt, p->field),
-      context.types.general_pointer);
+    llvm::Value* field_ptr = get_sxt_field_ptr(src, xcode, p->sxt, p->field);
 
     llvm::Value* ptr;
     if (ava_sft_ptr == fdef->type) {
@@ -2448,7 +2448,7 @@ noexcept {
     } else {
       assert(ava_sft_hybrid == fdef->type);
       llvm::Value* h = irb.CreatePtrToInt(src, context.types.c_intptr);
-      h = irb.CreateZExt(src, context.types.ava_string);
+      h = irb.CreateZExt(h, context.types.ava_string);
       irb.CreateStore(h, field_ptr, p->volatil);
     }
   } return false;
@@ -2471,6 +2471,8 @@ noexcept {
     llvm::Value* field_ptr = get_sxt_field_ptr(src, xcode, p->sxt, p->field);
     llvm::LoadInst* loaded = irb.CreateLoad(field_ptr, p->volatil);
     loaded->setOrdering(order);
+    loaded->setAlignment(layout.getABITypeAlignment(
+                           context.types.general_pointer));
     store_strangelet(p->dst, loaded, pcfun);
   } return false;
 
@@ -2493,6 +2495,8 @@ noexcept {
     llvm::Value* field_ptr = get_sxt_field_ptr(dst, xcode, p->sxt, p->field);
     llvm::StoreInst* store = irb.CreateStore(value, field_ptr, p->volatil);
     store->setOrdering(order);
+    store->setAlignment(layout.getABITypeAlignment(
+                          context.types.general_pointer));
   } return false;
 
   case ava_pcxt_S_pa_cas: {
@@ -2517,10 +2521,10 @@ noexcept {
     result->setWeak(p->weak);
 
     llvm::Value* succeeded = irb.CreateZExt(
-      irb.CreateExtractValue(result, { 0 }), context.types.ava_integer);
+      irb.CreateExtractValue(result, { 1 }), context.types.ava_integer);
     store_register(p->success, succeeded, pcfun);
 
-    llvm::Value* old = irb.CreateExtractValue(result, { 1 });
+    llvm::Value* old = irb.CreateExtractValue(result, { 0 });
     old = irb.CreateIntToPtr(old, context.types.general_pointer);
     store_strangelet(p->actual, old, pcfun);
   } return false;
@@ -2531,12 +2535,16 @@ noexcept {
     llvm::Value* src = load_strangelet(p->src, pcfun);
     src = irb.CreatePtrToInt(src, context.types.c_intptr);
     llvm::Value* dst = load_strangelet(p->dst, pcfun);
-    llvm::Value* field_ptr = get_sxt_field_ptr(dst, xcode, p->sxt, p->field);
+    llvm::Value* field_ptr = irb.CreateBitCast(
+      get_sxt_field_ptr(dst, xcode, p->sxt, p->field),
+      context.types.c_intptr->getPointerTo());
+
+    llvm::AtomicOrdering order = get_llvm_ordering(p->order);
+    /* Undocumented, but unordered is not permitted */
+    if (llvm::Unordered == order) order = llvm::Monotonic;
 
     llvm::AtomicRMWInst* xch = irb.CreateAtomicRMW(
-      llvm::AtomicRMWInst::Xchg, field_ptr, src,
-      /* All orderings supported */
-      get_llvm_ordering(p->order));
+      llvm::AtomicRMWInst::Xchg, field_ptr, src, order);
     xch->setVolatile(p->volatil);
 
     llvm::Value* result = irb.CreateIntToPtr(
@@ -2841,8 +2849,8 @@ noexcept {
       base, context.global_sxt_structs[struct_ix]
       ->getStructElementType(field_ix)->getPointerTo());
   else
-    return irb.CreateConstInBoundsGEP2_64(
-      irb.CreateBitCast(
+    return irb.CreateConstInBoundsGEP2_32(
+      nullptr, irb.CreateBitCast(
         base, context.global_sxt_structs[struct_ix]->getPointerTo()),
       0, field_ix + !!def->parent);
 }

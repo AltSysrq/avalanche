@@ -1,0 +1,34 @@
+reqmod helpers/test
+reqmod helpers/assert-equals-int
+alias assert-equals = assert-equals-int
+import esoterica.unsafe.strangelet S
+
+struct ah {
+  atomic atom
+}
+
+test.register struct-atomic-int-read-write {
+  x = S.new ah -s
+
+  S.set ah $x atom 42
+  assert-equals 42 : S.get ah $x atom
+
+  S.set ah $x atom -unatomic 56
+  assert-equals 56 : S.get ah $x atom -unatomic
+
+  ; Ensure all the memory orders compile successfully
+  S.set ah $x atom -order unordered 42
+  S.set ah $x atom -order monotonic 42
+  S.set ah $x atom -order acquire 42
+  S.set ah $x atom -order release 42
+  S.set ah $x atom -order acqrel 42
+  S.set ah $x atom -order seqcst 42
+  y = S.get ah $x atom -order unordered
+  y = S.get ah $x atom -order monotonic
+  y = S.get ah $x atom -order acquire
+  y = S.get ah $x atom -order release
+  y = S.get ah $x atom -order acqrel
+  y = S.get ah $x atom -order seqcst
+
+  test.pass $y
+}

@@ -1,0 +1,30 @@
+reqmod helpers/test
+alias assert = test.assert
+import esoterica.unsafe.strangelet S
+
+struct ih {
+  integer i
+  value unused-padding
+}
+
+test.register struct-arraycpy {
+  naturals = S.new ih -s -n 100
+  evens = S.new ih -s -n 100
+
+  for {i = 0} ($i < 100) {i += 1} {
+    S.set ih (S.ix ih $naturals $i) i $i
+    S.set ih (S.ix ih $evens $i) i ($i * 2)
+  }
+
+  S.arraycpy ih $naturals 10 $evens 20 5
+
+  for {i = 0} ($i < 100) {i += 1} {
+    if (($i >= 10) &^ ($i < 15)) {
+      assert ($i + 10) * 2 == S.get ih (S.ix ih $naturals $i) i
+    } else {
+      assert $i == S.get ih (S.ix ih $naturals $i) i
+    }
+  }
+
+  test.pass 42
+}

@@ -1,0 +1,116 @@
+reqmod helpers/test
+reqmod helpers/assert-equals-int
+import esoterica.unsafe.strangelet S
+
+struct sxt {
+  integer       signed          signed-ava-integer
+  integer       unsigned        unsigned-ava-integer
+  word          signed          signed-word
+  word          unsigned        unsigned-word
+  ; Test signless byte to ensure the default is correct. No need to test it for
+  ; other types since there's no difference in behaviour there.
+  byte                          signless-byte
+  byte          signed          signed-byte
+  byte          unsigned        unsigned-byte
+  short         signed          signed-short
+  short         unsigned        unsigned-short
+  int           signed          signed-int
+  int           unsigned        unsigned-int
+  long          signed          signed-long
+  long          unsigned        unsigned-long
+  c-short       signed          signed-c-short
+  c-short       unsigned        unsigned-c-short
+  c-int         signed          signed-c-int
+  c-int         unsigned        unsigned-c-int
+  c-long        signed          signed-c-long
+  c-long        unsigned        unsigned-c-long
+  c-llong       signed          signed-c-llong
+  c-llong       unsigned        unsigned-c-llong
+  c-size        signed          signed-c-size
+  c-size        unsigned        unsigned-c-size
+  c-intptr      signed          signed-c-intptr
+  c-intptr      unsigned        unsigned-c-intptr
+}
+
+test.register struct-all-int-types {
+  x = S.new sxt -s
+
+  macro cycle control %block-void {
+    %S.set %sxt $%x >0 (>1)
+    %assert-equals-int (>2) %: %S.get %sxt $%x >0
+  }
+
+  ; Sign is basically moot on ava-integer, so just run very basic tests that
+  ; all the bits survive.
+  cycle signed-ava-integer 42 42
+  cycle signed-ava-integer -1 -1
+  cycle unsigned-ava-integer 42 42
+  cycle unsigned-ava-integer -1 -1
+
+  ; For word and other things of uncertain size, just test storage of small
+  ; positives in all forms and small negatives is signed.
+  cycle unsigned-word 42 42
+  cycle signed-word 42 42
+  cycle signed-word -1 -1
+
+  cycle signless-byte 42 42
+  cycle signless-byte -1 255
+  cycle unsigned-byte 42 42
+  cycle unsigned-byte 256 0
+  cycle unsigned-byte -1 255
+  cycle unsigned-byte 255 255
+  cycle signed-byte 42 42
+  cycle signed-byte 256 0
+  cycle signed-byte -1 -1
+  cycle signed-byte 255 -1
+
+  cycle unsigned-short 42 42
+  cycle unsigned-short 65536 0
+  cycle unsigned-short -1 65535
+  cycle unsigned-short 65535 65535
+  cycle signed-short 42 42
+  cycle signed-short 65536 0
+  cycle signed-short -1 -1
+  cycle signed-short 65535 -1
+
+  cycle unsigned-int 42 42
+  cycle unsigned-int x100000000 0
+  cycle unsigned-int -1 xFFFFFFFF
+  cycle unsigned-int xFFFFFFFF xFFFFFFFF
+  cycle signed-int 42 42
+  cycle signed-int x100000000 0
+  cycle signed-int -1 -1
+  cycle signed-int xFFFFFFFF -1
+
+  ; As with ava-integer, signedness is rather moot
+  cycle unsigned-long 42 42
+  cycle unsigned-long -1 -1
+  cycle signed-long 42 42
+  cycle signed-long -1 -1
+
+  cycle unsigned-c-short 42 42
+  cycle signed-c-short 42 42
+  cycle signed-c-short -1 -1
+
+  cycle unsigned-c-int 42 42
+  cycle signed-c-int 42 42
+  cycle signed-c-int -1 -1
+
+  cycle unsigned-c-long 42 42
+  cycle signed-c-long 42 42
+  cycle signed-c-int -1 -1
+
+  cycle unsigned-c-llong 42 42
+  cycle signed-c-llong 42 42
+  cycle signed-c-llong -1 -1
+
+  cycle unsigned-c-size 42 42
+  cycle signed-c-size 42 42
+  cycle signed-c-size -1 -1
+
+  cycle unsigned-c-intptr 42 42
+  cycle signed-c-intptr 42 42
+  cycle signed-c-intptr -1 -1
+
+  test.pass 42
+}

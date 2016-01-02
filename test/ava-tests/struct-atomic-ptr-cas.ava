@@ -1,0 +1,38 @@
+reqmod helpers/test
+reqmod helpers/assert-equals-int
+alias assert-equals = assert-equals-int
+import esoterica.unsafe.strangelet S
+
+struct ih {
+  integer i
+}
+
+struct ap {
+  atomic ih& ptr
+}
+
+fun ddref aps = S.get ih (S.get ap $aps ptr) i
+
+fun struct-atomic-ptr-cas () {
+  a = S.new ih -s \ S.set ih $a i 42
+  b = S.new ih -s \ S.set ih $b i 56
+  c = S.new ih -s \ S.set ih $c i 99
+  x = S.new ap -s \ S.set ap $x ptr $a
+
+  map = []
+  key = foo
+  ; Just test that all the pointer movement works correctly;
+  ; struct-atomic-int-cas.ava tests all the shared stuff.
+  assert-equals true : S.cas ap $x ptr -old map($key) $a $b
+  assert-equals 42 : S.get ih $map($key) i
+  assert-equals 56 : ddref $x
+  assert-equals false : S.cas ap $x ptr -old map($key) $c $a
+  assert-equals 56 : S.get ih $map($key) i
+  assert-equals 56 : ddref $x
+
+  test.pass 42
+}
+
+test.register struct-atomic-ptr-cas {
+  struct-atomic-ptr-cas ()
+}

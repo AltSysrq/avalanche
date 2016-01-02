@@ -1,0 +1,90 @@
+reqmod helpers/test
+reqmod helpers/assert-equals-int
+alias assert-equals = assert-equals-int
+import esoterica.unsafe.strangelet S
+
+struct ah {
+  atomic signed atom
+}
+
+fun struct-atomic-int-rmw () {
+  x = S.new ah -s
+
+  S.set ah $x atom 42
+  y = S.rmw ah $x atom xchg 56
+  assert-equals 42 $y
+  assert-equals 56 : S.get ah $x atom
+
+  y = S.rmw ah $x atom add 2
+  assert-equals 56 $y
+  assert-equals 58 : S.get ah $x atom
+
+  y = S.rmw ah $x atom sub 4
+  assert-equals 58 $y
+  assert-equals 54 : S.get ah $x atom
+
+  y = S.rmw ah $x atom and 33
+  assert-equals 54 $y
+  assert-equals 32 : S.get ah $x atom
+
+  y = S.rmw ah $x atom xor -1
+  assert-equals 32 $y
+  assert-equals -33 : S.get ah $x atom
+
+  y = S.rmw ah $x atom nand 1
+  assert-equals -33 $y
+  assert-equals -2 : S.get ah $x atom
+
+  y = S.rmw ah $x atom or 1
+  assert-equals -2 $y
+  assert-equals -1 : S.get ah $x atom
+
+  y = S.rmw ah $x atom smin -2
+  assert-equals -1 $y
+  assert-equals -2 : S.get ah $x atom
+  y = S.rmw ah $x atom smin 1
+  assert-equals -2 $y
+  assert-equals -2 : S.get ah $x atom
+
+  y = S.rmw ah $x atom smax 1
+  assert-equals -2 $y
+  assert-equals 1 : S.get ah $x atom
+  y = S.rmw ah $x atom smax -1
+  assert-equals 1 $y
+  assert-equals 1 : S.get ah $x atom
+
+  S.set ah $x atom -42
+  y = S.rmw ah $x atom umin 42
+  assert-equals -42 $y
+  assert-equals 42 : S.get ah $x atom
+  y = S.rmw ah $x atom umin -1
+  assert-equals 42 $y
+  assert-equals 42 : S.get ah $x atom
+
+  y = S.rmw ah $x atom umax 43
+  assert-equals 42 $y
+  assert-equals 43 : S.get ah $x atom
+  y = S.rmw ah $x atom umax -42
+  assert-equals 43 $y
+  assert-equals -42 : S.get ah $x atom
+  y = S.rmw ah $x atom umax 0
+  assert-equals -42 $y
+  assert-equals -42 : S.get ah $x atom
+
+  ; Ensure all orderings are accepted
+  S.rmw ah $x atom -order unordered xchg 42
+  S.rmw ah $x atom -order monotonic xchg 42
+  S.rmw ah $x atom -order acquire   xchg 42
+  S.rmw ah $x atom -order release   xchg 42
+  S.rmw ah $x atom -order acqrel    xchg 42
+  S.rmw ah $x atom -order seqcst    xchg 42
+
+  ; Ensure volatile supported
+  S.rmw ah $x atom -order seqcst -volatile xchg 42
+
+  test.pass 42
+}
+
+test.register struct-atomic-int-rmw {
+  struct-atomic-int-rmw ()
+}

@@ -1,0 +1,38 @@
+reqmod helpers/test
+reqmod helpers/assert-equals-int
+alias assert-equals = assert-equals-int
+import esoterica.unsafe.strangelet S
+
+struct ih {
+  integer i
+}
+
+struct ap {
+  atomic ih& ptr
+}
+
+fun ddref aps = S.get ih (S.get ap $aps ptr) i
+
+fun struct-atomic-ptr-xchg () {
+  a = S.new ih -s \ S.set ih $a i 42
+  b = S.new ih -s \ S.set ih $b i 56
+  x = S.new ap -s \ S.set ap $x ptr $a
+
+  y = S.rmw ap $x ptr xchg $b
+  assert-equals 42 : S.get ih $y i
+  assert-equals 56 : ddref $x
+
+  ; Ensure all orders are supported
+  S.rmw ap $x ptr -order unordered xchg $a
+  S.rmw ap $x ptr -order monotonic xchg $a
+  S.rmw ap $x ptr -order acquire   xchg $a
+  S.rmw ap $x ptr -order release   xchg $a
+  S.rmw ap $x ptr -order acqrel    xchg $a
+  S.rmw ap $x ptr -order seqcst    xchg $a
+
+  test.pass 42
+}
+
+test.register struct-atomic-ptr-xchg {
+  struct-atomic-ptr-xchg ()
+}

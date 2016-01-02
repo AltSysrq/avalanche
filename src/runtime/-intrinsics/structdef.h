@@ -70,8 +70,11 @@ struct ava_struct_s;
  * member is a bareword which must resolve to a struct symbol which must be
  * composable.
  *
- * Semantics: The given fields are assembled into a struct. Symbols are defined
- * as per ava_intr_struct_define_symbols().
+ * Semantics: The given fields are assembled into a struct, which is created as
+ * a struct with the name built from field-name.
+ *
+ * Integers default to preferred byte order, natural alignment, and unsigned.
+ * Reals default to preferred byte order and natural alignment.
  */
 ava_macro_subst_result ava_intr_struct_subst(
   const struct ava_symbol_s* self,

@@ -1,0 +1,81 @@
+reqmod helpers/test
+alias assert = test.assert
+import esoterica.unsafe.strangelet S
+
+struct simple {
+  integer a
+  integer b
+}
+
+struct varsize {
+  struct simple [] v
+}
+
+fun test-stack-allocations () {
+  x = S.new simple -s
+  S.set simple $x a 42
+  assert 42 == S.get simple $x a
+  S.set simple $x b 56
+  assert 56 == S.get simple $x b
+
+  x = S.new simple -s -z
+  assert 0 == S.get simple $x a
+  assert 0 == S.get simple $x b
+
+  x = S.new simple -s -z -n 4
+  assert 0 == S.get simple (S.ix simple $x 3) b
+  S.set simple (S.ix simple $x 0) a 42
+  S.set simple (S.ix simple $x 1) a 56
+  S.set simple (S.ix simple $x 3) b 99
+  assert 42 == S.get simple (S.ix simple $x 0) a
+  assert 56 == S.get simple (S.ix simple $x 1) a
+  assert 99 == S.get simple (S.ix simple $x 3) b
+
+  x = S.new varsize -s -z -t 4
+  y = S.ix simple (S.get varsize $x v) 3
+  assert 0 == S.get simple $y b
+  S.set simple $y a 42
+  S.set simple $y b 56
+  assert 42 == S.get simple $y a
+  assert 56 == S.get simple $y b
+
+  x = S.new simple -s -precise -atomic
+}
+
+fun test-heap-allocations () {
+  x = S.new simple
+  S.set simple $x a 42
+  assert 42 == S.get simple $x a
+  S.set simple $x b 56
+  assert 56 == S.get simple $x b
+
+  x = S.new simple -z
+  assert 0 == S.get simple $x a
+  assert 0 == S.get simple $x b
+
+  x = S.new simple -z -n 4
+  assert 0 == S.get simple (S.ix simple $x 3) b
+  S.set simple (S.ix simple $x 0) a 42
+  S.set simple (S.ix simple $x 1) a 56
+  S.set simple (S.ix simple $x 3) b 99
+  assert 42 == S.get simple (S.ix simple $x 0) a
+  assert 56 == S.get simple (S.ix simple $x 1) a
+  assert 99 == S.get simple (S.ix simple $x 3) b
+
+  x = S.new varsize -z -t 4
+  y = S.ix simple (S.get varsize $x v) 3
+  assert 0 == S.get simple $y b
+  S.set simple $y a 42
+  S.set simple $y b 56
+  assert 42 == S.get simple $y a
+  assert 56 == S.get simple $y b
+
+  x = S.new simple -precise -atomic
+}
+
+test.register structops-allocations {
+  test-stack-allocations ()
+  test-heap-allocations ()
+
+  test.pass 42
+}

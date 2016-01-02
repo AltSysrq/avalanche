@@ -278,6 +278,10 @@ static ava_macro_subst_result ava_intr_struct_subst_impl(
     case AVA_ASCII9(__VA_ARGS__):                               \
       sxt->fields[i].type = ava_sft_int;                        \
       sxt->fields[i].v.vint.size = ava_sis_##sis;               \
+      sxt->fields[i].v.vint.byte_order = ava_sbo_preferred;     \
+      sxt->fields[i].v.vint.alignment =                         \
+        AVA_STRUCT_NATURAL_ALIGNMENT;                           \
+      sxt->fields[i].v.vint.sign_extend = ava_false;            \
       ava_intr_structdef_read_adjectives(                       \
         context, self->full_name, &unit, field_name_unit,       \
         &sxt->fields[i].v.vint.sign_extend,                     \
@@ -312,6 +316,7 @@ static ava_macro_subst_result ava_intr_struct_subst_impl(
         sxt->fields[i].v.vint.size = ava_sis_word;
         sxt->fields[i].v.vint.byte_order = ava_sbo_preferred;
         sxt->fields[i].v.vint.alignment = AVA_STRUCT_NATURAL_ALIGNMENT;
+        sxt->fields[i].v.vint.sign_extend = ava_false;
         sxt->fields[i].v.vint.is_atomic = ava_true;
         ava_intr_structdef_read_adjectives(
           context, self->full_name, &unit, field_name_unit,
@@ -323,6 +328,9 @@ static ava_macro_subst_result ava_intr_struct_subst_impl(
     case AVA_ASCII9(__VA_ARGS__):                               \
       sxt->fields[i].type = ava_sft_real;                       \
       sxt->fields[i].v.vreal.size = ava_srs_##srs;              \
+      sxt->fields[i].v.vreal.byte_order = ava_sbo_preferred;    \
+      sxt->fields[i].v.vreal.alignment =                        \
+        AVA_STRUCT_NATURAL_ALIGNMENT;                           \
       ava_intr_structdef_read_adjectives(                       \
         context, self->full_name, &unit, field_name_unit, NULL, \
         &sxt->fields[i].v.vreal.alignment,                      \
