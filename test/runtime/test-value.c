@@ -157,6 +157,11 @@ deftest(strcmp_on_strings_of_different_chunks) {
                                          ava_string_of_bytes(cstr, 2))));
 }
 
+deftest(equal_on_different_types) {
+  ck_assert(ava_value_equal(ava_value_of_cstring("42"),
+                            ava_value_of_integer(42)));
+}
+
 deftest(hash_basically_works) {
   ava_value a = ava_value_of_cstring("hello world");
   ava_value b = ava_value_of_cstring("hello worle");

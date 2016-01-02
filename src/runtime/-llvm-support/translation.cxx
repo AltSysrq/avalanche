@@ -60,6 +60,7 @@ AVA_BEGIN_DECLS
 #include "../avalanche/errors.h"
 #include "../avalanche/name-mangle.h"
 #include "../avalanche/struct.h"
+#include "../avalanche/exception.h"
 AVA_END_DECLS
 #include "../../bsd.h"
 #include "../-internal-defs.h"
@@ -90,6 +91,7 @@ struct ava_xcode_translation_context {
   const ava::exception_abi ea;
 
   llvm::GlobalVariable* string_type;
+  llvm::GlobalVariable* integer_type;
   llvm::GlobalVariable* pointer_pointer_impl;
   llvm::GlobalVariable* pointer_prototype_tag;
   llvm::Constant* empty_string, * empty_string_value;
@@ -620,6 +622,7 @@ ava_xcode_translation_context::ava_xcode_translation_context(
   ea(module_, types)
 {
   string_type = module.getGlobalVariable("ava_string_type");
+  integer_type = module.getGlobalVariable("ava_integer_type");
 
   empty_string = llvm::ConstantInt::get(types.ava_string, 1);
   empty_string_value = llvm::ConstantVector::get(
@@ -1219,6 +1222,18 @@ noexcept {
     bare_string, nullptr);
 }
 
+static bool is_normalised_integer(ava_value value) {
+  try {
+    return ava_value_equal(
+      value, ava_value_of_integer(ava_integer_of_value(value, 0)));
+  } catch (const ava_exception& ex) {
+    if (&ava_format_exception == ex.type)
+      return false;
+    else
+      throw;
+  }
+}
+
 static llvm::Constant* get_ava_value_constant(
   const ava_xcode_translation_context& context,
   ava_value value)
@@ -1228,12 +1243,21 @@ noexcept {
     return llvm::ConstantDataVector::getSplat(
       2, llvm::ConstantInt::get(context.types.ava_long, 0));
   } else {
-    /* TODO: We should try to find a better type than plain string */
-    ava_string string_value = ava_to_string(value);
+    /* Until we actually have type inferrence, encode everything as a string
+     * unless it is already a normalised integer.
+     */
     llvm::Constant* vals[2];
-    vals[0] = llvm::ConstantExpr::getPtrToInt(
-      context.string_type, context.types.ava_long);
-    vals[1] = get_ava_string_constant(context, string_value);
+    if (is_normalised_integer(value)) {
+      vals[0] = llvm::ConstantExpr::getPtrToInt(
+        context.integer_type, context.types.ava_long);
+      vals[1] = llvm::ConstantInt::get(
+        context.types.ava_long, ava_integer_of_value(value, 0));
+    } else {
+      ava_string string_value = ava_to_string(value);
+      vals[0] = llvm::ConstantExpr::getPtrToInt(
+        context.string_type, context.types.ava_long);
+      vals[1] = get_ava_string_constant(context, string_value);
+    }
     return llvm::ConstantVector::get(
       llvm::ArrayRef<llvm::Constant*>(vals, 2));
   }
