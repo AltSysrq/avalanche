@@ -122,6 +122,7 @@ ava::driver_iface::driver_iface(const llvm::Module& module) noexcept {
   MAR(ldouble);
   MAR(ava_real);
   MAR(string);
+  MAR(strange);
   MAR(pointer);
 
   program_entry = module.getFunction("a$$5Cprogram_entry");

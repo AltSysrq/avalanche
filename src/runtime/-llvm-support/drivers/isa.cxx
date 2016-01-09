@@ -461,6 +461,14 @@ ava_value ava_isa_m_from_string$(const char* v) {
   return ava_value_of_string(ava_string_of_cstring(v));
 }
 
+void* ava_isa_m_to_strange$(ava_value v) {
+  return (void*)ava_value_ptr(v);
+}
+
+ava_value ava_isa_m_from_strange$(void* v) {
+  return ava_strange_ptr(v);
+}
+
 void* ava_isa_m_to_pointer$(ava_value v, const ava_pointer_prototype* proto) {
   if (proto->is_const) {
     return (void*)ava_pointer_get_const(v, proto->tag);

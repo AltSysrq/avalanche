@@ -696,6 +696,14 @@ set defs {
     }
   }
 
+  serror R0063 non_strangelet_passed_to_strange_argument {{ava_integer ix}} {
+    msg "Non-strangelet passed to strange argument #%ix%."
+    explanation {
+      The given argument of a dynamically-invoked function is declared to be a
+      strangelet, but the value passed to it is not a strangelet.
+    }
+  }
+
   serror U3000 undef_integer_overflow {
     {ava_integer a} {ava_string op} {ava_integer b}
   } {

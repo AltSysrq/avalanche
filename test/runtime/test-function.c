@@ -27,6 +27,7 @@
 #include "runtime/avalanche/integer.h"
 #include "runtime/avalanche/real.h"
 #include "runtime/avalanche/list.h"
+#include "runtime/avalanche/strangelet.h"
 #include "runtime/avalanche/function.h"
 
 #define NO_PARM AVA_FUNCTION_NO_PARAMETER
@@ -214,10 +215,11 @@ deftest(understands_all_primitive_types) {
     PRIM(double)
     PRIM(ldouble)
     PRIM(ava_real)
-    PRIM(string));
+    PRIM(string)
+    PRIM(strange));
 #undef PRIM
 
-  ck_assert_int_eq(26, fun->num_args);
+  ck_assert_int_eq(27, fun->num_args);
 
   i = 0;
 #define PRIM(t) ck_assert_int_eq(ava_cmpt_##t, fun->args[i++].marshal.primitive_type)
@@ -247,6 +249,7 @@ deftest(understands_all_primitive_types) {
   PRIM(ldouble);
   PRIM(ava_real);
   PRIM(string);
+  PRIM(strange);
 #undef PRIM
 }
 
@@ -1554,6 +1557,54 @@ TEST_INVOKE(invoke_explosively, "abcd e fg",
             STATWORD(a),
             { .type = ava_fpt_spread,
                 .value = ava_value_of_cstring("-c c -b b d e f g") })
+
+static const char* strplus(const char* base, unsigned offset) {
+  return base + offset;
+}
+
+deftest(marshal_strange) {
+  char funspec[256];
+  const char* base = "hello world";
+  const ava_function* fun;
+  ava_value result;
+  ava_function_parameter parms[2] = {
+    { .type = ava_fpt_static, .value = ava_strange_ptr(base) },
+    { .type = ava_fpt_static, .value = WORD(6) },
+  };
+
+  snprintf(funspec, sizeof(funspec), "%lld c strange [strange pos] [uint pos]",
+           (long long)(ava_intptr)strplus);
+  fun = of_cstring(funspec);
+
+  result = ava_function_bind_invoke(fun, 2, parms);
+  ck_assert_ptr_eq(&ava_strangelet_type, ava_value_attr(result));
+  ck_assert_ptr_eq(base + 6, ava_value_ptr(result));
+}
+
+deftest(marshal_strange_throws_on_non_strangelet) {
+  ava_exception ex;
+  char funspec[256];
+  const ava_function* fun;
+  ava_function_parameter parms[2] = {
+    { .type = ava_fpt_static, .value = WORD(mundane) },
+    { .type = ava_fpt_static, .value = WORD(6) },
+  };
+  invoke_data d;
+
+  snprintf(funspec, sizeof(funspec), "%lld c strange [strange pos] [uint pos]",
+           (long long)(ava_intptr)strplus);
+  fun = of_cstring(funspec);
+
+  d.fun = fun;
+  d.nparms = 2;
+  d.parms = parms;
+
+  if (ava_catch(&ex, (void(*)(void*))do_invoke, &d)) {
+    ck_assert_ptr_eq(&ava_undefined_behaviour_exception, ex.type);
+  } else {
+    ck_abort_msg("no exception thrown");
+  }
+}
 
 deftest(list_miscellanea_work) {
   ava_value base = ava_value_of_function(of_cstring("42 ava pos"));

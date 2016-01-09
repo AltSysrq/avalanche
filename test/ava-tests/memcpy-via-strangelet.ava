@@ -1,0 +1,16 @@
+reqmod helpers/test
+import esoterica.unsafe.strangelet S
+extern memcpy memcpy c void [strange pos] [strange pos] [size pos]
+
+struct ih {
+  value padding
+  int val
+}
+
+test.register memcpy-via-strangelet {
+  a = S.new ih -s -z
+  b = S.new ih -s -z
+  S.set ih $a val 42
+  memcpy $b $a : S.sizeof ih
+  test.pass : S.get ih $b val
+}

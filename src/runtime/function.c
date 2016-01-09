@@ -32,6 +32,7 @@
 #include "avalanche/errors.h"
 #include "avalanche/real.h"
 #include "avalanche/pointer.h"
+#include "avalanche/strangelet.h"
 #include "avalanche/exception.h"
 #include "avalanche/list.h"
 #include "avalanche/function.h"
@@ -235,6 +236,7 @@ static ffi_type* ava_function_convert_type_to_ffi(
   case ava_cmpt_ldouble: return &ffi_type_longdouble;
 
   case ava_cmpt_string:
+  case ava_cmpt_strange:
   case ava_cmpt_pointer: return &ffi_type_pointer;
   }
 
@@ -366,6 +368,7 @@ static ava_c_marshalling_type ava_function_parse_marshal_type(ava_value val) {
   case AVA_ASCII9('l','d','o','u','b','l','e'): PRIM(ava_cmpt_ldouble);
   case AVA_ASCII9(AVA, 'r','e','a','l'):        PRIM(ava_cmpt_ava_real);
   case AVA_ASCII9('s','t','r','i','n','g'):     PRIM(ava_cmpt_string);
+  case AVA_ASCII9('s','t','r','a','n','g','e'): PRIM(ava_cmpt_strange);
   }
 #undef AVA
 
@@ -527,6 +530,7 @@ static ava_value ava_function_marshal_type_to_value(
   case PRIM(ldouble);
   case PRIM(ava_real);
   case PRIM(string);
+  case PRIM(strange);
 
   case ava_cmpt_ava_sshort:
     str = ava_sshort_text;
@@ -1036,6 +1040,14 @@ ava_value ava_function_invoke(const ava_function* fun,
       ARG.ptr = (void*)ava_string_to_cstring(ava_to_string(args[logical_arg]));
       break;
 
+    case ava_cmpt_strange:
+      if (&ava_strangelet_type != ava_value_attr(args[logical_arg]))
+        ava_throw_str(&ava_undefined_behaviour_exception,
+                      ava_error_non_strangelet_passed_to_strange_argument(
+                        logical_arg));
+      ARG.ptr = (void*)ava_value_ptr(args[logical_arg]);
+      break;
+
     case ava_cmpt_pointer:
       if (fun->args[logical_arg].marshal.pointer_proto->is_const)
         ARG.ptr = (void*)ava_pointer_get_const(
@@ -1140,6 +1152,9 @@ ava_value ava_function_invoke(const ava_function* fun,
 
   case ava_cmpt_string:
     return ava_value_of_cstring(return_value.ptr);
+
+  case ava_cmpt_strange:
+    return ava_strange_ptr(return_value.ptr);
 
   case ava_cmpt_pointer:
     return ava_pointer_of_proto(

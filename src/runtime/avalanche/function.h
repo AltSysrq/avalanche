@@ -247,6 +247,10 @@
  *   as an (assumed const) pointer. Return values are interpreted as C strings
  *   and converted back to values.
  *
+ * - `strange`. Arguments are assumed to be strangelets, and passed in as raw
+ *   pointers. Behaviour is undefined for non-strangelet arguments. Returns
+ *   values are interpreted as pointers and returned as a strangelet.
+ *
  * - `X*` or `X&`, for any `X`. Indicates a pointer with (Avalanche) type X.
  *   There is obviously no checking that `X` is in any way related to the
  *   pointer type the native function actually takes.
@@ -370,6 +374,10 @@ typedef enum {
   ava_cmpt_ava_real,
   /** C type: const char*, interpreted as NTBS */
   ava_cmpt_string,
+  /**
+   * C type: void*
+   */
+  ava_cmpt_strange,
   /**
    * C type: void*
    *

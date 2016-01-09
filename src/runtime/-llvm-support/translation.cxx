@@ -1116,6 +1116,7 @@ noexcept {
   case ava_cmpt_ldouble: return context.types.c_ldouble;
   case ava_cmpt_ava_real: return context.types.ava_real;
   case ava_cmpt_string: return context.types.c_string;
+  case ava_cmpt_strange: return context.types.general_pointer;
   case ava_cmpt_pointer: return context.types.general_pointer;
   }
 
