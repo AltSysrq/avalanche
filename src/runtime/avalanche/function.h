@@ -218,10 +218,11 @@
  * - If the number of arguments is less than or equal to 8, all arguments are
  *   passed as native arguments using the native C calling convention.
  *
- * - If there are more than 8 arguments, they are packed into a flat array.
- *   The function is passed a pointer to this array using the native C calling
- *   convention. The array is not guaranteed to remain valid after the callee
- *   returns, but the callee may modify the array arbitrarily.
+ * - If there are more than 8 arguments, they are packed into a flat array. The
+ *   function is passed a size_t indicating the number of arguments, then a
+ *   pointer to this array, using the native C calling convention. The array is
+ *   not guaranteed to remain valid after the callee returns, but the callee
+ *   may modify the array arbitrarily.
  *
  * The "c" calling convention requires a return type, and every argument's
  * specification is prefixed with the type of that argument. Permissible types
