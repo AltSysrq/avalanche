@@ -48,8 +48,7 @@
  * result.
  *
  * The () argument form indicates an anonymous positional argument whose value
- * MUST be the empty string upon invocation. Upon being called, the function
- * MAY assert that this is indeed the case.
+ * MUST be the empty string upon invocation.
  *
  * The pos-name argument form indicates a mandatory positional argument. The
  * argument is accessible within the function body as a variable whose name is
@@ -71,21 +70,16 @@
  * The visibility of the resulting symbol is intrinsic to the macro, derived
  * from *(ava_visibility*)userdata on the self symbol.
  */
-ava_macro_subst_result ava_intr_fun_subst(
-  const struct ava_symbol_s* self,
-  ava_macsub_context* context,
-  const ava_parse_statement* statement,
-  const ava_parse_unit* provoker,
-  ava_bool* consumed_other_statements);
+AVA_DEF_MACRO_SUBST(ava_intr_fun_subst);
 
 /**
  * Implementation for lambda expression syntax units.
  *
  * Essentially equivalent to
- *   fun ?gensym 1 [2] [3] [4] = <body>
- *   $?gensym
- *
- * Except that the body uses the `only` return policy.
+ *   block-last {
+ *     fun ?gensym 1 [2] [3] [4] = block-only <body>
+ *     $?gensym
+ *   }
  */
 ava_ast_node* ava_intr_lambda_expr(
   ava_macsub_context* context,
