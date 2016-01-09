@@ -189,9 +189,6 @@ struct global g {
     constraint {
       ava_list_length(@.vars) >= @.prototype->num_args
     }
-    constraint {
-      ava_cc_ava == @.prototype->calling_convention
-    }
   }
 
   # Declares the existence of a struct which can be used with native-interop

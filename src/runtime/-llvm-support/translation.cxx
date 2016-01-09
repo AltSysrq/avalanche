@@ -100,7 +100,24 @@ struct ava_xcode_translation_context {
   llvm::DIFile* di_file;
   std::map<std::string,llvm::DIFile*> di_files;
   llvm::DICompileUnit* di_compile_unit;
-  llvm::DIBasicType* di_size, * di_ava_ulong, * di_ava_integer;
+
+  llvm::DIBasicType* di_void;
+  llvm::DIBasicType* di_signed_c_byte, * di_unsigned_c_byte;
+  llvm::DIBasicType* di_signed_c_short, * di_unsigned_c_short;
+  llvm::DIBasicType* di_signed_c_int, * di_unsigned_c_int;
+  llvm::DIBasicType* di_signed_c_long, * di_unsigned_c_long;
+  llvm::DIBasicType* di_signed_c_llong, * di_unsigned_c_llong;
+  llvm::DIBasicType* di_signed_ava_byte, * di_unsigned_ava_byte;
+  llvm::DIBasicType* di_signed_ava_short, * di_unsigned_ava_short;
+  llvm::DIBasicType* di_signed_ava_int, * di_unsigned_ava_int;
+  llvm::DIBasicType* di_signed_ava_long, * di_unsigned_ava_long;
+  llvm::DIBasicType* di_signed_ava_integer, * di_unsigned_ava_integer;
+  llvm::DIBasicType* di_signed_c_size, * di_unsigned_c_size;
+  llvm::DIBasicType* di_signed_c_intptr, * di_unsigned_c_intptr;
+  llvm::DIBasicType* di_signed_c_atomic, * di_unsigned_c_atomic;
+  llvm::DIBasicType* di_c_float, * di_c_double, * di_c_ldouble, * di_ava_real;
+  llvm::DIDerivedType* di_c_string, * di_general_pointer;
+
   llvm::DICompositeType* di_ava_value;
   llvm::DIDerivedType* di_ava_function_ptr;
   llvm::DICompositeType* di_ava_function_parameter, * di_ava_fat_list_value;
@@ -176,6 +193,10 @@ static llvm::ArrayType* ava_xcode_to_ir_make_union_type(
   llvm::StructType* sxt) noexcept;
 
 static llvm::Type* translate_marshalling_type(
+  const ava_xcode_translation_context& context,
+  const ava_c_marshalling_type& type) noexcept;
+
+static llvm::Metadata* translate_marshalling_debug_type(
   const ava_xcode_translation_context& context,
   const ava_c_marshalling_type& type) noexcept;
 
@@ -259,6 +280,10 @@ struct ava_xcode_fun_xlate_info {
     data_array_base(data_array_base_)
   { }
 
+  void copy_args_to_regs(
+    const ava_pcg_fun* pcfun,
+    llvm::Function* dst) noexcept;
+
   bool translate_instruction(
     const ava_pcode_exe* exe,
     const ava_xcode_global* container,
@@ -329,9 +354,19 @@ struct ava_xcode_fun_xlate_info {
     llvm::Value*const* args,
     bool args_in_data_array) noexcept;
 
+  llvm::Value* marshal_from(
+    const ava_c_marshalling_type& marshal,
+    llvm::Value* orig) noexcept;
+  llvm::Value* marshal_to(
+    const ava_c_marshalling_type& marshal,
+    llvm::Value* raw) noexcept;
+
   llvm::Value* create_call_or_invoke(
     llvm::Value* callee,
     llvm::ArrayRef<llvm::Value*> args) noexcept;
+
+  void do_return(llvm::Value* value,
+                 const ava_pcg_fun* pcfun) noexcept;
 };
 
 AVA_END_FILE_PRIVATE
@@ -657,18 +692,47 @@ ava_xcode_translation_context::ava_xcode_translation_context(
     true);
   di_file = dib.createFile(basename, dirname);
   di_files[basename] = di_file;
-  di_size = dib.createBasicType(
-    "size_t", dl.getTypeSizeInBits(types.c_size),
-    dl.getABITypeAlignment(types.c_size),
-    llvm::dwarf::DW_ATE_unsigned);
-  di_ava_integer = dib.createBasicType(
-    "ava_integer", dl.getTypeSizeInBits(types.ava_integer),
-    dl.getABITypeAlignment(types.ava_integer),
-    llvm::dwarf::DW_ATE_signed);
-  di_ava_ulong = dib.createBasicType(
-    "ava_ulong", dl.getTypeSizeInBits(types.ava_long),
-    dl.getABITypeAlignment(types.ava_long),
-    llvm::dwarf::DW_ATE_unsigned);
+
+  di_void = nullptr;
+#define DI_INT(signedness, type)                                \
+  di_##signedness##_##type = dib.createBasicType(               \
+    #signedness "_" #type, dl.getTypeSizeInBits(types.type),    \
+    dl.getABITypeAlignment(types.type),                         \
+    llvm::dwarf::DW_ATE_##signedness)
+#define DI_INTS(type) DI_INT(signed, type); DI_INT(unsigned, type)
+  DI_INTS(c_byte);
+  DI_INTS(c_short);
+  DI_INTS(c_int);
+  DI_INTS(c_long);
+  DI_INTS(c_llong);
+  DI_INTS(ava_byte);
+  DI_INTS(ava_short);
+  DI_INTS(ava_int);
+  DI_INTS(ava_long);
+  DI_INTS(ava_integer);
+  DI_INTS(c_size);
+  DI_INTS(c_intptr);
+  DI_INTS(c_atomic);
+#undef DI_INTS
+#undef DI_INT
+#define DI_FLOAT(type)                          \
+  di_##type = dib.createBasicType(              \
+    #type, dl.getTypeSizeInBits(types.type),    \
+    dl.getABITypeAlignment(types.type),         \
+    llvm::dwarf::DW_ATE_float)
+  DI_FLOAT(c_float);
+  DI_FLOAT(c_double);
+  DI_FLOAT(c_ldouble);
+  DI_FLOAT(ava_real);
+#undef DI_FLOAT
+  di_c_string = dib.createPointerType(
+    dib.createBasicType(
+      "char", 1, 1, llvm::dwarf::DW_ATE_unsigned_char),
+    dl.getTypeSizeInBits(types.general_pointer),
+    dl.getABITypeAlignment(types.general_pointer),
+    "c_string");
+  di_general_pointer = di_c_string;
+
   llvm::DISubrange* ava_value_subscript = dib.getOrCreateSubrange(
     0, types.ava_value->getNumElements());
   llvm::DINodeArray ava_value_subscript_array = dib.getOrCreateArray(
@@ -676,7 +740,7 @@ ava_xcode_translation_context::ava_xcode_translation_context(
   di_ava_value = dib.createVectorType(
     dl.getTypeSizeInBits(types.ava_value),
     dl.getABITypeAlignment(types.ava_value),
-    di_ava_ulong, ava_value_subscript_array);
+    di_unsigned_ava_long, ava_value_subscript_array);
   di_ava_function_ptr = dib.createPointerType(
     dib.createUnspecifiedType("ava_function"),
     dl.getPointerSizeInBits(),
@@ -725,7 +789,7 @@ ava_xcode_translation_context::ava_xcode_translation_context(
         llvm::ArrayRef<llvm::Metadata*>(di_inline_args, i + 1)));
   di_subroutine_array_args = dib.createSubroutineType(
     di_file, dib.getOrCreateTypeArray(
-      { di_ava_value, di_size, dib.createPointerType(
+      { di_ava_value, di_unsigned_c_size, dib.createPointerType(
           di_ava_value, dl.getPointerSizeInBits()) }));
 }
 
@@ -1124,6 +1188,45 @@ noexcept {
   abort();
 }
 
+static llvm::Metadata* translate_marshalling_debug_type(
+  const ava_xcode_translation_context& context,
+  const ava_c_marshalling_type& type)
+noexcept {
+  switch (type.primitive_type) {
+  case ava_cmpt_void: return context.di_void;
+  case ava_cmpt_byte: return context.di_signed_c_byte;
+  case ava_cmpt_ubyte: return context.di_unsigned_c_byte;
+  case ava_cmpt_short: return context.di_signed_c_short;
+  case ava_cmpt_ushort: return context.di_unsigned_c_short;
+  case ava_cmpt_int: return context.di_signed_c_int;
+  case ava_cmpt_uint: return context.di_unsigned_c_int;
+  case ava_cmpt_long: return context.di_signed_c_long;
+  case ava_cmpt_ulong: return context.di_unsigned_c_long;
+  case ava_cmpt_llong: return context.di_signed_c_llong;
+  case ava_cmpt_ullong: return context.di_unsigned_c_llong;
+  case ava_cmpt_ava_sbyte: return context.di_signed_ava_byte;
+  case ava_cmpt_ava_ubyte: return context.di_unsigned_ava_byte;
+  case ava_cmpt_ava_sshort: return context.di_signed_ava_short;
+  case ava_cmpt_ava_ushort: return context.di_unsigned_ava_short;
+  case ava_cmpt_ava_sint: return context.di_signed_ava_int;
+  case ava_cmpt_ava_uint: return context.di_unsigned_ava_int;
+  case ava_cmpt_ava_slong: return context.di_signed_ava_long;
+  case ava_cmpt_ava_ulong: return context.di_unsigned_ava_long;
+  case ava_cmpt_ava_integer: return context.di_signed_ava_integer;
+  case ava_cmpt_size: return context.di_unsigned_c_size;
+  case ava_cmpt_float: return context.di_c_float;
+  case ava_cmpt_double: return context.di_c_double;
+  case ava_cmpt_ldouble: return context.di_c_ldouble;
+  case ava_cmpt_ava_real: return context.di_ava_real;
+  case ava_cmpt_string: return context.di_c_string;
+  case ava_cmpt_strange: return context.di_general_pointer;
+  case ava_cmpt_pointer: return context.di_general_pointer;
+  }
+
+  /* Unreachable */
+  abort();
+}
+
 static llvm::Constant* get_marshal_value(
   const ava_xcode_translation_context& context,
   const ava_c_marshalling_type& type)
@@ -1445,10 +1548,31 @@ static void build_user_function(
 noexcept {
   const ava_pcg_fun* pcfun = (const ava_pcg_fun*)xcode->pc;
   const ava_xcode_function* xfun = xcode->fun;
-  llvm::DISubroutineType* subroutine_type =
-    pcfun->prototype->num_args <= AVA_CC_AVA_MAX_INLINE_ARGS?
-    context.di_subroutine_inline_args[pcfun->prototype->num_args] :
-    context.di_subroutine_array_args;
+  llvm::DISubroutineType* subroutine_type;
+
+  if (ava_cc_ava == pcfun->prototype->calling_convention) {
+    subroutine_type =
+      pcfun->prototype->num_args <= AVA_CC_AVA_MAX_INLINE_ARGS?
+      context.di_subroutine_inline_args[pcfun->prototype->num_args] :
+      context.di_subroutine_array_args;
+  } else {
+    llvm::Metadata* types[1 + pcfun->prototype->num_args];
+    /* Need to count types separately since "void" entries aren't actually
+     * physical arguments.
+     */
+    size_t num_types = 1;
+    types[0] = translate_marshalling_debug_type(
+      context, pcfun->prototype->c_return_type);
+    for (size_t i = 0; i < pcfun->prototype->num_args; ++i)
+      if (ava_cmpt_void != pcfun->prototype->args[i].marshal.primitive_type)
+        types[num_types++] = translate_marshalling_debug_type(
+          context, pcfun->prototype->args[i].marshal);
+
+    subroutine_type = context.dib.createSubroutineType(
+      context.di_file, context.dib.getOrCreateTypeArray(
+        llvm::ArrayRef<llvm::Metadata*>(types, num_types)));
+  }
+
   llvm::DISubprogram* di_fun = context.dib.createFunction(
     in_file, ava_string_to_cstring(pcfun->name.name),
     dst->getName(), in_file, global_init_loc.getLine(),
@@ -1494,16 +1618,6 @@ noexcept {
       reg_names[i] = "(anonymous)";
 
     regs[i] = irb.CreateAlloca(context.types.ava_value, nullptr, reg_names[i]);
-    /* Initialise from argument if applicable */
-    if (i < pcfun->prototype->num_args) {
-      if (pcfun->prototype->num_args <= AVA_CC_AVA_MAX_INLINE_ARGS) {
-        irb.CreateStore(get_argument(dst, i), regs[i]);
-      } else {
-        irb.CreateStore(
-          irb.CreateLoad(irb.CreateConstGEP1_32(get_argument(dst, 1), i)),
-          regs[i]);
-      }
-    }
 
     llvm::DILocalVariable* di_var = context.dib.createLocalVariable(
       i < pcfun->prototype->num_args?
@@ -1528,7 +1642,7 @@ noexcept {
     }                                                            \
   } while (0)
   DEFREGS(d, ava_prt_data, ava_value, di_ava_value);
-  DEFREGS(i, ava_prt_int, ava_integer, di_ava_integer);
+  DEFREGS(i, ava_prt_int, ava_integer, di_signed_ava_integer);
   DEFREGS(l, ava_prt_list, ava_fat_list_value, di_ava_fat_list_value);
   DEFREGS(f, ava_prt_function, ava_function_ptr, di_ava_function_ptr);
 #undef DEFREGS
@@ -1596,28 +1710,37 @@ noexcept {
                                             max_data_array_length),
                      "(d*)");
 
+  ava_xcode_fun_xlate_info xi(
+    context, irb, xfun, basic_blocks, landing_pads, 0,
+    caught_exceptions, regs, tmplists, data_array_base);
+
   /* Fall through to the first block, or off the end of the function if it's
    * empty.
    */
   if (xfun->num_blocks > 0) {
     irb.CreateBr(basic_blocks[0]);
   } else {
-    irb.CreateRet(context.empty_string_value);
+    xi.do_return(context.empty_string_value, pcfun);
   }
 
   /* Initialise the final fall-through block */
   irb.SetInsertPoint(basic_blocks[xfun->num_blocks]);
-  irb.CreateRet(context.empty_string_value);
-
-  ava_xcode_fun_xlate_info xi(
-    context, irb, xfun, basic_blocks, landing_pads, 0,
-    caught_exceptions, regs, tmplists, data_array_base);
+  xi.do_return(context.empty_string_value, pcfun);
 
   for (size_t block_ix = 0; block_ix < xfun->num_blocks; ++block_ix) {
     xi.this_basic_block = block_ix;
 
     const ava_xcode_basic_block* block = xfun->blocks[block_ix];
     irb.SetInsertPoint(basic_blocks[block_ix]);
+
+    if (0 == block_ix)
+      /* Initialise arguments since we're in the first block.
+       * We don't do this in the initialisation block above, since we don't
+       * want to risk the true entry block with all the allocas getting split
+       * (eg, by maybe-throwing conversions) since that would prevent LLVM from
+       * raising the allocas into LLVM registers.
+       */
+      xi.copy_args_to_regs(pcfun, dst);
 
     if (!block->exception_stack) {
       /* Basic block is trivially unreachable */
@@ -1655,7 +1778,7 @@ noexcept {
       if (block_ix + 1 < xfun->num_blocks)
         irb.CreateBr(basic_blocks[block_ix + 1]);
       else
-        irb.CreateRet(context.empty_string_value);
+        xi.do_return(context.empty_string_value, pcfun);
     }
   }
 }
@@ -1666,6 +1789,31 @@ static ava_string to_ava_string(llvm::StringRef ref) {
 
 #define INVOKE(callee, ...)                             \
   create_call_or_invoke((callee), { __VA_ARGS__ })
+
+void ava_xcode_fun_xlate_info::copy_args_to_regs(
+  const ava_pcg_fun* pcfun,
+  llvm::Function* dst)
+noexcept {
+  size_t i, arg;
+  llvm::Value* value;
+
+  for (i = 0, arg = 0; i < pcfun->prototype->num_args; ++i) {
+    if (ava_cc_ava != pcfun->prototype->calling_convention) {
+      if (ava_cmpt_void == pcfun->prototype->args[i].marshal.primitive_type) {
+        value = marshal_from(pcfun->prototype->args[i].marshal, nullptr);
+      } else {
+        value = marshal_from(pcfun->prototype->args[i].marshal,
+                             get_argument(dst, arg++));
+      }
+    } else if (pcfun->prototype->num_args <= AVA_CC_AVA_MAX_INLINE_ARGS) {
+      value = get_argument(dst, arg++);
+    } else {
+      value = irb.CreateLoad(irb.CreateConstGEP1_32(get_argument(dst, 1), i));
+    }
+
+    irb.CreateStore(value, regs[i]);
+  }
+}
 
 bool ava_xcode_fun_xlate_info::translate_instruction(
   const ava_pcode_exe* exe,
@@ -1970,7 +2118,7 @@ noexcept {
 
     llvm::Value* src = load_register(
       p->return_value, pcfun, nullptr);
-    irb.CreateRet(src);
+    do_return(src, pcfun);
   } return true;
 
   case ava_pcxt_branch: {
@@ -2982,49 +3130,21 @@ noexcept {
     size_t actual_nargs = 0;
 
     for (size_t i = 0; i < prot->num_args; ++i) {
-      switch (prot->args[i].marshal.primitive_type) {
-      case ava_cmpt_void:
-        INVOKE(context.di.marshal_to[ava_cmpt_void], args[i]);
-        break;
-
-      case ava_cmpt_pointer:
-        actual_args[actual_nargs++] = INVOKE(
-          context.di.marshal_to[ava_cmpt_pointer],
-          args[i], get_pointer_prototype_constant(
-            context, prot->args[i].marshal.pointer_proto));
-        break;
-
-      default:
-        actual_args[actual_nargs++] = INVOKE(
-          context.di.marshal_to[prot->args[i].marshal.primitive_type],
-          args[i]);
-        break;
-      }
+      if (ava_cmpt_void == prot->args[i].marshal.primitive_type)
+        marshal_to(prot->args[i].marshal, args[i]);
+      else
+        actual_args[actual_nargs++] =
+          marshal_to(prot->args[i].marshal, args[i]);
     }
 
     llvm::Value* native_return = INVOKE(
       context.global_funs[fun_ix],
       llvm::ArrayRef<llvm::Value*>(actual_args, actual_nargs));
 
-    switch (prot->c_return_type.primitive_type) {
-    case ava_cmpt_void:
-      ret = irb.CreateCall(context.di.marshal_from[ava_cmpt_void]);
-      break;
-
-    case ava_cmpt_pointer:
-      ret = irb.CreateCall(
-        context.di.marshal_from[ava_cmpt_pointer],
-        { native_return,
-          get_pointer_prototype_constant(
-            context, prot->c_return_type.pointer_proto) });
-      break;
-
-    default:
-      ret = irb.CreateCall(
-        context.di.marshal_from[prot->c_return_type.primitive_type],
-        native_return);
-      break;
-    }
+    ret = marshal_from(
+      prot->c_return_type,
+      ava_cmpt_void == prot->c_return_type.primitive_type?
+      nullptr : native_return);
   }
 
   irb.CreateCall(
@@ -3048,6 +3168,47 @@ static bool landing_pad_has_catch(const ava_xcode_exception_stack* s) {
       return true;
 
   return false;
+}
+
+llvm::Value* ava_xcode_fun_xlate_info::marshal_from(
+  const ava_c_marshalling_type& marshal,
+  llvm::Value* raw)
+noexcept {
+  switch (marshal.primitive_type) {
+  case ava_cmpt_void:
+    return irb.CreateCall(context.di.marshal_from[ava_cmpt_void]);
+
+  case ava_cmpt_pointer:
+    return irb.CreateCall(
+      context.di.marshal_from[ava_cmpt_pointer],
+      { raw, get_pointer_prototype_constant(
+          context, marshal.pointer_proto) });
+
+  default:
+    return irb.CreateCall(
+      context.di.marshal_from[marshal.primitive_type], raw);
+  }
+}
+
+llvm::Value* ava_xcode_fun_xlate_info::marshal_to(
+  const ava_c_marshalling_type& marshal,
+  llvm::Value* raw)
+noexcept {
+  switch (marshal.primitive_type) {
+  case ava_cmpt_void:
+    INVOKE(context.di.marshal_to[ava_cmpt_void], raw);
+    return nullptr;
+
+  case ava_cmpt_pointer:
+    return INVOKE(
+      context.di.marshal_to[ava_cmpt_pointer],
+      raw, get_pointer_prototype_constant(
+        context, marshal.pointer_proto));
+
+  default:
+    return INVOKE(
+      context.di.marshal_to[marshal.primitive_type], raw);
+  }
 }
 
 llvm::Value* ava_xcode_fun_xlate_info::create_call_or_invoke(
@@ -3103,6 +3264,22 @@ noexcept {
   }
 
   return ret;
+}
+
+void ava_xcode_fun_xlate_info::do_return(
+  llvm::Value* value,
+  const ava_pcg_fun* pcfun)
+noexcept {
+  if (ava_cc_ava == pcfun->prototype->calling_convention) {
+    irb.CreateRet(value);
+  } else {
+    value = marshal_to(pcfun->prototype->c_return_type, value);
+    if (ava_cmpt_void == pcfun->prototype->c_return_type.primitive_type) {
+      irb.CreateRetVoid();
+    } else {
+      irb.CreateRet(value);
+    }
+  }
 }
 
 AVA_END_FILE_PRIVATE
