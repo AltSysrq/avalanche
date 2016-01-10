@@ -22,11 +22,10 @@
 /**
  * @file
  *
- * Function-like macros under the "intrinsics.esoterica" namespace which don't
- * really fit in anywhere else.
+ * Function-like macros under the "esoterica" namespace which don't really fit
+ * in anywhere else.
  *
- * The "S." prefix is shorthand here for
- * "intrinsics.esoterica.unsafe.strangelet".
+ * The "S." prefix is shorthand here for "esoterica.unsafe.strangelet".
  */
 
 /**

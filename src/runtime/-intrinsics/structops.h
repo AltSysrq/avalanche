@@ -24,8 +24,8 @@
  *
  * Function-like macros for working with structs.
  *
- * All these macros are found within the intrinsics.esoterica.unsafe.strangelet
- * namespace, which is not otherwise noted in the documentation.
+ * All these macros are found within the esoterica.unsafe.strangelet namespace,
+ * which is not otherwise noted in the documentation.
  *
  * In all cases, an "sxt" arg is a constant expression naming a struct symbol,
  * and "field" is a constant expression naming a field within that struct.

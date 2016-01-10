@@ -170,10 +170,6 @@ typedef double ava_real;
  * The root of the package provided by the runtime and the standard library.
  */
 #define AVA_AVAST_PACKAGE "org.ava-lang.avast"
-/**
- * The namespace used by intrinsics provided by the runtime.
- */
-#define AVA_AVAST_INTRINSIC AVA_AVAST_PACKAGE ":intrinsic"
 
 AVA_BEGIN_DECLS
 /**

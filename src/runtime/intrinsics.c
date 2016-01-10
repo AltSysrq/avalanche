@@ -64,7 +64,7 @@ static const ava_intr_seq_return_policy
 #define OP(p) ava_st_operator_macro, p
 #define EUS "esoterica.unsafe.strangelet."
 #define DEFINE(name, type_and_prec, ud, base)                           \
-  ava_register_intrinsic(symtab, AVA_AVAST_INTRINSIC "." name,          \
+  ava_register_intrinsic(symtab, AVA_AVAST_PACKAGE ":" name,            \
                          type_and_prec, ud,                             \
                          ava_intr_##base##_subst)
 
@@ -74,7 +74,6 @@ static void ava_register_intrinsic(
   const void* userdata, ava_macro_subst_f fun);
 
 void ava_register_intrinsics(ava_macsub_context* context) {
-  AVA_STATIC_STRING(intrinsic_prefix, AVA_AVAST_INTRINSIC ".");
   AVA_STATIC_STRING(avast_prefix, AVA_AVAST_PACKAGE ":");
   ava_string abs, amb;
 
@@ -143,9 +142,6 @@ void ava_register_intrinsics(ava_macsub_context* context) {
   DEFINE(EUS"cpu-pause",FUN,    NULL,           S_cpu_pause);
 
   /* Weak absolute imports of the intrinsics and standard library */
-  ava_macsub_import(&abs, &amb, context,
-                    intrinsic_prefix, AVA_EMPTY_STRING,
-                    ava_true, ava_false);
   ava_macsub_import(&abs, &amb, context,
                     avast_prefix, AVA_EMPTY_STRING,
                     ava_true, ava_false);
