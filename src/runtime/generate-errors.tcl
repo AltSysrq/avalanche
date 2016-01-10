@@ -799,8 +799,9 @@ set defs {
 
       More details can be found in the nested error message.
 
-      This error indicates that the macro did not correctly validate its
-      input and is probably a bug.
+      If this does not come from a marco which takes a literal function
+      prototype, this error indicates that the macro did not correctly validate
+      its input and is probably a bug.
     }
   }
 
@@ -2522,6 +2523,38 @@ set defs {
       Pointer fields support only the xchg (exchange, or
       set-and-return-prior-value) read-modify-write operation since the other
       operations are not in general meaningful for pointers.
+    }
+  }
+
+  cerror C5156 prototype_override_wrong_arg_count {} {
+    msg "Prototype override arg count differs from count function takes."
+    explanation {
+      The indicated function prototype override describes a function with a
+      different number of arguments than the function is declared to accept.
+    }
+  }
+
+  cerror C5157 overrides_on_nested_function {} {
+    msg "Linkage-name or prototype override on non-global function."
+    explanation {
+      The indicated location overrides the natural linkage name and/or
+      prototype of a function declaration, but that function is not at global
+      scope.
+
+      Non-global functions do not participate in linkage, so changing their
+      linkage name is not meaningful. If the function captures any variables of
+      the surrounding context, implicit arguments may be added to it, so the
+      overridden prototype could be incorrect and could describe a calling
+      convention in which the addition of those arguments would be impossible.
+    }
+  }
+
+  cerror C5158 linkage_name_on_non_linked {} {
+    msg "Linkage-name on non-linked entity."
+    explanation {
+      The indicated linkage name was placed on an entity (e.g., a function
+      declaration) which does not participate in linkage, for example because
+      it has private visibility.
     }
   }
 

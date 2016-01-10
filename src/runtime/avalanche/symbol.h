@@ -22,6 +22,7 @@
 
 #include "string.h"
 #include "macsub.h"
+#include "function.h"
 
 /**
  * The maximum precedence, inclusive, of an operator macro.

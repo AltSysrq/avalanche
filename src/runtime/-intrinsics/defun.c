@@ -35,6 +35,7 @@
 #include "../avalanche/pcode.h"
 #include "../avalanche/code-gen.h"
 #include "../avalanche/varscope.h"
+#include "../avalanche/exception.h"
 #include "../avalanche/errors.h"
 #include "variable.h"
 #include "fundamental.h"
@@ -55,6 +56,11 @@ typedef struct {
   ava_bool defined;
 } ava_intr_fun;
 
+typedef struct {
+  const ava_function* result;
+  const ava_parse_unit* unit;
+} ava_intr_fun_prototype_conv_data;
+
 static const ava_parse_unit* first_unit(const ava_parse_statement_list* list);
 static ava_bool ava_intr_fun_is_named(ava_string* name);
 static ava_bool ava_intr_fun_is_def_begin(const ava_parse_unit* unit);
@@ -66,6 +72,7 @@ static void ava_intr_fun_cg_define(
 
 static void ava_intr_fun_codegen(
   ava_intr_fun* this, ava_codegen_context* context);
+static void ava_intr_fun_try_convert_prototype(void* conv_data);
 
 static const ava_ast_node_vtable ava_intr_fun_vtable = {
   .name = "function declaration",
@@ -82,17 +89,22 @@ ava_macro_subst_result ava_intr_fun_subst(
   const ava_parse_unit* provoker,
   ava_bool* consumed_other_statements
 ) {
-  const ava_parse_unit* name_unit, * arg_unit, * body_begin, * prev_unit;
+  const ava_parse_unit* name_unit, * arg_begin, * arg_unit;
+  const ava_parse_unit* body_begin, * prev_unit;
+  const ava_parse_unit* linkage_name_unit = NULL, * prototype_unit = NULL;
   ava_macsub_context* subcontext;
   ava_string name, abs, amb;
   ava_bool is_expression_form;
   size_t num_args, arg_ix;
-  ava_function* fun;
+  const ava_function* fun;
+  ava_function* mutfun;
   ava_argument_spec* argspecs;
   ava_intr_fun* this;
   ava_bool has_nonoptional_arg = ava_false, expect_valid = ava_true;
   ava_bool has_varargs = ava_false, has_varshape = ava_false;
   ava_bool last_was_varshape = ava_false, is_varshape;
+  ava_intr_fun_prototype_conv_data prototype_conv_data;
+  ava_exception caught;
 
   name_unit = TAILQ_NEXT(provoker, next);
   if (!name_unit)
@@ -113,8 +125,33 @@ ava_macro_subst_result ava_intr_fun_subst(
                     AVA_EMPTY_STRING,
                     ava_true, ava_true);
 
-  num_args = 0;
-  for (arg_unit = TAILQ_NEXT(prev_unit = name_unit, next);
+  arg_unit = TAILQ_NEXT(prev_unit = name_unit, next);
+  if (arg_unit && ava_put_astring == arg_unit->type) {
+    linkage_name_unit = arg_unit;
+    arg_unit = TAILQ_NEXT(prev_unit = arg_unit, next);
+  }
+  if (arg_unit && ava_put_astring == arg_unit->type) {
+    prototype_unit = arg_unit;
+    arg_unit = TAILQ_NEXT(prev_unit = arg_unit, next);
+  }
+
+  if (linkage_name_unit && ava_macsub_get_level(context)) {
+    ava_macsub_record_error(
+      context, ava_error_overrides_on_nested_function(
+        &linkage_name_unit->location));
+    linkage_name_unit = prototype_unit = NULL;
+  }
+
+  if (linkage_name_unit &&
+      !ava_string_is_empty(linkage_name_unit->v.string) &&
+      ava_v_private == *(const ava_visibility*)self->v.macro.userdata) {
+    ava_macsub_record_error(
+      context, ava_error_linkage_name_on_non_linked(
+        &linkage_name_unit->location));
+    linkage_name_unit = NULL;
+  }
+
+  for (arg_begin = arg_unit, num_args = 0;
        arg_unit && !ava_intr_fun_is_def_begin(arg_unit);
        arg_unit = TAILQ_NEXT(prev_unit = arg_unit, next))
     ++num_args;
@@ -141,13 +178,39 @@ ava_macro_subst_result ava_intr_fun_subst(
       context, ava_error_defun_without_args(
         &(arg_unit? arg_unit : name_unit)->location));
 
-  fun = AVA_NEW(ava_function);
-  fun->address = (void(*)())1;
-  fun->calling_convention = ava_cc_ava;
-  fun->num_args = num_args;
-  fun->args = argspecs = ava_alloc(num_args * sizeof(ava_argument_spec));
+  fun = NULL;
+  if (prototype_unit) {
+    prototype_conv_data.unit = prototype_unit;
+    if (ava_catch(&caught, ava_intr_fun_try_convert_prototype,
+                  &prototype_conv_data)) {
+      ava_macsub_record_error(
+        context, ava_error_invalid_function_prototype(
+          &prototype_unit->location,
+          ava_exception_get_value(&caught)));
+    } else if (num_args != prototype_conv_data.result->num_args) {
+      ava_macsub_record_error(
+        context, ava_error_prototype_override_wrong_arg_count(
+          &prototype_unit->location));
+    } else {
+      fun = prototype_conv_data.result;
+    }
+  }
 
-  for (arg_unit = TAILQ_NEXT(name_unit, next), arg_ix = 0;
+  /* If there is a prototype override, this array ends up getting discarded,
+   * but the code is simpler if it always has a location to write back to, and
+   * it's not worth optimising for the case where there is a prototype
+   * override.
+   */
+  argspecs = ava_alloc(num_args * sizeof(ava_argument_spec));
+  if (!fun) {
+    fun = mutfun = AVA_NEW(ava_function);
+    mutfun->address = (void(*)())1;
+    mutfun->calling_convention = ava_cc_ava;
+    mutfun->num_args = num_args;
+    mutfun->args = argspecs;
+  }
+
+  for (arg_unit = arg_begin, arg_ix = 0;
        arg_ix < num_args;
        arg_unit = TAILQ_NEXT(arg_unit, next), ++arg_ix) {
     ava_string arg_name;
@@ -311,8 +374,14 @@ ava_macro_subst_result ava_intr_fun_subst(
   this->symbol->definer = (ava_ast_node*)this;
   this->symbol->full_name = ava_macsub_apply_prefix(context, name);
   this->symbol->v.var.is_mutable = ava_false;
-  this->symbol->v.var.name.scheme = ava_nms_ava;
-  this->symbol->v.var.name.name = this->symbol->full_name;
+  if (linkage_name_unit &&
+      !ava_string_is_empty(linkage_name_unit->v.string)) {
+    this->symbol->v.var.name.scheme = ava_nms_none;
+    this->symbol->v.var.name.name = linkage_name_unit->v.string;
+  } else {
+    this->symbol->v.var.name.scheme = ava_nms_ava;
+    this->symbol->v.var.name.name = this->symbol->full_name;
+  }
   this->symbol->v.var.fun = *fun;
   this->symbol->v.var.scope = ava_macsub_get_varscope(subcontext);
 
@@ -362,6 +431,16 @@ static const ava_parse_unit* first_unit(const ava_parse_statement_list* list) {
   if (TAILQ_EMPTY(units)) return NULL;
 
   return TAILQ_FIRST(units);
+}
+
+static void ava_intr_fun_try_convert_prototype(void* vdata) {
+  ava_intr_fun_prototype_conv_data* data = vdata;
+
+  data->result = ava_function_of_value(
+    ava_value_of_string(
+      ava_strcat(
+        AVA_ASCII9_STRING("1 "),
+        data->unit->v.string)));
 }
 
 static ava_bool ava_intr_fun_is_named(ava_string* name) {

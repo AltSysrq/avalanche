@@ -24,7 +24,6 @@
 #include "string.h"
 #include "value.h"
 #include "list.h"
-#include "function.h"
 #include "parser.h"
 #include "errors.h"
 #include "name-mangle.h"

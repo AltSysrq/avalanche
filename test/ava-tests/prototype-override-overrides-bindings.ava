@@ -1,0 +1,7 @@
+reqmod helpers/test
+
+fun doit "" "ava [named -value]" x = test.pass $x
+
+test.register prototype-override-overrides-bindings.ava {
+  doit -value 42
+}

@@ -1,5 +1,5 @@
 /*-
- * Copyright (c) 2015, Jason Lingle
+ * Copyright (c) 2015, 2016, Jason Lingle
  *
  * Permission to  use, copy,  modify, and/or distribute  this software  for any
  * purpose  with or  without fee  is hereby  granted, provided  that the  above
@@ -114,6 +114,7 @@ ava::driver_iface::driver_iface(const llvm::Module& module) noexcept {
   MAR(ava_slong);
   MAR(ava_ubyte);
   MAR(ava_ushort);
+  MAR(ava_uint);
   MAR(ava_ulong);
   MAR(ava_integer);
   MAR(size);

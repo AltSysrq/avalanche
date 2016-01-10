@@ -1,0 +1,11 @@
+reqmod helpers/test
+
+FUN do-pass-test "call_pass_test_with_other_linkage_name" value =
+\ test.pass $value
+
+extern call_pass_test_with_other_linkage_name
+\ call_pass_test_with_other_linkage_name ava pos
+
+test.register linkage-name-override-works {
+  call_pass_test_with_other_linkage_name 42
+}

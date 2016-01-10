@@ -1,5 +1,5 @@
 /*-
- * Copyright (c) 2015, Jason Lingle
+ * Copyright (c) 2015, 2016, Jason Lingle
  *
  * Permission to  use, copy,  modify, and/or distribute  this software  for any
  * purpose  with or  without fee  is hereby  granted, provided  that the  above
@@ -23,7 +23,7 @@
  * The `fun`, `Fun`, and `FUN` control macros.
  *
  * Syntax:
- *   fun name {argument}+ {body}
+ *   fun name [linkage-name [prototype]] {argument}+ {body}
  *   {argument} ::= "(" ")"
  *              |   pos-name
  *              |   -named-name
@@ -37,6 +37,17 @@
  * bareword not beginning with "-"; named-name is any bareword beginning with
  * "-". default is any single-unit constexpr, or nothing at all to stand for
  * the empty string.
+ *
+ * linkage-name and prototype are given as A-String literals and are not
+ * normally specified. If given, linkage-name overrides the name used for the
+ * function when generating code for the underlying platform (not subject to
+ * name mangling), but does not impact the name exposed to Avalanche code. If
+ * it is the empty string, it has no effect (this allows for overriding the
+ * prototype without changing the linkage name). If specified, prototype is a
+ * function prototype which must describe a function with the same number of
+ * arguments as the actual function. This prototype completely overrides the
+ * prototype of the function declaration, including argument binding.
+ * linkage-name and prototype may only be specified on global functions.
  *
  * The symbol table gains a function `name`. The arguments are derived from the
  * given list of arguments as described below; the function may have implicit
