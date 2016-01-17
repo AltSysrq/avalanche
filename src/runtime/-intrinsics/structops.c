@@ -1738,3 +1738,122 @@ static void ava_intr_S_static_cg_define(
   node->var_sym->pcode_index = ix;
   ava_codegen_export(context, node->var_sym);
 }
+
+/******************** S.exstatic ********************/
+
+typedef struct {
+  ava_ast_node header;
+
+  ava_symbol* var_sym;
+  ava_bool thr_local;
+  ava_bool defined;
+} ava_intr_S_exstatic;
+
+static ava_string ava_intr_S_exstatic_to_string(
+  const ava_intr_S_exstatic* node);
+static void ava_intr_S_exstatic_cg_define(
+  ava_intr_S_exstatic* node,
+  ava_codegen_context* context);
+
+static const ava_ast_node_vtable ava_intr_S_exstatic_vtable = {
+  .name = "external static strangelet declaration",
+  .to_string = (ava_ast_node_to_string_f)ava_intr_S_exstatic_to_string,
+  .cg_define = (ava_ast_node_cg_define_f)ava_intr_S_exstatic_cg_define,
+  .cg_discard = (ava_ast_node_cg_discard_f)ava_intr_S_exstatic_cg_define,/*sic*/
+};
+
+AVA_DEF_MACRO_SUBST(ava_intr_S_exstatic_subst) {
+  const ava_parse_unit* name_unit, * linkage_name_unit;
+  const ava_parse_unit* option_unit = NULL;
+  ava_string name, linkage_name, option;
+  ava_intr_S_exstatic* node;
+
+  node = AVA_NEW(ava_intr_S_exstatic);
+
+  AVA_MACRO_ARG_PARSE {
+    AVA_MACRO_ARG_FROM_RIGHT_BEGIN {
+      AVA_MACRO_ARG_CURRENT_UNIT(name_unit, "name");
+      AVA_MACRO_ARG_BAREWORD(name, "name");
+      AVA_MACRO_ARG_CURRENT_UNIT(linkage_name_unit, "linkage name");
+      AVA_MACRO_ARG_STRINGOID(linkage_name, "linkage name");
+
+      while (AVA_MACRO_ARG_HAS_ARG()) {
+        AVA_MACRO_ARG_CURRENT_UNIT(option_unit, "option");
+        AVA_MACRO_ARG_BAREWORD(option, "option");
+
+        if (ava_string_equal(ava_intr_S_static_thread_local_option, option)) {
+          if (node->thr_local) {
+            ava_macsub_record_error(
+              context, ava_error_macro_arg_given_more_than_once(
+                &option_unit->location, ava_intr_S_static_thread_local_option));
+          } else {
+            node->thr_local = ava_true;
+          }
+        } else {
+          ava_macsub_record_error(
+            context, ava_error_bad_macro_keyword(
+              &option_unit->location,
+              self->full_name, option,
+              ava_intr_S_static_thread_local_option));
+        }
+      }
+    }
+  }
+
+  node->header.v = &ava_intr_S_exstatic_vtable;
+  node->header.context = context;
+  node->header.location = provoker->location;
+  node->var_sym = AVA_NEW(ava_symbol);
+  node->var_sym->type = ava_st_global_variable;
+  node->var_sym->level = ava_macsub_get_level(context);
+  node->var_sym->visibility = *(const ava_visibility*)self->v.macro.userdata;
+  node->var_sym->definer = (ava_ast_node*)node;
+  node->var_sym->full_name = ava_macsub_apply_prefix(context, name);
+  node->var_sym->v.var.is_mutable = ava_false;
+  node->var_sym->v.var.name.scheme = ava_nms_none;
+  node->var_sym->v.var.name.name = linkage_name;
+
+  ava_macsub_put_symbol(context, node->var_sym, &name_unit->location);
+
+  return (ava_macro_subst_result) {
+    .status = ava_mss_done,
+    .v.node = (ava_ast_node*)node
+  };
+}
+
+static ava_string ava_intr_S_exstatic_to_string(
+  const ava_intr_S_exstatic* node
+) {
+  AVA_STATIC_STRING(private_prefix,  "S.exstatic ");
+  AVA_STATIC_STRING(internal_prefix, "S.Exstatic ");
+  AVA_STATIC_STRING(public_prefix,   "S.EXSTATIC ");
+
+  ava_string accum;
+
+  switch (node->var_sym->visibility) {
+  case ava_v_private:  accum = private_prefix; break;
+  case ava_v_internal: accum = internal_prefix; break;
+  case ava_v_public:   accum = public_prefix; break;
+  }
+
+  accum = ava_strcat(accum, node->var_sym->full_name);
+  accum = ava_strcat(accum, AVA_ASCII9_STRING(" "));
+  accum = ava_strcat(accum, node->var_sym->v.var.name.name);
+  if (node->thr_local) {
+    accum = ava_strcat(accum, AVA_ASCII9_STRING(" "));
+    accum = ava_strcat(accum, ava_intr_S_static_thread_local_option);
+  }
+
+  return accum;
+}
+
+static void ava_intr_S_exstatic_cg_define(
+  ava_intr_S_exstatic* node, ava_codegen_context* context
+) {
+  if (node->defined) return;
+  node->defined = ava_true;
+
+  node->var_sym->pcode_index =
+    AVA_PCGB(S_ext_bss, node->var_sym->v.var.name, node->thr_local);
+  ava_codegen_export(context, node->var_sym);
+}

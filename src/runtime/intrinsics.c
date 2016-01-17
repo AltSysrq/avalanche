@@ -143,6 +143,9 @@ void ava_register_intrinsics(ava_macsub_context* context) {
   DEFINE(EUS "static",  CTL,    PRIVATE,        S_static);
   DEFINE(EUS "Static",  CTL,    INTERNAL,       S_static);
   DEFINE(EUS "STATIC",  CTL,    PUBLIC,         S_static);
+  DEFINE(EUS "exstatic",CTL,    PRIVATE,        S_exstatic);
+  DEFINE(EUS "Exstatic",CTL,    INTERNAL,       S_exstatic);
+  DEFINE(EUS "EXSTATIC",CTL,    PUBLIC,         S_exstatic);
 
   /* Weak absolute imports of the intrinsics and standard library */
   ava_macsub_import(&abs, &amb, context,

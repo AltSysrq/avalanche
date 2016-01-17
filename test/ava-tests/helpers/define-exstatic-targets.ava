@@ -1,0 +1,13 @@
+; This file is not reqmodded by anything; it just defines targets for the
+; exstatic tests.
+import esoterica.unsafe.strangelet S
+
+namespace private-define-exstatic-targets
+
+struct ih {
+  integer i
+}
+
+S.STATIC ih a "exstatic_target_a"
+S.STATIC ih b "exstatic_target_b"
+S.STATIC ih c "exstatic_target_thread_local" -thread-local
