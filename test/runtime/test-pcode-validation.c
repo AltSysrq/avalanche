@@ -1,5 +1,5 @@
 /*-
- * Copyright (c) 2015, Jason Lingle
+ * Copyright (c) 2015, 2016, Jason Lingle
  *
  * Permission to  use, copy,  modify, and/or distribute  this software  for any
  * purpose  with or  without fee  is hereby  granted, provided  that the  above
@@ -337,6 +337,32 @@ deftest(global_init_extfun_ref) {
     VERB("init 0"));
 }
 
+deftest(global_bss_oob_ref) {
+  xcode_fail_with(
+    "X9007",
+    VERB("S-bss 99 true [ava foo] false"));
+}
+
+deftest(global_bss_ref_non_sxt) {
+  xcode_fail_with(
+    "X9008",
+    VERB("S-bss 0 true [ava foo] false"));
+}
+
+deftest(global_bss_t_ref_non_tail) {
+  xcode_fail_with(
+    "X9008",
+    VERB("S-bss-t 1 true [ava foo] false 42")
+    VERB("decl-sxt true [[struct foo] [value x]]"));
+}
+
+deftest(global_bss_t_ref_empty) {
+  xcode_fail_with(
+    "X9008",
+    VERB("S-bss-t 1 true [ava foo] false 42")
+    VERB("decl-sxt true [[struct foo]]"));
+}
+
 deftest(global_init_bad_arg_count) {
   xcode_fail_with(
     "X9008",
@@ -365,6 +391,14 @@ deftest(local_global_var_nonvar_ref) {
   xcode_fail_with(
     "X9008",
     VERB("init 1")
+    VERB(FUN_FOO ONE_ARG NO_VAR VERB(
+           VERB("set-glob 0 v0"))));
+}
+
+deftest(set_glob_on_ext_var) {
+  xcode_fail_with(
+    "X9008",
+    VERB("ext-var [ava some-var]")
     VERB(FUN_FOO ONE_ARG NO_VAR VERB(
            VERB("set-glob 0 v0"))));
 }

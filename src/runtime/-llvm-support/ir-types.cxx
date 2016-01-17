@@ -1,5 +1,5 @@
 /*-
- * Copyright (c) 2015, Jason Lingle
+ * Copyright (c) 2015, 2016, Jason Lingle
  *
  * Permission to  use, copy,  modify, and/or distribute  this software  for any
  * purpose  with or  without fee  is hereby  granted, provided  that the  above
@@ -110,4 +110,5 @@ noexcept {
     abi_info->getElementType(abi_exception));
 
   general_pointer = llvm::TypeBuilder<llvm::types::i<8>*,true>::get(context);
+  opaque = llvm::StructType::create(context, "S_ext_bss_opaque");
 }

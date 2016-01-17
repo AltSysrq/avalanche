@@ -1,5 +1,5 @@
 #-
-# Copyright (c) 2015 Jason Lingle
+# Copyright (c) 2015, 2016 Jason Lingle
 #
 # Permission to  use, copy,  modify, and/or distribute  this software  for any
 # purpose  with or  without fee  is hereby  granted, provided  that the  above
@@ -32,6 +32,9 @@
 struct global g {
   # Whether this element is a valid target for global variable references.
   attr var
+  # Whether this element is a valid target for global variable references which
+  # mutate the variable directly.
+  attr var-mutable
   # Whether this element is a valid target for global function references.
   attr fun
   # Whether this element is a valid target for global references that require
@@ -52,6 +55,12 @@ struct global g {
   # Property which is a reference, by absolute index, to an element with the
   # fun attribute in the same P-Code object.
   prop int global-fun-ref
+  # Property which is a reference, by absolute index, to an element with the
+  # struct-def property in the same P-Code object.
+  prop int global-sxt-ref
+  # Property used in conjunction with global-sxt-ref to indicate that the
+  # referenced struct must have a tail field.
+  prop int global-sxt-with-tail-ref
   # Property indicating that the element describes a function with the given
   # prototype.
   #
@@ -145,6 +154,7 @@ struct global g {
   # global index.
   elt var {
     attr var
+    attr var-mutable
     attr entity
     attr linkage-definition
     bool publish {
@@ -223,6 +233,113 @@ struct global g {
     sxt def {
       prop struct-def
     }
+  }
+
+  # Defines a static strangelet.
+  #
+  # This is considered unsafe because it causes any ld-glob instructions to
+  # produce strangelets, which may themselves result in unsafe operations.
+  #
+  # Semantics: This element behaves like a read-only variable which contains a
+  # strangelet referencing an instance of sxt. The reference is set, and the
+  # memory zero-initialised, at some time before the first read of the variable
+  # occurs.
+  #
+  # If sxt has a tail field, its size is zero.
+  #
+  # If thr-local is true, every *platform* thread sees a different strangelet.
+  #
+  # On read, the strangelet type is SXT.
+  elt S-bss {
+    attr entity
+    attr var
+    attr linkage-definition
+
+    int sxt {
+      prop global-entity-ref
+      prop global-sxt-ref
+    }
+    bool publish {
+      prop publish
+    }
+    demangled-name name {
+      prop linkage-name
+    }
+    bool thr-local
+  }
+
+  # Like S-bss, but the strangelet references an array of length length
+  # instances of sxt.
+  #
+  # On read, the strangelet type is SXT[].
+  elt S-bss-a {
+    attr entity
+    attr var
+    attr linkage-definition
+
+    int sxt {
+      prop global-entity-ref
+      prop global-sxt-ref
+    }
+    bool publish {
+      prop publish
+    }
+    demangled-name name {
+      prop linkage-name
+    }
+    bool thr-local
+    int length
+
+    constraint {
+      @.length >= 0
+    }
+  }
+
+  # Like S-bss, but the length of the tail field on sxt is given by length.
+  elt S-bss-t {
+    attr entity
+    attr var
+    attr linkage-definition
+
+    int sxt {
+      prop global-entity-ref
+      prop global-sxt-ref
+      prop global-sxt-with-tail-ref
+    }
+    bool publish {
+      prop publish
+    }
+    demangled-name name {
+      prop linkage-name
+    }
+    bool thr-local
+    int length
+
+    constraint {
+      @.length >= 0
+    }
+  }
+
+  # Declares a static strangelet defined by a different P-Code unit.
+  #
+  # Semantics: At any point before this P-Code unit's initialisation
+  # function(s) are run, the name of this variable will be resolved to a
+  # published S-bss, S-bss-a, or S-bss-t symbol. If resolvution fails, this
+  # unit fails to load. This resolution may occur before the program is loaded.
+  #
+  # As a variable, this behaves the same as S-bss. Note that the S-ext-bss
+  # itself is typeless.
+  #
+  # Behaviour is undefined if thr-local on the S-ext-bss is different from the
+  # thr-local on the S-bss it references.
+  elt S-ext-bss {
+    attr var
+    attr entity
+    attr effectively-published
+    demangled-name name {
+      prop linkage-name
+    }
+    bool thr-local
   }
 
   # Exports a symbol visible to Avalanche code referencing a global in this
@@ -376,6 +493,9 @@ struct exe x {
   prop bool landing-pad-is-cleanup
   # Identifies a field which must refer to a variable-like global entity.
   prop int global-var-ref
+  # Identifies a field which must refer to a global entity with the var-mutable
+  # attribute.
+  prop int global-var-mutable-ref
   # Identifies a field which must refer to a function-like global entity.
   prop int global-fun-ref
   # Identifies a field which must refer to a struct-like global entity.
@@ -598,6 +718,7 @@ struct exe x {
   elt set-glob {
     int dst {
       prop global-var-ref
+      prop global-var-mutable-ref
       prop global-ref
     }
     register dv src {

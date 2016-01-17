@@ -162,6 +162,7 @@ static void make_global_locations(
 static bool ava_xcode_to_ir_declare_global(
   ava_xcode_translation_context& context,
   std::set<std::string>& declared_symbols,
+  const ava_xcode_global_list* xcode,
   const ava_pcode_global* pcode,
   size_t ix,
   std::string& error) noexcept;
@@ -191,6 +192,10 @@ static llvm::Type* ava_xcode_to_ir_make_struct_member(
 static llvm::ArrayType* ava_xcode_to_ir_make_union_type(
   ava_xcode_translation_context& context,
   llvm::StructType* sxt) noexcept;
+static llvm::Type* get_sxt_type(
+  const ava_xcode_translation_context& context,
+  const ava_xcode_global_list* xcode,
+  size_t struct_ix) noexcept;
 
 static llvm::Type* translate_marshalling_type(
   const ava_xcode_translation_context& context,
@@ -314,10 +319,6 @@ struct ava_xcode_fun_xlate_info {
     ava_pcode_register_type dst_type,
     ava_pcode_register_type src_type,
     llvm::Value* tmplist) noexcept;
-
-  llvm::Type* get_sxt_type(
-    const ava_xcode_global_list* xcode,
-    size_t struct_ix) noexcept;
 
   llvm::Type* get_sxt_field_type(
     size_t struct_ix, size_t field_ix) noexcept;
@@ -451,8 +452,19 @@ const noexcept {
   make_global_locations(context, xcode);
 
   for (size_t i = 0; i < xcode->length; ++i) {
+    if (ava_pcgt_decl_sxt == xcode->elts[i].pc->type) {
+      const ava_pcg_decl_sxt* v =
+        (const ava_pcg_decl_sxt*)xcode->elts[i].pc;
+
+      if (!ava_xcode_to_ir_declare_sxt(context, i, v->def, error))
+        return error_ret;
+
+    }
+  }
+
+  for (size_t i = 0; i < xcode->length; ++i) {
     if (!ava_xcode_to_ir_declare_global(
-          context, declared_symbols, xcode->elts[i].pc, i, error)) {
+          context, declared_symbols, xcode, xcode->elts[i].pc, i, error)) {
       return error_ret;
     }
   }
@@ -566,6 +578,7 @@ noexcept {
 static bool ava_xcode_to_ir_declare_global(
   ava_xcode_translation_context& context,
   std::set<std::string>& declared_symbols,
+  const ava_xcode_global_list* xcode,
   const ava_pcode_global* pcode,
   size_t ix,
   std::string& error)
@@ -623,13 +636,76 @@ noexcept {
       true, ix, error);
   } break;
 
-  case ava_pcgt_decl_sxt: {
-    const ava_pcg_decl_sxt* v = (const ava_pcg_decl_sxt*)pcode;
-
-    return ava_xcode_to_ir_declare_sxt(
-      context, ix, v->def, error);
+  case ava_pcgt_S_ext_bss: {
+    const ava_pcg_S_ext_bss* v = (const ava_pcg_S_ext_bss*)pcode;
+    llvm::GlobalVariable* var = new llvm::GlobalVariable(
+      context.module, context.types.opaque,
+      false, llvm::GlobalValue::ExternalLinkage,
+      nullptr, ava_string_to_cstring(ava_name_mangle(v->name)),
+      nullptr, v->thr_local?
+      llvm::GlobalValue::GeneralDynamicTLSModel :
+      llvm::GlobalValue::NotThreadLocal);
+    context.global_vars[ix] = var;
   } break;
 
+  case ava_pcgt_S_bss: {
+    const ava_pcg_S_bss* v = (const ava_pcg_S_bss*)pcode;
+    llvm::Type* type = get_sxt_type(context, xcode, v->sxt);
+    llvm::GlobalVariable* var = new llvm::GlobalVariable(
+      context.module, type,
+      false, v->publish? llvm::GlobalValue::ExternalLinkage :
+                         llvm::GlobalValue::InternalLinkage,
+      llvm::ConstantAggregateZero::get(type),
+      ava_string_to_cstring(ava_name_mangle(v->name)),
+      nullptr, v->thr_local?
+      llvm::GlobalValue::GeneralDynamicTLSModel :
+      llvm::GlobalValue::NotThreadLocal);
+    context.global_vars[ix] = var;
+  } break;
+
+  case ava_pcgt_S_bss_a: {
+    const ava_pcg_S_bss_a* v = (const ava_pcg_S_bss_a*)pcode;
+    llvm::Type* type = llvm::ArrayType::get(
+      get_sxt_type(context, xcode, v->sxt), v->length);
+    llvm::GlobalVariable* var = new llvm::GlobalVariable(
+      context.module, type,
+      false, v->publish? llvm::GlobalValue::ExternalLinkage :
+                         llvm::GlobalValue::InternalLinkage,
+      llvm::ConstantAggregateZero::get(type),
+      ava_string_to_cstring(ava_name_mangle(v->name)),
+      nullptr, v->thr_local?
+      llvm::GlobalValue::GeneralDynamicTLSModel :
+      llvm::GlobalValue::NotThreadLocal);
+    context.global_vars[ix] = var;
+  } break;
+
+  case ava_pcgt_S_bss_t: {
+    const ava_pcg_S_bss_t* v = (const ava_pcg_S_bss_t*)pcode;
+    llvm::Type* base_type = get_sxt_type(context, xcode, v->sxt);
+    llvm::Type* struct_type = context.global_sxt_structs[v->sxt];
+    llvm::Type* tail_type = struct_type->getStructElementType(
+      struct_type->getStructNumElements() - 1)
+      ->getArrayElementType();
+
+    const llvm::DataLayout& dl(context.module.getDataLayout());
+    size_t size = dl.getTypeAllocSize(base_type) +
+      v->length * dl.getTypeAllocSize(tail_type);
+    llvm::Type* type = llvm::ArrayType::get(
+      context.types.ava_byte, size);
+    llvm::GlobalVariable* var = new llvm::GlobalVariable(
+      context.module, type,
+      false, v->publish? llvm::GlobalValue::ExternalLinkage :
+                         llvm::GlobalValue::InternalLinkage,
+      llvm::ConstantAggregateZero::get(type),
+      ava_string_to_cstring(ava_name_mangle(v->name)),
+      nullptr, v->thr_local?
+      llvm::GlobalValue::GeneralDynamicTLSModel :
+      llvm::GlobalValue::NotThreadLocal);
+    var->setAlignment(dl.getABITypeAlignment(base_type));
+    context.global_vars[ix] = var;
+  } break;
+
+  case ava_pcgt_decl_sxt:
   case ava_pcgt_load_pkg:
   case ava_pcgt_load_mod:
   case ava_pcgt_src_pos:
@@ -1149,6 +1225,22 @@ noexcept {
   return llvm::ArrayType::get(elt, max_size / layout.getTypeAllocSize(elt));
 }
 
+static llvm::Type* get_sxt_type(
+  const ava_xcode_translation_context& context,
+  const ava_xcode_global_list* xcode,
+  size_t struct_ix)
+noexcept {
+  const ava_struct* def;
+
+  if (!ava_pcode_global_get_struct_def(&def, xcode->elts[struct_ix].pc, 0))
+    abort();
+
+  if (def->is_union)
+    return context.global_sxt_unions.find(struct_ix)->second;
+  else
+    return context.global_sxt_structs.find(struct_ix)->second;
+}
+
 static llvm::Type* translate_marshalling_type(
   const ava_xcode_translation_context& context,
   const ava_c_marshalling_type& type)
@@ -1508,6 +1600,10 @@ noexcept {
         llvm::DebugLoc::get(p->start_line, p->start_column, di_fun));
     } break;
 
+    case ava_pcgt_S_ext_bss:
+    case ava_pcgt_S_bss:
+    case ava_pcgt_S_bss_a:
+    case ava_pcgt_S_bss_t:
     case ava_pcgt_decl_sxt:
     case ava_pcgt_export:
     case ava_pcgt_macro:
@@ -1856,14 +1952,25 @@ noexcept {
   case ava_pcxt_ld_glob: {
     const ava_pcx_ld_glob* p = (const ava_pcx_ld_glob*)exe;
 
-    llvm::Value* src = irb.CreateCall(
-      ava_pcode_global_is_fun(xcode->elts[p->src].pc)?
-      context.di.x_load_glob_fun : context.di.x_load_glob_var,
-      { context.global_vars[p->src],
-        get_ava_string_constant(
-          context, to_ava_string(
-            context.global_vars[p->src]->getName())) });
-    store_register(p->dst, src, pcfun);
+    switch (xcode->elts[p->src].pc->type) {
+    case ava_pcgt_S_ext_bss:
+    case ava_pcgt_S_bss:
+    case ava_pcgt_S_bss_a:
+    case ava_pcgt_S_bss_t: {
+      store_strangelet(p->dst, context.global_vars[p->src], pcfun);
+    } break;
+
+    default: {
+      llvm::Value* src = irb.CreateCall(
+        ava_pcode_global_is_fun(xcode->elts[p->src].pc)?
+        context.di.x_load_glob_fun : context.di.x_load_glob_var,
+        { context.global_vars[p->src],
+            get_ava_string_constant(
+              context, to_ava_string(
+                context.global_vars[p->src]->getName())) });
+      store_register(p->dst, src, pcfun);
+    } break;
+    }
   } return false;
 
   case ava_pcxt_ld_reg_s: {
@@ -1910,8 +2017,7 @@ noexcept {
   case ava_pcxt_set_glob: {
     const ava_pcx_set_glob* p = (const ava_pcx_set_glob*)exe;
 
-    llvm::Value* src = load_register(
-      p->src, pcfun, nullptr);
+    llvm::Value* src = load_register(p->src, pcfun, nullptr);
     irb.CreateCall(
       context.di.x_store_glob_var,
       { context.global_vars[p->dst],
@@ -2197,7 +2303,7 @@ noexcept {
 
   case ava_pcxt_S_new_s: {
     const ava_pcx_S_new_s* p = (const ava_pcx_S_new_s*)exe;
-    llvm::Type* type = get_sxt_type(xcode, p->sxt);
+    llvm::Type* type = get_sxt_type(context, xcode, p->sxt);
     llvm::Value* allocated = irb.CreateAlloca(type);
     if (p->zero_init) {
       irb.CreateStore(llvm::ConstantAggregateZero::get(type), allocated);
@@ -2207,7 +2313,7 @@ noexcept {
 
   case ava_pcxt_S_new_sa: {
     const ava_pcx_S_new_sa* p = (const ava_pcx_S_new_sa*)exe;
-    llvm::Type* type = get_sxt_type(xcode, p->sxt);
+    llvm::Type* type = get_sxt_type(context, xcode, p->sxt);
     llvm::Value* length = load_register(p->length, pcfun, nullptr);
     llvm::Value* allocated = irb.CreateAlloca(type, length);
     if (p->zero_init) {
@@ -2224,7 +2330,7 @@ noexcept {
 
   case ava_pcxt_S_new_st: {
     const ava_pcx_S_new_st* p = (const ava_pcx_S_new_st*)exe;
-    llvm::Type* type = get_sxt_type(xcode, p->sxt);
+    llvm::Type* type = get_sxt_type(context, xcode, p->sxt);
     llvm::Type* struct_type = context.global_sxt_structs[p->sxt];
     llvm::Type* tail_type = struct_type->getStructElementType(
       struct_type->getStructNumElements() - 1)
@@ -2250,7 +2356,7 @@ noexcept {
 
   case ava_pcxt_S_new_h: {
     const ava_pcx_S_new_h* p = (const ava_pcx_S_new_h*)exe;
-    llvm::Type* type = get_sxt_type(xcode, p->sxt);
+    llvm::Type* type = get_sxt_type(context, xcode, p->sxt);
     llvm::Value* size = llvm::ConstantInt::get(
       context.types.c_size, layout.getTypeAllocSize(type));
     llvm::Value* allocated = INVOKE(
@@ -2264,7 +2370,7 @@ noexcept {
 
   case ava_pcxt_S_new_ha: {
     const ava_pcx_S_new_ha* p = (const ava_pcx_S_new_ha*)exe;
-    llvm::Type* type = get_sxt_type(xcode, p->sxt);
+    llvm::Type* type = get_sxt_type(context, xcode, p->sxt);
     llvm::Value* struct_size = llvm::ConstantInt::get(
       context.types.c_size, layout.getTypeAllocSize(type));
     llvm::Value* length =
@@ -2282,7 +2388,7 @@ noexcept {
 
   case ava_pcxt_S_new_ht: {
     const ava_pcx_S_new_ht* p = (const ava_pcx_S_new_ht*)exe;
-    llvm::Type* type = get_sxt_type(xcode, p->sxt);
+    llvm::Type* type = get_sxt_type(context, xcode, p->sxt);
     llvm::Type* struct_type = context.global_sxt_structs[p->sxt];
     llvm::Type* tail_type = struct_type->getStructElementType(
       struct_type->getStructNumElements() - 1)
@@ -2306,7 +2412,7 @@ noexcept {
 
   case ava_pcxt_S_sizeof: {
     const ava_pcx_S_sizeof* p = (const ava_pcx_S_sizeof*)exe;
-    llvm::Type* type = get_sxt_type(xcode, p->sxt);
+    llvm::Type* type = get_sxt_type(context, xcode, p->sxt);
     llvm::Value* size_val = llvm::ConstantInt::get(
       context.types.ava_integer, layout.getTypeAllocSize(type));
     store_register(p->dst, size_val, pcfun);
@@ -2314,7 +2420,7 @@ noexcept {
 
   case ava_pcxt_S_alignof: {
     const ava_pcx_S_alignof* p = (const ava_pcx_S_alignof*)exe;
-    llvm::Type* type = get_sxt_type(xcode, p->sxt);
+    llvm::Type* type = get_sxt_type(context, xcode, p->sxt);
     llvm::Value* align_val = llvm::ConstantInt::get(
       context.types.ava_integer, layout.getABITypeAlignment(type));
     store_register(p->dst, align_val, pcfun);
@@ -2338,7 +2444,7 @@ noexcept {
 
   case ava_pcxt_S_cpy: {
     const ava_pcx_S_cpy* p = (const ava_pcx_S_cpy*)exe;
-    llvm::Type* type = get_sxt_type(xcode, p->sxt);
+    llvm::Type* type = get_sxt_type(context, xcode, p->sxt);
     llvm::Value* src_ptr = irb.CreateBitCast(
       load_strangelet(p->src, pcfun), type->getPointerTo());
     llvm::Value* dst_ptr = irb.CreateBitCast(
@@ -2349,7 +2455,7 @@ noexcept {
 
   case ava_pcxt_S_cpy_a: {
     const ava_pcx_S_cpy_a* p = (const ava_pcx_S_cpy_a*)exe;
-    llvm::Type* type = get_sxt_type(xcode, p->sxt);
+    llvm::Type* type = get_sxt_type(context, xcode, p->sxt);
     llvm::Value* struct_size = llvm::ConstantInt::get(
       context.types.ava_integer, layout.getTypeAllocSize(type));
     llvm::Value* count = load_register(p->count, pcfun, nullptr);
@@ -2370,7 +2476,7 @@ noexcept {
 
   case ava_pcxt_S_cpy_t: {
     const ava_pcx_S_cpy_t* p = (const ava_pcx_S_cpy_t*)exe;
-    llvm::Type* type = get_sxt_type(xcode, p->sxt);
+    llvm::Type* type = get_sxt_type(context, xcode, p->sxt);
     llvm::Type* tail_type = type->getStructElementType(
       type->getStructNumElements() - 1)
       ->getArrayElementType();
@@ -2777,7 +2883,7 @@ noexcept {
 
     llvm::Value* base = load_strangelet(p->src, pcfun);
     base = irb.CreateBitCast(
-      base, get_sxt_type(xcode, p->sxt)->getPointerTo());
+      base, get_sxt_type(context, xcode, p->sxt)->getPointerTo());
     llvm::Value* index = load_register(p->index, pcfun, nullptr);
     llvm::Value* result = irb.CreateInBoundsGEP(base, { index });
     store_strangelet(p->dst, result, pcfun);
@@ -2954,21 +3060,6 @@ noexcept {
     case ava_prt_parm: abort();
     }
   }
-}
-
-llvm::Type* ava_xcode_fun_xlate_info::get_sxt_type(
-  const ava_xcode_global_list* xcode,
-  size_t struct_ix)
-noexcept {
-  const ava_struct* def;
-
-  if (!ava_pcode_global_get_struct_def(&def, xcode->elts[struct_ix].pc, 0))
-    abort();
-
-  if (def->is_union)
-    return context.global_sxt_unions[struct_ix];
-  else
-    return context.global_sxt_structs[struct_ix];
 }
 
 llvm::Type* ava_xcode_fun_xlate_info::get_sxt_field_type(

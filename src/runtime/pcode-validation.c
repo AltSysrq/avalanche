@@ -1,5 +1,5 @@
 /*-
- * Copyright (c) 2015, Jason Lingle
+ * Copyright (c) 2015, 2016, Jason Lingle
  *
  * Permission to  use, copy,  modify, and/or distribute  this software  for any
  * purpose  with or  without fee  is hereby  granted, provided  that the  above
@@ -1018,6 +1018,7 @@ static ava_bool ava_xcode_validate_global_xrefs(
   size_t glob_ix, i;
   ava_integer ref;
   const ava_pcode_global* global, * target;
+  const ava_struct* sxt;
 
   ava_xcode_unknown_location(&location);
   for (glob_ix = 0; glob_ix < xcode->length; ++glob_ix) {
@@ -1039,6 +1040,20 @@ static ava_bool ava_xcode_validate_global_xrefs(
 
       target = xcode->elts[ref].pc;
       if (!ava_pcode_global_is_fun(target))
+        DIE(ava_error_xcode_bad_xref(&location, ref));
+    }
+
+    for (i = 0; ava_pcode_global_get_global_sxt_ref(&ref, global, i); ++i) {
+      if (ref < 0 || ref >= (ava_integer)xcode->length)
+        DIE(ava_error_xcode_oob_global(&location, ref));
+
+      target = xcode->elts[ref].pc;
+      if (!ava_pcode_global_get_struct_def(&sxt, target, 0))
+        DIE(ava_error_xcode_bad_xref(&location, ref));
+
+      if (ava_pcode_global_get_global_sxt_with_tail_ref(&ref, global, i) &&
+          (0 == sxt->num_fields ||
+           ava_sft_tail != sxt->fields[sxt->num_fields-1].type))
         DIE(ava_error_xcode_bad_xref(&location, ref));
     }
 
@@ -1101,6 +1116,16 @@ static ava_bool ava_xcode_validate_fun_global_xrefs(
 
         target = xcode->elts[ref].pc;
         if (!ava_pcode_global_is_var(target))
+          DIE(ava_error_xcode_bad_xref(&location, ref));
+      }
+
+      for (i = 0; ava_pcode_exe_get_global_var_mutable_ref(&ref, instr, i);
+           ++i) {
+        /* All global-var-mutable-refs should also be var-refs */
+        assert(ref >= 0 && ref < (ava_integer)xcode->length);
+
+        target = xcode->elts[ref].pc;
+        if (!ava_pcode_global_is_var_mutable(target))
           DIE(ava_error_xcode_bad_xref(&location, ref));
       }
 

@@ -1,5 +1,5 @@
 /*-
- * Copyright (c) 2015, Jason Lingle
+ * Copyright (c) 2015, 2016, Jason Lingle
  *
  * Permission to  use, copy,  modify, and/or distribute  this software  for any
  * purpose  with or  without fee  is hereby  granted, provided  that the  above
@@ -83,6 +83,7 @@ namespace ava {
     llvm::StructType* ava_exception;
 
     llvm::PointerType* general_pointer;
+    llvm::StructType* opaque;
 
     enum {
       ff_address = 0, ff_calling_convention, ff_c_return_type,

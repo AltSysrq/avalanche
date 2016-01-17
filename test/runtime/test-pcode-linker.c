@@ -1,5 +1,5 @@
 /*-
- * Copyright (c) 2015, Jason Lingle
+ * Copyright (c) 2015, 2016, Jason Lingle
  *
  * Permission to  use, copy,  modify, and/or distribute  this software  for any
  * purpose  with or  without fee  is hereby  granted, provided  that the  above
@@ -236,6 +236,25 @@ deftest(interface_keeps_exported_struct) {
     "[export 0 true foo]\n");
 }
 
+deftest(interface_keeps_exported_ext_bss) {
+  to_interface_like(
+    "[S-ext-bss [ava foo] false]\n"
+    "[export 0 true foo]\n",
+
+    "[S-ext-bss [ava foo] false]\n"
+    "[export 0 true foo]\n");
+}
+
+deftest(interface_changes_exported_bss_to_ext_bss) {
+  to_interface_like(
+    "[S-ext-bss [ava foo] true]\n"
+    "[export 0 true foo]\n",
+
+    "[decl-sxt true [[struct foo]]]\n"
+    "[S-bss 0 true [ava foo] true]\n"
+    "[export 1 true foo]\n");
+}
+
 deftest(linker_emits_error_on_module_conflict) {
   ava_compile_error_list errors;
   ava_pcode_linker* linker = ava_pcode_linker_new();
@@ -309,8 +328,8 @@ deftest(global_refs_relinked_after_export_deletions) {
     "[ext-var [ava public]]\n"
     "[export 1 true public]\n"
     "[fun false [ava init] [ava pos] [\"\"] [\n"
-    "  [set-glob 0 v0]\n"
-    "  [set-glob 1 v0]\n"
+    "  [ld-glob v0 0]\n"
+    "  [ld-glob v0 1]\n"
     "]]\n"
     "[init 3]\n",
     ava_false,
@@ -321,8 +340,8 @@ deftest(global_refs_relinked_after_export_deletions) {
     "[ext-var [ava public]]\n"
     "[export 2 true public]\n"
     "[fun false [ava init] [ava pos] [\"\"] [\n"
-    "  [set-glob 0 v0]\n"
-    "  [set-glob 2 v0]\n"
+    "  [ld-glob v0 0]\n"
+    "  [ld-glob v0 2]\n"
     "]]\n"
     "[init 4]\n");
 }
@@ -445,6 +464,38 @@ deftest(structs_not_deduped) {
     "module",
     "[decl-sxt true [[struct foo] [value v]]]\n"
     "[decl-sxt false [[struct foo] [value v]]]\n");
+}
+
+deftest(global_sturct_refs_relinked) {
+  link_modules_like(
+    "[ext-var [ava some-var]]\n"
+    "[decl-sxt true [[struct foo] [value v]]]\n"
+    "[S-bss 1 false [ava foo] false]\n",
+    ava_false,
+
+    "module",
+    /* So some collapse happens before the refs */
+    "[ext-var [ava some-var]]\n"
+    "[ext-var [ava some-var]]\n"
+    "[decl-sxt true [[struct foo] [value v]]]\n"
+    "[S-bss 2 false [ava foo] false]\n");
+}
+
+deftest(ext_bss_collapsed_into_bss) {
+  link_modules_like(
+    "[decl-sxt true [[struct foo] [value v]]]\n"
+    "[S-bss 0 true [ava foo] false]\n"
+    "[export 1 true foo]\n",
+    ava_false,
+
+    "module-a",
+    "[load-mod module-b]\n"
+    "[S-ext-bss [ava foo] true]\n"
+    "[export 1 true foo]\n",
+
+    "module-b",
+    "[decl-sxt true [[struct foo] [value v]]]\n"
+    "[S-bss 0 true [ava foo] false]\n");
 }
 
 deftest(nondependent_modules_concatenated) {
