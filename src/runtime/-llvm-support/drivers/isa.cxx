@@ -32,6 +32,8 @@
 
 #include <stdlib.h>
 
+#include <atomic_ops.h>
+
 #define AVA__INTERNAL_INCLUDE 1
 #include "../../avalanche/defs.h"
 AVA_BEGIN_DECLS
@@ -46,6 +48,8 @@ AVA_BEGIN_DECLS
 #include "../../avalanche/list-proj.h"
 #include "../../avalanche/pcode.h"
 #include "../../avalanche/errors.h"
+#include "../../avalanche/strangelet.h"
+#include "../../-internal-defs.h"
 
 /* Stay in extern "C" so names don't get mangled */
 
@@ -57,6 +61,8 @@ struct ava_c_abi_info {
   long l;
   long long ll;
   size_t size;
+  AO_t atomic;
+  ava_intptr intptr;
   long double ldouble;
   ava_bool ab;
   ava_function_parameter_type fpt;
@@ -256,7 +262,7 @@ void ava_isa_x_lflatten$(ava_fat_list_value* dst,
 ava_value ava_isa_x_lindex$(const ava_fat_list_value* src,
                             ava_integer ix,
                             ava_string ex_type, ava_string ex_message) {
-  if (ix < 0 || ix >= (*src->v->length)(src->c))
+  if (ix < 0 || ix >= (ava_integer)(*src->v->length)(src->c))
     ava_throw_uex(&ava_error_exception, ex_type, ex_message);
 
   return (*src->v->index)(src->c, ix);
@@ -272,10 +278,6 @@ ava_integer ava_isa_x_iadd$(ava_integer a, ava_integer b) {
 
 ava_integer ava_isa_x_icmp$(ava_integer a, ava_integer b) {
   return (a > b) - (a < b);
-}
-
-void ava_isa_x_aaempty$(ava_value val) {
-  /* TODO */
 }
 
 void ava_isa_x_pre_invoke_s$(const ava_function* f, ava_string name) { }
@@ -347,6 +349,30 @@ ava_value ava_isa_x_ex_value$(const ava_exception* ex) {
   return ava_exception_get_value(ex);
 }
 
+void ava_isa_x_cpu_pause$(void) {
+  AVA_SPINLOOP;
+}
+
+void* ava_isa_x_new$(size_t sz, ava_bool atomic, ava_bool precise,
+                     ava_bool zero) {
+  if (atomic)
+    if (precise)
+      if (zero)
+        return ava_alloc_atomic_precise_zero(sz);
+      else
+        return ava_alloc_atomic_precise(sz);
+    else
+      if (zero)
+        return ava_alloc_atomic_zero(sz);
+      else
+        return ava_alloc_atomic(sz);
+  else
+    if (precise)
+      return ava_alloc_precise(sz);
+    else
+      return ava_alloc(sz);
+}
+
 void ava_isa_foreign_exception$(ava_exception* dst,
                                 const ava_exception* ignore) {
   ava_value empty;
@@ -361,6 +387,15 @@ void ava_isa_copy_exception$(ava_exception* dst, const ava_exception* src) {
 }
 
 void ava_isa_nop$(void) { }
+
+void* ava_isa_strangelet_to_pointer$(ava_value val) {
+  /* TODO: Checked build should assert val is a strangelet */
+  return (void*)ava_value_ptr(val);
+}
+
+ava_value ava_isa_strangelet_of_pointer$(const void* ptr) {
+  return ava_strange_ptr(ptr);
+}
 
 void ava_isa_m_to_void$(ava_value v) {
   if (!ava_string_is_empty(ava_to_string(v)))
@@ -424,6 +459,14 @@ const char* ava_isa_m_to_string$(ava_value v) {
 
 ava_value ava_isa_m_from_string$(const char* v) {
   return ava_value_of_string(ava_string_of_cstring(v));
+}
+
+void* ava_isa_m_to_strange$(ava_value v) {
+  return (void*)ava_value_ptr(v);
+}
+
+ava_value ava_isa_m_from_strange$(void* v) {
+  return ava_strange_ptr(v);
 }
 
 void* ava_isa_m_to_pointer$(ava_value v, const ava_pointer_prototype* proto) {

@@ -1,0 +1,45 @@
+; This test is only valid on the LLVM backend
+
+reqmod helpers/test
+alias assert = test.assert
+import esoterica.unsafe.strangelet S
+
+struct little-value {
+  long unsigned attr
+  long unsigned little data
+}
+
+struct big-value {
+  long unsigned attr
+  long unsigned big data
+}
+
+struct nat-value {
+  long unsigned attr
+  long unsigned data
+}
+
+union value {
+  value value
+  struct little-value little
+  struct big-value big
+  struct nat-value nat
+}
+
+test.register struct-integer-byte-order {
+  x = S.new value -s
+  ; Don't try this at home
+  S.set value $x value ""
+  is-little-endian = 1 == S.get little-value (S.get value $x little) data
+
+  S.set nat-value (S.get value $x nat) data xDEADBEEFBAADC0DE
+  if ($is-little-endian) {
+    assert xDEADBEEFBAADC0DE == S.get little-value (S.get value $x little) data
+    assert xDEC0ADBAEFBEADDE == S.get big-value (S.get value $x big) data
+  } else {
+    assert xDEC0ADBAEFBEADDE == S.get little-value (S.get value $x little) data
+    assert xDEADBEEFBAADC0DE == S.get big-value (S.get value $x big) data
+  }
+
+  test.pass 42
+}

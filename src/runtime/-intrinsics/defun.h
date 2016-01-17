@@ -1,5 +1,5 @@
 /*-
- * Copyright (c) 2015, Jason Lingle
+ * Copyright (c) 2015, 2016, Jason Lingle
  *
  * Permission to  use, copy,  modify, and/or distribute  this software  for any
  * purpose  with or  without fee  is hereby  granted, provided  that the  above
@@ -23,7 +23,7 @@
  * The `fun`, `Fun`, and `FUN` control macros.
  *
  * Syntax:
- *   fun name {argument}+ {body}
+ *   fun name [linkage-name [prototype]] {argument}+ {body}
  *   {argument} ::= "(" ")"
  *              |   pos-name
  *              |   -named-name
@@ -38,6 +38,17 @@
  * "-". default is any single-unit constexpr, or nothing at all to stand for
  * the empty string.
  *
+ * linkage-name and prototype are given as A-String literals and are not
+ * normally specified. If given, linkage-name overrides the name used for the
+ * function when generating code for the underlying platform (not subject to
+ * name mangling), but does not impact the name exposed to Avalanche code. If
+ * it is the empty string, it has no effect (this allows for overriding the
+ * prototype without changing the linkage name). If specified, prototype is a
+ * function prototype which must describe a function with the same number of
+ * arguments as the actual function. This prototype completely overrides the
+ * prototype of the function declaration, including argument binding.
+ * linkage-name and prototype may only be specified on global functions.
+ *
  * The symbol table gains a function `name`. The arguments are derived from the
  * given list of arguments as described below; the function may have implicit
  * arguments before the first listed one to account for captures if this
@@ -48,8 +59,7 @@
  * result.
  *
  * The () argument form indicates an anonymous positional argument whose value
- * MUST be the empty string upon invocation. Upon being called, the function
- * MAY assert that this is indeed the case.
+ * MUST be the empty string upon invocation.
  *
  * The pos-name argument form indicates a mandatory positional argument. The
  * argument is accessible within the function body as a variable whose name is
@@ -71,21 +81,16 @@
  * The visibility of the resulting symbol is intrinsic to the macro, derived
  * from *(ava_visibility*)userdata on the self symbol.
  */
-ava_macro_subst_result ava_intr_fun_subst(
-  const struct ava_symbol_s* self,
-  ava_macsub_context* context,
-  const ava_parse_statement* statement,
-  const ava_parse_unit* provoker,
-  ava_bool* consumed_other_statements);
+AVA_DEF_MACRO_SUBST(ava_intr_fun_subst);
 
 /**
  * Implementation for lambda expression syntax units.
  *
  * Essentially equivalent to
- *   fun ?gensym 1 [2] [3] [4] = <body>
- *   $?gensym
- *
- * Except that the body uses the `only` return policy.
+ *   block-last {
+ *     fun ?gensym 1 [2] [3] [4] = block-only <body>
+ *     $?gensym
+ *   }
  */
 ava_ast_node* ava_intr_lambda_expr(
   ava_macsub_context* context,

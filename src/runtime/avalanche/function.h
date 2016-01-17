@@ -1,5 +1,5 @@
 /*-
- * Copyright (c) 2015, Jason Lingle
+ * Copyright (c) 2015, 2016, Jason Lingle
  *
  * Permission to  use, copy,  modify, and/or distribute  this software  for any
  * purpose  with or  without fee  is hereby  granted, provided  that the  above
@@ -72,6 +72,13 @@
  *
  * - `pos`. The argument is mandatory and derives its value based on absolute
  *   position within the parameter list.
+ *
+ * - `empty`. Exactly like `pos`, but the resulting value is required to be a
+ *   static empty value. Note that unlike other places where a dynamic
+ *   parameter will cause binding to fail with ava_fbs_unknown, empty arguments
+ *   will fail with ava_fbs_impossible since there is never any reason to pass
+ *   a non-constant value in. A spread parameter will still result in
+ *   ava_fbs_unpack in order to support constructs like forwarding.
  *
  * - `pos default`. The argument is optional. If it is specified in the call,
  *   it gains its value based on absolute position within the parameter list;
@@ -211,10 +218,11 @@
  * - If the number of arguments is less than or equal to 8, all arguments are
  *   passed as native arguments using the native C calling convention.
  *
- * - If there are more than 8 arguments, they are packed into a flat array.
- *   The function is passed a pointer to this array using the native C calling
- *   convention. The array is not guaranteed to remain valid after the callee
- *   returns, but the callee may modify the array arbitrarily.
+ * - If there are more than 8 arguments, they are packed into a flat array. The
+ *   function is passed a size_t indicating the number of arguments, then a
+ *   pointer to this array, using the native C calling convention. The array is
+ *   not guaranteed to remain valid after the callee returns, but the callee
+ *   may modify the array arbitrarily.
  *
  * The "c" calling convention requires a return type, and every argument's
  * specification is prefixed with the type of that argument. Permissible types
@@ -240,6 +248,10 @@
  *   as an (assumed const) pointer. Return values are interpreted as C strings
  *   and converted back to values.
  *
+ * - `strange`. Arguments are assumed to be strangelets, and passed in as raw
+ *   pointers. Behaviour is undefined for non-strangelet arguments. Returns
+ *   values are interpreted as pointers and returned as a strangelet.
+ *
  * - `X*` or `X&`, for any `X`. Indicates a pointer with (Avalanche) type X.
  *   There is obviously no checking that `X` is in any way related to the
  *   pointer type the native function actually takes.
@@ -262,6 +274,14 @@
  * calling convention.
  */
 #define AVA_CC_AVA_MAX_INLINE_ARGS 8
+
+/**
+ * Special value used to indicate that a parameter index points to no parameter
+ * at all.
+ */
+#define AVA_FUNCTION_NO_PARAMETER (~(size_t)0)
+
+typedef struct ava_function_s ava_function;
 
 /**
  * Indicates the calling convention used by a function.
@@ -357,6 +377,10 @@ typedef enum {
   ava_cmpt_string,
   /**
    * C type: void*
+   */
+  ava_cmpt_strange,
+  /**
+   * C type: void*
    *
    * Note that this type requires the pointer_proto on the
    * ava_c_marshalling_type to be set appropriately.
@@ -396,6 +420,13 @@ typedef enum {
    * The argument binds to exactly one parameter by position.
    */
   ava_abt_pos,
+  /**
+   * The argument binds to exactly one parameter by position, and that
+   * parameter is required to be the empty string. Binding fails with
+   * ava_fbs_impossible if the parameter that would be bound to an empty
+   * argument is dynamic.
+   */
+  ava_abt_empty,
   /**
    * The argument binds to at most one parameter by position, otherwise using
    * the default in the binding.
@@ -457,7 +488,7 @@ typedef struct {
  * dynamically invoked until ava_function_init_ffi() is called on it, so care
  * must be taken when statically declaring functions.
  */
-typedef struct {
+struct ava_function_s {
   /**
    * The address of the function to call.
    *
@@ -492,7 +523,7 @@ typedef struct {
    * FFI unless otherwise noted.
    */
   char ffi[AVA_SIZEOF_FFI_CIF];
-} ava_function;
+};
 
 /**
  * Indicates ways in which an argument can be bound to a value.
@@ -529,6 +560,19 @@ typedef struct {
    * The manner in which this argument is bound.
    */
   ava_function_bound_argument_type type;
+  /**
+   * The index of the parameter which triggered this binding, or
+   * AVA_FUNCTION_NO_PARAMETER if the argument is not bound to any parameter.
+   *
+   * This is distinct from parameter_index in that it (a) is set for all
+   * arguments which are bound as a result of parameters, and (b) for named
+   * arguments, it references the parameter that specified the name (including
+   * for bool) rather than the value.
+   *
+   * For varargs, this references the first parameter used as input to the
+   * collection, if any.
+   */
+  size_t trigger_parameter_index;
   /**
    * Type-specific information.
    */

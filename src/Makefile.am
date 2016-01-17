@@ -16,8 +16,10 @@ AM_CCASFLAGS = -g0
 EMIT_LLVM_CFLAGS= -O3 -g0 -fno-caret-diagnostics -fno-diagnostics-fixit-info \
                   -fno-color-diagnostics -c -emit-llvm \
 		  -DNDEBUG -DHAVE_CONFIG_H -Wall $(DEFAULT_INCLUDES)
-EMIT_LLVM = $(AM_V_GEN)$(CLANG) $(EMIT_LLVM_CFLAGS) -o $@
-EMIT_LLVMXX = $(AM_V_GEN)$(CLANGXX) $(EMIT_LLVM_CFLAGS) -o $@
+EMIT_LLVM = $(AM_V_GEN)$(CLANG) $(AM_CPPFLAGS) $(CPPFLAGS) \
+	    $(AM_CFLAGS) $(CFLAGS) $(EMIT_LLVM_CFLAGS) -o $@
+EMIT_LLVMXX = $(AM_V_GEN)$(CLANGXX) $(AM_CPPFLAGS) $(CPPFLAGS) \
+	      $(AM_CXXFLAGS) $(CXXFLAGS) $(EMIT_LLVM_CFLAGS) -o $@
 DAT2C = $(AM_V_GEN)$(TCLSH) dat2c.tcl >$@
 BOOTSTRAP_LIBS = libavart-bootstrap.la $(LIBFFI_LIBS)
 
@@ -80,16 +82,21 @@ runtime/pcode-linker.c \
 runtime/pcode-validation.c \
 runtime/pointer.c \
 runtime/real.c \
+runtime/strangelet.c \
 runtime/string.c \
+runtime/struct.c \
+runtime/symbol.c \
 runtime/symtab.c \
 runtime/value.c \
 runtime/varscope.c \
 runtime/-intrinsics/block.c \
 runtime/-intrinsics/defun.c \
 runtime/-intrinsics/eh.c \
+runtime/-intrinsics/esoterica.c \
 runtime/-intrinsics/extern.c \
 runtime/-intrinsics/funcall.c \
 runtime/-intrinsics/fundamental.c \
+runtime/-intrinsics/funmac.c \
 runtime/-intrinsics/if.c \
 runtime/-intrinsics/loop.c \
 runtime/-intrinsics/namespace.c \
@@ -97,6 +104,8 @@ runtime/-intrinsics/pasta.c \
 runtime/-intrinsics/reg-rvalue.c \
 runtime/-intrinsics/require.c \
 runtime/-intrinsics/ret.c \
+runtime/-intrinsics/structdef.c \
+runtime/-intrinsics/structops.c \
 runtime/-intrinsics/subscript.c \
 runtime/-intrinsics/user-macro.c \
 runtime/-intrinsics/variable.c

@@ -1,0 +1,15 @@
+reqmod helpers/test
+import esoterica.unsafe.strangelet S
+
+struct ih {
+  integer i
+}
+
+test.register simple-exstatic {
+  S.exstatic a "exstatic_target_a"
+  S.exstatic b "exstatic_target_thread_local" -thread-local
+
+  S.set ih $a i 40
+  S.set ih $b i 2
+  test.pass : S.get ih $a i + S.get ih $b i
+}

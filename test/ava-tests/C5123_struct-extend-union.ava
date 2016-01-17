@@ -1,0 +1,8 @@
+union foo {
+  integer a
+  real b
+}
+
+struct bar extends foo {
+  value c
+}

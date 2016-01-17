@@ -1,0 +1,9 @@
+reqmod helpers/test
+reqmod helpers/decl-public-struct
+
+import esoterica.unsafe.strangelet S
+
+test.register import-public-static-struct {
+  S.set foo $THE-FOO v 42
+  test.pass : S.get foo $THE-FOO v
+}

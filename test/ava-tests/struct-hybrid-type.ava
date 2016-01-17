@@ -1,0 +1,36 @@
+reqmod helpers/test
+alias assert = test.assert
+import esoterica.unsafe.strangelet S
+
+struct ih {
+  integer i
+}
+
+struct ref {
+  hybrid ih& hy
+}
+
+test.register struct-hybrid-type {
+  a = S.new ih -s
+  b = S.new ih -s
+  x = S.new ref -s -z
+
+  S.set ih $a i 42
+  S.set ih $b i 56
+
+  assert ! S.is-int ref $x hy
+
+  S.set ref $x hy -int 33
+  assert S.is-int ref $x hy
+  assert 33 == S.get ref $x hy -int
+
+  S.set ref $x hy -ptr $a
+  assert ! S.is-int ref $x hy
+  assert 42 == S.get ih (S.get ref $x hy -ptr) i
+
+  S.set ref $x hy -ptr $b
+  assert ! S.is-int ref $x hy
+  assert 56 == S.get ih (S.get ref $x hy -ptr) i
+
+  test.pass 42
+}

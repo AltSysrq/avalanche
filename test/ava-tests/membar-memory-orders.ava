@@ -1,0 +1,15 @@
+reqmod helpers/test
+import esoterica.unsafe.strangelet S
+
+test.register membar-memory-orders {
+  ; It's rather hard to actually test that the barriers work correctly, but we
+  ; can at least check that the code generator doesn't crash and such.
+  S.membar unordered
+  S.membar monotonic
+  S.membar acquire
+  S.membar release
+  S.membar acqrel
+  S.membar seqcst
+
+  test.pass 42
+}

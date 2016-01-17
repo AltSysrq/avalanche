@@ -255,39 +255,16 @@ static void ava_intr_goto_postprocess(ava_intr_goto* this) {
   }
 
   switch (symbols[0]->type) {
-  case ava_st_global_variable:
-  case ava_st_local_variable:
-    ava_macsub_record_error(
-      context, ava_error_use_of_other_as_label(
-        &this->target_location, symbols[0]->full_name,
-        AVA_ASCII9_STRING("variable")));
-    return;
-
-  case ava_st_global_function:
-  case ava_st_local_function:
-    ava_macsub_record_error(
-      context, ava_error_use_of_other_as_label(
-        &this->target_location, symbols[0]->full_name,
-        AVA_ASCII9_STRING("function")));
-    return;
-
-  case ava_st_control_macro:
-  case ava_st_operator_macro:
-  case ava_st_function_macro:
-    ava_macsub_record_error(
-      context, ava_error_use_of_other_as_label(
-        &this->target_location, symbols[0]->full_name,
-        AVA_ASCII9_STRING("macro")));
-    return;
-
   case ava_st_other:
     if (&ava_intr_pasta_label_type == symbols[0]->v.other.type)
       break;
 
+    /* fall through */
+  default:
     ava_macsub_record_error(
       context, ava_error_use_of_other_as_label(
         &this->target_location, symbols[0]->full_name,
-        ava_string_of_cstring(symbols[0]->v.other.type->name)));
+        ava_symbol_type_name(symbols[0])));
     return;
   }
 

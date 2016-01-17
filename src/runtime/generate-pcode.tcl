@@ -1,6 +1,6 @@
 #! /usr/bin/env tclsh8.6
 #-
-# Copyright (c) 2015 Jason Lingle
+# Copyright (c) 2015, 2016, Jason Lingle
 #
 # Permission to  use, copy,  modify, and/or distribute  this software  for any
 # purpose  with or  without fee  is hereby  granted, provided  that the  above
@@ -114,6 +114,18 @@ proc ava-list {args} {
   add-field list {*}$args
 }
 
+proc sxt {args} {
+  add-field sxt {*}$args
+}
+
+proc rmw-op {args} {
+  add-field rmw-op {*}$args
+}
+
+proc memory-order {args} {
+  add-field memory-order {*}$args
+}
+
 proc register-type {types name args} {
   add-field register-type $name {*}$args
   add-register-type-constraint $types $name
@@ -196,6 +208,9 @@ set SIMPLE_TYPES {
   function {const ava_function*}
   list ava_list_value
   bool ava_bool
+  sxt {const struct ava_struct_s*}
+  rmw-op {ava_pcode_rmw_op}
+  memory-order {ava_pcode_memory_order}
 }
 
 proc ctype-field {type} {
@@ -379,6 +394,7 @@ proc gen-impl {} {
 #include "avalanche/exception.h"
 #include "avalanche/name-mangle.h"
 #include "avalanche/symbol.h"
+#include "avalanche/struct.h"
 #include "avalanche/pcode.h"
 
 #include "-pcode-conversions.h"
@@ -664,12 +680,14 @@ proc gen-impl {} {
           lassign $ftype cname cmne
           putm {
             elt_string = ava_strcat\(
-              elt_string, AVA_ASCII9_STRING(" \\""\{\n")\);
+              elt_string, AVA_ASCII9_STRING(" ")\);
             elt_string = ava_strcat\(
-              elt_string, ava_pcode_CNAME_list_to_string\(
-                elt->FIELD, indent+1\)\);
-            elt_string = ava_strcat\(
-              elt_string, apply_indent(AVA_ASCII9_STRING("\\""\}"), indent)\);
+              elt_string, ava_list_escape\(
+                ava_value_of_string\(
+                  ava_strcat\(
+                    AVA_ASCII9_STRING("\n"),
+                    ava_pcode_CNAME_list_to_string\(
+                      elt->FIELD, indent+1\)\)\)\)\);
           } CNAME $cname FIELD [dict get $field name]
         } else {
           putm {

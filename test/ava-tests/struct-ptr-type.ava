@@ -1,0 +1,28 @@
+reqmod helpers/test
+alias assert = test.assert
+import esoterica.unsafe.strangelet S
+
+struct ih {
+  integer i
+}
+
+struct ref {
+  ih& ptr
+}
+
+test.register struct-ptr-type {
+  a = S.new ih -s
+  b = S.new ih -s
+  x = S.new ref -s
+
+  S.set ih $a i 42
+  S.set ih $b i 56
+
+  S.set ref $x ptr $a
+  assert 42 == S.get ih (S.get ref $x ptr) i
+
+  S.set ref $x ptr $b
+  assert 56 == S.get ih (S.get ref $x ptr) i
+
+  test.pass 42
+}

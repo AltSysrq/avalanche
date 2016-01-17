@@ -1,5 +1,5 @@
 /*-
- * Copyright (c) 2015, Jason Lingle
+ * Copyright (c) 2015, 2016, Jason Lingle
  *
  * Permission to  use, copy,  modify, and/or distribute  this software  for any
  * purpose  with or  without fee  is hereby  granted, provided  that the  above
@@ -34,7 +34,7 @@ noexcept {
   const llvm::Function* abi_info_function;
   const llvm::StructType* abi_info;
   enum { abi_char = 0, abi_short, abi_int, abi_long,
-         abi_llong, abi_size, abi_ldouble,
+         abi_llong, abi_size, abi_atomic, abi_intptr, abi_ldouble,
          abi_abool, abi_fpt, abi_fun, abi_argspec,
          abi_twine, abi_str, abi_parm, abi_fat_list,
          abi_exception };
@@ -53,6 +53,8 @@ noexcept {
   c_long = llvm::cast<llvm::IntegerType>(abi_info->getElementType(abi_long));
   c_llong = llvm::cast<llvm::IntegerType>(abi_info->getElementType(abi_llong));
   c_size = llvm::cast<llvm::IntegerType>(abi_info->getElementType(abi_size));
+  c_atomic = llvm::cast<llvm::IntegerType>(abi_info->getElementType(abi_atomic));
+  c_intptr = llvm::cast<llvm::IntegerType>(abi_info->getElementType(abi_intptr));
   c_float = llvm::TypeBuilder<llvm::types::ieee_float,true>::get(context);
   c_double = llvm::TypeBuilder<llvm::types::ieee_double,true>::get(context);
   c_ldouble = abi_info->getElementType(abi_ldouble);
@@ -108,4 +110,5 @@ noexcept {
     abi_info->getElementType(abi_exception));
 
   general_pointer = llvm::TypeBuilder<llvm::types::i<8>*,true>::get(context);
+  opaque = llvm::StructType::create(context, "S_ext_bss_opaque");
 }

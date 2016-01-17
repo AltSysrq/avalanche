@@ -1,5 +1,5 @@
 /*-
- * Copyright (c) 2015, Jason Lingle
+ * Copyright (c) 2015, 2016, Jason Lingle
  *
  * Permission to  use, copy,  modify, and/or distribute  this software  for any
  * purpose  with or  without fee  is hereby  granted, provided  that the  above
@@ -38,7 +38,8 @@ static ava_pcode_global_list* parse_pcode(const char* str) {
 
   ck_assert_msg(TAILQ_EMPTY(&errors),
                 "Test source P-Code was invalid.\n%s",
-                ava_error_list_to_string(&errors, 50, ava_false));
+                ava_string_to_cstring(
+                  ava_error_list_to_string(&errors, 50, ava_false)));
 
   return pcode;
 }
@@ -182,11 +183,11 @@ deftest(interface_changes_funs_to_ext_fun) {
 
 deftest(interface_keeps_macros) {
   to_interface_like(
-    "[macro true foo 4 0 [die]]\n"
-    "[macro false foo 4 0 [die]]\n",
+    "[macro true foo 5 0 [die]]\n"
+    "[macro false foo 5 0 [die]]\n",
 
-    "[macro true foo 4 0 [die]]\n"
-    "[macro false foo 4 0 [die]]\n");
+    "[macro true foo 5 0 [die]]\n"
+    "[macro false foo 5 0 [die]]\n");
 }
 
 deftest(interface_relinks_globals) {
@@ -202,21 +203,56 @@ deftest(interface_relinks_globals) {
 deftest(interface_deletes_redundant_src_pos) {
   to_interface_like(
     "[src-pos source.ava 1 2 2 2 2]\n"
-    "[macro true foo 4 0 [die]]\n",
+    "[macro true foo 5 0 [die]]\n",
 
     "[src-pos source.ava 0 1 1 1 1]\n"
     "[var false [ava private]]\n"
     "[src-pos source.ava 1 2 2 2 2]\n"
-    "[macro true foo 4 0 [die]]\n");
+    "[macro true foo 5 0 [die]]\n");
 }
 
 deftest(interface_deletes_src_pos_at_eof) {
   to_interface_like(
-    "[macro true foo 4 0 [die]]\n",
+    "[macro true foo 5 0 [die]]\n",
 
-    "[macro true foo 4 0 [die]]\n"
+    "[macro true foo 5 0 [die]]\n"
     "[src-pos source.ava 0 1 1 1 1]\n"
     "[var false [ava private]]\n");
+}
+
+deftest(interface_deletes_unreference_struct) {
+  to_interface_like(
+    "",
+
+    "[decl-sxt true [[struct foo]]]\n");
+}
+
+deftest(interface_keeps_exported_struct) {
+  to_interface_like(
+    "[decl-sxt true [[struct foo]]]\n"
+    "[export 0 true foo]\n",
+
+    "[decl-sxt true [[struct foo]]]\n"
+    "[export 0 true foo]\n");
+}
+
+deftest(interface_keeps_exported_ext_bss) {
+  to_interface_like(
+    "[S-ext-bss [ava foo] false]\n"
+    "[export 0 true foo]\n",
+
+    "[S-ext-bss [ava foo] false]\n"
+    "[export 0 true foo]\n");
+}
+
+deftest(interface_changes_exported_bss_to_ext_bss) {
+  to_interface_like(
+    "[S-ext-bss [ava foo] true]\n"
+    "[export 0 true foo]\n",
+
+    "[decl-sxt true [[struct foo]]]\n"
+    "[S-bss 0 true [ava foo] true]\n"
+    "[export 1 true foo]\n");
 }
 
 deftest(linker_emits_error_on_module_conflict) {
@@ -266,13 +302,13 @@ deftest(reexported_exports_kept) {
   link_modules_like(
     "[ext-var [ava bar]]\n"
     "[export 0 true bar]\n"
-    "[macro true foo 4 0 [die]]\n",
+    "[macro true foo 5 0 [die]]\n",
     ava_false,
 
     "module",
     "[ext-var [ava bar]]\n"
     "[export 0 true bar]\n"
-    "[macro true foo 4 0 [die]]\n");
+    "[macro true foo 5 0 [die]]\n");
 }
 
 deftest(nonreexported_exports_deleted) {
@@ -283,7 +319,7 @@ deftest(nonreexported_exports_deleted) {
     "module",
     "[ext-var [ava bar]]\n"
     "[export 0 false bar]\n"
-    "[macro false foo 4 0 [die]]\n");
+    "[macro false foo 5 0 [die]]\n");
 }
 
 deftest(global_refs_relinked_after_export_deletions) {
@@ -292,8 +328,8 @@ deftest(global_refs_relinked_after_export_deletions) {
     "[ext-var [ava public]]\n"
     "[export 1 true public]\n"
     "[fun false [ava init] [ava pos] [\"\"] [\n"
-    "  [set-glob 0 v0]\n"
-    "  [set-glob 1 v0]\n"
+    "  [ld-glob v0 0]\n"
+    "  [ld-glob v0 1]\n"
     "]]\n"
     "[init 3]\n",
     ava_false,
@@ -304,8 +340,8 @@ deftest(global_refs_relinked_after_export_deletions) {
     "[ext-var [ava public]]\n"
     "[export 2 true public]\n"
     "[fun false [ava init] [ava pos] [\"\"] [\n"
-    "  [set-glob 0 v0]\n"
-    "  [set-glob 2 v0]\n"
+    "  [ld-glob v0 0]\n"
+    "  [ld-glob v0 2]\n"
     "]]\n"
     "[init 4]\n");
 }
@@ -321,7 +357,7 @@ deftest(unpublished_globals_do_not_conflict) {
     ava_false,
 
     "module",
-    "[macro false macro 4 0 [die]]\n"
+    "[macro false macro 5 0 [die]]\n"
     "[var false [ava private]]\n"
     "[var false [ava private]]\n"
     "[fun false [ava init] [ava pos] [\"\"] [\n"
@@ -396,6 +432,70 @@ deftest(globals_refs_relinked_after_cannonicalisation) {
     "[fun true [ava doit] [ava pos] [x] [\n"
     "  [ret v0]\n"
     "]]\n");
+}
+
+deftest(struct_refs_relinked) {
+  link_modules_like(
+    "[ext-var [ava some-var]]\n"
+    "[decl-sxt true [[struct foo] [value v]]]\n"
+    "[fun false [ava init] [ava pos] [\"\"] [\n"
+    "  [S-v-ld v0 v0 1 0 false]\n"
+    "  [ret v0]\n"
+    "]]\n",
+    ava_false,
+
+    "module",
+    /* So some collapse happens before the refs */
+    "[ext-var [ava some-var]]\n"
+    "[ext-var [ava some-var]]\n"
+    "[decl-sxt true [[struct foo] [value v]]]\n"
+    "[fun false [ava init] [ava pos] [\"\"] [\n"
+    "  [S-v-ld v0 v0 2 0 false]\n"
+    "  [ret v0]\n"
+    "]]\n");
+}
+
+deftest(structs_not_deduped) {
+  link_modules_like(
+    "[decl-sxt true [[struct foo] [value v]]]\n"
+    "[decl-sxt false [[struct foo] [value v]]]\n",
+    ava_false,
+
+    "module",
+    "[decl-sxt true [[struct foo] [value v]]]\n"
+    "[decl-sxt false [[struct foo] [value v]]]\n");
+}
+
+deftest(global_sturct_refs_relinked) {
+  link_modules_like(
+    "[ext-var [ava some-var]]\n"
+    "[decl-sxt true [[struct foo] [value v]]]\n"
+    "[S-bss 1 false [ava foo] false]\n",
+    ava_false,
+
+    "module",
+    /* So some collapse happens before the refs */
+    "[ext-var [ava some-var]]\n"
+    "[ext-var [ava some-var]]\n"
+    "[decl-sxt true [[struct foo] [value v]]]\n"
+    "[S-bss 2 false [ava foo] false]\n");
+}
+
+deftest(ext_bss_collapsed_into_bss) {
+  link_modules_like(
+    "[decl-sxt true [[struct foo] [value v]]]\n"
+    "[S-bss 0 true [ava foo] false]\n"
+    "[export 1 true foo]\n",
+    ava_false,
+
+    "module-a",
+    "[load-mod module-b]\n"
+    "[S-ext-bss [ava foo] true]\n"
+    "[export 1 true foo]\n",
+
+    "module-b",
+    "[decl-sxt true [[struct foo] [value v]]]\n"
+    "[S-bss 0 true [ava foo] false]\n");
 }
 
 deftest(nondependent_modules_concatenated) {

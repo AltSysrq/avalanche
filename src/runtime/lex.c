@@ -1,5 +1,5 @@
 /*-
- * Copyright (c) 2015, Jason Lingle
+ * Copyright (c) 2015, 2016, Jason Lingle
  *
  * Permission to  use, copy,  modify, and/or distribute  this software  for any
  * purpose  with or  without fee  is hereby  granted, provided  that the  above
@@ -748,9 +748,9 @@ static ava_lex_status ava_lex_error_illegal_chars(
   unsigned i;
   size_t n;
 
-  n = lex->p.index - start->index;
+  n = lex->p.index - frag_start->index;
   ava_string_to_bytes(chars, lex->str,
-                      start->index, start->index + (n > 4? 4 : n));
+                      frag_start->index, frag_start->index + (n > 4? 4 : n));
   for (i = 0; i < n && i < 4; ++i)
     snprintf(hex + 4*i, sizeof(hex) - 4*i, "\\x%02X", (unsigned)chars[i]);
 

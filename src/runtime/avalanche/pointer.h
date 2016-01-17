@@ -38,7 +38,7 @@ extern const ava_attribute_tag ava_pointer_prototype_tag;
  * When possible, these objects should be declared statically (see
  * AVA_INIT_POINTER_PROTOTYPE) to avoid unnecessary heap allocations.
  */
-typedef struct {
+typedef struct ava_pointer_prototype_s {
   ava_attribute header;
   /**
    * The tag, or empty string if no tag.

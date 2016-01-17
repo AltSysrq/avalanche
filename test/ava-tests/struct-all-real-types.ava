@@ -1,0 +1,46 @@
+reqmod helpers/test
+import esoterica.unsafe.strangelet S
+
+struct sxt {
+  real r
+  single s
+  double d
+  extended x
+}
+
+fun assert-equals a b {
+  if ($a .!= $b) {
+    cstdio.puts : "Assertion failed: `$a` != `$b
+    throw-err assertion-failure
+  }
+}
+
+test.register struct-all-real-types {
+  x = S.new sxt -s
+
+  macro cycle control %block-void {
+    %S.set %sxt $%x >0 (>1)
+    %assert-equals (>1) %: %S.get %sxt $%x >0
+  }
+
+  cycle r 0
+  cycle r -1.25
+  cycle r inf
+  ; Since real == types used for reals in normal values, even a nonexact value
+  ; should be round-tripped exactly.
+  cycle r 1.1
+
+  cycle s 0
+  cycle s -1.25
+  cycle s inf
+
+  cycle d 0
+  cycle d -1.25
+  cycle d inf
+
+  cycle x 0
+  cycle x -1.25
+  cycle x inf
+
+  test.pass 42
+}

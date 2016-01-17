@@ -1,0 +1,122 @@
+reqmod helpers/test
+reqmod helpers/assert-equals-int
+alias assert = test.assert
+import esoterica.unsafe.strangelet S
+
+struct pair {
+  integer a
+  integer b
+}
+
+fun do-pass-test "" "c void [void pos]" () =
+\ test.pass 42
+
+fun do-byte "" "c byte [byte pos]" x = $x
+fun do-short "" "c short [short pos]" x = $x
+fun do-int "" "c int [int pos]" x = $x
+fun do-long "" "c long [long pos]" x = $x
+fun do-llong "" "c llong [llong pos]" x = $x
+fun do-ubyte "" "c ubyte [ubyte pos]" x = $x
+fun do-ushort "" "c ushort [ushort pos]" x = $x
+fun do-uint "" "c uint [uint pos]" x = $x
+fun do-ulong "" "c ulong [ulong pos]" x = $x
+fun do-ullong "" "c ullong [ullong pos]" x = $x
+fun do-ava-sbyte "" "c ava_sbyte [ava_sbyte pos]" x = $x
+fun do-ava-sshort "" "c ava_sshort [ava_sshort pos]" x = $x
+fun do-ava-sint "" "c ava_sint [ava_sint pos]" x = $x
+fun do-ava-slong "" "c ava_slong [ava_slong pos]" x = $x
+fun do-ava-ubyte "" "c ava_ubyte [ava_ubyte pos]" x = $x
+fun do-ava-ushort "" "c ava_ushort [ava_ushort pos]" x = $x
+fun do-ava-uint "" "c ava_uint [ava_uint pos]" x = $x
+fun do-ava-ulong "" "c ava_ulong [ava_ulong pos]" x = $x
+fun do-ava-integer "" "c ava_integer [ava_integer pos]" x = $x
+fun do-size "" "c size [size pos]" x = $x
+fun do-float "" "c float [float pos]" x = $x
+fun do-double "" "c double [double pos]" x = $x
+fun do-ldouble "" "c ldouble [ldouble pos]" x = $x
+fun do-ava-real "" "c ava_real [ava_real pos]" x = $x
+fun do-string "" "c string [string pos]" x = $x
+fun do-pointer "" "c * [* pos]" x = $x
+
+fun clone "" "c strange [strange pos]" src {
+  dst = S.new pair -atomic
+  S.cpy pair $dst $src
+  ret $dst
+}
+
+test.register native-function-definitions {
+  assert-equals-int 42 : do-byte +42
+  assert-equals-int -1 : do-byte -1
+  assert-equals-int -1 : do-byte 255
+  assert-equals-int 42 : do-short +42
+  assert-equals-int -1 : do-short -1
+  assert-equals-int -1 : do-short 65535
+  assert-equals-int 42 : do-int +42
+  assert-equals-int -1 : do-int -1
+  assert-equals-int 42 : do-long +42
+  assert-equals-int -1 : do-long -1
+  assert-equals-int 42 : do-llong +42
+  assert-equals-int -1 : do-llong -1
+
+  assert-equals-int 42 : do-ubyte +42
+  assert-equals-int 255 : do-ubyte -1
+  assert-equals-int 255 : do-ubyte 255
+  assert-equals-int 42 : do-ushort +42
+  assert-equals-int 65535 : do-ushort -1
+  assert-equals-int 65535 : do-ushort 65535
+  assert-equals-int 42 : do-uint +42
+  assert-equals-int 42 : do-ulong +42
+  assert-equals-int 42 : do-ullong +42
+
+  assert-equals-int 42 : do-ava-sbyte 42
+  assert-equals-int -1 : do-ava-sbyte -1
+  assert-equals-int -1 : do-ava-sbyte 255
+  assert-equals-int 42 : do-ava-sshort 42
+  assert-equals-int -1 : do-ava-sshort -1
+  assert-equals-int -1 : do-ava-sshort 65535
+  assert-equals-int 42 : do-ava-sint 42
+  assert-equals-int -1 : do-ava-sint -1
+  assert-equals-int -1 : do-ava-sint xFFFFFFFF
+  assert-equals-int 42 : do-ava-slong 42
+  assert-equals-int -1 : do-ava-slong -1
+  assert-equals-int -1 : do-ava-slong xFFFFFFFFFFFFFFFF
+
+  assert-equals-int 42 : do-ava-ubyte 42
+  assert-equals-int 255 : do-ava-ubyte -1
+  assert-equals-int 255 : do-ava-ubyte 255
+  assert-equals-int 42 : do-ava-ushort 42
+  assert-equals-int 65535 : do-ava-ushort -1
+  assert-equals-int 65535 : do-ava-ushort 65535
+  assert-equals-int 42 : do-ava-uint 42
+  assert-equals-int xFFFFFFFF : do-ava-uint -1
+  assert-equals-int xFFFFFFFF : do-ava-uint xFFFFFFFF
+  assert-equals-int 42 : do-ava-ulong 42
+  assert-equals-int xFFFFFFFFFFFFFFFF : do-ava-ulong -1
+  assert-equals-int xFFFFFFFFFFFFFFFF : do-ava-ulong xFFFFFFFFFFFFFFFF
+
+  assert-equals-int 42 : do-ava-integer 42
+  assert-equals-int -1 : do-ava-integer -1
+
+  assert-equals-int 42 : do-size 42
+
+  assert 2.5 .== do-float 2.5
+  assert 2.5 .== do-double 2.5
+  assert 2.5 .== do-ldouble 2.5
+  assert 3.14 .== do-ava-real 3.14
+
+  assert "hello world" b== do-string "hello world"
+  assert "hello" b== do-string "hello\x00world"
+
+  assert "* null" b== do-pointer "FILE* 0"
+
+  orig = S.new pair -s
+  S.set pair $orig a 42
+  S.set pair $orig b 56
+  copied = clone $orig
+  S.set pair $orig a 0
+  S.set pair $orig b 0
+  assert-equals-int 42 : S.get pair $copied a
+  assert-equals-int 56 : S.get pair $copied b
+
+  do-pass-test ()
+}

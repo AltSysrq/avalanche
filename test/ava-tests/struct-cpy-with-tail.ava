@@ -1,0 +1,36 @@
+reqmod helpers/test
+alias assert = test.assert
+import esoterica.unsafe.strangelet S
+
+struct ih {
+  integer i
+  value unused-padding
+}
+
+struct sxt {
+  c-size length
+  struct ih [] tail
+}
+
+test.register struct-cpy-with-tail {
+  len = 42
+  a = S.new sxt -s -t $len
+  b = S.new sxt -s -z -t $len
+
+  S.set sxt $a length $len
+  for {i = 0} ($i < $len) {i += 1} {
+    S.set ih (S.ix ih (S.get sxt $a tail) $i) i $i
+  }
+
+  S.cpy sxt -t $len $b $a
+  for {i = 0} ($i < $len) {i += 1} {
+    S.set ih (S.ix ih (S.get sxt $a tail) $i) i -1
+  }
+
+  assert 42 == S.get sxt $b length
+  for {i = 0} ($i < $len) {i += 1} {
+    assert $i == S.get ih (S.ix ih (S.get sxt $b tail) $i) i
+  }
+
+  test.pass 42
+}

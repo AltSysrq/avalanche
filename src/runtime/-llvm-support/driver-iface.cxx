@@ -1,5 +1,5 @@
 /*-
- * Copyright (c) 2015, Jason Lingle
+ * Copyright (c) 2015, 2016, Jason Lingle
  *
  * Permission to  use, copy,  modify, and/or distribute  this software  for any
  * purpose  with or  without fee  is hereby  granted, provided  that the  above
@@ -69,7 +69,6 @@ ava::driver_iface::driver_iface(const llvm::Module& module) noexcept {
   ISA(x_llength);
   ISA(x_iadd);
   ISA(x_icmp);
-  ISA(x_aaempty);
   ISA(x_pre_invoke_s);
   ISA(x_post_invoke_s);
   ISA(x_invoke_sd_bind);
@@ -79,9 +78,13 @@ ava::driver_iface::driver_iface(const llvm::Module& module) noexcept {
   ISA(x_throw);
   ISA(x_ex_type);
   ISA(x_ex_value);
+  ISA(x_cpu_pause);
+  ISA(x_new);
   ISA(foreign_exception);
   ISA(copy_exception);
   ISA(nop);
+  ISA(strangelet_to_pointer);
+  ISA(strangelet_of_pointer);
 #undef ISA
 
 #define MAR(type) do {                                            \
@@ -111,6 +114,7 @@ ava::driver_iface::driver_iface(const llvm::Module& module) noexcept {
   MAR(ava_slong);
   MAR(ava_ubyte);
   MAR(ava_ushort);
+  MAR(ava_uint);
   MAR(ava_ulong);
   MAR(ava_integer);
   MAR(size);
@@ -119,6 +123,7 @@ ava::driver_iface::driver_iface(const llvm::Module& module) noexcept {
   MAR(ldouble);
   MAR(ava_real);
   MAR(string);
+  MAR(strange);
   MAR(pointer);
 
   program_entry = module.getFunction("a$$5Cprogram_entry");

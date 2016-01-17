@@ -1,0 +1,75 @@
+reqmod helpers/test
+reqmod helpers/assert-equals-int
+alias assert = test.assert
+alias assert-equals = assert-equals-int
+import esoterica.unsafe.strangelet S
+
+struct ah {
+  atomic atom
+}
+
+namespace struct-atomic-int-cas {
+  ; Global and public to prevent inlining to keep compile time down
+  FUN assert-true x {
+    assert-equals true $x
+  }
+
+  FUN assert-false x {
+    assert-equals false $x
+  }
+}
+import struct-atomic-int-cas *
+
+fun struct-atomic-int-cas () {
+  x = S.new ah -s -z
+
+  assert-true : S.cas ah $x atom 0 42
+  assert-false : S.cas ah $x atom 0 42
+  assert-equals 42 : S.get ah $x atom
+  assert-true : S.cas ah $x atom 42 56
+  assert-equals 56 : S.get ah $x atom
+
+  map = []
+  key = foo
+  assert-equals 1 : S.cas ah $x atom -old map($key) 56 42
+  assert-equals 56 $map($key)
+  assert-equals 0 : S.cas ah $x atom -old map($key) 56 99
+  assert-equals 42 $map($key)
+
+  zero = + 0
+  eight = + 8
+  ; Test every permutation of options
+  macro base-case control %assert-false %:
+  \ %S.cas %ah $%x !atom >* $%zero $%eight
+  macro bool-flags control %block-void {
+    %base-case >*
+    %base-case !-weak >*
+    %base-case !-volatile >*
+    %base-case !-weak !-volatile >*
+  }
+  macro orders control %block-void {
+    %bool-flags >*
+    %bool-flags !-order !unordered >*
+    %bool-flags !-order !monotonic >*
+    %bool-flags !-order !acquire >*
+    %bool-flags !-order !release >*
+    %bool-flags !-order !acqrel >*
+    %bool-flags !-order !seqcst >*
+  }
+  macro forders control %block-void {
+    %orders >*
+    %orders !-forder !unordered >*
+    %orders !-forder !monotonic >*
+    %orders !-forder !acquire >*
+    %orders !-forder !release >*
+    %orders !-forder !acqrel >*
+    %orders !-forder !seqcst >*
+  }
+  forders
+
+  test.pass 42
+}
+
+test.register struct-atomic-int-cas {
+  struct-atomic-int-cas ()
+}

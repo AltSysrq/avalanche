@@ -1,0 +1,4 @@
+struct foo { }
+struct bar { struct foo [] x }
+
+esoterica.unsafe.strangelet.arraycpy bar () 0 () 0 0

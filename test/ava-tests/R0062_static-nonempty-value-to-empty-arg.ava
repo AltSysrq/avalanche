@@ -1,0 +1,2 @@
+fun doit () = 42
+doit 42

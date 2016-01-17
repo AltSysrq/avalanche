@@ -196,11 +196,11 @@ ava_ast_node* ava_intr_variable_lvalue(
         context, ava_error_assignment_to_macro(
           location, symbol->full_name));
 
-    case ava_st_other:
+    default:
       return ava_macsub_error(
         context, ava_error_assignment_to_other(
           location, symbol->full_name,
-          ava_string_of_cstring(symbol->v.other.type->name)));
+          ava_symbol_type_name(symbol)));
     }
 
     if (!symbol->v.var.is_mutable) {
@@ -415,12 +415,12 @@ static void ava_intr_var_read_postprocess(ava_intr_var_read* node) {
                               &node->header.location, node->var->full_name));
     return;
 
-  case ava_st_other:
+  default:
     ava_macsub_record_error(
       node->header.context,
       ava_error_use_of_other_as_var(
         &node->header.location, node->var->full_name,
-        ava_string_of_cstring(node->var->v.other.type->name)));
+        ava_symbol_type_name(node->var)));
   }
 }
 
@@ -487,10 +487,7 @@ static void ava_intr_var_read_cg_evaluate(
     }
   } break;
 
-  case ava_st_control_macro:
-  case ava_st_operator_macro:
-  case ava_st_function_macro:
-  case ava_st_other:
+  default:
     /* unreachable */
     abort();
   }

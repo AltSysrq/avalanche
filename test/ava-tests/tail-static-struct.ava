@@ -1,0 +1,38 @@
+reqmod helpers/test
+reqmod helpers/assert-equals-int
+import esoterica.unsafe.strangelet S
+
+struct ih {
+  integer i
+}
+
+struct array {
+  byte b
+  struct ih [] v
+}
+
+fun increment-and-sum () {
+  S.static array a -t 4
+  S.static array b -t 4 -thread-local
+
+  sum = 0
+  for {i = 0} ($i < 4) {i += 1} {
+    v = S.get ih (S.ix ih (S.get array $a v) $i) i
+    sum += $v
+    S.set ih (S.ix ih (S.get array $a v) $i) i : $v + $i
+
+    v = S.get ih (S.ix ih (S.get array $b v) $i) i
+    sum += $v
+    S.set ih (S.ix ih (S.get array $b v) $i) i : $v + $i
+  }
+
+  ret $sum
+}
+
+test.register tail-static-struct {
+  assert-equals-int 0 : increment-and-sum () ; [0 0 0 0] -> [0 1 2 3]
+  assert-equals-int 12 : increment-and-sum () ; [0 1 2 3] -> [0 2 4 6]
+  assert-equals-int 24 : increment-and-sum () ; [0 2 4 6] -> [0 4 8 12]
+  assert-equals-int 36 : increment-and-sum ()
+  test.pass 42
+}

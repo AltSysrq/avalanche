@@ -1,0 +1,12 @@
+reqmod helpers/test
+reqmod helpers/expose-exstatic-target-b
+import esoterica.unsafe.strangelet S
+
+struct ih {
+  integer i
+}
+
+test.register cross-module-exstatic {
+  S.set ih $exstatic-target-b i 42
+  test.pass : S.get ih $exstatic-target-b i
+}

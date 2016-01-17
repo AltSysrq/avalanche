@@ -1,0 +1,32 @@
+reqmod helpers/test
+alias assert = test.assert
+import esoterica.unsafe.strangelet S
+
+struct ih {
+  integer i
+}
+
+struct array {
+  struct ih [42] values
+}
+
+test.register struct-cpy-with-array {
+  a = S.new array -s
+  b = S.new array -s -z
+
+  for {i = 0} ($i < 42) {i += 1} {
+    S.set ih (S.ix ih (S.get array $a values) $i) i $i
+  }
+
+  S.cpy array $b $a
+
+  for {i = 0} ($i < 42) {i += 1} {
+    S.set ih (S.ix ih (S.get array $a values) $i) i -1
+  }
+
+  for {i = 0} ($i < 42) {i += 1} {
+    assert $i == S.get ih (S.ix ih (S.get array $b values) $i) i
+  }
+
+  test.pass 42
+}

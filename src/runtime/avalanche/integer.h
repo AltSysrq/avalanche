@@ -104,6 +104,18 @@ static inline ava_integer ava_integer_of_value(
 ava_integer ava_integer_of_noninteger_value(
   ava_value value, ava_integer dfault);
 
+/**
+ * Attempts to parse the given string as an integer.
+ *
+ * @param dst Out-parameter for the parsed integer. On success, set to the
+ * parsed integer; on failure, unchanged.
+ * @param str The string to parse as an integer.
+ * @param dfault The integeger to use if the string is empty.
+ * @return Whether an integer was parsed.
+ */
+ava_bool ava_integer_try_parse(ava_integer* dst,
+                               ava_string str, ava_integer dfault);
+
 static inline ava_integer ava_integer_of_value(
   ava_value value, ava_integer dfault
 ) {

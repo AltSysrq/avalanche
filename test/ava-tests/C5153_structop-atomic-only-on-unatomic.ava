@@ -1,0 +1,2 @@
+struct foo { int x }
+esoterica.unsafe.strangelet.cas foo () x () ()

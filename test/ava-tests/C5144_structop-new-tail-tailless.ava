@@ -1,0 +1,2 @@
+struct foo { }
+x = esoterica.unsafe.strangelet.new foo -t 42

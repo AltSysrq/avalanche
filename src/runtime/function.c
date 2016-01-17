@@ -1,5 +1,5 @@
 /*-
- * Copyright (c) 2015, Jason Lingle
+ * Copyright (c) 2015, 2016, Jason Lingle
  *
  * Permission to  use, copy,  modify, and/or distribute  this software  for any
  * purpose  with or  without fee  is hereby  granted, provided  that the  above
@@ -32,6 +32,7 @@
 #include "avalanche/errors.h"
 #include "avalanche/real.h"
 #include "avalanche/pointer.h"
+#include "avalanche/strangelet.h"
 #include "avalanche/exception.h"
 #include "avalanche/list.h"
 #include "avalanche/function.h"
@@ -235,6 +236,7 @@ static ffi_type* ava_function_convert_type_to_ffi(
   case ava_cmpt_ldouble: return &ffi_type_longdouble;
 
   case ava_cmpt_string:
+  case ava_cmpt_strange:
   case ava_cmpt_pointer: return &ffi_type_pointer;
   }
 
@@ -366,6 +368,7 @@ static ava_c_marshalling_type ava_function_parse_marshal_type(ava_value val) {
   case AVA_ASCII9('l','d','o','u','b','l','e'): PRIM(ava_cmpt_ldouble);
   case AVA_ASCII9(AVA, 'r','e','a','l'):        PRIM(ava_cmpt_ava_real);
   case AVA_ASCII9('s','t','r','i','n','g'):     PRIM(ava_cmpt_string);
+  case AVA_ASCII9('s','t','r','a','n','g','e'): PRIM(ava_cmpt_strange);
   }
 #undef AVA
 
@@ -417,6 +420,13 @@ static ava_argument_binding ava_function_parse_binding(ava_list_value argspec,
       ava_throw_str(&ava_format_exception,
                     ava_error_function_argspec_pos_length());
     }
+    break;
+
+  case AVA_ASCII9('e','m','p','t','y'):
+    if (length != start_ix + 1)
+      ava_throw_str(&ava_format_exception,
+                    ava_error_function_argspec_pos_length());
+    ret.type = ava_abt_empty;
     break;
 
   case AVA_ASCII9('v','a','r','a','r','g','s'):
@@ -520,6 +530,7 @@ static ava_value ava_function_marshal_type_to_value(
   case PRIM(ldouble);
   case PRIM(ava_real);
   case PRIM(string);
+  case PRIM(strange);
 
   case ava_cmpt_ava_sshort:
     str = ava_sshort_text;
@@ -565,6 +576,11 @@ static ava_value ava_function_argspec_to_value(
   case ava_abt_pos:
     count = 1;
     values[1] = ava_value_of_string(AVA_ASCII9_STRING("pos"));
+    goto ok;
+
+  case ava_abt_empty:
+    count = 1;
+    values[1] = ava_value_of_string(AVA_ASCII9_STRING("empty"));
     goto ok;
 
   case ava_abt_pos_default:
@@ -622,6 +638,7 @@ ava_bool ava_function_is_valid(ava_string* message, const ava_function* fun) {
     switch (fun->args[i].binding.type) {
     case ava_abt_implicit:
     case ava_abt_pos:
+    case ava_abt_empty:
       is_var_shape = ava_false;
       goto ok;
 
@@ -690,23 +707,39 @@ ava_function_bind_status ava_function_bind(
 
   memset(consumed_args, 0, sizeof(consumed_args));
 
-  /* Bind all implicit arguments */
+  /* Bind all implicit arguments, and reset all triggers to unbound. */
   for (arg = 0; arg < fun->num_args; ++arg) {
     if (ava_abt_implicit == fun->args[arg].binding.type) {
       bound_args[arg].type = ava_fbat_implicit;
       bound_args[arg].v.value = fun->args[arg].binding.value;
       consumed_args[arg] = ava_true;
     }
+
+    bound_args[arg].trigger_parameter_index = AVA_FUNCTION_NO_PARAMETER;
   }
 
   /* Bind pos arguments from left */
   for (arg = parm = 0; arg < fun->num_args && parm < parm_limit; ++arg) {
     if (consumed_args[arg]) continue;
-    if (ava_abt_pos != fun->args[arg].binding.type) break;
+    if (ava_abt_pos != fun->args[arg].binding.type &&
+        ava_abt_empty != fun->args[arg].binding.type) break;
+
     if (ava_fpt_spread == parms[parm].type)
       return ava_fbs_unpack;
 
+    if (ava_abt_empty == fun->args[arg].binding.type) {
+      if (ava_fpt_static != parms[parm].type) {
+        *message = ava_error_function_dynamic_value_to_empty(arg);
+        return ava_fbs_impossible;
+      }
+      if (0 != ava_strlen(ava_to_string(parms[parm].value))) {
+        *message = ava_error_function_nonempty_to_empty(arg);
+        return ava_fbs_impossible;
+      }
+    }
+
     bound_args[arg].type = ava_fbat_parameter;
+    bound_args[arg].trigger_parameter_index = parm;
     bound_args[arg].v.parameter_index = parm;
     consumed_args[arg] = ava_true;
     ++parm;
@@ -715,11 +748,25 @@ ava_function_bind_status ava_function_bind(
   for (arg = fun->num_args - 1; arg < fun->num_args &&
          parm < parm_limit; --arg) {
     if (consumed_args[arg]) continue;
-    if (ava_abt_pos != fun->args[arg].binding.type) break;
+    if (ava_abt_pos != fun->args[arg].binding.type &&
+        ava_abt_empty != fun->args[arg].binding.type) break;
+
     if (ava_fpt_spread == parms[parm_limit - 1].type)
       return ava_fbs_unpack;
 
+    if (ava_abt_empty == fun->args[arg].binding.type) {
+      if (ava_fpt_static != parms[parm].type) {
+        *message = ava_error_function_dynamic_value_to_empty(arg);
+        return ava_fbs_impossible;
+      }
+      if (0 != ava_strlen(ava_to_string(parms[parm].value))) {
+        *message = ava_error_function_nonempty_to_empty(arg);
+        return ava_fbs_impossible;
+      }
+    }
+
     bound_args[arg].type = ava_fbat_parameter;
+    bound_args[arg].trigger_parameter_index = parm_limit - 1;
     bound_args[arg].v.parameter_index = parm_limit - 1;
     consumed_args[arg] = ava_true;
     --parm_limit;
@@ -746,6 +793,7 @@ ava_function_bind_status ava_function_bind(
           /* Matched */
           if (ava_abt_bool == fun->args[other].binding.type) {
             bound_args[other].type = ava_fbat_implicit;
+            bound_args[other].trigger_parameter_index = parm;
             bound_args[other].v.value = ava_value_of_string(
               AVA_ASCII9_STRING("true"));
             consumed_args[other] = ava_true;
@@ -761,6 +809,7 @@ ava_function_bind_status ava_function_bind(
               return ava_fbs_unpack;
 
             bound_args[other].type = ava_fbat_parameter;
+            bound_args[other].trigger_parameter_index = parm;
             bound_args[other].v.parameter_index = parm + 1;
             parm += 2;
           }
@@ -782,6 +831,7 @@ ava_function_bind_status ava_function_bind(
         return ava_fbs_unpack;
 
       bound_args[arg].type = ava_fbat_parameter;
+      bound_args[arg].trigger_parameter_index = parm;
       bound_args[arg].v.parameter_index = parm;
       consumed_args[arg] = ava_true;
       ++parm;
@@ -791,6 +841,8 @@ ava_function_bind_status ava_function_bind(
         variadic_collection[i] = parm + i;
 
       bound_args[arg].type = ava_fbat_collect;
+      if (parm < parm_limit)
+        bound_args[arg].trigger_parameter_index = parm;
       bound_args[arg].v.collection_size = parm_limit - parm;
       consumed_args[arg] = ava_true;
       parm = parm_limit;
@@ -988,6 +1040,14 @@ ava_value ava_function_invoke(const ava_function* fun,
       ARG.ptr = (void*)ava_string_to_cstring(ava_to_string(args[logical_arg]));
       break;
 
+    case ava_cmpt_strange:
+      if (&ava_strangelet_type != ava_value_attr(args[logical_arg]))
+        ava_throw_str(&ava_undefined_behaviour_exception,
+                      ava_error_non_strangelet_passed_to_strange_argument(
+                        logical_arg));
+      ARG.ptr = (void*)ava_value_ptr(args[logical_arg]);
+      break;
+
     case ava_cmpt_pointer:
       if (fun->args[logical_arg].marshal.pointer_proto->is_const)
         ARG.ptr = (void*)ava_pointer_get_const(
@@ -1092,6 +1152,9 @@ ava_value ava_function_invoke(const ava_function* fun,
 
   case ava_cmpt_string:
     return ava_value_of_cstring(return_value.ptr);
+
+  case ava_cmpt_strange:
+    return ava_strange_ptr(return_value.ptr);
 
   case ava_cmpt_pointer:
     return ava_pointer_of_proto(

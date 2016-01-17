@@ -1,5 +1,5 @@
 /*-
- * Copyright (c) 2015, Jason Lingle
+ * Copyright (c) 2015, 2016, Jason Lingle
  *
  * Permission to  use, copy,  modify, and/or distribute  this software  for any
  * purpose  with or  without fee  is hereby  granted, provided  that the  above
@@ -24,7 +24,6 @@
 #include "string.h"
 #include "value.h"
 #include "list.h"
-#include "function.h"
 #include "parser.h"
 #include "errors.h"
 #include "name-mangle.h"
@@ -411,6 +410,8 @@ void ava_ast_node_cg_force(ava_ast_node* node,
  * Calls the given node's cg_define method.
  *
  * The process aborts if this method is not defined on the node.
+ *
+ * This call does nothing if node is NULL.
  */
 void ava_ast_node_cg_define(ava_ast_node* node,
                             struct ava_codegen_context_s* context);
@@ -752,5 +753,27 @@ void ava_macsub_insert_module(
  * Returns an error AST node without emitting any errors.
  */
 ava_ast_node* ava_macsub_silent_error(const ava_compile_location* location);
+
+/**
+ * Returns a macro substitution result wrapping a silent error as produced by
+ * ava_macsub_silent_error().
+ */
+ava_macro_subst_result ava_macsub_silent_error_result(
+  const ava_compile_location* location);
+
+/**
+ * Convenience function for declaring/defining standard macro substitution
+ * functions.
+ *
+ * Qualifiers may be placed before the macro, and it may be followed by a body
+ * or a semicolon.
+ */
+#define AVA_DEF_MACRO_SUBST(name)               \
+  ava_macro_subst_result name(                  \
+    const struct ava_symbol_s* self,            \
+    ava_macsub_context* context,                \
+    const ava_parse_statement* statement,       \
+    const ava_parse_unit* provoker,             \
+    ava_bool* consumed_other_statements)
 
 #endif /* AVA_RUNTIME_MACSUB_H_ */

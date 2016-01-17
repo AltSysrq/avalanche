@@ -102,30 +102,41 @@ void* ava_alloc_atomic_precise_zero(size_t sz) AVA_MALLOC;
  *
  * If memory allocation fails, the process is aborted.
  */
-void* ava_alloc_unmanaged(size_t) AVA_MALLOC;
+void* ava_alloc_unmanaged(size_t sz) AVA_MALLOC;
 /**
  * Frees the given memory allocated from ava_alloc_unmanaged().
  */
-void ava_free_unmanaged(void*);
+void ava_free_unmanaged(void* ptr);
 /**
  * Performs an ava_alloc() with the given size, then copies that many bytes
  * from the given source pointer into the new memory before returning it.
  *
  * If memory allocation fails, the process is aborted.
  */
-void* ava_clone(const void*restrict, size_t) AVA_MALLOC;
+void* ava_clone(const void*restrict src, size_t sz) AVA_MALLOC;
 /**
  * Performs an ava_alloc_atomic() with the given size, then copies that many
  * bytes from the given source pointer into the new memory before returning it.
  *
  * If memory allocation fails, the process is aborted.
  */
-void* ava_clone_atomic(const void*restrict, size_t) AVA_MALLOC;
+void* ava_clone_atomic(const void*restrict src, size_t sz) AVA_MALLOC;
 /**
  * Syntax sugar for calling ava_alloc() with the size of the selected type and
  * casting it to a pointer to that type.
  */
 #define AVA_NEW(type) ((type*)ava_alloc(sizeof(type)))
+/**
+ * Syntax sugar for allocating a struct with a flexible array member at the
+ * end.
+ *
+ * type behaves as in AVA_NEW(). array_member is the name of a field directly
+ * within type which is a flexible array member. count is the number of
+ * elements to allocate for the flexible array member.
+ */
+#define AVA_NEWA(type, array_member, count)                             \
+  ((type*)ava_alloc(sizeof(type) +                                      \
+                    sizeof(((type*)NULL)->array_member[0]) * (count)))
 /**
  * Syntax sugar for calling ava_clone() with the size of the given value and a
  * pointer to that value.

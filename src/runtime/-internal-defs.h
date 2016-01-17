@@ -25,4 +25,16 @@
 #define AVA_SPINLOOP
 #endif
 
+/**
+ * Expands to an integer indicating the ABI alignment of the given type.
+ */
+#define ava_alignof(type)                                       \
+  offsetof(struct { char padding; type target; }, target)
+
+/**
+ * Expands to the length of the given array.
+ */
+#define ava_lenof(array)                        \
+  (sizeof(array) / sizeof((array)[0]))
+
 #endif /* AVA_RUNTIME__INTERNAL_DEFS_H_ */

@@ -1,0 +1,12 @@
+namespace foo {
+  struct s { }
+}
+
+namespace bar {
+  struct s { }
+}
+
+import foo *
+import bar *
+
+esoterica.unsafe.strangelet.new s

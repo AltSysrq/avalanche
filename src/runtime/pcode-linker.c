@@ -1,5 +1,5 @@
 /*-
- * Copyright (c) 2015, Jason Lingle
+ * Copyright (c) 2015, 2016, Jason Lingle
  *
  * Permission to  use, copy,  modify, and/or distribute  this software  for any
  * purpose  with or  without fee  is hereby  granted, provided  that the  above
@@ -141,7 +141,7 @@ ava_pcode_global_list* ava_pcode_to_interface(
   TAILQ_INIT(dst);
 
   /* Copy all the elements we want to keep, changing fun and var into ext-fun
-   * and ext-var appropriately.
+   * and ext-var, etc,x appropriately.
    */
   src_ix = dst_ix = 0;
   TAILQ_FOREACH(src_elt, src, next) {
@@ -165,6 +165,36 @@ ava_pcode_global_list* ava_pcode_to_interface(
         dvar->header.type = ava_pcgt_ext_var;
         dvar->name = svar->name;
         dst_elt = (ava_pcode_global*)dvar;
+      } break;
+
+      case ava_pcgt_S_bss: {
+        const ava_pcg_S_bss* sbss = (const ava_pcg_S_bss*)src_elt;
+        ava_pcg_S_ext_bss* dbss = AVA_NEW(ava_pcg_S_ext_bss);
+
+        dbss->header.type = ava_pcgt_S_ext_bss;
+        dbss->name = sbss->name;
+        dbss->thr_local = sbss->thr_local;
+        dst_elt = (ava_pcode_global*)dbss;
+      } break;
+
+      case ava_pcgt_S_bss_a: {
+        const ava_pcg_S_bss_a* sbss = (const ava_pcg_S_bss_a*)src_elt;
+        ava_pcg_S_ext_bss* dbss = AVA_NEW(ava_pcg_S_ext_bss);
+
+        dbss->header.type = ava_pcgt_S_ext_bss;
+        dbss->name = sbss->name;
+        dbss->thr_local = sbss->thr_local;
+        dst_elt = (ava_pcode_global*)dbss;
+      } break;
+
+      case ava_pcgt_S_bss_t: {
+        const ava_pcg_S_bss_t* sbss = (const ava_pcg_S_bss_t*)src_elt;
+        ava_pcg_S_ext_bss* dbss = AVA_NEW(ava_pcg_S_ext_bss);
+
+        dbss->header.type = ava_pcgt_S_ext_bss;
+        dbss->name = sbss->name;
+        dbss->thr_local = sbss->thr_local;
+        dst_elt = (ava_pcode_global*)dbss;
       } break;
 
       default:
@@ -226,6 +256,11 @@ static ava_bool ava_pcode_keep_in_interface(
   case ava_pcgt_ext_fun:
   case ava_pcgt_var:
   case ava_pcgt_fun:
+  case ava_pcgt_decl_sxt:
+  case ava_pcgt_S_ext_bss:
+  case ava_pcgt_S_bss:
+  case ava_pcgt_S_bss_a:
+  case ava_pcgt_S_bss_t:
     return exported[ix];
 
   case ava_pcgt_export:

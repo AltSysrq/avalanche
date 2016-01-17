@@ -1,0 +1,16 @@
+reqmod helpers/test
+
+fun doit () { }
+
+fun nonempty-value-to-empty-arg-caught-at-runtime () {
+  try {
+    x = $doit
+    $x foo
+  } workaround err {
+    test.pass 42
+  }
+}
+
+test.register nonempty-value-to-empty-arg-caught-at-runtime {
+  nonempty-value-to-empty-arg-caught-at-runtime ()
+}

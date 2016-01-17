@@ -1,0 +1,11 @@
+namespace plugh {
+  struct foo { }
+}
+
+namespace xyzzy {
+  struct foo { }
+}
+
+import plugh *
+import xyzzy *
+struct bar extends foo { }

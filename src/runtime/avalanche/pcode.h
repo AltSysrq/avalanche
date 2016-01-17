@@ -28,6 +28,8 @@
 #include "function.h"
 #include "macsub.h"
 
+struct ava_struct_s;
+
 /**
    @file
 
@@ -58,11 +60,11 @@
    - Variables private to a function
    - Global variables
 
-   Global variables are thus the only mutable location recognised by the
-   virtual machine which can be observed by multiple threads. The virtual
-   machine defines no memory model around global variables. Instead, during
-   module initialisation, reading a global variable from a thread other than
-   the one initialising the module containing that global variable is
+   Global variables are thus the only first-class mutable location recognised
+   by the virtual machine which can be observed by multiple threads. The
+   virtual machine defines no memory model around global variables. Instead,
+   during module initialisation, reading a global variable from a thread other
+   than the one initialising the module containing that global variable is
    considered to have undefined behaviour; similarly, mutating a global
    variable after the containing module has initialised or from a thread other
    than the one initialising is considered to have undefined behaviour.
@@ -119,6 +121,32 @@
                 "Module"                "Fat Package"   "Application"
    Iface        .avami                  .avapi          -
                 "[Module] Interface"    "Package"       -
+
+   For interoperation with the underlying platform, the P-Code VM also supports
+   direct interaction with strangelets. By nature, the operation of strangelets
+   is somewhat vague and entirely unsafe, and so generally should only be found
+   in low-level code interacting directly with the platform. Strangelets
+   present a second vector for mutation to be observed across threads. Unlike
+   with global variables, this is permitted. The P-Code VM's memory model
+   matches that of LLVM.
+
+   - In the absence of anything else, memory reads are unordered and
+     non-atomic. Note that this means simply reading and writing to an
+     unsynchronised thread-shared ava_value field is unsafe and produces
+     undefined behaviour.
+
+   - Volatile affects the optimiser *only*; volatile operations cannot be
+     reordered with respect to other volatile operations, split, coalesced, or
+     deleted. However, there is nothing stopping the underlying architecture
+     from doing the same, and thus there are no particular guarantees about
+     cross-threaded behaviour. Volatiles are therefore of extremely limited
+     utility, especially since their main use --- asynchronous signal handlers
+     --- is not available to Avalanche code.
+
+   - Certain field types can be atomically manipulated. Each atomic operation
+     is given a memory ordering, which is interpreted at least as strongly as
+     LLVM defines them:
+     http://llvm.org/docs/LangRef.html#memory-model-for-concurrent-operations
 
  */
 
@@ -224,6 +252,147 @@ typedef enum {
    */
   ava_pet_other_exception
 } ava_pcode_exception_type;
+
+/**
+ * Describes a type of read-modify-write operation.
+ *
+ * These directly correspond to the LLVM atomicrmw operation.
+ * http://llvm.org/docs/LangRef.html#i-atomicrmw
+ */
+typedef enum {
+  /**
+   * result = new
+   */
+  ava_pro_xchg,
+  /**
+   * result = old + new
+   */
+  ava_pro_add,
+  /**
+   * result = old - new
+   */
+  ava_pro_sub,
+  /**
+   * result = old & new
+   */
+  ava_pro_and,
+  /**
+   * result = ~(old & new)
+   */
+  ava_pro_nand,
+  /**
+   * result = old | new
+   */
+  ava_pro_or,
+  /**
+   * result = old ^ new
+   */
+  ava_pro_xor,
+  /**
+   * result = old > new? old : new (signed)
+   */
+  ava_pro_smax,
+  /**
+   * result = old < new? old : new (signed)
+   */
+  ava_pro_smin,
+  /**
+   * result = old > new? old : new (unsigned)
+   */
+  ava_pro_umax,
+  /**
+   * result = old < new? old : new (unsigned)
+   */
+  ava_pro_umin
+} ava_pcode_rmw_op;
+
+/**
+ * Describes the minimum memory ordering guarantees for an atomic operation.
+ *
+ * These correspond at minimum to the options of the same name provided by
+ * LLVM. http://llvm.org/docs/LangRef.html#atomic-memory-ordering-constraints
+ *
+ * Unlike with LLVM, all operations permit all orders everywhere; orders which
+ * don't make sense in-context are simply promoted to the next order that does.
+ */
+typedef enum {
+  ava_pmo_unordered,
+  ava_pmo_monotonic,
+  ava_pmo_acquire,
+  ava_pmo_release,
+  ava_pmo_acqrel,
+  ava_pmo_seqcst
+} ava_pcode_memory_order;
+
+/**
+ * Converts the given value to a register type.
+ *
+ * The value must be a single-character string.
+ *
+ * @throws ava_format_exception if value is not a legal register type.
+ */
+ava_pcode_register_type ava_pcode_parse_register_type(ava_value value);
+
+/**
+ * Converts the given register type to its string representation.
+ */
+ava_string ava_pcode_register_type_to_string(
+  ava_pcode_register_type type) AVA_PURE;
+
+/**
+ * Converts the given value to a register identifier.
+ *
+ * This conversion is strict; no surrounding whitespace is permitted.
+ *
+ * @throws ava_format_exception if value is not syntactically a legal register
+ * identifier.
+ */
+ava_pcode_register ava_pcode_parse_register(ava_value value);
+
+/**
+ * Converts the given register to its string representation.
+ */
+ava_string ava_pcode_register_to_string(ava_pcode_register reg) AVA_PURE;
+
+/**
+ * Converts the given value to a demangled name, according to the format
+ * normally used in P-Code files.
+ *
+ * @throws ava_format_exception if value is not a syntactically valid
+ * demangled-name.
+ */
+ava_demangled_name ava_pcode_parse_demangled_name(ava_value value);
+
+/**
+ * Converts the given demangled-name to its P-Code string representation.
+ */
+ava_string ava_pcode_demangled_name_to_string(ava_demangled_name name) AVA_PURE;
+
+/**
+ * Converts the given value to the ava_pcode_rmw_op it names.
+ *
+ * @throws ava_format_exception if value does not name any ava_pcode_rmw_op.
+ */
+ava_pcode_rmw_op ava_pcode_parse_rmw_op(ava_value value);
+
+/**
+ * Converts the given rmw-op to the string that names it.
+ */
+ava_string ava_pcode_rmw_op_to_string(ava_pcode_rmw_op op) AVA_PURE;
+
+/**
+ * Converts the given value to the ava_pcode_memory_order it names.
+ *
+ * @throws ava_format_exception if value does not name any
+ * ava_pcode_memory_order.
+ */
+ava_pcode_memory_order ava_pcode_parse_memory_order(ava_value value);
+
+/**
+ * Converts the given memory-order to the string that names it.
+ */
+ava_string ava_pcode_memory_order_to_string(ava_pcode_memory_order order)
+AVA_PURE;
 
 #define AVA__IN_PCODE_H_ 1
 #include "gen-pcode.h"

@@ -1,0 +1,8 @@
+reqmod helpers/test
+
+test.register cpu-pause {
+  ; Impossible to test behaviour; just make sure it doesn't crash the code
+  ; generator.
+  esoterica.unsafe.strangelet.cpu-pause ()
+  test.pass 42
+}

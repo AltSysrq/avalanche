@@ -1,0 +1,6 @@
+struct foo {
+  int bar
+}
+
+x = []
+esoterica.unsafe.strangelet.set foo $x baz 42

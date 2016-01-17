@@ -1,5 +1,5 @@
 /*-
- * Copyright (c) 2015, Jason Lingle
+ * Copyright (c) 2015, 2016, Jason Lingle
  *
  * Permission to  use, copy,  modify, and/or distribute  this software  for any
  * purpose  with or  without fee  is hereby  granted, provided  that the  above
@@ -41,6 +41,8 @@ namespace ava {
     llvm::IntegerType* c_long;
     llvm::IntegerType* c_llong;
     llvm::IntegerType* c_size;
+    llvm::IntegerType* c_atomic;
+    llvm::IntegerType* c_intptr;
     llvm::Type* c_float;
     llvm::Type* c_double;
     llvm::Type* c_ldouble;
@@ -81,6 +83,7 @@ namespace ava {
     llvm::StructType* ava_exception;
 
     llvm::PointerType* general_pointer;
+    llvm::StructType* opaque;
 
     enum {
       ff_address = 0, ff_calling_convention, ff_c_return_type,

@@ -1,6 +1,6 @@
 #! /usr/bin/env tclsh8.6
 #-
-# Copyright (c) 2015 Jason Lingle
+# Copyright (c) 2015, 2016 Jason Lingle
 #
 # Permission to  use, copy,  modify, and/or distribute  this software  for any
 # purpose  with or  without fee  is hereby  granted, provided  that the  above
@@ -510,6 +510,200 @@ set defs {
     }
   }
 
+  serror R0047 struct_empty_list {} {
+    msg "Empty list is not a valid struct."
+    explanation {
+      An attempt was made to interprete the empty list as a struct.
+    }
+  }
+
+  serror R0048 struct_header_too_short {{ava_integer cnt}} {
+    msg "Struct header block too short; only has %cnt% elements."
+    explanation {
+      An attempt was made to interpret a value as a struct, but the first
+      element (the header block) did not have enough elements.
+
+      The header block must at least define whether the struct is a proper
+      struct or a union, and its name.
+
+      If the stated count is 1, this may be because quotation was forgotten
+      around the header block. For example, using
+
+        [struct foo [...]]
+
+      instead of
+
+        [[struct foo] [...]]
+
+      will produce this error.
+    }
+  }
+
+  serror R0049 struct_header_too_long {{ava_integer cnt}} {
+    msg "Struct header block too long; has %cnt% elements."
+    explanation {
+      An attempt was made to interpret a value as a struct, but the first
+      element (the header block) had too many elements.
+
+      The header block at most defines whether the struct is a proper struct or
+      union, its name, and its parent struct.
+
+      This could be caused if the struct header is missing altogether, i.e., if
+      a field specification is found where the header is supposed to be.
+    }
+  }
+
+  serror R0050 struct_bad_header_type {{ava_string type}} {
+    msg "Bad struct type '%type%', expected 'struct' or 'union'."
+    explanation {
+      A string other than "struct" or "union" was found in the type element of
+      a struct's header block (the first element in the list defining the
+      struct).
+
+      It is possible that the header block is missing, and a field
+      specification is instead found where the header is supposed to be.
+    }
+  }
+
+  serror R0051 struct_field_spec_too_short {{ava_integer cnt}} {
+    msg "Struct field specifier is empty, has only %cnt% elements."
+    explanation {
+      A field specifier within a value to be interpreted as a struct has too
+      few values to be a valid field specifier.
+
+      At the very least, each field needs a type (first element) and name (last
+      element). Most types take additional elements between the two.
+    }
+  }
+
+  serror R0052 struct_bad_type {{ava_string type}} {
+    msg "Bad type for struct field: %type%"
+    explanation {
+      The type in a field specifier in a value interpreted as a struct does not
+      name a known field type.
+    }
+  }
+
+  serror R0053 struct_bad_field_spec_length {
+    {ava_string field} {ava_string type}
+    {ava_integer expected} {ava_integer got}
+  } {
+    msg "Bad %type% spec for field %field%; expected %expected%, got %got% elements"
+    explanation {
+      The given field specifier in a value interpreted as a struct had an
+      unexpected number of elements.
+    }
+  }
+
+  serror R0054 struct_bad_field_spec_element {
+    {ava_string field} {ava_string element} {ava_value value}
+  } {
+    msg "Bad %element% for field %field%: %value%"
+    explanation {
+      The given element of the field specifier for the given field was not a
+      valid value for that field.
+    }
+  }
+
+  serror R0055 struct_nonnative_atomic {{ava_string field}} {
+    msg "Field %field% is atomic but has unnatural properties."
+    explanation {
+      Atomic fields in structs are required to always have natural alignment,
+      word size, and byte order, but the given field violates one of these
+      restrictions.
+    }
+  }
+
+  serror R0056 struct_extends_non_composable {
+    {ava_string child} {ava_string parent}
+  } {
+    msg "Struct %child% extends non-composable struct %parent%"
+    explanation {
+      The named struct extends another struct which is not composable.
+
+      Structs become non-composable if they end with a non-fixed-size field,
+      such as a tail field.
+    }
+  }
+
+  serror R0057 struct_composes_non_composable {
+    {ava_string struct_name} {ava_string field}
+  } {
+    msg "Field %field% of struct %struct_name% is non-composable."
+    explanation {
+      The named field in the given struct attempts to compose the struct with a
+      non-composable struct.
+
+      Structs become non-composable if they end with a non-fixed-size field,
+      such as a tail field. The only way to reference a non-composable struct
+      is with a pointer.
+    }
+  }
+
+  serror R0058 struct_var_length_field_not_at_end {
+    {ava_string struct_name} {ava_string field}
+  } {
+    msg "Field %field% of struct %struct_name% is variable-length, but not at end."
+    explanation {
+      Variable-length fields (such as tail fields) are required to come at the
+      end of the structure that contains them, but the indicated field is
+      followed by one or more other fields.
+    }
+  }
+
+  serror R0059 struct_union_in_extension {
+    {ava_string child} {ava_string parent}
+  } {
+    msg "Struct %child% extends %parent%, but one of them is a union."
+    explanation {
+      When interpreting a value as a struct, it was found that the struct
+      extends a parent, but either the parent or child is a union.
+
+      Such extension is prohibited since the binary semantics are unclear and
+      it does not correspond to any common native construct.
+    }
+  }
+
+  serror R0060 struct_var_length_field_in_union {
+    {ava_string sxt} {ava_string field}
+  } {
+    msg "Variable-length field %field% found in union %sxt%."
+    explanation {
+      The given field in a union is variable-length, but variable-length fields
+      are not permitted in unions.
+    }
+  }
+
+  serror R0061 function_dynamic_value_to_empty {{ava_integer ix}} {
+    msg "Dynamic value passed to required-empty argument #%ix%."
+    explanation {
+      The indicated function argument is required to be empty (e.g., declared
+      with "()"), but the parameter given to it does not have a known value at
+      function binding time.
+
+      While in theory the parameter may very well evaluate to the empty string,
+      there is never any reason to use anything other than a literal "()" when
+      calling the function, so such occurrences are flagged with this error.
+    }
+  }
+
+  serror R0062 function_nonempty_to_empty {{ava_integer ix}} {
+    msg "Non-empty value passed to required-empty argument #%ix%."
+    explanation {
+      The indicated function argument is required to be empty (e.g., declared
+      with "()"), but the parameter given to it is known to be non-empty at
+      function binding time.
+    }
+  }
+
+  serror R0063 non_strangelet_passed_to_strange_argument {{ava_integer ix}} {
+    msg "Non-strangelet passed to strange argument #%ix%."
+    explanation {
+      The given argument of a dynamically-invoked function is declared to be a
+      strangelet, but the value passed to it is not a strangelet.
+    }
+  }
+
   serror U3000 undef_integer_overflow {
     {ava_integer a} {ava_string op} {ava_integer b}
   } {
@@ -605,8 +799,9 @@ set defs {
 
       More details can be found in the nested error message.
 
-      This error indicates that the macro did not correctly validate its
-      input and is probably a bug.
+      If this does not come from a marco which takes a literal function
+      prototype, this error indicates that the macro did not correctly validate
+      its input and is probably a bug.
     }
   }
 
@@ -691,6 +886,20 @@ set defs {
 
       Labels occupy the same namespace as other symbols, so the conflicting
       symbols are not necessarily labels.
+    }
+  }
+
+  cerror C5134 ambiguous_struct {
+    {ava_string name} {ava_integer count}
+    {ava_string exa} {ava_string exb}
+  } {
+    msg "Struct reference is ambiguous: %name%; found %count% results, including %exa% and %exb%"
+    explanation {
+      The given name used as a struct reference could refer to more than one
+      symbol.
+
+      Structs occupy the same namespace as other symbols, so the conflicting
+      symbols are not necessarily structs.
     }
   }
 
@@ -1998,6 +2207,373 @@ set defs {
     }
   }
 
+  cerror C5121 funmac_bind_impossible {
+    {ava_string macro} {ava_string message}
+  } {
+    msg "Invalid invocation of function-like macro %macro%: %message%"
+    explanation {
+      The arguments for the given function-like macro could not be bound for
+      the reason given.
+
+      Most commonly, this will happen due to passing it the incorrect number of
+      arguments, misspelling a named argument name, or placing an extraneous
+      unnamed argument where a named argument name was expected.
+    }
+  }
+
+  cerror C5122 structdef_union_with_parent {{ava_string sxt}} {
+    msg "Invalid extension of struct by union %sxt%"
+    explanation {
+      Unions are not permitted to extend structs or unions.
+    }
+  }
+
+  cerror C5123 structdef_parent_is_union {
+    {ava_string child} {ava_string parent}
+  } {
+    msg "Invalid extension of union %parent% by struct %child%"
+    explanation {
+      Unions are not permitted to be extended by other structs or unions.
+    }
+  }
+
+  cerror C5124 structdef_duplicate_field_name {
+    {ava_string sxt} {ava_string field}
+  } {
+    msg "Field %field% defined more than once in struct %sxt%"
+    explanation {
+      Struct field names are required to be unique when defined in ordinary
+      ways, but the indicated name was assigned to more than one field in the
+      same struct or union.
+    }
+  }
+
+  cerror C5125 structdef_typeless_field {} {
+    msg "Expected field type before field name."
+    explanation {
+      The indicated statement within a struct or union body has only one token,
+      but a minimum of two are needed to specify the type and name.
+    }
+  }
+
+  cerror C5126 structdef_tail_not_at_end {{ava_string field}} {
+    msg "Tail field %field% not at end of structure."
+    explanation {
+      The noted field is a tail field (an array without a length), but does not
+      occur at the end of its structure, which is the only place where it is
+      allowed.
+    }
+  }
+
+  cerror C5127 structdef_tail_in_union {{ava_string field}} {
+    msg "Tail field %field% within a union."
+    explanation {
+      Tail fields are not permitted in unions, due to their somewhat ambiguous
+      nature. In general, an array of union instances containing that one item
+      is both easier to work with and more flexible anyway.
+    }
+  }
+
+  cerror C5128 structdef_extra_tokens_in_array_length {} {
+    msg "Unexpected additional tokens in array length specifier."
+    explanation {
+      A struct array length specifier must consist of a single bareword.
+    }
+  }
+
+  cerror C5129 structdef_invalid_array_length {
+    {ava_string field} {ava_string len}
+  } {
+    msg "Invalid array length %len% for struct field %field%"
+    explanation {
+      The length of the given array field is an invalid integer, is negative,
+      or is greater than the maximum size integer on the host platform.
+    }
+  }
+
+  cerror C5130 structdef_invalid_type {} {
+    msg "Unknown/unparseable type in struct field declaration."
+    explanation {
+      The indicated bareword does not describe any known struct field type.
+
+      Note that struct composition needs to be indicated explicitly with the
+      "struct" bareword before the composed struct name, and this error will
+      occur if it is missing.
+    }
+  }
+
+  cerror C5131 structdef_composed_noncomposable {
+    {ava_string field} {ava_string member}
+  } {
+    msg "Struct %member% cannot be composed (in field %field%)."
+    explanation {
+      The indicated field indicates to compose a structure, but that structure
+      does not permit composition.
+
+      Variable-length structures cannot be composed, for the same reason that
+      tail fields must come at the end. Instead, a level of indirection must be
+      added by using a pointer to that structure.
+    }
+  }
+
+  cerror C5132 structdef_invalid {{ava_string message}} {
+    msg "BUG: Struct is invalid: %message%"
+    explanation {
+      The struct defined by the indicated construct was in the end invalid.
+
+      This is a bug in the struct definition macro, which is supposed to
+      prevent this condition from occurring.
+    }
+  }
+
+  cerror C5133 no_such_struct {{ava_string name}} {
+    msg "No such struct: %name%"
+    explanation {
+      A reference to a struct or union symbol with the given name was made, but
+      no such symbol could be found.
+    }
+  }
+
+  # cerror C5134 ambiguous_struct with other ambiguous_* errors
+
+  cerror C5135 symbol_not_a_struct {{ava_string name} {ava_string actual}} {
+    msg "Not a struct: %name% (is a(n) %actual%)."
+    explanation {
+      The given bareword is expected to reference a struct or union symbol, but
+      the symbol it references is something else.
+    }
+  }
+
+  cerror C5136 structdef_unexpected_type_modifier {{ava_string mod}} {
+    msg "Unknown/unexpected type modifier: %mod%"
+    explanation {
+      A type modifier which is not known, not supported for this type, or
+      already specified for this field was found.
+    }
+  }
+
+  cerror C5137 structdef_invalid_alignment {{ava_string align}} {
+    msg "Invalid field alignment: %align%"
+    explanation {
+      The given alignment is not one of the special values "native" or
+      "natural", and is either not a valid integer, non-positive, not a power
+      of two, or greater than the maximum permitted alignment.
+    }
+  }
+
+  cerror C5138 structdef_garbage_after_type {} {
+    msg "Unexpected tokens between field type and name."
+    explanation {
+      The type declaration for the indicated field of the containing struct
+      appears to be valid, but unexpected tokens occur between it and the name.
+    }
+  }
+
+  cerror C5139 structdef_invalid_pointer_prototype {{ava_string prot}} {
+    msg "Invalid pointer prototype: %prot%"
+    explanation {
+      The given token was expected to specify a pointer prototype (e.g.,
+      because the struct field is a hybrid field or looks like it should be a
+      pointer field), but the token is not actually a valid prototype.
+    }
+  }
+
+  cerror C5140 structdef_parent_is_noncomposable {
+    {ava_string child} {ava_string parent}
+  } {
+    msg "Struct %child% extends non-composable struct %parent%"
+    explanation {
+      The indicated struct extends another struct, but the latter is
+      non-composable (e.g., ends with a tail field).
+
+      Struct extension is a form of composition and therefore cannot be used
+      with non-composable structs.
+    }
+  }
+
+  cerror C5141 structdef_compose_self {{ava_string name}} {
+    msg "Attempt to compose struct %name% with itself."
+    explanation {
+      The indicated compose/array/tail member of the given struct appears to be
+      composing the struct with itself.
+
+      Self-composition results in an infinitely large type and so is ultimately
+      meaningless. In virtually all cases the true intent is likely to use a
+      pointer instead anyway.
+    }
+  }
+
+  cerror C5142 macro_arg_not_constexpr {{ava_string arg_name}} {
+    msg "Macro argument %arg_name% must be a constant expression."
+    explanation {
+      The indicated macro argument must have a value which can be determined at
+      compile time, but a runtime-only expression was given.
+    }
+  }
+
+  cerror C5143 cannot_operate_array_of_noncomposable {{ava_string sxt}} {
+    msg "Cannot operate on array of non-composable struct %sxt%."
+    explanation {
+      Non-composable structs (such as those with tail fields) cannot be
+      allocated in arrays since they do not have a definite element size.
+    }
+  }
+
+  cerror C5144 tail_operation_on_struct_without_tail {{ava_string sxt}} {
+    msg "Struct %sxt% does not have a tail"
+    explanation {
+      The indicated operation specifies the length of a structure's tail, but
+      the structure in use has no tail.
+    }
+  }
+
+  cerror C5145 struct_field_not_found {
+    {ava_string sxt} {ava_string field}
+  } {
+    msg "Struct %sxt% does not contain a field named %field%"
+    explanation {
+      A reference was made to a field of the given name within a particular
+      struct type, but that type does not directly contain a field of that
+      name.
+
+      Note that child structs do *not* inherit the names of their parent; they
+      must be accessed via the parent type instead.
+    }
+  }
+
+  cerror C5146 nonatomic_operation_cannot_have_memory_order {} {
+    msg "Invalid use of atomic memory order on unatomic operation."
+    explanation {
+      Memory ordering only ever makes sense on operations which are actually
+      atomic. Memory order cannot be specified on uses of non-atomic fields, or
+      on accesses that explicitly specify -unatomic.
+    }
+  }
+
+  cerror C5147 unknown_memory_order {{ava_string str}} {
+    msg "Unknown atomic memory order: %str%"
+    explanation {
+      The given memory order is not known.
+    }
+  }
+
+  cerror C5148 struct_invalid_hybrid_flags {} {
+    msg "Exactly one of -int, -ptr must be specified for hybrid fields only."
+    explanation {
+      A field accessor was passed -int or -ptr when used on a non-hybrid field,
+      was not passed either of them when operating on a hybrid field, or was
+      passed both of them.
+    }
+  }
+
+  cerror C5149 already_unatomic {} {
+    msg "Field is unatomic anyway, passing -unatomic is meaningless."
+    explanation {
+      -unatomic was passed to an access to a struct field which is already
+      unatomic, so the modifier has no meaning.
+    }
+  }
+
+  cerror C5150 non_memory_access_cannot_be_volatile {} {
+    msg "Field access does not access memory, cannot be volatile."
+    explanation {
+      Accesses to composed fields in a struct do not involve any accesses to
+      accessible memory, so making such access volatile is meaningless.
+    }
+  }
+
+  cerror C5151 struct_composed_field_cannot_be_set {} {
+    msg "Composed/array struct field is not settable."
+    explanation {
+      Composed and array fields are not references, and so cannot be set.
+
+      If the intent really is to copy the *contents* of the struct in the
+      composed field, use the cpy or arraycpy macros to copy the result of
+      getting the field instead.
+    }
+  }
+
+  cerror C5152 is_int_on_non_hybrid {} {
+    msg "Field is not a hybrid, cannot query for integer/pointer."
+    explanation {
+      The indicated location queries a field to see whether it holds an integer
+      or a pointer, but the field is not a hybrid, and so does not support this
+      operation.
+    }
+  }
+
+  cerror C5153 operation_only_legal_on_atomic_fields {} {
+    msg "Atomic-only operation used on unatomic field."
+    explanation {
+      Inherently atomic operations, like CaS, may only be performed on struct
+      fields explicitly marked as atomic.
+    }
+  }
+
+  cerror C5154 unknown_rmw_op {{ava_string str}} {
+    msg "Unknown read-modify-write operation: %str%"
+    explanation {
+      The given read-modify-write operation is not known.
+    }
+  }
+
+  cerror C5155 non_xchg_rmw_on_ptr {} {
+    msg "Non-xchg RMW performed against pointer."
+    explanation {
+      Pointer fields support only the xchg (exchange, or
+      set-and-return-prior-value) read-modify-write operation since the other
+      operations are not in general meaningful for pointers.
+    }
+  }
+
+  cerror C5156 prototype_override_wrong_arg_count {} {
+    msg "Prototype override arg count differs from count function takes."
+    explanation {
+      The indicated function prototype override describes a function with a
+      different number of arguments than the function is declared to accept.
+    }
+  }
+
+  cerror C5157 overrides_on_nested_function {} {
+    msg "Linkage-name or prototype override on non-global function."
+    explanation {
+      The indicated location overrides the natural linkage name and/or
+      prototype of a function declaration, but that function is not at global
+      scope.
+
+      Non-global functions do not participate in linkage, so changing their
+      linkage name is not meaningful. If the function captures any variables of
+      the surrounding context, implicit arguments may be added to it, so the
+      overridden prototype could be incorrect and could describe a calling
+      convention in which the addition of those arguments would be impossible.
+    }
+  }
+
+  cerror C5158 linkage_name_on_non_linked {} {
+    msg "Linkage-name on non-linked entity."
+    explanation {
+      The indicated linkage name was placed on an entity (e.g., a function
+      declaration) which does not participate in linkage, for example because
+      it has private visibility.
+    }
+  }
+
+  cerror C5159 macro_arg_given_more_than_once {{ava_string name}} {
+    msg "Macro argument %name% given more than once."
+    explanation {
+      The indicated macro argument, which may be specified at most once, was
+      specified more than one time in the same invocation.
+    }
+  }
+
+  cerror C5160 macro_arg_not_an_integer {{ava_string name}} {
+    msg "Macro argument %name% is not a valid integer or is out of range."
+    explanation {
+      The indicated macro argument is required to be an integer, but the value
+      given is either not parsable as such or is outside the valid range.
+    }
+  }
+
   cerror X9000 xcode_dupe_label {{ava_value label}} {
     msg "P-Code label present in function more than once: %label%"
     explanation {
@@ -2220,6 +2796,36 @@ set defs {
       block with an empty caught-exception stack.
 
       This is an error in whatever software generated the P-Code.
+    }
+  }
+
+  cerror X9017 xcode_oob_sxt_field {{ava_integer ix}} {
+    msg "P-Code references out-of-bounds struct field index %ix%"
+    explanation {
+      An instruction referencing a struct field has a field index which is
+      negative or greater than the index of the last field in the struct.
+
+      This is an error in whatever software generated the P-Code.
+    }
+  }
+
+  cerror X9018 xcode_bad_sxt_field {{ava_integer ix}} {
+    msg "P-Code references struct field of incorrect type at index %ix%"
+    explanation {
+      An instruction references a struct field which is not a suitable type for
+      that instruction.
+
+      This is an error in whatever software generated the P-Code.
+    }
+  }
+
+  serror N9900 native_field_with_unnatural_alignment_unsupported {
+    {ava_string struct_name} {ava_string field_name}
+  } {
+    msg "Field %field_name% of struct %struct_name% has unnatural alignment, which is currently unsupported"
+    explanation {
+      Unnatural field alignments are currently unsupported during native code
+      generation.
     }
   }
 }

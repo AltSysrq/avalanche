@@ -1,0 +1,21 @@
+reqmod helpers/test
+alias assert = test.assert
+import esoterica.unsafe.strangelet S
+
+struct sxt {
+  byte a
+  value b
+}
+
+test.register struct-cpy-simple {
+  a = S.new sxt -s
+  b = S.new sxt -s
+
+  S.set sxt $a a 42
+  S.set sxt $a b "hello world"
+  S.cpy sxt $b $a
+  assert 42 == S.get sxt $b a
+  assert "hello world" b== S.get sxt $b b
+
+  test.pass 42
+}

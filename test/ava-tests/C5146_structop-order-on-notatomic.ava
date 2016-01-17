@@ -1,0 +1,2 @@
+struct foo { int val }
+esoterica.unsafe.strangelet.set foo () val -order seqcst 42

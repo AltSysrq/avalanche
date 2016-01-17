@@ -1,5 +1,5 @@
 /*-
- * Copyright (c) 2015, Jason Lingle
+ * Copyright (c) 2015, 2016, Jason Lingle
  *
  * Permission to  use, copy,  modify, and/or distribute  this software  for any
  * purpose  with or  without fee  is hereby  granted, provided  that the  above
@@ -30,6 +30,7 @@
 #include "avalanche/map.h"
 #include "avalanche/pcode.h"
 #include "avalanche/errors.h"
+#include "avalanche/struct.h"
 #include "avalanche/pcode-validation.h"
 
 static const ava_xcode_exception_stack ava_xcode_empty_exception_stack = {
@@ -1017,6 +1018,7 @@ static ava_bool ava_xcode_validate_global_xrefs(
   size_t glob_ix, i;
   ava_integer ref;
   const ava_pcode_global* global, * target;
+  const ava_struct* sxt;
 
   ava_xcode_unknown_location(&location);
   for (glob_ix = 0; glob_ix < xcode->length; ++glob_ix) {
@@ -1024,7 +1026,7 @@ static ava_bool ava_xcode_validate_global_xrefs(
     ava_xcode_see_global(&location, global, sources);
 
     for (i = 0; ava_pcode_global_get_global_entity_ref(&ref, global, i); ++i) {
-      if (ref < 0 || (size_t)ref >= xcode->length)
+      if (ref < 0 || ref >= (ava_integer)xcode->length)
         DIE(ava_error_xcode_oob_global(&location, ref));
 
       target = xcode->elts[ref].pc;
@@ -1033,11 +1035,25 @@ static ava_bool ava_xcode_validate_global_xrefs(
     }
 
     for (i = 0; ava_pcode_global_get_global_fun_ref(&ref, global, i); ++i) {
-      if (ref < 0 || (size_t)ref >= xcode->length)
+      if (ref < 0 || ref >= (ava_integer)xcode->length)
         DIE(ava_error_xcode_oob_global(&location, ref));
 
       target = xcode->elts[ref].pc;
       if (!ava_pcode_global_is_fun(target))
+        DIE(ava_error_xcode_bad_xref(&location, ref));
+    }
+
+    for (i = 0; ava_pcode_global_get_global_sxt_ref(&ref, global, i); ++i) {
+      if (ref < 0 || ref >= (ava_integer)xcode->length)
+        DIE(ava_error_xcode_oob_global(&location, ref));
+
+      target = xcode->elts[ref].pc;
+      if (!ava_pcode_global_get_struct_def(&sxt, target, 0))
+        DIE(ava_error_xcode_bad_xref(&location, ref));
+
+      if (ava_pcode_global_get_global_sxt_with_tail_ref(&ref, global, i) &&
+          (0 == sxt->num_fields ||
+           ava_sft_tail != sxt->fields[sxt->num_fields-1].type))
         DIE(ava_error_xcode_bad_xref(&location, ref));
     }
 
@@ -1079,12 +1095,13 @@ static ava_bool ava_xcode_validate_fun_global_xrefs(
   ava_map_value sources
 ) {
   ava_compile_location location;
-  size_t block_ix, instr_ix, i;
+  size_t block_ix, instr_ix, i, j;
   const ava_xcode_basic_block* block;
   const ava_pcode_exe* instr;
   ava_integer ref, num_args;
   const ava_pcode_global* target;
   const ava_function* prototype;
+  const ava_struct* sxt;
 
   ava_xcode_unknown_location(&location);
   for (block_ix = 0; block_ix < fun->num_blocks; ++block_ix) {
@@ -1094,7 +1111,7 @@ static ava_bool ava_xcode_validate_fun_global_xrefs(
       ava_xcode_see_exe(&location, instr, sources);
 
       for (i = 0; ava_pcode_exe_get_global_var_ref(&ref, instr, i); ++i) {
-        if (ref < 0 || (size_t)ref >= xcode->length)
+        if (ref < 0 || ref >= (ava_integer)xcode->length)
           DIE(ava_error_xcode_oob_global(&location, ref));
 
         target = xcode->elts[ref].pc;
@@ -1102,8 +1119,18 @@ static ava_bool ava_xcode_validate_fun_global_xrefs(
           DIE(ava_error_xcode_bad_xref(&location, ref));
       }
 
+      for (i = 0; ava_pcode_exe_get_global_var_mutable_ref(&ref, instr, i);
+           ++i) {
+        /* All global-var-mutable-refs should also be var-refs */
+        assert(ref >= 0 && ref < (ava_integer)xcode->length);
+
+        target = xcode->elts[ref].pc;
+        if (!ava_pcode_global_is_var_mutable(target))
+          DIE(ava_error_xcode_bad_xref(&location, ref));
+      }
+
       for (i = 0; ava_pcode_exe_get_global_fun_ref(&ref, instr, i); ++i) {
-        if (ref < 0 || (size_t)ref >= xcode->length)
+        if (ref < 0 || ref >= (ava_integer)xcode->length)
           DIE(ava_error_xcode_oob_global(&location, ref));
 
         target = xcode->elts[ref].pc;
@@ -1117,6 +1144,45 @@ static ava_bool ava_xcode_validate_fun_global_xrefs(
             DIE(ava_error_xcode_wrong_arg_count(
                   &location, prototype->num_args, num_args));
         }
+      }
+
+      for (i = 0; ava_pcode_exe_get_global_sxt_ref(&ref, instr, i); ++i) {
+        if (ref < 0 || ref >= (ava_integer)xcode->length)
+          DIE(ava_error_xcode_oob_global(&location, ref));
+
+        target = xcode->elts[ref].pc;
+        if (!ava_pcode_global_get_struct_def(&sxt, target, 0))
+          DIE(ava_error_xcode_bad_xref(&location, ref));
+
+        if (ava_pcode_exe_get_global_sxt_with_tail_ref(&ref, instr, i)) {
+          if (0 == sxt->num_fields ||
+              ava_sft_tail != sxt->fields[sxt->num_fields-1].type)
+            DIE(ava_error_xcode_bad_xref(&location, ref));
+        }
+
+#define FCHECK(type, accept)                                            \
+        for (j = 0; ava_pcode_exe_get_sxt_field_ref_##type(             \
+               &ref, instr, j); ++j) {                                  \
+          if (ref < 0 || ref >= (ava_integer)sxt->num_fields)           \
+            DIE(ava_error_xcode_oob_sxt_field(&location, ref));         \
+          if (!(accept))                                                \
+            DIE(ava_error_xcode_bad_sxt_field(&location, ref));         \
+        }
+#define FIELD (sxt->fields[ref])
+        FCHECK(int, ava_sft_int == FIELD.type);
+        FCHECK(real, ava_sft_real == FIELD.type);
+        FCHECK(value, ava_sft_value == FIELD.type);
+        FCHECK(ptr_hybrid,
+               ava_sft_ptr == FIELD.type || ava_sft_hybrid == FIELD.type);
+        FCHECK(hybrid, ava_sft_hybrid == FIELD.type);
+        FCHECK(composite,
+               ava_sft_compose == FIELD.type ||
+               ava_sft_array == FIELD.type ||
+               ava_sft_tail == FIELD.type);
+        FCHECK(atomic_int, ava_sft_int == FIELD.type && FIELD.v.vint.is_atomic);
+        FCHECK(atomic_ptr, ava_sft_ptr == FIELD.type && FIELD.v.vptr.is_atomic);
+#undef FIELD
+#undef FCHECK
       }
     }
   }

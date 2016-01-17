@@ -26,7 +26,7 @@ static void format_error(ava_string message) {
     format_error(ava_error_bad_pcode(_message));        \
   } while (0)
 
-static ava_pcode_register_type ava_pcode_parse_register_type(
+ava_pcode_register_type ava_pcode_parse_register_type(
   ava_value value
 ) {
   ava_string str = ava_to_string(value);
@@ -46,7 +46,7 @@ static ava_pcode_register_type ava_pcode_parse_register_type(
   }
 }
 
-static ava_string ava_pcode_register_type_to_string(
+ava_string ava_pcode_register_type_to_string(
   ava_pcode_register_type type
 ) {
   switch (type) {
@@ -62,7 +62,7 @@ static ava_string ava_pcode_register_type_to_string(
   }
 }
 
-static ava_pcode_register ava_pcode_parse_register(ava_value value) {
+ava_pcode_register ava_pcode_parse_register(ava_value value) {
   ava_string str = ava_to_string(value);
   size_t length = ava_strlen(str);
   ava_pcode_register reg;
@@ -83,7 +83,7 @@ static ava_pcode_register ava_pcode_parse_register(ava_value value) {
   return reg;
 }
 
-static ava_string ava_pcode_register_to_string(ava_pcode_register reg) {
+ava_string ava_pcode_register_to_string(ava_pcode_register reg) {
   return ava_strcat(
     ava_pcode_register_type_to_string(reg.type),
     ava_to_string(ava_value_of_integer(reg.index)));
@@ -113,7 +113,7 @@ static ava_string ava_pcode_str_to_string(ava_string str) {
   return str;
 }
 
-static ava_demangled_name ava_pcode_parse_demangled_name(ava_value value) {
+ava_demangled_name ava_pcode_parse_demangled_name(ava_value value) {
   size_t length = ava_list_length(value);
   ava_demangled_name ret;
 
@@ -138,7 +138,7 @@ static ava_demangled_name ava_pcode_parse_demangled_name(ava_value value) {
   return ret;
 }
 
-static ava_string ava_pcode_demangled_name_to_string(ava_demangled_name name) {
+ava_string ava_pcode_demangled_name_to_string(ava_demangled_name name) {
   ava_value values[2];
 
   switch (name.scheme) {
@@ -189,6 +189,14 @@ static ava_string ava_pcode_list_to_string(ava_list_value list) {
   return ava_to_string(list.v);
 }
 
+static const ava_struct* ava_pcode_parse_sxt(ava_value value) {
+  return ava_struct_of_value(value);
+}
+
+static ava_string ava_pcode_sxt_to_string(const ava_struct* sxt) {
+  return ava_to_string(ava_value_of_struct(sxt));
+}
+
 static ava_string apply_indent(ava_string str, ava_uint indent) {
   ava_string base = AVA_EMPTY_STRING;
   ava_uint i;
@@ -209,4 +217,75 @@ static ava_string ava_pcode_elt_escape(ava_string elt_string) {
 
 static ava_bool ava_pcode_is_valid_ex_type(ava_integer type) {
   return type >= 0 && type < ava_pet_other_exception;
+}
+
+ava_pcode_rmw_op ava_pcode_parse_rmw_op(ava_value value) {
+  switch (ava_string_to_ascii9(ava_to_string(value))) {
+#define CASE(sym,...) case AVA_ASCII9(__VA_ARGS__): return ava_pro_##sym
+  CASE(xchg,    'x','c','h','g');
+  CASE(add,     'a','d','d');
+  CASE(sub,     's','u','b');
+  CASE(and,     'a','n','d');
+  CASE(nand,    'n','a','n','d');
+  CASE(or,      'o','r');
+  CASE(xor,     'x','o','r');
+  CASE(smax,    's','m','a','x');
+  CASE(smin,    's','m','i','n');
+  CASE(umax,    'u','m','a','x');
+  CASE(umin,    'u','m','i','n');
+#undef CASE
+  default: FORMAT_ERROR("illegal rmw-op");
+  }
+}
+
+ava_string ava_pcode_rmw_op_to_string(ava_pcode_rmw_op op) {
+  switch (op) {
+#define CASE(sym) case ava_pro_##sym: return AVA_ASCII9_STRING(#sym)
+  CASE(xchg);
+  CASE(add);
+  CASE(sub);
+  CASE(and);
+  CASE(nand);
+  CASE(or);
+  CASE(xor);
+  CASE(smax);
+  CASE(smin);
+  CASE(umax);
+  CASE(umin);
+#undef CASE
+  }
+
+  /* unreachable */
+  abort();
+}
+
+ava_pcode_memory_order ava_pcode_parse_memory_order(ava_value value) {
+  switch (ava_string_to_ascii9(ava_to_string(value))) {
+#define CASE(sym,...) case AVA_ASCII9(__VA_ARGS__): return ava_pmo_##sym
+    /* 123456789 */
+  CASE(unordered, 'u','n','o','r','d','e','r','e','d');
+  CASE(monotonic, 'm','o','n','o','t','o','n','i','c');
+  CASE(acquire,   'a','c','q','u','i','r','e');
+  CASE(release,   'r','e','l','e','a','s','e');
+  CASE(acqrel,    'a','c','q','r','e','l');
+  CASE(seqcst,    's','e','q','c','s','t');
+#undef CASE
+  default: FORMAT_ERROR("illegal memory-order");
+  }
+}
+
+ava_string ava_pcode_memory_order_to_string(ava_pcode_memory_order order) {
+  switch (order) {
+#define CASE(sym) case ava_pmo_##sym: return AVA_ASCII9_STRING(#sym)
+  CASE(unordered);
+  CASE(monotonic);
+  CASE(acquire);
+  CASE(release);
+  CASE(acqrel);
+  CASE(seqcst);
+#undef CASE
+  }
+
+  /* unreachable */
+  abort();
 }
