@@ -1,5 +1,5 @@
 /*-
- * Copyright (c) 2015, Jason Lingle
+ * Copyright (c) 2015, 2016, Jason Lingle
  *
  * Permission to  use, copy,  modify, and/or distribute  this software  for any
  * purpose  with or  without fee  is hereby  granted, provided  that the  above
@@ -604,6 +604,15 @@ ava_macro_subst_result ava_macsub_error_result(
   };
 }
 
+ava_macro_subst_result ava_macsub_silent_error_result(
+  const ava_compile_location* location
+) {
+  return (ava_macro_subst_result) {
+    .status = ava_mss_done,
+    .v.node = ava_macsub_silent_error(location)
+  };
+}
+
 static ava_string ava_macsub_error_to_string(const ava_ast_node* this) {
   return AVA_ASCII9_STRING("<error>");
 }
@@ -720,6 +729,8 @@ void ava_ast_node_cg_force(ava_ast_node* node,
 
 void ava_ast_node_cg_define(ava_ast_node* node,
                             ava_codegen_context* context) {
+  if (!node) return;
+
   assert(node->v->cg_define);
   (*node->v->cg_define)(node, context);
 }

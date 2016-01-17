@@ -38,7 +38,7 @@ struct ava_struct_s;
 typedef enum {
   /**
    * A symbol which  references a variable or constant (but  not a function) at
-   * global scope.
+   * global scope or effectively at global scope.
    */
   ava_st_global_variable = 0,
   /**

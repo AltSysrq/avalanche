@@ -1,0 +1,6 @@
+struct foo {
+  value v
+}
+esoterica.unsafe.strangelet.static foo bar
+
+bar = 42

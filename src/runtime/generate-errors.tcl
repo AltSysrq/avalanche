@@ -1,6 +1,6 @@
 #! /usr/bin/env tclsh8.6
 #-
-# Copyright (c) 2015 Jason Lingle
+# Copyright (c) 2015, 2016 Jason Lingle
 #
 # Permission to  use, copy,  modify, and/or distribute  this software  for any
 # purpose  with or  without fee  is hereby  granted, provided  that the  above
@@ -2555,6 +2555,22 @@ set defs {
       The indicated linkage name was placed on an entity (e.g., a function
       declaration) which does not participate in linkage, for example because
       it has private visibility.
+    }
+  }
+
+  cerror C5159 macro_arg_given_more_than_once {{ava_string name}} {
+    msg "Macro argument %name% given more than once."
+    explanation {
+      The indicated macro argument, which may be specified at most once, was
+      specified more than one time in the same invocation.
+    }
+  }
+
+  cerror C5160 macro_arg_not_an_integer {{ava_string name}} {
+    msg "Macro argument %name% is not a valid integer or is out of range."
+    explanation {
+      The indicated macro argument is required to be an integer, but the value
+      given is either not parsable as such or is outside the valid range.
     }
   }
 

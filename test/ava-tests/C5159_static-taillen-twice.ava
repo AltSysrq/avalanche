@@ -1,0 +1,7 @@
+struct foo {
+  value v
+}
+struct bar {
+  struct foo [] tail
+}
+esoterica.unsafe.strangelet.static bar baz -t 56 -t 42

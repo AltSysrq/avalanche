@@ -100,6 +100,7 @@ static void ava_intr_structdef_cg_define(
   node->defined = ava_true;
   node->struct_sym->pcode_index =
     AVA_PCGB(decl_sxt, node->is_definition, node->def);
+  ava_codegen_export(context, node->struct_sym);
 }
 
 ava_macro_subst_result ava_intr_struct_subst(

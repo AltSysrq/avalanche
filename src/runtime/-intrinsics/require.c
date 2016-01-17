@@ -280,6 +280,12 @@ static void ava_intr_require_import_cg_define(
       AVA_PCGB(decl_sxt, ava_false, v->def);
   } break;
 
+  case ava_pcgt_S_ext_bss: {
+    const ava_pcg_S_ext_bss* v = (const ava_pcg_S_ext_bss*)node->target;
+    node->symbol->pcode_index =
+      AVA_PCGB(S_ext_bss, v->name, v->thr_local);
+  } break;
+
   default: abort();
   }
 }
@@ -406,6 +412,7 @@ void ava_macsub_insert_module(
         symbol->type = ava_st_global_function;
         symbol->v.var.fun = *f->prototype;
         symbol->v.var.name = f->name;
+        symbol->v.var.is_mutable = ava_false;
       } break;
 
       case ava_pcgt_ext_var: {
@@ -413,6 +420,7 @@ void ava_macsub_insert_module(
 
         symbol->type = ava_st_global_variable;
         symbol->v.var.name = v->name;
+        symbol->v.var.is_mutable = ava_false;
       } break;
 
       case ava_pcgt_decl_sxt: {
@@ -422,12 +430,19 @@ void ava_macsub_insert_module(
         symbol->v.sxt.def = s->def;
       } break;
 
+      case ava_pcgt_S_ext_bss: {
+        const ava_pcg_S_ext_bss* v = (const ava_pcg_S_ext_bss*)target;
+
+        symbol->type = ava_st_global_variable;
+        symbol->v.var.name = v->name;
+        symbol->v.var.is_mutable = ava_false;
+      } break;
+
       default: abort();
       }
       symbol->level = 0;
       symbol->visibility = x->reexport? ava_v_public : ava_v_internal;
       symbol->full_name = x->effective_name;
-      symbol->v.var.is_mutable = ava_false;
 
       definer = AVA_NEW(ava_intr_require_import);
       definer->header.v = &ava_intr_require_import_vtable;

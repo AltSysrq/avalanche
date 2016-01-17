@@ -31,6 +31,7 @@
 #include "../avalanche/function.h"
 #include "../avalanche/pcode.h"
 #include "../avalanche/exception.h"
+#include "../avalanche/macro-arg.h"
 #include "../avalanche/errors.h"
 #include "funmac.h"
 #include "reg-rvalue.h"
@@ -64,7 +65,7 @@
   } while (0)
 
 #define REQUIRE_TAIL(trigger) do {                                      \
-    if (!ava_intr_structop_has_tail(*instance))                         \
+    if (!ava_intr_structop_has_tail((*instance)->sxt))                  \
       ava_macsub_record_error(                                          \
         context, ava_error_tail_operation_on_struct_without_tail(       \
           &trigger->location, (*instance)->struct_sym->full_name));     \
@@ -113,13 +114,18 @@ static ava_bool ava_intr_structop_look_struct_up(
   ava_macsub_context* context,
   const ava_ast_node* node);
 
+static const ava_symbol* ava_intr_structop_look_struct_sym_up(
+  ava_macsub_context* context,
+  ava_string name,
+  const ava_compile_location* location);
+
 static ava_bool ava_intr_structop_look_field_up(
   ava_intr_structop_instance* dst,
   ava_macsub_context* context,
   const ava_ast_node* node);
 
 static ava_bool ava_intr_structop_has_tail(
-  ava_intr_structop_instance* this);
+  const ava_struct* sxt);
 
 static size_t ava_intr_structop_get_index(
   const ava_intr_structop_instance* this,
@@ -159,8 +165,6 @@ static ava_bool ava_intr_structop_look_struct_up(
   ava_macsub_context* context,
   const ava_ast_node* node
 ) {
-  const ava_symbol** results;
-  size_t num_results;
   ava_value name_value;
   ava_string name;
 
@@ -174,34 +178,50 @@ static ava_bool ava_intr_structop_look_struct_up(
   }
   name = ava_to_string(name_value);
 
+  (*dst)->struct_sym = ava_intr_structop_look_struct_sym_up(
+    context, name, &node->location);
+  if ((*dst)->struct_sym) {
+    (*dst)->sxt = (*dst)->struct_sym->v.sxt.def;
+    return ava_true;
+  } else {
+    return ava_false;
+  }
+}
+
+static const ava_symbol* ava_intr_structop_look_struct_sym_up(
+  ava_macsub_context* context,
+  ava_string name,
+  const ava_compile_location* location
+) {
+  const ava_symbol** results;
+  size_t num_results;
+
   num_results = ava_symtab_get(
     &results, ava_macsub_get_symtab(context), name);
 
   if (!num_results) {
     ava_macsub_record_error(
-      context, ava_error_no_such_struct(&node->location, name));
-    return ava_false;
+      context, ava_error_no_such_struct(location, name));
+    return NULL;
   }
 
   if (num_results > 1) {
     ava_macsub_record_error(
       context, ava_error_ambiguous_struct(
-        &node->location, name, num_results,
+        location, name, num_results,
         results[0]->full_name, results[1]->full_name));
-    return ava_false;
+    return NULL;
   }
 
   if (ava_st_struct != results[0]->type) {
     ava_macsub_record_error(
       context, ava_error_symbol_not_a_struct(
-        &node->location,
+        location,
         results[0]->full_name, ava_symbol_type_name(results[0])));
-    return ava_false;
+    return NULL;
   }
 
-  (*dst)->struct_sym = results[0];
-  (*dst)->sxt = results[0]->v.sxt.def;
-  return ava_true;
+  return results[0];
 }
 
 static ava_bool ava_intr_structop_look_field_up(
@@ -236,9 +256,8 @@ static ava_bool ava_intr_structop_look_field_up(
 }
 
 static ava_bool ava_intr_structop_has_tail(
-  ava_intr_structop_instance* this
+  const ava_struct* sxt
 ) {
-  const ava_struct* sxt = this->sxt;
   return sxt->num_fields > 0 &&
     ava_sft_tail == sxt->fields[sxt->num_fields-1].type;
 }
@@ -1487,3 +1506,235 @@ static void ava_intr_S_membar_cg_discard(
 }
 
 MACRO(membar)
+
+/******************** S.static ********************/
+
+AVA_STATIC_STRING(ava_intr_S_static_thread_local_option,
+                  "-thread-local");
+
+typedef enum {
+  ava_isst_scalar = 0, ava_isst_array, ava_isst_tail
+} ava_intr_S_static_type;
+
+typedef struct {
+  ava_ast_node header;
+
+  const ava_symbol* struct_sym;
+  ava_symbol* var_sym;
+
+  ava_intr_S_static_type type;
+  ava_integer array_length;
+  ava_bool thr_local;
+
+  ava_bool defined;
+} ava_intr_S_static;
+
+static ava_string ava_intr_S_static_to_string(const ava_intr_S_static* node);
+static void ava_intr_S_static_cg_define(
+  ava_intr_S_static* node, ava_codegen_context* context);
+
+static const ava_ast_node_vtable ava_intr_S_static_vtable = {
+  .name = "static strangelet declaration",
+  .to_string = (ava_ast_node_to_string_f)ava_intr_S_static_to_string,
+  .cg_define = (ava_ast_node_cg_define_f)ava_intr_S_static_cg_define,
+  .cg_discard = (ava_ast_node_cg_discard_f)ava_intr_S_static_cg_define, /*sic*/
+};
+
+AVA_DEF_MACRO_SUBST(ava_intr_S_static_subst) {
+  const ava_parse_unit* sxt_unit = NULL, * name_unit = NULL;
+  const ava_parse_unit* linkage_name_unit = NULL;
+  const ava_parse_unit* option_unit, * length_unit;
+  ava_string sxt = AVA_ABSENT_STRING, name = AVA_ABSENT_STRING;
+  ava_string linkage_name = AVA_ABSENT_STRING, option, length_str;
+  ava_intr_S_static_type array_type;
+  ava_intr_S_static* node;
+
+  node = AVA_NEW(ava_intr_S_static);
+
+  AVA_MACRO_ARG_PARSE {
+    AVA_MACRO_ARG_FROM_RIGHT_BEGIN {
+      AVA_MACRO_ARG_CURRENT_UNIT(sxt_unit, "struct");
+      AVA_MACRO_ARG_BAREWORD(sxt, "struct");
+
+      node->struct_sym = ava_intr_structop_look_struct_sym_up(
+        context, sxt, &sxt_unit->location);
+      if (!node->struct_sym)
+        return ava_macsub_silent_error_result(&provoker->location);
+
+      AVA_MACRO_ARG_CURRENT_UNIT(name_unit, "name");
+      AVA_MACRO_ARG_BAREWORD(name, "name");
+
+      if (AVA_MACRO_ARG_HAS_ARG()) {
+        AVA_MACRO_ARG_CURRENT_UNIT(linkage_name_unit, "linkage-name");
+        if (ava_put_astring != linkage_name_unit->type) {
+          linkage_name_unit = NULL;
+        } else {
+          linkage_name = linkage_name_unit->v.string;
+          AVA_MACRO_ARG_CONSUME();
+        }
+      }
+
+      while (AVA_MACRO_ARG_HAS_ARG()) {
+        AVA_MACRO_ARG_CURRENT_UNIT(option_unit, "option");
+        AVA_MACRO_ARG_BAREWORD(option, "option");
+
+        if (ava_string_equal(ava_intr_S_static_thread_local_option, option)) {
+          if (node->thr_local) {
+            ava_macsub_record_error(
+              context, ava_error_macro_arg_given_more_than_once(
+                &option_unit->location, ava_intr_S_static_thread_local_option));
+          } else {
+            node->thr_local = ava_true;
+          }
+        } else if (ava_string_equal(AVA_ASCII9_STRING("-n"), option) ||
+                   ava_string_equal(AVA_ASCII9_STRING("-t"), option)) {
+          AVA_MACRO_ARG_CURRENT_UNIT(length_unit, "length");
+          AVA_MACRO_ARG_BAREWORD(length_str, "length");
+
+          if (ava_string_equal(AVA_ASCII9_STRING("-n"), option))
+            array_type = ava_isst_array;
+          else
+            array_type = ava_isst_tail;
+
+          if (!node->struct_sym->v.sxt.def->is_composable &&
+              ava_isst_array == array_type) {
+            ava_macsub_record_error(
+              context, ava_error_cannot_operate_array_of_noncomposable(
+                &option_unit->location, node->struct_sym->full_name));
+          } else if (!ava_intr_structop_has_tail(node->struct_sym->v.sxt.def) &&
+                     ava_isst_tail == array_type) {
+            ava_macsub_record_error(
+              context, ava_error_tail_operation_on_struct_without_tail(
+                &option_unit->location, node->struct_sym->full_name));
+          } else if (array_type == node->type) {
+            ava_macsub_record_error(
+              context, ava_error_macro_arg_given_more_than_once(
+                &option_unit->location, option_unit->v.string));
+          } else if (!ava_integer_try_parse(
+                       &node->array_length, length_str, -1) ||
+                     node->array_length < 0 ||
+                     node->array_length !=
+                     (ava_integer)(size_t)node->array_length) {
+            ava_macsub_record_error(
+              context, ava_error_macro_arg_not_an_integer(
+                &length_unit->location, AVA_ASCII9_STRING("length")));
+          } else {
+            node->type = array_type;
+          }
+        } else {
+          AVA_STATIC_STRING(expected_options,
+                            "one of -thread-local, -t, or -n");
+          return ava_macsub_error_result(
+            context, ava_error_bad_macro_keyword(
+              &option_unit->location,
+              self->full_name, option, expected_options));
+        }
+      }
+    }
+  }
+
+  if (linkage_name_unit &&
+      ava_v_private == *(const ava_visibility*)self->v.macro.userdata) {
+    ava_macsub_record_error(
+      context, ava_error_linkage_name_on_non_linked(
+        &linkage_name_unit->location));
+  }
+
+  node->header.v = &ava_intr_S_static_vtable;
+  node->header.context = context;
+  node->header.location = provoker->location;
+  node->var_sym = AVA_NEW(ava_symbol);
+  node->var_sym->type = ava_st_global_variable;
+  node->var_sym->level = ava_macsub_get_level(context);
+  node->var_sym->visibility = *(const ava_visibility*)self->v.macro.userdata;
+  node->var_sym->definer = (ava_ast_node*)node;
+  node->var_sym->full_name = ava_macsub_apply_prefix(context, name);
+  node->var_sym->v.var.is_mutable = ava_false;
+  if (ava_string_is_present(linkage_name)) {
+    node->var_sym->v.var.name.scheme = ava_nms_none;
+    node->var_sym->v.var.name.name = linkage_name;
+  } else {
+    node->var_sym->v.var.name.scheme = ava_nms_ava;
+    node->var_sym->v.var.name.name = node->var_sym->full_name;
+  }
+
+  ava_macsub_put_symbol(context, node->var_sym, &name_unit->location);
+
+  return (ava_macro_subst_result) {
+    .status = ava_mss_done,
+    .v.node = (ava_ast_node*)node
+  };
+}
+
+static ava_string ava_intr_S_static_to_string(const ava_intr_S_static* node) {
+  ava_string accum;
+
+  switch (node->var_sym->visibility) {
+  case ava_v_private:  accum = AVA_ASCII9_STRING("S.static "); break;
+  case ava_v_internal: accum = AVA_ASCII9_STRING("S.Static "); break;
+  case ava_v_public:   accum = AVA_ASCII9_STRING("S.STATIC "); break;
+  }
+
+  accum = ava_strcat(accum, node->struct_sym->full_name);
+  accum = ava_strcat(accum, AVA_ASCII9_STRING(" "));
+  accum = ava_strcat(accum, node->var_sym->full_name);
+  switch (node->type) {
+  case ava_isst_scalar: break;
+
+  case ava_isst_tail:
+    accum = ava_strcat(accum, AVA_ASCII9_STRING(" -t "));
+    accum = ava_strcat(accum, ava_to_string(
+                         ava_value_of_integer(node->array_length)));
+    break;
+
+  case ava_isst_array:
+    accum = ava_strcat(accum, AVA_ASCII9_STRING(" -n "));
+    accum = ava_strcat(accum, ava_to_string(
+                         ava_value_of_integer(node->array_length)));
+    break;
+  }
+
+  if (node->thr_local) {
+    accum = ava_strcat(accum, AVA_ASCII9_STRING(" "));
+    accum = ava_strcat(accum, ava_intr_S_static_thread_local_option);
+  }
+
+  return accum;
+}
+
+static void ava_intr_S_static_cg_define(
+  ava_intr_S_static* node, ava_codegen_context* context
+) {
+  size_t ix;
+
+  if (node->defined) return;
+  node->defined = ava_true;
+
+  ava_ast_node_cg_define(node->struct_sym->definer, context);
+
+  switch (node->type) {
+  case ava_isst_scalar:
+    ix = AVA_PCGB(S_bss, node->struct_sym->pcode_index,
+                  node->var_sym->visibility > ava_v_private,
+                  node->var_sym->v.var.name,
+                  node->thr_local);
+    break;
+
+  case ava_isst_array:
+    ix = AVA_PCGB(S_bss_a, node->struct_sym->pcode_index,
+                  node->var_sym->visibility > ava_v_private,
+                  node->var_sym->v.var.name,
+                  node->thr_local, node->array_length);
+    break;
+
+  case ava_isst_tail:
+    ix = AVA_PCGB(S_bss_t, node->struct_sym->pcode_index,
+                  node->var_sym->visibility > ava_v_private,
+                  node->var_sym->v.var.name,
+                  node->thr_local, node->array_length);
+    break;
+  }
+
+  node->var_sym->pcode_index = ix;
+  ava_codegen_export(context, node->var_sym);
+}

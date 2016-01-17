@@ -140,6 +140,9 @@ void ava_register_intrinsics(ava_macsub_context* context) {
   DEFINE(EUS "get-sp",  FUN,    NULL,           S_get_sp);
   DEFINE(EUS "set-sp",  FUN,    NULL,           S_set_sp);
   DEFINE(EUS"cpu-pause",FUN,    NULL,           S_cpu_pause);
+  DEFINE(EUS "static",  CTL,    PRIVATE,        S_static);
+  DEFINE(EUS "Static",  CTL,    INTERNAL,       S_static);
+  DEFINE(EUS "STATIC",  CTL,    PUBLIC,         S_static);
 
   /* Weak absolute imports of the intrinsics and standard library */
   ava_macsub_import(&abs, &amb, context,

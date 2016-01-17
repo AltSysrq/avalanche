@@ -275,4 +275,44 @@ AVA_DEF_MACRO_SUBST(ava_intr_S_alignof_subst);
  */
 AVA_DEF_MACRO_SUBST(ava_intr_S_membar_subst);
 
+/**
+ * The S.static, S.Static, and S.STATIC control macros.
+ *
+ *   static sxt name [linkage-name] {option}*
+ *   {option} ::= "-n" array-length
+ *            |   "-t" tail-length
+ *            |   "-thread-local"
+ *
+ * sxt is a bareword which must identify a struct symbol. name is a bareword.
+ * linkage-name is an A-string. array-length and tail-length are both barewords
+ * parsable as non-negative integers. array-length and tail-length cannot be
+ * specified together, and tail-length requires that the referenced structure
+ * has a tail field. linkage-name cannot be given for the private form.
+ *
+ * Semantics: A constant variable with the given name is defined. On read, it
+ * produces a strangelet referencing a statically-allocated (as per the S-bss,
+ * S-bss-a, and S-bss-t) instance or array of instances of sxt.
+ *
+ * The visibility is passed to the macro via the macro userdata.
+ */
+AVA_DEF_MACRO_SUBST(ava_intr_S_static_subst);
+
+/**
+ * The S.exstatic, S.Exstatic, and S.EXSTATIC control macros.
+ *
+ *   exstatic name linkage-name ["-thread-local"]
+ *
+ * name is a bareword; linkage-name is a stringoid.
+ *
+ * Semantics: A constant variable with the given name is defined, referencing a
+ * statically-allocated strangelet (as with S.static) with the given linkage
+ * name. -thread-local must be given if and only if the corresponding S.static
+ * is also thread-local.
+ *
+ * The visibility is passed to the macro via the macro userdata.
+ *
+ * This is a direct front-end to the S-ext-bss P-Code declaration.
+ */
+AVA_DEF_MACRO_SUBST(ava_intr_S_exstatic_subst);
+
 #endif /* AVA_RUNTIME__INTRINSICS_STRUCTOPS_H_ */

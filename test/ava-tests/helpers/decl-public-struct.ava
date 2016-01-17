@@ -1,0 +1,4 @@
+STRUCT foo {
+  value v
+}
+esoterica.unsafe.strangelet.STATIC foo THE-FOO
