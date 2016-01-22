@@ -1,0 +1,621 @@
+The pure-C runtime implementation (soon to be relegated to being the bootstrap
+runtime) uses the following representation for values:
+
+- A value is a double-qword. The first word points to an "attribute chain",
+  which allows finding implementations of methods (both general and
+  type-specific) to manipulate the value. The second word is arbitrary inline
+  data. For simple types like strings, integers, reals, strangelets, etc, this
+  is the value proper. Lists store the effective length here.
+
+- Values are declared as vectors rather than structs. This allows them to be
+  passed into and returned from functions via SSE registers, reducing the stack
+  space and memory accesses needed for function calls.
+
+"Well-known" types like integers are implemented by having a single attribute
+chain used for all of them. Operations on the types first check whether each
+operand is of the appropriate type, and convert them otherwise. The code which
+writes the result would be inlined so the result type would also be visible to
+the optimiser. The theory was that constant propagation would eliminate most of
+these checks.
+
+Strings have a dual representation. Strings of 9 characters or fewer containing
+no NUL nor non-ASCII values are packed into a single qword, known as ASCII9
+format. Other strings are allocated in arrays on the heap, using a structure
+called a "twine". In order to amortise concatenation costs, concatenation is
+lazy, and forced when the string is accessed or overhead exceeds the forced
+size of the string.
+
+Lists and maps are implemented with exotic semi-persistent data-structures, in
+an effort to maintain the visible properties of persistent values while
+retaining the computational complexity of traditional mutable values for the
+common use cases.
+
+What we've learned:
+
+- The use of vectors/SSE registers for values probably causes more problems
+  than it solves. While GCC handles them pretty well, LLVM treats the
+  vectorness as an absolute mandate, and will move data back into SSE registers
+  the moment it needs a general-purpose register for something else. The fact
+  that the System V calling convention on AMD64 doesn't define *any*
+  callee-preserved SSE registers makes this an even bigger problem, as any
+  function call then calls all live values to be spilled onto the stack.
+
+- The constant-propagation hack to optimise well-known types works in some
+  cases, though when it does work it does in fact produce C-like machine code.
+  When it doesn't work, however, it results in a huge number of branches in
+  critical paths and substantial code bloat.
+
+- ASCII9 strings work really well, and a lot of common operations reduce to
+  extremely fast instruction sequences. Integers can also be converted to and
+  from this form very efficiently, even in base-10.
+
+- Twines successfully amortise the concatenation cost, but slow everything else
+  down, since two pointers must be chased and one branch tested to find the
+  string data even in case of an already-forced twine. They also result in
+  doubling the number of heap allocations that occur during lexical analysis.
+
+- The semi-persistent data structures successfully achieved the desired
+  asymptotic complexity for most use-cases. However, the constant overhead is
+  substantial. Accessing a list element without bounds checking in the bast
+  case requires two memory accesses, a branch, three more memory accesses, and
+  another branch. Additional overhead is incurred from the attempt to optimise
+  double-word values to single-word when all have the same type. Iterating an
+  Avalanche list via C ends up taking about the same amount of time as
+  iterating a list in Python 2.7.
+
+- In order for the integer implementation to be anywhere near efficient,
+  integers had to be capped at 64-bit, and inherited C's esoteric overflow
+  semantics. Overflow checking incurred additional overhead. Supporting values
+  larger than 64 bits would have meant adding another inline branch to every
+  integer operation.
+
+- There's no clear way for real-number operations to have any useful exception
+  behaviour since, like integer operations, it would require an additional
+  branch on every operation that couldn't be optimised.
+
+-------------------------------------------------------------------------------
+
+Goals for the redesign:
+
+- Values are a single qword. This still has performance implications for 32-bit
+  systems, but those are less important now.
+
+- Integer and real optimisations should have a high-speed "hot path" which can
+  be performed blindly of type issues which atomically falls back to a cold
+  path if assumptions are found to be violated at the very end.
+
+- String and list accesses should optimise to direct array access.
+
+- Replace twines and semi-persistent data structures with uniqueness tracking.
+  That is, given a value which points to memory, it should be possible to
+  determine whether that pointer is definitely unique (thus permitting
+  mutation) or not (thus requiring a copy).
+
+"Native" avalanche pointers always have 16-byte alignment.
+
+Values are statically typed with one of three immediate-physical types (called
+IPTs from hereonout to avoid confusion with format types which get more
+discussion) which indicate how the raw bit array that is the value is
+interpreted:
+
+- Standard values conform to the rules described below, and may or may not
+  contain a pointer. They are always 64-bits wide. This is the default IPT of a
+  value and is what all but very low-level code will use.
+
+- Raw integers are 64-bit values which never contain pointers, and thus do not
+  risk being incorrectly manipulated by the garbage collector or de-uniquer.
+
+- Raw pointers are platform-specific values which are always assumed to contain
+  pointers but do not have uniqueness. They may be manipulated by the garbage
+  collector and need not have any particular alignment. These are distinct from
+  strangelets.
+
+Value types are divided into first-class and second-class values. First-class
+values are directly represented by the format described below; second-class
+values are forced into a more general object-style system hidden behind a
+pointer stored within the value proper.
+
+- The value equal to qword 1 is the empty (ASCII9) string.
+
+- A value with bit 0 set and at least one of bits 56..63 set is an ASCII9
+  string.
+
+- A value with bit 0 set, bits 56..63 clear, and at least one of bits 1..55 set
+  encodes a 56-bit floating point value. These floats have the same format as
+  IEEE-754 binary64, except that the lowest 8 precision bits are dropped, and
+  the all the bits are negated. Note that the negative NaN with all bits set is
+  not encodable here, as it would result in a value which would encode the
+  empty string, so this value is changed to a positive NaN.
+
+- A value with bits 2..3 clear encodes a signed 60-bit integer in the upper 60
+  bits. Integers which do not fit in 60 bits are represented as second-class
+  values. Bit 1 of an integer is always clear. (It would be the uniqueness bit,
+  which is meaningless here.)
+
+- A value with bit 0 clear, bit 2 set, and bit 3 clear is a out-of-line string.
+  Bit 1 stores the uniqueness of the value. Clearing the lower 4 bits of the
+  value yields a pointer to the string. The string is prefixed with two size_ts
+  indicating the length of the string and the size of the allocation (in
+  characters following the header), which is always a multiple of twice
+  sizeof(size_t). Following that is the string character data. All bytes beyond
+  the end of the string, of which there is always at least 1, are always zero.
+
+- A value with bits 0 and 2 clear and bit 3 set is a list. Bit 1 stores the
+  uniqueness of the value. Clearing the lower 4 bits of the value yields a
+  pointer to the list. The list is prefixed by two size_ts indicating the
+  length of the list and the number of entries in the allocation. Following the
+  header is a direct array of values. All values beyond the in-use portion are
+  zero.
+
+- A value with bit 0 clear and bits 2 and 3 set is a second-class value. Bit 1
+  stores the uniqueness of the value. Clearing the lower 4 bits of the value
+  yields a pointer to the object storing the actual value.
+
+Note that all formatted values with bit 0 clear and either bits 2 or 3 set make
+use of the uniqueness bit, and all other values do not. However, clearing bit 1
+is safe for all values where bit 0 is clear, which allows the de-uniquing
+operation to be expressed as `val &= ~((val & 1) << 1);`.
+
+Strangelets are encoded simply by their raw pointer value, with required
+alignment 8 and bit 2 set. Note that this makes them indistinguishable from
+out-of-line strings and second-class values; this requires demoting the
+behaviour of stringifying a strangelet to undefined behaviour. (This would
+probably have been necessary anyway for the planned JS backend.) Raw pointers
+are usually preferable to strangelets, but strangelets permit threading them
+through infrastructure that works with the standard IPT.
+
+Sequences of integer operations are hot-pathed by grouping together branchless
+sequences and performing the operations directly upon the upper 61 bits,
+accumulating the OR of the lower 3 bits of every input into a NAT accumulator.
+Overflows result in ORing 1 into the NAT accumulator. If the NAT accumulator is
+non-zero at the end of the group, the result is discarded and an
+interpreter-based cold path is used to execute the operations. This means that
+the hot path remains branch-free (except for possibly testing for
+divide-by-zero eagerly) and the cold path does not introduce substantial bloat.
+It also permits supporting arbitrary-precision integers without added overhead.
+
+Sequences of NaN-preserving floating-point operations similarly can be
+hot-pathed by decoding the float values in such a way that non-floating-point
+values result in a NaN, then falling back to the cold path if the final result
+is NaN.
+
+-------------------------------------------------------------------------------
+
+INFERENCES
+
+The new implementation will be designed from the ground up to support
+uniqueness, type, and region inference (ie, escape analysis).
+
+Type inference involves determining what physical representation a value will
+need to have and lifting the conversion to a location that reduces the number
+of conversions. In the simplest and most common case, this occurs simply within
+a function. For example, in the function
+
+```
+  fun add-to-all lst val {
+    for {i = 0} ($i < # $lst) {$i += 1} {
+      lst[$i] += $val
+    }
+    ret $lst
+  }
+```
+
+we would want to lift the conversion of `$val` to an integer out of the loop.
+This is something the prior design failed to due to the possibility of the
+conversion throwing an exception.
+
+Type inference is also useful cross-procedurally. In the above function, the
+caller may be able to coalesce the conversion of `$lst` to a list (or even a
+list of integers) and `$val` to an integer with other conversions.
+
+This is the part where we define a type system for our typeless language. We
+use C++/Java type notation since Avalanche has no notation of its own.
+
+A "type" here is both a physical representation of a value and a constraint on
+the possible values it may take. There is also a notion of sub-typing: A is a
+sub-type of B iff all *normalised* logical values of A are also *normalised*
+values of B. Sub-typing is normally only considered if there exists an
+efficient conversion path from super-type to sub-type. For example, lists can
+be converted to maps more quickly than can strings, and a normalised map is
+also a normalised list, so map is a sub-type of list.
+
+Note that the normalisation requirement means that `int` is *not* a sub-type of
+`real`; while all integer values are accepted as real values, the normalised
+representation of a real may lose information since it is of limited precision.
+
+Types like lists and maps are said to contain other values. This is denoted via
+parameterised types. Eg, list<integer> is a list containing only integers.
+Since all values are pure, all types are covariant: list<integer> is a sub-type
+of list<string> automatically. Physical representations are required to not
+depend on type parameters, so a list<integer> and list<string> are identical at
+the binary level.
+
+The `top` type is the type that contains all values with no particular physical
+representation. While `string` also contains all values, it sub-types `top`
+since it is not an ideal representation for all cases. (This means that we
+prefer doing nothing to spontaneously stringifying things.) The `bottom` type
+is a sub-type of all other types, and has no values at all. It emerges in
+constructs like `list<bottom>` which describes the empty list.
+
+We use the notation union(A,B) to abstractly indicate the narrowest type such
+that all values of types A and B are also values of that type (constrained to
+only consider explicit super-types, ie, where it makes sense performance-wise).
+union(int,real) is top. union(list<integer>,list<string>) is list<top>.
+union(map<int,int>,list<int>) is list<int>.
+
+Type inference proceeds bidirectionally, based on the fact that certain
+operations take particular types as inputs and produce particular types as
+outputs. The "output type" of a value is the union of all types that may be
+used to create that value; the "input type" of a value is the union of all
+types for which that value is used as an input.
+
+The latter point may be surprising; in most type systems, type *intersection*
+would be used for inputs from the value. Unioning is necessary since it is
+possible for the code to choose only *one* such usage at runtime, and we need
+to preserve the most general representation that results in no observable
+differences. Below is a contrived example of such a function:
+
+```
+  fun do-something arg {
+    if (b# $arg > 50) {
+      ret $arg `!"
+    } else {
+      ret $arg + 5
+    }
+  }
+```
+
+the inferred type of `$arg` here is union(string,int) = top. The fact that the
+value _could_ be used for two radically different purposes doesn't mean we can
+conclude that the code is broken.
+
+Within a single function, a value at a certain location may be "polymorphic".
+That is, by nature of being in that location within the function, the code
+generator necessarily has a version of that value in another type handy. For
+example, in the above function, the string-length invocation forces a string
+value to be produced, so further on `$arg` is polymorphically top&string. Note
+that this is purely a code-generation concept and occurs because there are
+multiple instantiations of a value locally.
+
+By multiply-instantiating basic blocks as different combinations of polymorphic
+values arise, the code-generator can reduce or eliminate the number of
+conversion attempts that occur.
+
+The output type of a value is only used for eliminating guaranteed-noop
+conversions.
+
+A value may be converted to its input type ahead of time if there are more than
+one location taking that value as input, or if such locations are
+multiply-reachable. Note that if conversion fails, we simply leave the value
+unchanged, so that the exception gets thrown in the correct place (if the
+forced conversion is even actually reached).
+
+An open question is whether ahead-of-time conversion of parameterised types
+should occur. Eg, should `top` ever be converted to a `list<int>` instead of
+`list<top>`? There's three general cases:
+
+- Sparse access. If only a few values in the container are accessed, the bulk
+  conversion was a net loss.
+
+- No conversion. If all the elements in the structure already happened to be of
+  the correct type, checking all of them early was a net loss.
+
+- Full access. It's reasonably common for an algorithm to iterate a list
+  exactly once. Converting the list early would have no overall benefit, and
+  may actually be a net loss due to some code bloat.
+
+- Voluminous access. If the code accesses every element of the list more than
+  once, the early conversion is a net win.
+
+One option would be to tag such structures at runtime and track conversions
+resulting from not doing an ahead-of-time conversion. Alternatively, accesses
+to such a tagged data structure could write the result of conversion (if there
+was one) back into the structure when such a conversion occurs. For inline
+integers and floats, this would only occur on the cold path and presents little
+issue, even in the case of multi-threading (as long as 64-bit values can be
+read and written atomically). But for other types it would force using memory
+barriers.
+
+
+Region inference / escape analysis is performed to identify the upper bound on
+the lifetime of any given value. This allows for two large benefits:
+
+- Values that do not escape the callstack can be allocated on a thread-local
+  heap. Thread-local garbage collection does not require an expensive
+  stop-the-world step (as only that thread stops, and does so naturally by
+  calling the memory allocator) and has better locality.
+
+- Values that do not escape a function can be allocated on a smaller heap local
+  to that call frame. This has two benefits: (a) garbage-collecting a very
+  small heap is much faster than garbage-collecting a large one, and (b) when
+  the function returns, all the memory local to the call can be freed at once.
+
+Region inference is only performed at a whole-procedure level; i.e., there is
+no attempt to identify separate parts of a function which would benefit from
+having their own local heap.
+
+Every input to an operation or a function is assigned one of three escape
+scopes:
+
+- Local. When the operation/function completes, no new references to the value
+  exist.
+
+- Regional. The output from the operation/function may contain new live
+  references to the value, but no other new references exist.
+
+- Global. The operation/function may create new live references to the value
+  not reachable from its output, for example by setting a global variable.
+
+Note that these scopes are strictly ordered. The escape scope for each value in
+a function is found by tracing all possible paths the value data may take and
+using the widest scope found.
+
+- If a value or derived value is used as a local input, the trace has no effect
+  and the operation's output is not related to the value.
+
+- If a value or derived value is used as a global input, the value is global.
+
+- If a value or derived value is used as a regional input, the output value
+  from the operation is a derived value from the value. Note that a value may
+  be derived from any number of other values.
+
+- If a value or derived value is returned from the function, the value is at
+  least regional.
+
+Any call frame has three conceptual heaps:
+
+- The local heap. Functions create this themselves as necessary. This is used
+  as the parent heap for function calls whose output is local to the caller and
+  all local values within the function.
+
+- The parent heap. Provided by the caller of a function. This is used as the
+  parent heap for function calls whose output is regional to the caller and all
+  regional values within the function.
+
+- The global heap. Exists always, everywhere. This is used as the parent heap
+  for function calls whose output is global and all global values within the
+  function.
+
+Traditionally, escape analysis has seen limited success due to mutable
+structures. For example, in the following code, the escape scope of `$value`
+depends on the lifetime of `$container`, which is not expressable in this
+system.
+
+```
+  struct value-container {
+    value v
+  }
+  fun doit container value {
+    S.set value-container $container v $value
+  }
+```
+
+High-level Avalanche does not generally have such mutable structures, and where
+it does (i.e., higher-level constructs like boxes), we can simply assume global
+without substantial loss of performance in most cases. Low-level Avalanche
+code, such as that found in the runtime, does have mutable structures and if we
+assumed global, we'd end up making everything global. Instead, we simply foist
+the responsibility of notating the escape scope on the programmer, since
+anything involving strangelets requires intimate knowledge of the runtime
+anyway.
+
+Escape analysis also plays into uniqueness inference. The goal of uniqueness
+inference is to determine at compile time when a value ceases to be unique. A
+unique value is one which has only one live reference within the entire
+process. By knowing that a value is unique, code that would otherwise need to
+do a sequence of operations like
+
+- Clone the original value
+- Discard the original value
+- Make an adjustment to the clone
+- Return the clone
+
+can simplify to
+
+- Make an adjustment to the value
+- Return the value
+
+because it is known that no other part of the process could possibly observe
+the in-place mutation.
+
+It is impossible to determine whether a value is unique at compile-time, so for
+the types that can benefit, we have a uniqueness bit on particular value
+formats. Unlike reference counts, this is in the value itself rather than
+behind a pointer; we can get away with this because, by definition, if the
+value was unique, changing that one bit clears all of the (one) uniqueness bits
+for that value.
+
+The task of uniqueness inference is therefore to identify points where a value
+ceases to be unique if it was before, and clearing the uniqueness bit in
+response. This is derived from the escape analysis performed on the values. The
+rule is simply this: A value is de-uniqued immediately before being passed to
+an operation that might try to take advantage of its uniqueness (eg, function
+call) or before it escapes the function if there are any other live values in
+the same derivation family at that point. A value is only considered "live" for
+this purpose if it is possible it will ever be used again. Two values are in
+the same derivation family if one is derived from the other (as per escape
+analysis) or if there is another value in both nodes derivation families.
+
+-------------------------------------------------------------------------------
+
+GARBAGE COLLECTION
+
+This design involves two distinct classes of heaps: The global heap, and the
+local heaps created by functions for isolated regions.
+
+For the global heap, we'll simply continue to use the Boehm GC, patched to
+ensure alignment of 16 bytes and to use mmap when possible (it strangely still
+uses sbrk() in the default FreeBSD build, for example). Justification:
+
+- While the Boehm GC needs to stop the world, it doesn't require safe-points,
+  which we'd otherwise awkwardly need to allow threads to proceed to when
+  stopping the world.
+
+- Hopefully, for the majority of programs, the global heap is not very active.
+  Ideally it would mostly hold static read-only data and small high-level
+  things like handles. This means that collectors which reorganise objects
+  would be of little benefit.
+
+- It's well-understood and easy to use.
+
+- It tolerates garbage pointers and doesn't need to be notified about threads
+  calling unaware functions.
+
+For the most part, we get interoperation with the Boehm GC for free. While we
+do do weird things with pointers, as long as all allocations are a multiple of
+16 bytes, even pointers with tags in their lower bits still point within the
+allocation and thus retain it.
+
+We will need to make sure to tell it about the local heaps we allocate and
+fibre stacks, but that isn't difficult.
+
+For local heaps, we use a custom allocator and garbage collector.
+(Implementation details to be decided when implemented.) Since local heaps are
+only ever accessed by the strand that owns them, the allocator and collector
+can ignore all threading issues of every kind. If collections occur in response
+to allocation failures, all suspended functions in the callstack are naturally
+at safe-points, which makes a relocating collector practical. A relocating
+collector is also desirable, since being able to defragment the local heaps
+greatly simplifies the allocation function.
+
+In order to support a relocating collector, we need to make sure it knows where
+to find roots on the stack (which are definitely pointers or values or
+uninitialised garbage) and the format of values on the heap. The latter we can
+easily achieve with static tables describing the formats of things, thus
+incurring no runtime space overhead for tags.
+
+(Note that there are no roots *not* on the stack, because such values by
+definition have escaped to global scope.)
+
+The obvious choice for identifying roots on the stack is to use LLVM's garbage
+collection support. The problem with this is that this system is very poorly
+defined; the new statemap system even more so. It's also quite presumptious
+(eg, by default it opts you into a "feature" to assist GCs that can't tolerate
+garbage pointers). Most of the issues appear to be a result of attempting to
+describe a system where the GC could be swapped out without knowledge of the
+code generator, which isn't very useful and ultimately overcomplicates the
+whole thing. In any case, we're completely in underdefined behaviour territory,
+which in many ways is worse than undefined behaviour.
+
+Zimbu (http://zimbu.org/) uses an interesting hack in which on the first
+invocation of a function, it grabs the stack offsets of every variable and
+hands them to its garbage collector. It's unclear whether this could even work
+in LLVM (or whether it does for aggressive optimisation levels with a C
+compiler), and is definitely very far into undefined behaviour territory.
+
+Instead, we simply maintain a linked stack of explicit roots via a thread-local
+variable. Each explicit root is actually a structure with slots for any values
+that could contain pointers and must survive a function call. We explicitly
+move values into and out of this structure when crossing function calls. LLVM
+can still elide the loads/stores and even the link/unlink for leaf functions
+and functions that can't possibly make calls outside of the compilation unit,
+which should eliminate most of the meaningful overhead. We'll need to make use
+of the llvm.assume intrinsic to inform the optimiser that the lower 4 bits
+(excluding the uniquenss bit --- see the binary compatibility section below)
+won't change over the function call and that non-pointer values will not be
+changed either. (We can't just do something like store a 4-bit integer outside
+the structure, since that will spill to two separate stack slots and end up
+doubling the number of stores and loads in many cases.)
+
+-------------------------------------------------------------------------------
+
+BINARY COMPATIBILITY
+
+The inferences described above run into a subtle problem: binary compatibility.
+If a shared library is updated without recompiling the things that depend on
+it, the correct inferences could change.
+
+- For type inference, this could result in a caller passing a narrower type in
+  than it should (ie, if the expected type was widened). In most cases, this
+  would be harmless, but would sometimes result in confusing or outright
+  incorrect behaviour. Note that there are no negative impacts of an expected
+  type _narrowing_; functions still need to handle types outside the inferred
+  one in any case as this is how precise exception handling works.
+
+- For region inference, dangling pointer issues arise if the escape scope of a
+  function input widens. Calling a function with an unnecessarily wide parent
+  heap is always safe.
+
+- For uniqueness inference, the widening of escape scope could also result in a
+  value continuing to be marked unique when it has escaped to another location,
+  which could result in a value appearing to spontaneously mutate. Spuriously
+  de-uniquing a value is always safe.
+
+There's several things we could do here.
+
+- Do nothing. If you update a shared library without recompiling, hope
+  everything pans out in the end. Not really acceptable.
+
+- Ban shared libraries. It eliminates the problem, but also complicates one of
+  the two use cases described below.
+
+- Add additional name mangling to functions so that if an incompatible change
+  occurs, the resulting executable cannot be loaded due to dynamic linker
+  failure.
+
+- Only determine pessimistic locations for type conversions / heap changes /
+  de-uniquing and figure out the actual actions at runtime, ie, in a thunk that
+  occurs the first time a function is executed. This works, but incurs overhead
+  and may be overly pessimistic.
+
+- Use the name-mangling scheme above, but provide weak implementations of
+  external functions as fallback, which "fix" the inconsistencies before
+  delegating back to the original. Incurs zero overhead if no mismatches occur.
+
+To properly evaluate these choices, it is important to keep in mind that there
+are three major deployment styles.
+
+- Programs / scripts under the control of a local developer. Recompiling is
+  inconvenient but not a severe issue. Performance isn't too important.
+  Recompilation happens often, so shared libraries are somewhat preferable
+  since linking static executables is slower.
+
+- Binary distributions, especially Linux-style package deployments. Shared
+  libraries are a large benefit: (a) less bandwidth used for both user and
+  distributor; (b) upgrades (especially security upgrades) only need touch the
+  library, not everything that uses it; (c) if there are lots of things using
+  the shared library, disk and RAM usage is reduced. This is a strong argument
+  against banning shared libraries. Points (a) and (b) remain for the
+  link-failure option, since that still requires recompiling and redistributing
+  the executables.
+
+- Microservice-style deployments. Servers run a single application. Zero
+  benefits to shared libraries; such applications are normally statically
+  linked. Any approach which adds runtime overhead in the normal case is
+  somewhat undesireable.
+
+Looking at each inference type and how we can deal with its issues:
+
+- Type inference. Given a value of an incorrectly-inferred type, it is
+  impossible to reverse the conversion back to the original, so the optimistic
+  "fix problems if they occur" solution cannot apply. However, one may note
+  that, in practise, any type conversion incurs a function call anyway (unless
+  it fast-paths to a noop, which makes the situation moot). Instead of having a
+  direct function call, we can instead indirect to a function which, on first
+  call, looks at static information compiled into the executable and chooses
+  what function to call to do the type conversion. All future calls go directly
+  to the resolved one. This involves very little runtime overhead beyond the
+  first run of the function and only makes the executable a bit bigger.
+
+- Region inference. A value in too narrow a region can be fixed by deep copying
+  it to the correct region. This could be quite expensive, and requires all
+  types to implement deep-copying, an operation that would never be used
+  otherwise. In many cases, this would also deep-copy too much. Initialising a
+  local region will almost certainly involve a call to a runtime function; we
+  can thus do the same thing as for type inference and figure out whether the
+  expected region was wrong, and if so, fall back on an overly wide region.
+
+- Uniqueness inference. This is a difficult case because the value that needs
+  to be de-uniqued is not actually passed into the function. A missing
+  de-unique operation has no code at all, much less a function call. However,
+  there _is_ something we can take advantage of in the "fix it in a weak
+  fallback function" approach. Since we need to apply the fix upon a function
+  call (destined for something outside the compilation unit), we know that any
+  values that could possibly need de-uniquing that the caller will ever use
+  again have been stored in the GC root structure. If the static information
+  contains sufficient information for a runtime function to determine which
+  values belong to which arguments, the fallback could call that function to
+  de-unique the values behind the caller's back before falling into the real
+  function. In the common case, this incurs no runtime cost except that code
+  generation must be prepared for a uniqueness bit to spontaneously change from
+  1 to 0 during a safepoint.
