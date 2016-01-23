@@ -64,7 +64,9 @@
            "workaround" "workaround-undefined")
           'symbols)
          'font-lock-keyword-face)
-   (cons "\\$\\(\\s_\\|\\w\\)+\\$?" 'font-lock-variable-name-face)))
+   (cons "\\$\\$\\(\\s_\\|\\w\\)+\\_>" 'font-lock-preprocessor-face)
+   (cons "\\$\\(\\s_\\|\\w\\)+\\$?" 'font-lock-variable-name-face)
+   (cons "\\$" 'font-lock-variable-name-face)))
 
 (defvar ava-mode-syntax-table
   (let ((st (make-syntax-table)))

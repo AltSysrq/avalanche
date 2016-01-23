@@ -1,5 +1,5 @@
 /*-
- * Copyright (c) 2015, Jason Lingle
+ * Copyright (c) 2015, 2016, Jason Lingle
  *
  * Permission to  use, copy,  modify, and/or distribute  this software  for any
  * purpose  with or  without fee  is hereby  granted, provided  that the  above
@@ -57,7 +57,8 @@ static void ava_intr_user_macro_body_translate_bareword(
   ava_macsub_context* context,
   ava_pcm_builder* builder,
   const ava_parse_unit* unit,
-  ava_visibility visibility);
+  ava_visibility visibility,
+  ava_bool is_expander);
 static void ava_intr_user_macro_body_translate_splice(
   ava_macsub_context* context,
   ava_pcm_builder* builder,
@@ -126,6 +127,10 @@ ava_macro_subst_result ava_intr_user_macro_subst(
       AVA_MACRO_ARG_BAREWORD(type_str, "type");
 
       switch (ava_string_to_ascii9(type_str)) {
+      case AVA_ASCII9('e','x','p','a','n','d'):
+        type = ava_st_expander_macro;
+        break;
+
       case AVA_ASCII9('c','o','n','t','r','o','l'):
         type = ava_st_control_macro;
         break;
@@ -239,7 +244,12 @@ static void ava_intr_user_macro_body_translate_unit(
   switch (unit->type) {
   case ava_put_bareword:
     ava_intr_user_macro_body_translate_bareword(context, builder, unit,
-                                                visibility);
+                                                visibility, ava_false);
+    break;
+
+  case ava_put_expander:
+    ava_intr_user_macro_body_translate_bareword(context, builder, unit,
+                                                visibility, ava_true);
     break;
 
   case ava_put_astring:
@@ -302,14 +312,18 @@ static void ava_intr_user_macro_body_translate_bareword(
   ava_macsub_context* context,
   ava_pcm_builder* builder,
   const ava_parse_unit* unit,
-  ava_visibility visibility
+  ava_visibility visibility,
+  ava_bool is_expander
 ) {
   const ava_symbol* symbol, ** results;
   ava_string value, chopped;
   char sigil;
   size_t strlen, num_results;
 
-  assert(ava_put_bareword == unit->type);
+  if (is_expander)
+    assert(ava_put_expander == unit->type);
+  else
+    assert(ava_put_bareword == unit->type);
 
   value = unit->v.string;
   strlen = ava_strlen(value);
@@ -324,7 +338,10 @@ static void ava_intr_user_macro_body_translate_bareword(
           &unit->location, value));
       goto error;
     }
-    ava_pcmb_bareword(builder, chopped);
+    if (is_expander)
+      ava_pcmb_expander(builder, chopped);
+    else
+      ava_pcmb_bareword(builder, chopped);
     break;
 
   case '#':
@@ -334,12 +351,16 @@ static void ava_intr_user_macro_body_translate_bareword(
           &unit->location, value));
       goto error;
     }
-    ava_pcmb_bareword(builder, value);
+    if (is_expander)
+      ava_pcmb_expander(builder, value);
+    else
+      ava_pcmb_bareword(builder, value);
     break;
 
   case '$':
     /* Only can get this way because the parser decided it should */
     assert(1 == strlen);
+    assert(!is_expander);
     ava_pcmb_bareword(builder, value);
     break;
 
@@ -374,10 +395,14 @@ static void ava_intr_user_macro_body_translate_bareword(
       /* Continue anyway */
     }
 
-    ava_pcmb_bareword(builder, symbol->full_name);
+    if (is_expander)
+      ava_pcmb_expander(builder, symbol->full_name);
+    else
+      ava_pcmb_bareword(builder, symbol->full_name);
     break;
 
   case '?':
+    if (is_expander) goto bad_sigil;
     /* There's strictly no reason to require this, but if '?' is an operator,
      * the result of forgetting to say '%?' would be extremely confusing.
      */
@@ -392,12 +417,15 @@ static void ava_intr_user_macro_body_translate_bareword(
 
   case '<':
   case '>':
+    if (is_expander) goto bad_sigil;
+
     ava_intr_user_macro_body_translate_splice(
       context, builder, &unit->location,
       ('>' == sigil)? +1 : -1, chopped);
     break;
 
   default:
+  bad_sigil:
     ava_macsub_record_error(
       context, ava_error_bad_macro_bareword_sigil(
         &unit->location, value));
@@ -888,6 +916,11 @@ ava_macro_subst_result ava_intr_user_macro_eval(
     case ava_pcmt_bareword: {
       const ava_pcm_bareword* b = (const ava_pcm_bareword*)instr;
       PUSH_STRINGOID(ava_put_bareword, b->value);
+    } break;
+
+    case ava_pcmt_expander: {
+      const ava_pcm_expander* b = (const ava_pcm_expander*)instr;
+      PUSH_STRINGOID(ava_put_expander, b->value);
     } break;
 
     case ava_pcmt_astring: {

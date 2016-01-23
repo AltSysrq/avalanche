@@ -183,11 +183,11 @@ deftest(interface_changes_funs_to_ext_fun) {
 
 deftest(interface_keeps_macros) {
   to_interface_like(
-    "[macro true foo 5 0 [die]]\n"
-    "[macro false foo 5 0 [die]]\n",
+    "[macro true foo 6 0 [die]]\n"
+    "[macro false foo 6 0 [die]]\n",
 
-    "[macro true foo 5 0 [die]]\n"
-    "[macro false foo 5 0 [die]]\n");
+    "[macro true foo 6 0 [die]]\n"
+    "[macro false foo 6 0 [die]]\n");
 }
 
 deftest(interface_relinks_globals) {
@@ -203,19 +203,19 @@ deftest(interface_relinks_globals) {
 deftest(interface_deletes_redundant_src_pos) {
   to_interface_like(
     "[src-pos source.ava 1 2 2 2 2]\n"
-    "[macro true foo 5 0 [die]]\n",
+    "[macro true foo 6 0 [die]]\n",
 
     "[src-pos source.ava 0 1 1 1 1]\n"
     "[var false [ava private]]\n"
     "[src-pos source.ava 1 2 2 2 2]\n"
-    "[macro true foo 5 0 [die]]\n");
+    "[macro true foo 6 0 [die]]\n");
 }
 
 deftest(interface_deletes_src_pos_at_eof) {
   to_interface_like(
-    "[macro true foo 5 0 [die]]\n",
+    "[macro true foo 6 0 [die]]\n",
 
-    "[macro true foo 5 0 [die]]\n"
+    "[macro true foo 6 0 [die]]\n"
     "[src-pos source.ava 0 1 1 1 1]\n"
     "[var false [ava private]]\n");
 }
@@ -302,13 +302,13 @@ deftest(reexported_exports_kept) {
   link_modules_like(
     "[ext-var [ava bar]]\n"
     "[export 0 true bar]\n"
-    "[macro true foo 5 0 [die]]\n",
+    "[macro true foo 6 0 [die]]\n",
     ava_false,
 
     "module",
     "[ext-var [ava bar]]\n"
     "[export 0 true bar]\n"
-    "[macro true foo 5 0 [die]]\n");
+    "[macro true foo 6 0 [die]]\n");
 }
 
 deftest(nonreexported_exports_deleted) {
@@ -319,7 +319,7 @@ deftest(nonreexported_exports_deleted) {
     "module",
     "[ext-var [ava bar]]\n"
     "[export 0 false bar]\n"
-    "[macro false foo 5 0 [die]]\n");
+    "[macro false foo 6 0 [die]]\n");
 }
 
 deftest(global_refs_relinked_after_export_deletions) {

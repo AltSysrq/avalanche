@@ -694,6 +694,14 @@ ava_ast_node* ava_macsub_run_units(ava_macsub_context* context,
                                    const ava_parse_unit* last);
 
 /**
+ * Expands Expander units within the given unit list, mutating the list
+ * in-place.
+ */
+void ava_macsub_expand_expanders(
+  ava_macsub_context* context,
+  ava_parse_unit_list* units);
+
+/**
  * Records an error with the given message and location.
  *
  * @prama context The current macro substitution context.

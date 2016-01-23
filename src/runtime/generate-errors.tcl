@@ -903,6 +903,16 @@ set defs {
     }
   }
 
+  cerror C5162 ambiguous_expander {{ava_string name}} {
+    msg "Expander reference is ambiguous: %name%"
+    explanation {
+      The given reference to an expander could refer to more than one symbol.
+
+      Expanders occupy the same namespace as other symbols, so the conflicting
+      symbols are not necessarily also expanders.
+    }
+  }
+
   cerror C5003 no_such_function {{ava_string name}} {
     msg "No such function: %name%"
     explanation {
@@ -2573,6 +2583,16 @@ set defs {
       given is either not parsable as such or is outside the valid range.
     }
   }
+
+  cerror C5161 no_such_expander {{ava_string name}} {
+    msg "No such expander, or not an expander: %name%"
+    explanation {
+      The given Expander token either references a symbol not defined at the
+      given location, or something which is not an expander macro.
+    }
+  }
+
+  # cerror C5162 ambiguous_expander with other ambiguous_* errors
 
   cerror X9000 xcode_dupe_label {{ava_value label}} {
     msg "P-Code label present in function more than once: %label%"

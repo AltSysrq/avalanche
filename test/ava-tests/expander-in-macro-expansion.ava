@@ -1,0 +1,8 @@
+reqmod helpers/test
+
+macro pass-exp expand %test.pass "42"
+macro pass control ($$%pass-exp)
+
+test.register expander-in-macro-expansion {
+  pass ()
+}

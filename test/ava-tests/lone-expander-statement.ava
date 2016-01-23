@@ -1,0 +1,7 @@
+reqmod helpers/test
+
+macro pass expand %test.pass "42"
+
+test.register lone-expander-statement {
+  $$pass
+}

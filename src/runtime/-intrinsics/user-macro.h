@@ -1,5 +1,5 @@
 /*-
- * Copyright (c) 2015, Jason Lingle
+ * Copyright (c) 2015, 2016, Jason Lingle
  *
  * Permission to  use, copy,  modify, and/or distribute  this software  for any
  * purpose  with or  without fee  is hereby  granted, provided  that the  above
@@ -26,8 +26,9 @@
  *   macro name type [precedence] ...
  *
  * The symbol table gains a macro named `name`. `type` is a bareword, one of
- * "control", "op", or "fun". If and only if the type is "op", the `precedence`
- * argument is consumed, and must be a bareword parseable as an integer.
+ * "expand", "control", "op", or "fun". If and only if the type is "op", the
+ * `precedence` argument is consumed, and must be a bareword parseable as an
+ * integer.
  *
  * The rest of the arguments form the macro definition, which behave as
  * documented in the Syntax III section of the spec.

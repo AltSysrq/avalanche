@@ -1,5 +1,5 @@
 /*-
- * Copyright (c) 2015, Jason Lingle
+ * Copyright (c) 2015, 2016, Jason Lingle
  *
  * Permission to  use, copy,  modify, and/or distribute  this software  for any
  * purpose  with or  without fee  is hereby  granted, provided  that the  above
@@ -613,6 +613,8 @@ static ava_ast_node* ava_intr_semilit_of(
   size_t num_elements, i;
   ava_parse_unit* subunit;
 
+  ava_macsub_expand_expanders(context, &unit->v.units);
+
   num_elements = 0;
   TAILQ_FOREACH(subunit, &unit->v.units, next)
     ++num_elements;
@@ -911,6 +913,10 @@ ava_ast_node* ava_intr_unit(ava_macsub_context* context,
 
   case ava_put_block:
     return ava_intr_lambda_expr(context, unit);
+
+  case ava_put_expander:
+    /* Supposed to be handled by macro expansion */
+    abort();
   }
 
   /* unreachable */

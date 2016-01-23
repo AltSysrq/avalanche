@@ -1,0 +1,8 @@
+reqmod helpers/test
+
+macro numbers expand "36" "42" "56"
+
+test.register expander-in-semilit {
+  lst = [0 $$numbers 99]
+  test.pass $lst[2]
+}

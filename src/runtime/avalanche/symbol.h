@@ -64,6 +64,18 @@ typedef enum {
    */
   ava_st_struct,
   /**
+   * A symbol which is an expander macro.
+   *
+   * An expander macro is invoked explicitly with the $$ expander syntax, and
+   * may be invoked anywhere, even as a lone token or in a semiliteral.
+   *
+   * Note that expander macros are *not* allowed to successfully expand with
+   * the ava_mss_done status; they must result in ava_mss_again. If
+   * ava_mss_done is the result, the macro expander assumes an error occurred
+   * and simply deletes the Expander unit from the input.
+   */
+  ava_st_expander_macro,
+  /**
    * A symbol which is a control macro.
    *
    * A control macro is invoked when it is named as the first bareword in a

@@ -1,0 +1,11 @@
+reqmod helpers/test
+
+macro fourty-two expand "42"
+
+fun get-42 () {
+  ret $$fourty-two
+}
+
+test.register expander-embedded-in-statement {
+  test.pass : get-42 ()
+}

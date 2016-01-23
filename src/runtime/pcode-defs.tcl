@@ -386,7 +386,8 @@ struct global g {
     constraint {
       ava_st_control_macro == @.type ||
       ava_st_operator_macro == @.type ||
-      ava_st_function_macro == @.type
+      ava_st_function_macro == @.type ||
+      ava_st_expander_macro == @.type
     }
     constraint {
       (ava_st_operator_macro == @.type &&
@@ -2248,6 +2249,12 @@ struct macro m {
   #
   #   ( ) -- ( u )
   elt bareword {
+    str value
+  }
+  # Pushes an expander onto the stack.
+  #
+  #   ( ) -- ( u )
+  elt expander {
     str value
   }
   # Pushes an A-String onto the stack.
