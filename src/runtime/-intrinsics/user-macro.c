@@ -1,5 +1,5 @@
 /*-
- * Copyright (c) 2015, Jason Lingle
+ * Copyright (c) 2015, 2016, Jason Lingle
  *
  * Permission to  use, copy,  modify, and/or distribute  this software  for any
  * purpose  with or  without fee  is hereby  granted, provided  that the  above
@@ -126,6 +126,10 @@ ava_macro_subst_result ava_intr_user_macro_subst(
       AVA_MACRO_ARG_BAREWORD(type_str, "type");
 
       switch (ava_string_to_ascii9(type_str)) {
+      case AVA_ASCII9('e','x','p','a','n','d'):
+        type = ava_st_expander_macro;
+        break;
+
       case AVA_ASCII9('c','o','n','t','r','o','l'):
         type = ava_st_control_macro;
         break;

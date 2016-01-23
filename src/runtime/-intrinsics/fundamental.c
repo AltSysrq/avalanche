@@ -1,5 +1,5 @@
 /*-
- * Copyright (c) 2015, Jason Lingle
+ * Copyright (c) 2015, 2016, Jason Lingle
  *
  * Permission to  use, copy,  modify, and/or distribute  this software  for any
  * purpose  with or  without fee  is hereby  granted, provided  that the  above
@@ -612,6 +612,8 @@ static ava_ast_node* ava_intr_semilit_of(
   ava_intr_semilit* node;
   size_t num_elements, i;
   ava_parse_unit* subunit;
+
+  ava_macsub_expand_expanders(context, &unit->v.units);
 
   num_elements = 0;
   TAILQ_FOREACH(subunit, &unit->v.units, next)

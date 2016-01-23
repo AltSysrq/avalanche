@@ -386,7 +386,8 @@ struct global g {
     constraint {
       ava_st_control_macro == @.type ||
       ava_st_operator_macro == @.type ||
-      ava_st_function_macro == @.type
+      ava_st_function_macro == @.type ||
+      ava_st_expander_macro == @.type
     }
     constraint {
       (ava_st_operator_macro == @.type &&

@@ -1,0 +1,12 @@
+namespace foo {
+  macro mac expand 42
+}
+
+namespace bar {
+  macro mac expand 56
+}
+
+import foo *
+import bar *
+
+cstdio.puts $$mac

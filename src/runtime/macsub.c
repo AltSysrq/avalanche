@@ -371,10 +371,18 @@ static ava_ast_node* ava_macsub_run_one_nonempty_statement(
   ava_symbol_type macro_type = ava_st_other, candidate_type;
   signed precedence = -0x7f, candidate_precedence;
   ava_bool singleton;
+  const ava_compile_location* init_location;
+
+  assert(!TAILQ_EMPTY(&statement->units));
+  init_location = &TAILQ_FIRST(&statement->units)->location;
 
   tail_call:
 
-  assert(!TAILQ_EMPTY(&statement->units));
+  ava_macsub_expand_expanders(context, &statement->units);
+
+  /* Statement could become empty via expander expansion */
+  if (TAILQ_EMPTY(&statement->units))
+    return ava_intr_statement(context, statement, init_location);
 
   unit = TAILQ_FIRST(&statement->units);
 
@@ -443,6 +451,62 @@ static ava_ast_node* ava_macsub_run_one_nonempty_statement(
     goto tail_call;
 
   default: abort();
+  }
+}
+
+void ava_macsub_expand_expanders(ava_macsub_context* context,
+                                 ava_parse_unit_list* units) {
+  ava_parse_unit* unit, * unit_clone, * new, * tmp, * insert_point;
+  ava_parse_statement tmp_statement, * res_statement;
+  ava_macro_subst_result result;
+  const ava_symbol* symbol;
+  ava_bool ignore;
+
+  tailcall:
+
+  TAILQ_FOREACH(unit, units, next) {
+    if (ava_put_expander != unit->type) continue;
+
+    switch (ava_macsub_resolve_macro(
+              &symbol, context, unit, ava_st_expander_macro, 0)) {
+    case ava_mrmr_is_macro: break;
+    case ava_mrmr_not_macro:
+      ava_macsub_record_error(
+        context, ava_error_no_such_expander(
+          &unit->location, unit->v.string));
+      goto delete_unit;
+
+    case ava_mrmr_ambiguous:
+      ava_macsub_record_error(
+        context, ava_error_ambiguous_expander(
+          &unit->location, unit->v.string));
+      goto delete_unit;
+    }
+
+    unit_clone = AVA_CLONE(*unit);
+    TAILQ_INIT(&tmp_statement.units);
+    TAILQ_INSERT_TAIL(&tmp_statement.units, unit_clone, next);
+    result = (*symbol->v.macro.macro_subst)(
+      symbol, context, &tmp_statement, unit_clone, &ignore);
+    switch (result.status) {
+    case ava_mss_done:
+      /* Assumed an error */
+      break;
+
+    case ava_mss_again:
+      res_statement = result.v.statement;
+      insert_point = unit;
+      TAILQ_FOREACH_SAFE(new, &res_statement->units, next, tmp) {
+        TAILQ_REMOVE(&res_statement->units, new, next);
+        TAILQ_INSERT_AFTER(units, insert_point, new, next);
+        insert_point = new;
+      }
+      break;
+    }
+
+    delete_unit:
+    TAILQ_REMOVE(units, unit, next);
+    goto tailcall;
   }
 }
 
@@ -537,7 +601,12 @@ static ava_macsub_resolve_macro_result ava_macsub_resolve_macro(
     return ava_mrmr_is_macro;
   }
 
-  if (ava_put_bareword != provoker->type) return ava_mrmr_not_macro;
+  if (ava_put_bareword != provoker->type &&
+      ava_st_expander_macro != target_type)
+    return ava_mrmr_not_macro;
+  if (ava_put_expander != provoker->type &&
+      ava_st_expander_macro == target_type)
+    return ava_mrmr_not_macro;
 
   num_results = ava_symtab_get(
     &results, context->symbol_table, provoker->v.string);
