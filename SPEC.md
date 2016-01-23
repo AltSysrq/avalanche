@@ -349,9 +349,13 @@ within the spread, such that `\*foo[42]` is equivalent to `\*(foo[42])` rather
 than `(\*foo)[42]`.
 
 After grouping and subscript simplification, the parser recursively walks the
-structure to perform variable symplification. For each Bareword syntax unit
-which contains at least one dollar sign, the following transformation is
-applied:
+structure to perform variable and expander symplification.
+
+A Bareword beginning with two dolar signs and no other dollar signs has the
+dollar signs dropped and becomes an Expander syntax unit.
+
+For each remaining Bareword syntax unit which contains at least one dollar
+sign, the following transformation is applied:
 
 - The Bareword is split into alternating string and variable parts, delimited
   by dollar signs, with any leading empty string part dropped. For example, the
@@ -423,8 +427,12 @@ Syntax III --- Macro Processing
 
 Macros in avalanche come in three flavours:
 
+- Expander macros occur anywhere but must be explicitly referenced using an
+  Expander syntax unit. They are substituted before any implcit macro
+  processing, including within semiliterals.
+
 - Control macros occur at the beginning of a statement, and are substituted
-  before any other macro processing.
+  before any other implicit macro processing.
 
 - Operator macros occur anywehere, and are substituted in an order based on
   their precedence and associativity.
@@ -435,7 +443,8 @@ Macros in avalanche come in three flavours:
 Macro processing is performed within Blocks (including the top-level) and
 Substitutions. (Subscript simplification has already eliminated all Subscript
 syntax units.) Semiliterals are not subject to any kind of macro processing,
-but any Blocks or Substitutions they contain are.
+but any Blocks or Substitutions they contain are, and Expanders are still
+expanded.
 
 A syntax unit is said to invoke a macro if it is a Bareword whose symbol in the
 current scope references a macro. L-Strings, R-Strings, and LR-Strings are
@@ -449,6 +458,10 @@ A-String):
 ```
 
 The macro processing algorithm for a single statement is as follows:
+
+- Attempt to locate an Expander. If one is found, it must resolve to a unique
+  symbol of type expander-macro. Substute it with no arguments. The
+  substitution replaces the Expander syntax unit alone.
 
 - If the first syntax unit invokes a control macro and the enclosing unit is a
   Block, substitute that macro with an empty left argument and a right argument
