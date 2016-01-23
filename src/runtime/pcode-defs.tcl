@@ -2251,6 +2251,12 @@ struct macro m {
   elt bareword {
     str value
   }
+  # Pushes an expander onto the stack.
+  #
+  #   ( ) -- ( u )
+  elt expander {
+    str value
+  }
   # Pushes an A-String onto the stack.
   #
   #   ( ) -- ( u )
