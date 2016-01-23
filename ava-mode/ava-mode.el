@@ -1,6 +1,6 @@
 ;;; ava-mode --- Major mode for editing Avalanche programs
 
-;;;  Copyright (C) 2015 Jason Lingle
+;;;  Copyright (C) 2015, 2016 Jason Lingle
 
 ;; Author: Jason Lingle <jason@lin.gl>
 ;; Version: 0.1
@@ -64,6 +64,7 @@
            "workaround" "workaround-undefined")
           'symbols)
          'font-lock-keyword-face)
+   (cons "\\\\[a-zA-Z]\\(\\s_\\|\\w\\)*\\_>" 'font-lock-constant-face)
    (cons "\\$\\$\\(\\s_\\|\\w\\)+\\_>" 'font-lock-preprocessor-face)
    (cons "\\$\\(\\s_\\|\\w\\)+\\$?" 'font-lock-variable-name-face)
    (cons "\\$" 'font-lock-variable-name-face)))
