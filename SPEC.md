@@ -351,8 +351,8 @@ than `(\*foo)[42]`.
 After grouping and subscript simplification, the parser recursively walks the
 structure to perform variable and expander symplification.
 
-A Bareword beginning with two dolar signs and no other dollar signs has the
-dollar signs dropped and becomes an Expander syntax unit.
+A Bareword of length at least 3 beginning with two dolar signs and no other
+dollar signs has the dollar signs dropped and becomes an Expander syntax unit.
 
 For each remaining Bareword syntax unit which contains at least one dollar
 sign, the following transformation is applied:
@@ -425,7 +425,7 @@ described runtime semantics can be applied.
 Syntax III --- Macro Processing
 -------------------------------
 
-Macros in avalanche come in three flavours:
+Macros in avalanche come in four flavours:
 
 - Expander macros occur anywhere but must be explicitly referenced using an
   Expander syntax unit. They are substituted before any implcit macro

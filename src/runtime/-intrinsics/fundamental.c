@@ -911,6 +911,10 @@ ava_ast_node* ava_intr_unit(ava_macsub_context* context,
 
   case ava_put_block:
     return ava_intr_lambda_expr(context, unit);
+
+  case ava_put_expander:
+    /* Supposed to be handled by macro expansion */
+    abort();
   }
 
   /* unreachable */

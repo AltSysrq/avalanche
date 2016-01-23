@@ -1,5 +1,5 @@
 /*-
- * Copyright (c) 2015, Jason Lingle
+ * Copyright (c) 2015, 2016, Jason Lingle
  *
  * Permission to  use, copy,  modify, and/or distribute  this software  for any
  * purpose  with or  without fee  is hereby  granted, provided  that the  above
@@ -105,6 +105,11 @@ static ava_string stringify_unit(const ava_parse_unit* unit) {
   switch (unit->type) {
   case ava_put_bareword:
     accum = AVA_ASCII9_STRING("bareword:");
+    accum = ava_strcat(accum, unit->v.string);
+    return accum;
+
+  case ava_put_expander:
+    accum = AVA_ASCII9_STRING("expander:");
     accum = ava_strcat(accum, unit->v.string);
     return accum;
 
@@ -312,6 +317,18 @@ deftest(variable_simplification_rejects_empty_variable_name_at_end) {
 
 deftest(variable_simplification_context_variable) {
   parse_like("{((bareword:#var# bareword:$))}", "$");
+}
+
+deftest(basic_expander) {
+  parse_like("{expander:foo}", "$$foo");
+}
+
+deftest(lone_double_dollar_not_expander) {
+  parse_failure("$$", "Empty");
+}
+
+deftest(double_dollar_with_dollar_later_not_expander) {
+  parse_failure("$$foo$bar", "Empty");
 }
 
 deftest(parse_empty_substitution) {

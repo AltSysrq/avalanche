@@ -242,6 +242,10 @@ static void ava_intr_user_macro_body_translate_unit(
                                                 visibility);
     break;
 
+  case ava_put_expander:
+    /* TODO */
+    abort();
+
   case ava_put_astring:
     ava_pcmb_astring(builder, unit->v.string);
     break;

@@ -1,5 +1,5 @@
 /*-
- * Copyright (c) 2015, Jason Lingle
+ * Copyright (c) 2015, 2016, Jason Lingle
  *
  * Permission to  use, copy,  modify, and/or distribute  this software  for any
  * purpose  with or  without fee  is hereby  granted, provided  that the  above
@@ -474,21 +474,34 @@ static ava_parse_unit_read_result ava_parse_bareword(
   size_t strlen, begin, end, i;
   ava_parse_unit* unit, * subunit, * varword;
   ava_parse_statement* statement, * substatement;
-  ava_bool has_dollar;
+  ava_bool has_dollar, has_dollar_beyond_ix_1;
   ava_bool in_var;
 
   strlen = ava_strlen(token->str);
   content = ava_string_to_cstring_buff(strtmp, token->str);
 
   has_dollar = ava_false;
-  for (i = 0; i < strlen && !has_dollar; ++i)
+  has_dollar_beyond_ix_1 = ava_false;
+  for (i = 0; i < strlen; ++i) {
     has_dollar |= '$' == content[i];
+    has_dollar_beyond_ix_1 |= '$' == content[i] && i > 1;
+  }
 
   if (!has_dollar) {
     unit = AVA_NEW(ava_parse_unit);
     unit->type = ava_put_bareword;
     ava_parse_location_from_lex(&unit->location, context, token);
     unit->v.string = token->str;
+    TAILQ_INSERT_TAIL(dst, unit, next);
+    return ava_purr_ok;
+  }
+
+  if (strlen > 2 && '$' == content[0] && '$' == content[1] &&
+      !has_dollar_beyond_ix_1) {
+    unit = AVA_NEW(ava_parse_unit);
+    unit->type = ava_put_expander;
+    ava_parse_location_from_lex(&unit->location, context, token);
+    unit->v.string = ava_string_slice(token->str, 2, strlen);
     TAILQ_INSERT_TAIL(dst, unit, next);
     return ava_purr_ok;
   }
