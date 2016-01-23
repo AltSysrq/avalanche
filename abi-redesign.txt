@@ -119,14 +119,14 @@ pointer stored within the value proper.
 - A value with bit 0 set and at least one of bits 56..63 set is an ASCII9
   string.
 
-- A value with bits 0 and 1 set, bits 56..63 clear, and at least one of bits
-  1..54 set encodes a 56-bit floating point value. These floats have the same
-  format as IEEE-754 binary64, except that the lowest 9 precision bits are
-  dropped. This is essentially a float being stashed in the unused portion of
-  what would otherwise be a (denormalised) ASCII9 string, but forcing the
-  lowest bit to be set both eliminates an edge case where the value _would_ be
-  the ASCII9 empty string, and allows detecting floats by rotating the value 7
-  bits left and checking whether the lower 9 bits are 0x18.
+- A value with bits 0 and 1 set and bits 56..63 clear set encodes a 56-bit
+  floating point value. These floats have the same format as IEEE-754 binary64,
+  except that the lowest 9 precision bits are dropped. This is essentially a
+  float being stashed in the unused portion of what would otherwise be a
+  (denormalised) ASCII9 string, but forcing the lowest bit to be set both
+  eliminates an edge case where the value _would_ be the ASCII9 empty string,
+  and allows detecting floats by rotating the value 7 bits left and checking
+  whether the lower 9 bits are 0x18.
 
 - A value with bits 2..3 clear encodes a signed 60-bit integer in the upper 60
   bits. Integers which do not fit in 60 bits are represented as second-class
