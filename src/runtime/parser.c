@@ -104,6 +104,11 @@ static ava_parse_unit_read_result ava_parse_bareword(
   ava_compile_error_list* errors,
   const ava_parse_context* context,
   const ava_lex_result* token);
+static ava_parse_unit_read_result ava_parse_keysym(
+  ava_parse_unit_list* dst,
+  ava_compile_error_list* errors,
+  const ava_parse_context* context,
+  const ava_lex_result* token);
 static ava_parse_unit_read_result ava_parse_stringoid(
   ava_parse_unit_list* dst,
   ava_compile_error_list* errors,
@@ -220,6 +225,9 @@ static ava_parse_unit_read_result ava_parse_unit_read(
     switch (lexed->type) {
     case ava_ltt_bareword:
       return ava_parse_bareword(dst, errors, context, lexed);
+
+    case ava_ltt_keysym:
+      return ava_parse_keysym(dst, errors, context, lexed);
 
     case ava_ltt_astring:
     case ava_ltt_lstring:
@@ -591,6 +599,49 @@ static ava_parse_unit_read_result ava_parse_bareword(
   }
 
   TAILQ_INSERT_TAIL(dst, unit, next);
+  return ava_purr_ok;
+}
+
+static ava_parse_unit_read_result ava_parse_keysym(
+  ava_parse_unit_list* dst,
+  ava_compile_error_list* errors,
+  const ava_parse_context* context,
+  const ava_lex_result* token
+) {
+  ava_parse_unit* subst, * unit;
+  ava_parse_statement* stmt;
+  size_t ix;
+
+  for (ix = 0; ix < ava_strlen(token->str); ++ix) {
+    if ('$' == ava_string_index(token->str, ix)) {
+      ava_parse_error_on_lex_off(
+        errors, context, token,
+        ava_error_dollar_sign_in_keysym(), ix, ix + 1);
+      break;
+    }
+  }
+
+  subst = AVA_NEW(ava_parse_unit);
+  subst->type = ava_put_substitution;
+  ava_parse_location_from_lex(&subst->location, context, token);
+  TAILQ_INIT(&subst->v.statements);
+  stmt = AVA_NEW(ava_parse_statement);
+  TAILQ_INIT(&stmt->units);
+  TAILQ_INSERT_TAIL(&subst->v.statements, stmt, next);
+
+  unit = AVA_NEW(ava_parse_unit);
+  unit->type = ava_put_bareword;
+  ava_parse_location_from_lex(&unit->location, context, token);
+  unit->v.string = AVA_ASCII9_STRING("#keysym#");
+  TAILQ_INSERT_TAIL(&stmt->units, unit, next);
+
+  unit = AVA_NEW(ava_parse_unit);
+  unit->type = ava_put_bareword;
+  ava_parse_location_from_lex(&unit->location, context, token);
+  unit->v.string = ava_string_slice(token->str, 1, ava_strlen(token->str));
+  TAILQ_INSERT_TAIL(&stmt->units, unit, next);
+
+  TAILQ_INSERT_TAIL(dst, subst, next);
   return ava_purr_ok;
 }
 

@@ -77,6 +77,11 @@ static ava_lex_status ava_lex_bareword(
   const ava_lex_pos* start,
   const ava_lex_pos* frag_start,
   ava_lex_context* lex);
+static ava_lex_status ava_lex_keysym(
+  ava_lex_result* dst,
+  const ava_lex_pos* start,
+  const ava_lex_pos* frag_start,
+  ava_lex_context* lex);
 static ava_lex_status ava_lex_newline(
   ava_lex_result* dst,
   const ava_lex_pos* start,
@@ -422,6 +427,7 @@ ava_lex_status ava_lex_lex(ava_lex_result* dst, ava_lex_context* lex) {
       COMNLP = (COM? NL WS*)+ ;
       BS = [\\] ;
       NS = LEGALNL \ [()\[\]{}\\;"`] \ WS ;
+      AAL = [a-zA-Z] ;
       SD = ["`] ;
       ESCT = ([\\"`'abefnrtv]|"x"[0-9a-fA-F]{2}) ;
       STRINGB = LEGALNL \ BS \ SD ;
@@ -430,6 +436,7 @@ ava_lex_status ava_lex_lex(ava_lex_result* dst, ava_lex_context* lex) {
       ILLEGAL_STR = ((ILLEGAL \ [\x00])+ | "\x00") ;
 
       <Ground> NS+              { IND();  ACCEPT(ava_lex_bareword); }
+      <Ground> BS AAL NS*       { IND();  ACCEPT(ava_lex_keysym); }
       <Ground> WS+              {         IGNORE(); }
       <Ground> NL               {         ACCEPT(ava_lex_newline); }
       <Ground> BS WS* COMNLP    {         IGNORE(); }
@@ -506,6 +513,15 @@ static ava_lex_status ava_lex_bareword(
   ava_lex_context* lex
 ) {
   return ava_lex_put_token(dst, ava_ltt_bareword, start, &lex->p, lex);
+}
+
+static ava_lex_status ava_lex_keysym(
+  ava_lex_result* dst,
+  const ava_lex_pos* start,
+  const ava_lex_pos* frag_start,
+  ava_lex_context* lex
+) {
+  return ava_lex_put_token(dst, ava_ltt_keysym, start, &lex->p, lex);
 }
 
 static ava_lex_status ava_lex_newline(

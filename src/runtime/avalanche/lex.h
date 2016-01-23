@@ -1,5 +1,5 @@
 /*-
- * Copyright (c) 2015, Jason Lingle
+ * Copyright (c) 2015, 2016, Jason Lingle
  *
  * Permission to  use, copy,  modify, and/or distribute  this software  for any
  * purpose  with or  without fee  is hereby  granted, provided  that the  above
@@ -60,6 +60,11 @@ typedef enum {
    * Tke token is a string enclosed in back-quotes.
    */
   ava_ltt_lrstring,
+  /**
+   * The token is a Keysym, ie, an ASCII-letter-initiated bareword prefixed
+   * with a backslash.
+   */
+  ava_ltt_keysym,
   /**
    * The token is a left-parenthesis starting a substitution.
    */

@@ -2594,6 +2594,14 @@ set defs {
 
   # cerror C5162 ambiguous_expander with other ambiguous_* errors
 
+  serror C5163 dollar_sign_in_keysym {} {
+    msg "Stray '$' in keysym token."
+    explanation {
+      The indicated keysym reference contains a '$' character, which is not
+      supported syntax.
+    }
+  }
+
   cerror X9000 xcode_dupe_label {{ava_value label}} {
     msg "P-Code label present in function more than once: %label%"
     explanation {

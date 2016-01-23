@@ -386,7 +386,7 @@ expression `((#var# $))`, called the "context variable".
 Keysym tokens then undergo keysym simplification. Any Keysym token is repaced
 with a Substitution containing the bareword `#keysym#` and a Bareword whose
 string value is the same as the Keysym (which does not include the leading
-backslash).
+backslash). It is an error if the Keysym contains a dollar sign.
 
 Next, the parser performs string regrouping on the direct contents of each
 Semiliteral. Units are first grouped into sequences of contiguous units where

@@ -1,5 +1,5 @@
 /*-
- * Copyright (c) 2015, Jason Lingle
+ * Copyright (c) 2015, 2016, Jason Lingle
  *
  * Permission to  use, copy,  modify, and/or distribute  this software  for any
  * purpose  with or  without fee  is hereby  granted, provided  that the  above
@@ -623,6 +623,27 @@ deftest(spread_must_be_independent) {
   start("foo\\*bar");
   lex(ava_ltt_bareword, "foo");
   error();
+  error();
+  end();
+}
+
+deftest(keysym_at_bol) {
+  start("\\foo");
+  lex(ava_ltt_keysym, "\\foo");
+  end();
+}
+
+deftest(keysym_in_middle) {
+  start("foo \\bar\n");
+  lex(ava_ltt_bareword, "foo");
+  lex(ava_ltt_keysym, "\\bar");
+  lex(ava_ltt_newline, "\n");
+  end();
+}
+
+deftest(keysym_must_be_independent) {
+  start("foo\\bar");
+  lex(ava_ltt_bareword, "foo");
   error();
   end();
 }
