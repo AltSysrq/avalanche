@@ -627,3 +627,11 @@ deftest(compound_spread_over_compound_subscript) {
 deftest(spread_over_variable) {
   parse_like("{\\*((bareword:#var# bareword:foo))}", "\\*$foo");
 }
+
+deftest(basic_keysym) {
+  parse_like("{(bareword:#keysym# bareword:foo)}", "\\foo");
+}
+
+deftest(keysym_with_dollar) {
+  parse_failure("\\foo$bar", "C5163");
+}

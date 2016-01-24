@@ -1,0 +1,8 @@
+reqmod helpers/test
+reqmod helpers/define-keysym-and-alias
+
+test.register cross-module-keysyms {
+  test.assert \original-keysym b== \aliased-keysym
+  test.assert \original-keysym b!= \other-keysym
+  test.pass 42
+}

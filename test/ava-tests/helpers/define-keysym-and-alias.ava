@@ -1,0 +1,3 @@
+KEYSYM \original-keysym
+ALIAS aliased-keysym = original-keysym
+KEYSYM \other-keysym

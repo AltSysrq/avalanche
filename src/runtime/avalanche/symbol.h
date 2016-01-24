@@ -99,6 +99,14 @@ typedef enum {
    */
   ava_st_function_macro,
   /**
+   * A symbol which is a keysym.
+   *
+   * Keysym symbols carry no information other than their own identity. This is
+   * not found in full_name, since that may reflect an alias; this is instead
+   * copied to v.keysym.
+   */
+  ava_st_keysym,
+  /**
    * A symbol which is some "other" type.
    *
    * "Other" symbols have their type identified by the open
@@ -263,6 +271,11 @@ struct ava_symbol_s {
        */
       const void* userdata;
     } other;
+
+    /**
+     * The true identifier for a keysym symbol.
+     */
+    ava_string keysym;
   } v;
 };
 

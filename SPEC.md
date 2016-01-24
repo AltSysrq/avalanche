@@ -195,6 +195,9 @@ A Backslash followed by an Asterisk `*` forms a Spread token. Any token
 immediately following the Spread token is considered Independent. The Spread
 token must always be Independent.
 
+A Backslash followed by an ASCII letter then any number of bareword characters
+is a Keysym token. The Keysym token must always be independent.
+
 Modules, Packages, and Names
 ----------------------------
 
@@ -379,6 +382,11 @@ For example, the bareword `pre$a$mid$x$post` is equivalent to the input string
 
 As a special exception to the above, the bareword `$` is expanded to the
 expression `((#var# $))`, called the "context variable".
+
+Keysym tokens then undergo keysym simplification. Any Keysym token is repaced
+with a Substitution containing the bareword `#keysym#` and a Bareword whose
+string value is the same as the Keysym (which does not include the leading
+backslash). It is an error if the Keysym contains a dollar sign.
 
 Next, the parser performs string regrouping on the direct contents of each
 Semiliteral. Units are first grouped into sequences of contiguous units where

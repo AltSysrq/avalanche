@@ -1,0 +1,10 @@
+reqmod helpers/test
+
+keysym \foo
+keysym \bar
+
+test.register basic-keysyms {
+  test.assert \foo b== \foo
+  test.assert \foo b!= \bar
+  test.pass 42
+}

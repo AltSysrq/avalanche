@@ -1,5 +1,5 @@
 /*-
- * Copyright (c) 2015, Jason Lingle
+ * Copyright (c) 2015, 2016, Jason Lingle
  *
  * Permission to  use, copy,  modify, and/or distribute  this software  for any
  * purpose  with or  without fee  is hereby  granted, provided  that the  above
@@ -293,6 +293,7 @@ static void ava_intr_alias_cg_define(
     case ava_st_control_macro:
     case ava_st_operator_macro:
     case ava_st_function_macro:
+    case ava_st_expander_macro:
       if (alias->new_symbol->visibility > ava_v_private) {
         if (ava_intr_user_macro_eval ==
             alias->new_symbol->v.macro.macro_subst){
@@ -313,6 +314,14 @@ static void ava_intr_alias_cg_define(
               &alias->header.location, alias->old_symbol->full_name));
         }
       } break;
+
+    case ava_st_keysym:
+      if (alias->new_symbol->visibility > ava_v_private) {
+        AVA_PCGB(keysym, alias->new_symbol->full_name,
+                 alias->new_symbol->v.keysym,
+                 alias->new_symbol->visibility > ava_v_internal);
+      }
+      break;
 
     default:
       if (alias->new_symbol->visibility > ava_v_private) {

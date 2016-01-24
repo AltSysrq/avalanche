@@ -711,6 +711,7 @@ noexcept {
   case ava_pcgt_src_pos:
   case ava_pcgt_export:
   case ava_pcgt_macro:
+  case ava_pcgt_keysym:
   case ava_pcgt_init:
     break;
   }
@@ -1607,6 +1608,7 @@ noexcept {
     case ava_pcgt_decl_sxt:
     case ava_pcgt_export:
     case ava_pcgt_macro:
+    case ava_pcgt_keysym:
     case ava_pcgt_load_pkg:
     case ava_pcgt_load_mod:
     case ava_pcgt_init:
