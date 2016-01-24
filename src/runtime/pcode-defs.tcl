@@ -398,6 +398,18 @@ struct global g {
     }
   }
 
+  # Defines a keysym symbol exported by this P-Code unit.
+  elt keysym {
+    # The name of the symbol as exposed to Avalanche code.
+    str name
+    # The actual identity of this keysym.
+    str id
+    # Whether this keysym should be reexported to composite P-Code units.
+    bool reexport {
+      prop reexport
+    }
+  }
+
   # Declares that this P-Code unit depends upon a given package.
   #
   # Semantics: Before module-dependency initialisation, all load-pkg statements

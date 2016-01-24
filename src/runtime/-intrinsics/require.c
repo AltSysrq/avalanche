@@ -1,5 +1,5 @@
 /*-
- * Copyright (c) 2015, Jason Lingle
+ * Copyright (c) 2015, 2016, Jason Lingle
  *
  * Permission to  use, copy,  modify, and/or distribute  this software  for any
  * purpose  with or  without fee  is hereby  granted, provided  that the  above
@@ -286,6 +286,10 @@ static void ava_intr_require_import_cg_define(
       AVA_PCGB(S_ext_bss, v->name, v->thr_local);
   } break;
 
+  case ava_pcgt_keysym:
+    /* Nothing to do */
+    break;
+
   default: abort();
   }
 }
@@ -452,6 +456,17 @@ void ava_macsub_insert_module(
       definer->symbol = symbol;
       definer->defined = ava_false;
       symbol->definer = (ava_ast_node*)definer;
+    } break;
+
+    case ava_pcgt_keysym: {
+      const ava_pcg_keysym* k = (const ava_pcg_keysym*)global;
+
+      symbol = AVA_NEW(ava_symbol);
+      symbol->type = ava_st_keysym;
+      symbol->level = 0;
+      symbol->visibility = (k->reexport? ava_v_public : ava_v_internal);
+      symbol->full_name = k->name;
+      symbol->v.keysym = k->id;
     } break;
 
     default: break;

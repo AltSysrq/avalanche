@@ -34,6 +34,7 @@ ava_string ava_symbol_type_name(const ava_symbol* sym) {
   AVA_STATIC_STRING(control_macro_str, "control macro");
   AVA_STATIC_STRING(operator_macro_str, "operator macro");
   AVA_STATIC_STRING(function_macro_str, "function macro");
+  const ava_string keysym_str = AVA_ASCII9_STRING("keysym");
 
   switch (sym->type) {
   case ava_st_global_variable: return global_variable_str;
@@ -45,6 +46,7 @@ ava_string ava_symbol_type_name(const ava_symbol* sym) {
   case ava_st_control_macro: return control_macro_str;
   case ava_st_operator_macro: return operator_macro_str;
   case ava_st_function_macro: return function_macro_str;
+  case ava_st_keysym: return keysym_str;
   case ava_st_other:
     return ava_string_of_cstring(sym->v.other.type->name);
   }

@@ -1,0 +1,11 @@
+namespace foo {
+  keysym \plugh
+}
+
+namespace bar {
+  keysym \plugh
+}
+
+import foo *
+import bar *
+x = \plugh

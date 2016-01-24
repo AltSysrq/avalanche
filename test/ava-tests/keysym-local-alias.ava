@@ -1,0 +1,9 @@
+reqmod helpers/test
+
+keysym \foo
+alias bar = foo
+
+test.register keysym-local-alias {
+  test.assert \foo b== \bar
+  test.pass 42
+}

@@ -913,6 +913,20 @@ set defs {
     }
   }
 
+  cerror C5164 ambiguous_keysym {
+    {ava_string name} {ava_integer count}
+    {ava_string exa} {ava_string exb}
+  } {
+    msg "Keysym reference is ambiguous: %name%; found %count% results, including %exa% and %exb%"
+    explanation {
+      The given name used as a keysym reference could refer to more than one
+      symbol.
+
+      Keysyms occupy the same namespace as other symbols, so the conflicting
+      symbols are not necessarily keysyms.
+    }
+  }
+
   cerror C5003 no_such_function {{ava_string name}} {
     msg "No such function: %name%"
     explanation {
@@ -2599,6 +2613,35 @@ set defs {
     explanation {
       The indicated keysym reference contains a '$' character, which is not
       supported syntax.
+    }
+  }
+
+  cerror C5163 no_such_keysym {{ava_string name}} {
+    msg "No such keysym: %name%"
+    explanation {
+      A reference was made to a keysym of the given name, but no such symbol
+      exists in the current context.
+    }
+  }
+
+  # cerror C5164 ambiguous_keysym with other ambiguous_* errors
+
+  cerror C5165 not_a_keysym {{ava_string name} {ava_string actual}} {
+    msg "Not a keysym: %name% (actually a(n) %actual%)"
+    explanation {
+      The given symbol was referenced as a keysym, but it is some other type of
+      symbol.
+    }
+  }
+
+  cerror C5166 defkeysym_invalid_syntax {} {
+    msg "Invalid syntax for keysym definition (forgot backslash?)"
+    explanation {
+      The correct syntax for the keysym macro family is
+
+        keysym \name
+
+      Note the inclusion of the backslash when defining the name.
     }
   }
 

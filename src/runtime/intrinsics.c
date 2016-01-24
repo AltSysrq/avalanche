@@ -32,6 +32,7 @@
 #include "-intrinsics/esoterica.h"
 #include "-intrinsics/extern.h"
 #include "-intrinsics/if.h"
+#include "-intrinsics/keysym.h"
 #include "-intrinsics/loop.h"
 #include "-intrinsics/namespace.h"
 #include "-intrinsics/pasta.h"
@@ -91,6 +92,9 @@ void ava_register_intrinsics(ava_macsub_context* context) {
   DEFINE("Extern",      CTL,    INTERNAL,       extern);
   DEFINE("EXTERN",      CTL,    PUBLIC,         extern);
   DEFINE("defer",       CTL,    NULL,           defer);
+  DEFINE("keysym",      CTL,    PRIVATE,        defkeysym);
+  DEFINE("Keysym",      CTL,    INTERNAL,       defkeysym);
+  DEFINE("KEYSYM",      CTL,    PUBLIC,         defkeysym);
   DEFINE("fun",         CTL,    PRIVATE,        fun);
   DEFINE("Fun",         CTL,    INTERNAL,       fun);
   DEFINE("FUN",         CTL,    PUBLIC,         fun);
@@ -98,6 +102,7 @@ void ava_register_intrinsics(ava_macsub_context* context) {
   DEFINE("Macro",       CTL,    INTERNAL,       user_macro);
   DEFINE("MACRO",       CTL,    PUBLIC,         user_macro);
   DEFINE("goto",        CTL,    NULL,           goto);
+  DEFINE("#keysym#",    CTL,    NULL,           keysym);
   DEFINE("if",          CTL,    NULL,           if);
   DEFINE("each",        CTL,    "each",         loop);
   DEFINE("for",         CTL,    "for",          loop);

@@ -48,6 +48,7 @@
            "in"
            "if"
            "import"
+           "keysym" "Keysym" "KEYSYM"
            "macro" "Macro" "MACRO"
            "namespace"
            "on-any-bad-format"

@@ -255,6 +255,13 @@ deftest(interface_changes_exported_bss_to_ext_bss) {
     "[export 1 true foo]\n");
 }
 
+deftest(interface_keeps_keysym) {
+  to_interface_like(
+    "[keysym foo foo false]\n",
+
+    "[keysym foo foo false]\n");
+}
+
 deftest(linker_emits_error_on_module_conflict) {
   ava_compile_error_list errors;
   ava_pcode_linker* linker = ava_pcode_linker_new();
@@ -302,13 +309,15 @@ deftest(reexported_exports_kept) {
   link_modules_like(
     "[ext-var [ava bar]]\n"
     "[export 0 true bar]\n"
-    "[macro true foo 6 0 [die]]\n",
+    "[macro true foo 6 0 [die]]\n"
+    "[keysym foo foo true]\n",
     ava_false,
 
     "module",
     "[ext-var [ava bar]]\n"
     "[export 0 true bar]\n"
-    "[macro true foo 6 0 [die]]\n");
+    "[macro true foo 6 0 [die]]\n"
+    "[keysym foo foo true]\n");
 }
 
 deftest(nonreexported_exports_deleted) {
@@ -319,7 +328,8 @@ deftest(nonreexported_exports_deleted) {
     "module",
     "[ext-var [ava bar]]\n"
     "[export 0 false bar]\n"
-    "[macro false foo 6 0 [die]]\n");
+    "[macro false foo 6 0 [die]]\n"
+    "[keysym foo foo false]\n");
 }
 
 deftest(global_refs_relinked_after_export_deletions) {

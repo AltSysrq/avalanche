@@ -265,6 +265,7 @@ static ava_bool ava_pcode_keep_in_interface(
 
   case ava_pcgt_export:
   case ava_pcgt_macro:
+  case ava_pcgt_keysym:
     return ava_true;
 
   case ava_pcgt_load_pkg:
