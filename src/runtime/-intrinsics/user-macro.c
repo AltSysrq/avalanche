@@ -39,7 +39,6 @@
 
 typedef struct {
   ava_ast_node header;
-  ava_string self_name;
   ava_symbol* symbol;
   ava_bool defined;
 } ava_intr_user_macro;
@@ -113,8 +112,7 @@ ava_macro_subst_result ava_intr_user_macro_subst(
   ava_symbol_type type = -1;
   ava_integer precedence = -1;
   ava_pcode_macro_list* body;
-  ava_intr_user_macro* this;
-  ava_symbol* symbol;
+  ava_ast_node* this;
   ava_visibility visibility;
 
   visibility = *(const ava_visibility*)self->v.macro.userdata;
@@ -189,6 +187,26 @@ ava_macro_subst_result ava_intr_user_macro_subst(
 
   body = ava_intr_user_macro_make_body(context, definition_begin,
                                        visibility);
+  this = ava_intr_user_macro_put(
+    context, type, visibility, name, precedence, body,
+    &provoker->location, &name_unit->location);
+
+  return (ava_macro_subst_result) {
+    .status = ava_mss_done,
+    .v = { .node = this },
+  };
+}
+
+ava_ast_node* ava_intr_user_macro_put(
+  ava_macsub_context* context, ava_symbol_type type,
+  ava_visibility visibility, ava_string name,
+  int precedence, ava_pcode_macro_list* body,
+  const ava_compile_location* main_location,
+  const ava_compile_location* name_location
+) {
+  ava_intr_user_macro* this;
+  ava_symbol* symbol;
+
   this = AVA_NEW(ava_intr_user_macro);
   symbol = AVA_NEW(ava_symbol);
 
@@ -202,17 +220,13 @@ ava_macro_subst_result ava_intr_user_macro_subst(
   symbol->v.macro.userdata = body;
 
   this->header.v = &ava_intr_user_macro_vtable;
-  this->header.location = provoker->location;
+  this->header.location = *main_location;
   this->header.context = context;
   this->symbol = symbol;
-  this->self_name = self->full_name;
 
-  ava_macsub_put_symbol(context, symbol, &name_unit->location);
+  ava_macsub_put_symbol(context, symbol, name_location);
 
-  return (ava_macro_subst_result) {
-    .status = ava_mss_done,
-    .v = { .node = (ava_ast_node*)this },
-  };
+  return (ava_ast_node*)this;
 }
 
 static ava_pcode_macro_list* ava_intr_user_macro_make_body(
@@ -563,8 +577,7 @@ static ava_string ava_intr_user_macro_to_string(
 ) {
   ava_string accum;
 
-  accum = node->self_name;
-  accum = ava_strcat(accum, AVA_ASCII9_STRING(" "));
+  accum = AVA_ASCII9_STRING("macro ");
   accum = ava_strcat(accum, node->symbol->full_name);
   switch (node->symbol->type) {
   case ava_st_control_macro:

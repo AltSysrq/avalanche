@@ -1,0 +1,15 @@
+reqmod helpers/test
+reqmod helpers/assert-equals-int
+
+seqenum foo {
+  a
+  b
+  c
+  d = $$b
+}
+
+test.register enum-ref-self-in-definition {
+  assert-equals-int 1 $$foo.b
+  assert-equals-int 1 $$foo.d
+  test.pass 42
+}

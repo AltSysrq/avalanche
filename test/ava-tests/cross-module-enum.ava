@@ -1,0 +1,10 @@
+reqmod helpers/test
+reqmod helpers/assert-equals-int
+reqmod helpers/decl-public-enum
+
+test.register cross-module-enum {
+  assert-equals-int 0 $$some-enum.zero
+  assert-equals-int 1 $$some-enum.one
+  assert-equals-int 2 $$some-enum.two
+  test.pass 42
+}

@@ -1,0 +1,24 @@
+reqmod helpers/test
+reqmod helpers/assert-equals-int
+
+seqenum {
+  zero
+  one
+  two
+}
+
+seqenum nss {
+  three = 3
+  four
+  six = 6
+}
+
+test.register basic-seqenum {
+  assert-equals-int 0 $$zero
+  assert-equals-int 1 $$one
+  assert-equals-int 2 $$two
+  assert-equals-int 3 $$nss.three
+  assert-equals-int 4 $$nss.four
+  assert-equals-int 6 $$nss.six
+  test.pass 42
+}

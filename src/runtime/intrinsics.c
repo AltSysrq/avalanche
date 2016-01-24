@@ -29,6 +29,7 @@
 #include "-intrinsics/block.h"
 #include "-intrinsics/defun.h"
 #include "-intrinsics/eh.h"
+#include "-intrinsics/enum.h"
 #include "-intrinsics/esoterica.h"
 #include "-intrinsics/extern.h"
 #include "-intrinsics/if.h"
@@ -83,6 +84,9 @@ void ava_register_intrinsics(ava_macsub_context* context) {
   DEFINE("alias",       CTL,    PRIVATE,        alias);
   DEFINE("Alias",       CTL,    INTERNAL,       alias);
   DEFINE("ALIAS",       CTL,    PUBLIC,         alias);
+  DEFINE("bitenum",     CTL,    PRIVATE,        bitenum);
+  DEFINE("Bitenum",     CTL,    INTERNAL,       bitenum);
+  DEFINE("BITENUM",     CTL,    PUBLIC,         bitenum);
   DEFINE("block-last",  CTL,    LAST,           block);
   DEFINE("block-only",  CTL,    ONLY,           block);
   DEFINE("block-void",  CTL,    VOID,           block);
@@ -117,6 +121,9 @@ void ava_register_intrinsics(ava_macsub_context* context) {
   DEFINE("ret",         CTL,    NULL,           ret);
   DEFINE("#throw#",     CTL,    NULL,           throw);
   DEFINE("try",         CTL,    NULL,           try);
+  DEFINE("seqenum",     CTL,    PRIVATE,        seqenum);
+  DEFINE("Seqenum",     CTL,    INTERNAL,       seqenum);
+  DEFINE("SEQENUM",     CTL,    PUBLIC,         seqenum);
   DEFINE("#set#",       CTL,    NULL,           set);
   DEFINE("#update#",    CTL,    "",             set);
   DEFINE("struct",      CTL,    PRIVATE,        struct);
