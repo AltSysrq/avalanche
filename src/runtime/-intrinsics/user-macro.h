@@ -18,6 +18,8 @@
 
 #include "../avalanche/parser.h"
 #include "../avalanche/macsub.h"
+#include "../avalanche/symbol.h"
+#include "../avalanche/pcode.h"
 
 /**
  * The `macro`, `Macro`, and `MACRO` control macros.
@@ -54,5 +56,27 @@ ava_macro_subst_result ava_intr_user_macro_eval(
   const ava_parse_statement* statement,
   const ava_parse_unit* provoker,
   ava_bool* consumed_other_statements);
+
+/**
+ * Defines a user macro in the given context.
+ *
+ * @param context The macro substitution context in which the macro will be
+ * defined.
+ * @param type The symbol type to create.
+ * @param visibility The visibility of the symbol to create.
+ * @param name The base name of the symbol to define.
+ * @param precedence The macro precedence.
+ * @param body The body of the macro.
+ * @param main_location The location to report for the resulting AST node.
+ * @param name_location The location to report if an issue with the name
+ * arises.
+ * @return An AST node which defines the macro.
+ */
+ava_ast_node* ava_intr_user_macro_put(
+  ava_macsub_context* context, ava_symbol_type type,
+  ava_visibility visibility, ava_string name,
+  int precedence, ava_pcode_macro_list* body,
+  const ava_compile_location* main_location,
+  const ava_compile_location* name_location);
 
 #endif /* AVA_RUNTIME__INTRINSICS_USER_MACRO_H_ */

@@ -31,6 +31,7 @@
    (cons (regexp-opt
           (list
            "alias" "Alias" "ALIAS"
+           "bitenum" "Bitenum" "BITENUM"
            "break"
            "collect" "collecting"
            "continue"
@@ -55,6 +56,7 @@
            "pasta"
            "reqmod" "reqpkg"
            "ret"
+           "seqenum" "Seqenum" "SEQENUM"
            "struct" "Struct" "STRUCT"
            "throw" "throw-err" "throw-fmt"
            "try"

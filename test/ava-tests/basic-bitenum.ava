@@ -1,0 +1,23 @@
+reqmod helpers/test
+reqmod helpers/assert-equals-int
+
+bitenum {
+  one
+  two
+  four
+  eight
+  nine = 9
+  eighteen
+  thirty-six
+}
+
+test.register basic-bitenum {
+  assert-equals-int 1 $$one
+  assert-equals-int 2 $$two
+  assert-equals-int 4 $$four
+  assert-equals-int 8 $$eight
+  assert-equals-int 9 $$nine
+  assert-equals-int 18 $$eighteen
+  assert-equals-int 36 $$thirty-six
+  test.pass 42
+}

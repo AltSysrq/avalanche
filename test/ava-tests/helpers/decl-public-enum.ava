@@ -1,0 +1,5 @@
+SEQENUM some-enum {
+  zero
+  one
+  two
+}
