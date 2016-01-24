@@ -3,7 +3,7 @@ AC_INIT([avalanche], [0.0.0], [jason@lin.gl])
 AC_CANONICAL_TARGET
 AC_CANONICAL_BUILD
 AC_CANONICAL_HOST
-AC_CONFIG_SRCDIR([src/.c])
+AC_CONFIG_SRCDIR([hello.ava])
 AM_INIT_AUTOMAKE([1.11])
 AM_SILENT_RULES(yes)
 AC_CONFIG_MACRO_DIR([m4])
@@ -179,5 +179,8 @@ LLVM_LIBS="$LLVM_LIBS `$LLVM_CONFIG --system-libs`"
 AC_SUBST([LLVM_LIBS])
 AC_MSG_RESULT([done])
 
-AC_CONFIG_FILES([Makefile src/Makefile src/runtime/Makefile test/Makefile])
+AC_CONFIG_FILES([Makefile
+                 bootstrap-runtime/src/Makefile
+                 bootstrap-runtime/src/runtime/Makefile
+                 bootstrap-runtime/test/Makefile])
 AC_OUTPUT

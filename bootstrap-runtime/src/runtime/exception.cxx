@@ -23,8 +23,8 @@
 #include <string.h>
 #include <assert.h>
 
-#include "../../contrib/libbacktrace/backtrace.h"
-#include "../../contrib/libbacktrace/backtrace-supported.h"
+#include "../../../contrib/libbacktrace/backtrace.h"
+#include "../../../contrib/libbacktrace/backtrace-supported.h"
 
 #define AVA__INTERNAL_INCLUDE 1
 #include "avalanche/defs.h"
