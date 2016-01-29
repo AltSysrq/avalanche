@@ -35,13 +35,13 @@ ava-config.h
 *-trait.h
 *.class
 *.bc
-src/bootstrap/bin
+bootstrap-runtime/src/bootstrap/bin
 *.avam
 *.avami
 *.avap
 *.avapi
 org.*.S
 *.avapi.c
-test/*.S
+bootstrap-runtime/test/*.S
 vgcore.*
 contrib/libbacktrace/backtrace-supported.h
