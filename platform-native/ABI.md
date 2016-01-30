@@ -7,7 +7,8 @@ This document describes the ABI of native Avalanche targets, insofar as it
 concerns code generators. Anything which is fully abstracted by a functional
 interface without performance loss is not described here. Functions tied to the
 ABI are not described in detail here, but rather in the documentation for the
-headers that declare them.
+headers that declare them. Other references to headers also imply more detailes
+documentation there, which is not generally repeated here.
 
 The Avalanche ABI is designed primarily with 64-bit architectures in mind. It
 is expected to be functional on 32-bit architectures as well, but will be much
@@ -142,22 +143,8 @@ library calls.
 
 An out-of-line string is identified by having a clear integer/special
 discriminator and a type of 1. The uniqueness bit is meaningful. The lower 4
-bits can be cleared to derive a pointer to the following structure:
-
-```
-  struct out_of_line_string {
-    intptr_t capacity;
-    intptr_t length;
-    char data[capacity];
-  };
-```
-
-The capacity is always a multiple of 8, and the total allocation size of the
-out-of-line string a multiple of 16. length is always strictly less than
-capacity. All bytes with an index greater than or equal to length are zero.
-
-Bit 0 of capacity is used to indicate whether the out-of-line string is
-gc-heap-allocated.
+bits can be cleared to derive a pointer to the `ava_ool_string` structure
+defined in abi.h.
 
 Note that this allows the data array to be treated as a C-string (though
 obviously embedded NULs will cause that string to be effectively truncated).
@@ -168,38 +155,13 @@ runtime and without needing to use any atomic operations. String data,
 including that beyond the index given by length, may be accessed through a
 standard value at any time without the use of atomic operations.
 
-The garbage collector is permitted to adjust the capacity of an out-of-line
-string at safepoints.
-
 The memory backing a string is assumed to not alias anything else.
 
 ## List
 
 A list is identified by having a clear integer/special discriminator and a type
 of 2. The uniqueness bit is meaningful. The lower 4 bits can be cleared to
-derive a pointer to the following structure:
-
-```
-  struct list {
-    intptr_t capacity;
-    intptr_t length;
-    standard_value data[capacity];
-  };
-```
-
-The total allocation size of the list is always a multiple of 16. Note that
-this means that a 64-bit pointer implies that capacity will always be even,
-while a 32-bit pointer implies that it will always be odd. The low bit of
-capacity is therefore used to indicate whether the value is gc-heap-allocated.
-length is always less than or equal to capacity.
-
-The first length elements in data are the contents of the list. Entries beyond
-length have undefined content. Values may be extracted from a list via a
-standard value at any time without the use of atomic operations. A list may be
-mutated in-place via a standard value with the uniqueness bit set at any time
-and without coordination with the runtime or atomic operations.
-
-The memory backing a list is assumed to not alias anything else.
+derive a pointer to the `ava_list` sturcture defined in abi.h.
 
 Mutating a list to reference a gc-heap-allocated value which could have been
 allocated after the list requires informing the memory manager about the
@@ -360,7 +322,7 @@ instructions.
 The base address of the page holding a gc-heap-allocated object can be derived
 by clearing the lower 12 bits. Every page of every managed heap begins with a
 qword called the heap-graph table, and then a 64-bit card table (encoded as a
-qword).
+qword). See the `ava_page_header` struct in abi.h for more details.
 
 ## Garbage-Collection Write Barriers
 
@@ -377,8 +339,9 @@ actually a gc-heap-allocated object:
 - The heap-graph table of `page(VAL)` is ORed into the heap-graph table of
   `page(PTR)` (leaving `page(VAL)` untouched).
 
-- The `n`th bit of `page(VAL)`'s card-table must be set, where `n` is equal to
-  `(FLD >> 12) & 63`.
+- The `n`th bit of `page(VAL)`'s card table must be set, where `n` is equal to
+  `(FLD >> 6) & 63`. Note that this means for an allocation spanning pages, a
+  bit in the card table may refer to multiple locations.
 
 These operations are performed without atomic operations; if a memory location
 is visible to multiple threads, it is not marked as gc-heap-allocated.
@@ -387,76 +350,15 @@ is visible to multiple threads, it is not marked as gc-heap-allocated.
 
 The garbage collector needs to be informed of how certain regions of memory are
 interpreted, such as the stack, static storage, and allocated objects of a
-non-intrinsic type; this is accomplished with a _memory layout_ table.
-
-```
-struct memory_layout {
-  intptr_t num_fields;
-  memory_layout_field fields[num_fields];
-};
-
-struct memory_layout_field {
-  /* C bitfield notation used for convenience.
-   * Bits assigned from least to most significant.
-   */
-  enum char {
-    standard_value = 0,
-    raw_integer_dword,
-    raw_integer_qword,
-    raw_pointer_precise,
-    raw_pointer_imprecise
-  } type : 3;
-  char intent_mutate : 1;
-  char weak : 1;
-  char reserved : 3;
-};
-```
-
-Fields in a memory region are allocated contiguously, except that padding is
-inserted immediately before a field if necessary to achieve standard C ABI
-alignment.
-
-`standard_value` indicates a Standard Value as described previously.
-`raw_integer_dword` and `raw_integer_qword` describe 32-bit and 64-bit fields,
-respectively, which have no particular interpretation. `raw_pointer_precise`
-and `raw_pointer_imprecise` describe the two flavours of raw pointers described
-previously.
-
-If `intent_mutate` is set (on a standard value), the garbage collector is not
-permitted to take any action that would require clearing the uniqueness bit of
-the value.
-
-If `weak` is set (on a standard value or pointer IPT), the garbage collector
-is not required to retain the pointee if there are no non-weak references to
-it. If, after collection, it no longer points to a valid object, the pointer
-is reset to point to the `ava_gc_broken_weak_pointer` symbol. If the field is a
-standard value, it becomes non-unique and is tagged a second-class object.
-
-The `reserved` bits should be zero.
+non-intrinsic type; this is accomplished with a _memory layout_ table, which is
+described under the `ava_memory_layout` structure in abi.h.
 
 ## Stack Maps and Safepoints
 
 Functions which could result in a call into the memory management system must
 mantain a _stack map_ which allows the garbage collector to manipulate live
 variables that live on the call stack. The format of a frame of the stack map
-is described below.
-
-```
-  struct stack_map {
-    const memory_layout* layout;
-    const stack_map* callers_stack_map;
-    void* parent_heap;
-    void* local_heap;
-    /* Fields described by layout */
-  };
-```
-
-`callers_stack_map` is a pointer to the stack map of the calling function, if
-there is one. This implies that functions necessarily pass their stack maps to
-their callees. Only values which are live at a safepoint must actually be
-written to the stackmap; temporaries need not be notated. Similarly, there is
-no reason to add raw integers to the stack map, since the garbage collector
-would simply ignore them.
+is described in the `ava_static_map` structure in abi.h.
 
 Functions do not normally initialise a `stack_map` directly. Rather, they pass
 the uninitialised `stack_map` along with `layout` and `callers_stack_map` to
@@ -465,6 +367,17 @@ This function returns the `stack_map` pointer itself. By using the return value
 instead of the declared `stack_map` itself, the call can be declared pure,
 allowing the optimiser to elide the call in functions or paths that do not need
 it.
+
+The lower two bits of the `stack_map` pointer (a heap handle) passed into
+`ava_gc_push_local_heap` as the caller's stack map are used to tag what the
+parent heap of the resulting heap handle should be:
+
+- 00: The parent heap is the local heap of the parent handle.
+- 01: The parent heap is the parent heap of the parent handle.
+- 10: The parent heap is the global heap of the parent handle.
+
+This is encoded this way because these bits are set by the caller of a
+function, which knows what escape scope the callee's return value will have.
 
 A safepoint in a function occurs whenever another function which could possibly
 call into the memory management system or which is such a call itself is made.
@@ -496,21 +409,9 @@ a greater address than the stack map containing it.)
 ## Static Maps
 
 Static maps inform the garbage collector about statically-allocated data that
-may point into the managed heap. They must be registered with the garbage
-collector before any pointers into the heap are written into them.
-
-Static maps have a similar physical format to that of stack maps:
-
-```
-  struct static_map {
-    const memory_layout* layout;
-    const static_map* next;
-    /* Fields described by layout */
-  };
-```
-
-The `next` field is set by the memory manager when the static map is
-registered.
+may point into a managed heap. They must be registered with the garbage
+collector before any pointers into a heap are written into them. They are
+described in more detail with the `ava_static_map` structure in abi.h.
 
 ## Voluntary Preemption and Suspension
 
@@ -530,3 +431,49 @@ something else that could block it from responding to world-stops, it must call
 Both of these are void functions taking a pointer to the caller's stack map as
 their only argument. Between these calls, no allocations may be performed using
 the suspended stack map.
+
+## Heaps and Heap Handles
+
+Avalanche takes an unusual approach in that it uses a hierarchy of heaps,
+rather than a single managed heap.
+
+ Every heap has exactly one parent (except a root heap, which has no parent)
+and any number of children. Heaps may contain pointers to other heaps with the
+following restrictions:
+
+- A child heap may reference memory in any of its direct or indirect parents
+  freely, without notifying the garbage collector, except for the allocation
+  order restriction described below.
+
+- A parent heap may reference memory in any of its direct or indirect childern,
+  provided it notifies the garbage collector by maintaining the heap graph and
+  card table. However, in doing so, the object that contains the reference must
+  not itself outlive the child heap it references and, if the child heap is
+  single-strand, any use of the allocation in the parent heap must be only by
+  the owner of the child heap.
+
+- No heap may reference memory in another heap which is not a direct or
+  indirect parent or child.
+
+Additionally, allocations are _ordered_. Even within a single heap, an
+allocation may only freely reference other allocations that occurred _before_
+it freely. If this is not necessarily the case, the mutator must update the
+heap graph and card table.
+
+Any heap is considered either single-strand or multi-strand. A
+single-strand heap may only be used by a single strand of execution and marks
+its allocations as gc-heap-allocated. A multi-strand heap permits sharing
+across strands at the cost of less efficient allocation and garbage collection.
+A multi-strand heap must have a multi-strand parent.
+
+A heap handle is a reference to a "local heap", a "parent heap", and a "global
+heap". It is represented simply as a pointer to a stack map. Each handle has
+its own parent handle, which is independent the parent of any of its heaps. A
+strand is assumed to have only one active handle at a time. Whenever a handle
+is passed to the memory manager, any handles not in the handle chain are
+assumed abandoned and no longer referencable from that strand, which may also
+result in destruction of heaps.
+
+Typically, the local heap of a handle is a heap allocated specifically for that
+call frame, while the parent heap is chosen by the caller of a function and
+used for the function's return value. The global heap is usually the root heap.
