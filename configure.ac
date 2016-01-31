@@ -61,6 +61,8 @@ AC_PROG_SED
 PKG_CHECK_MODULES([CHECK], [check], [], [:])
 PKG_CHECK_MODULES([LIBFFI], [libffi], [], [AC_MSG_ERROR(
 [libffi could not be found. Make sure libffi[[-dev]] is installed.])])
+PKG_CHECK_MODULES([LIBUV], [libuv], [], [AC_MSG_ERROR(
+[libuv could not be found. Make sure libuv[[-dev]] is installed.])])
 AC_SEARCH_LIBS([sin], [c m])
 AC_SEARCH_LIBS([strlcpy], [c bsd])
 AC_SEARCH_LIBS([dlopen], [c dl])
@@ -182,5 +184,7 @@ AC_MSG_RESULT([done])
 AC_CONFIG_FILES([Makefile
                  bootstrap-runtime/src/Makefile
                  bootstrap-runtime/src/runtime/Makefile
-                 bootstrap-runtime/test/Makefile])
+                 bootstrap-runtime/test/Makefile
+                 platform-native/src/Makefile
+                 platform-native/src/avalanche/Makefile])
 AC_OUTPUT
