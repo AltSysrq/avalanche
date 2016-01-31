@@ -477,3 +477,17 @@ result in destruction of heaps.
 Typically, the local heap of a handle is a heap allocated specifically for that
 call frame, while the parent heap is chosen by the caller of a function and
 used for the function's return value. The global heap is usually the root heap.
+
+## Interaction with the Threading Model
+
+The memory management system is integrated with the threading model, which is
+described in more detail in THREADING.md. As far as the ABI goes, code
+generators and other low-level code must account for two things:
+
+- Any call into the GC which may rendezvous with a world-stop may cause the
+  current strand to be suspended.
+
+- While a strand is suspended, the execution stack may be relocated to another
+  memory region. It is therefore not safe to expose pointers into the stack
+  to code outside of the current strand except to subsystems expecting to cope
+  with relocated strands (eg, the memory manager).
