@@ -436,7 +436,7 @@ threads.
 
 If a thread of execution makes a call to a non-trivial native function or does
 something else that could block it from responding to world-stops, it must call
-`ava_gc_suspend_thread` and `ava_gc_resume_thread` before and after that point.
+`ava_gc_suspend_strand` and `ava_gc_resume_strand` before and after that point.
 Both of these are void functions taking a pointer to the caller's stack map as
 their only argument. Between these calls, no allocations may be performed using
 the suspended stack map.

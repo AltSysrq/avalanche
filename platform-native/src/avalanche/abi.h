@@ -50,6 +50,10 @@ typedef uint64_t ava_qword;
  * Type for Standard Values.
  */
 typedef ava_qword ava_stdval;
+/**
+ * Type for booleans used in the low-level API.
+ */
+typedef _Bool ava_bool;
 
 /**
  * The number of low bits in a Standard Value reserved for flags.
