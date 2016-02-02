@@ -41,3 +41,8 @@ Authoratative documentation on the native platform is also found here.
 
 Note that this does _not_ contain and part of the compiler or code generator
 for native targets.
+
+The `src/avalanche` subdirectory contains the headers which represent the
+native runtime's public API. This is mostly limited to routines invoked by
+generated code and accessors for various metrics. Headers elsewhere under `src`
+define private APIs.

@@ -163,9 +163,9 @@ A list is identified by having a clear integer/special discriminator and a type
 of 2. The uniqueness bit is meaningful. The lower 4 bits can be cleared to
 derive a pointer to the `ava_list` sturcture defined in abi.h.
 
-Mutating a list to reference a gc-heap-allocated value which could have been
-allocated after the list requires informing the memory manager about the
-mutation in certain circumstances (see Memory Management). The garbage
+Mutating a list to reference a single-strand-heap-allocated value which could
+have been allocated after the list requires informing the memory manager about
+the mutation in certain circumstances (see Memory Management). The garbage
 collector is permitted to adjust the capacity of a list at safepoints.
 
 ## Object
@@ -206,8 +206,9 @@ and an associated type. The uniqueness bit indicates whether the object may be
 operations and thus are permitted certain classes of in-place mutation even
 when non-unique.
 
-Bit 0 of the type field indicates whether the object is gc-heap-allocated. The
-actual type pointer is found by clearing this bit.
+Bit 0 of the type field indicates whether the object is
+single-strand-heap-allocated. The actual type pointer is found by clearing this
+bit.
 
 The type of an object determines its size. The size is always a multiple of 16
 bytes. The type name is only used for debugging purposes. The type also
@@ -224,10 +225,11 @@ Similarly, there is no defined behaviour for in-place mutation under
 multithreaded access, except for operations specifically designed for such
 situations.
 
-Mutating an object (in certain circumstances) to point to a gc-heap-allocated
-value which may have been allocated after the object itself requires informing
-the memory manager about this operation. This is described under Memory
-Management.
+Mutating an object (in certain circumstances) to point to a
+single-strand-heap-allocated value which may have been allocated after the
+object itself requires informing the memory manager about this operation or
+require copying the allocation containing the pointer to another heap. This is
+described under Memory Management.
 
 ## Pointer-Based / Heap-Allocated Values
 
@@ -235,7 +237,7 @@ The out-of-line string, list, and object standard value types are considered
 pointer-based values, and can be converted to pointers to real memory by
 zeroing the lower 4 bits if it is known the value is initialised. Reading the
 zeroth bit of the intptr_t behind this pointer indicates whether the memory
-backing the value is gc-heap-allocated.
+backing the value is single-strand-heap-allocated.
 
 Expression to test whether a standard value is pointer-based:
 
@@ -243,12 +245,10 @@ Expression to test whether a standard value is pointer-based:
   is_ptr_based = !(val & 1) && ((val >> 2) & 3);
 ```
 
-Recording whether an object is gc-heap-allocated is necessary to permit
-constants to be compiled into the executable, as such objects do not exist
-within the garbage collector's memory layout. Note that "gc-heap-allocated"
-here as a somewhat narrower meaning that might be expected; it reflects whether
-the object is contained is subject to GC write barriers, and thus may be clear
-for some objects actually allocated on a managed heap.
+Recording whether an object is single-strand-heap-allocated is necessary to
+permit constants to be compiled into the executable, as such objects do not
+exist within the garbage collector's memory layout, and to correctly handle
+multi-stranded regions in general.
 
 Pointer-based standard values must point to the base address of their backing
 allocation. The garbage collector is permitted to adjust any pointer-based
@@ -319,22 +319,24 @@ for flags as done with Standard Values, and also permits somewhat more
 efficient bulk copies on platforms like AMD64 with 16-byte-aligned register
 instructions.
 
-The base address of the page holding a gc-heap-allocated object can be derived
-by clearing the lower 12 bits. Every page of every managed heap begins with a
-qword called the heap-graph table, and then a 64-bit card table (encoded as a
-qword). See the `ava_page_header` struct in abi.h for more details.
+The base address of the page holding a single-strand-heap-allocated object can
+be derived by clearing the lower 12 bits. Every page of every managed heap
+begins with a qword called the heap-graph table, and then a 64-bit card table
+(encoded as a qword). See the `ava_page_header` struct in abi.h for more
+details.
 
 ## Garbage-Collection Write Barriers
 
-For the below, asume `PTR` is a value known to point to a gc-heap-allocated
-object, `FLD` is a pointer offset from `PTR` by some amount that leaves it
-within `PTR`'s allocation, and `VAL` is some other value. `page(X)` notates
-base address of pointer `X`. Note that `page(PTR)` could be different from
-`page(FLD)`.
+For the below, assume `PTR` is a value known to point to a
+single-strand-heap-allocated object, `FLD` is a pointer offset from `PTR` by
+some amount that leaves it within `PTR`'s allocation, and `VAL` is some other
+value. `page(X)` notates base address of pointer `X`. Note that `page(PTR)`
+could be different from `page(FLD)`.
 
-If `FLD` is to be set to `VAL`, and `VAL` could possibly be a gc-heap-allocated
-value which was allocated *after* `PTR`, the following must happen iff `VAL` is
-actually a gc-heap-allocated object:
+If `FLD` is to be set to `VAL`, and `VAL` could possibly be a
+single-strand-heap-allocated value which was allocated *after* `PTR`, the
+following must happen iff `VAL` is actually a single-strand-heap-allocated
+object:
 
 - The heap-graph table of `page(VAL)` is ORed into the heap-graph table of
   `page(PTR)` (leaving `page(VAL)` untouched).
@@ -343,8 +345,15 @@ actually a gc-heap-allocated object:
   `(FLD >> 6) & 63`. Note that this means for an allocation spanning pages, a
   bit in the card table may refer to multiple locations.
 
-These operations are performed without atomic operations; if a memory location
-is visible to multiple threads, it is not marked as gc-heap-allocated.
+These operations are performed without atomic operations, since they only
+affect single-strand heaps which by definition are never mutated by more than
+one thread at a time.
+
+Since it is not permitted for a non-single-strand-heap-allocated object to
+point to a single-strand-heap-allocated object, mutating code must also check
+for the case where `PTR` is not single-strand-heap-allocated and `VAL` is; in
+this case, the object behind `PTR` must first be copied into a single-strand
+heap.
 
 ## Memory Layout
 
@@ -454,6 +463,8 @@ following restrictions:
 
 - No heap may reference memory in another heap which is not a direct or
   indirect parent or child.
+
+- No multi-strand heap may reference memory in a single-strand heap.
 
 Additionally, allocations are _ordered_. Even within a single heap, an
 allocation may only freely reference other allocations that occurred _before_
