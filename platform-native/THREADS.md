@@ -114,50 +114,49 @@ silently while leaving the rest of the process running but paralysed (cf
 threads in Java).
 
 Strands are organised into a tree, with each child strand being anchored to a
-particular call frame of its parent. Each sub-program has exactly one root
+particular call frame of its parent. Each sub-process has exactly one root
 (parentless) strand.
 
-A call frame cannot exit until all fibres rooted at that frame have terminated.
-While this makes constructs like daemon threads initially more awkward, it also
-makes them more explicit. Furthermore, it ensures that any exceptions escaping
-a strand have someplace to propagate to (except for the root strand, beyond
-which any thrown exception terminates the process as one would expect). If a
-call frame _does_ attempt to exit (be it by returning or throwing an exception)
-before all child strands are given interrupted uncancellably with the
-`parent-strand-exit` exception type, and the call frame blocks uninterruptably
-until all children have terminated.
+Functionally, strands are modelled as futures. When a strand is spawned, it
+begins executing asynchronously from the parent strand. The parent strand may
+later _join_ with the child strand, blocking until the child terminates and
+obtaining its return value. Alternatively, the parent may _cancel_ the child.
 
-A strand may be interrupted at any time. An interruption causes a particular
-exception to be thrown in the strand at any point where it enters an
-interruptable blocked state. An interruption may be cancellable, which allows
-the strand that it has acknowledged the interruption (with whatever thing it
-was coordinating with) and wishes to resume normal operation.
+If a strand tries to join with a child which terminated due to throwing an
+exception, the exception is transparently re-thrown in the parent strand.
 
-If an exception of any kind escapes a strand, the parent will be issued a
-cancellable interruption with the escaped exception. High-level constructs
-abstract this by handling the interruption and letting the exception propagate
-normally.
+If the parent strand attempts to exit a call frame which has anchored child
+strands, the child strands are cancelled (if not already), and the parent
+blocks uninterruptably until all child strands have terminated. If the call
+frame in the parent was terminating without throwing an exception, a
+`return-with-live-strands` error exception is thrown.
 
-If there was already an interruption when a strand is interrupted, the old
-exception is appended to the `previous-interruption` field of the new
-exception and the new exception replaces the exception thrown to indicate
-interruption.
+When a strand is in a cancelled state, any interruptible operation which would
+ordinarily cause suspension of the strand (ie, blocking operations) instead
+throws an interruption exception; this includes any interruptable operation for
+which the strand is currently suspended. A strand may temporarily suspend its
+cancellation in unusual cases where necessary cleanup requires blocking
+operations, such as deletion of temporary files.
+
+Note that since a strand does not die immediately upon being cancelled, the
+parent call frame still needs to block for all cancelled strands to terminate
+when it exits.
 
 Note that this setup provides a nice set of assurances:
 
 - An uncaught exception by default terminates the whole program. Something
-  _must_ be prepared to handle the exception. However, handling cross-strand
-  exceptions is also reasonably straight-forward. This eliminates the
-  silent-thread-death issue from systems like Java while also providing a way
-  to recover, unlike C++ which terminates the whole process.
+  _must_ be prepared to handle the exception or the strand with the escaping
+  exception cancellled. However, handling cross-strand exceptions is also
+  reasonably straight-forward. This eliminates the silent-thread-death issue
+  from systems like Java while also providing a way to recover, unlike C++
+  which terminates the whole process.
 
-- Issuing an uncancellable interruption to a strand and waiting for it to
-  terminate guarantees that all work it has spawned has either terminated or
-  was deliberately handed off to a different subsystem.
+- Cancelling a strand and waiting for it to terminate guarantees that all work
+  it has spawned has either terminated or was deliberately handed off to a
+  different subsystem.
 
-- Accidentally cancelling an interrupt is difficult, and impossible for
-  uncancellable interrupts. This has an obvious contrast to Java, where it only
-  takes one person doing
+- Accidentally completely supressing a cancellation is difficult. This has an
+  obvious contrast to Java, where it only takes one person doing
   ```
     try {
       Thread.sleep(42);
@@ -166,15 +165,14 @@ Note that this setup provides a nice set of assurances:
     }
   ```
   or wrapping the interruption in another exception something else
-  (unknowingly) "handles" to ruin the whole concept.
+  (unknowingly) "handles" to ruin the whole concept of interruption.
 
 - Accidentally returning from a function without waiting for spawned strands
-  results in an exception.
+  results in an exception. This both makes strand lifetime management explicit,
+  makes leaks much less likely, and prevents libraries from introducing
+  additional background strands behind the caller's back.
 
-- Interrupting a strand not prepared for being interrupted results in an
-  exception propagating out.
-
-There are, of course, still ways of continuing a thread after interruption,
+There are, of course, still ways of continuing a strand after cancellation,
 simply by not doing any interruptable things. Infinite loops, long stretches of
 numeric computation, or calling into native code are easy examples of
 accomplishing this. However, there is no general way to cause termination more
