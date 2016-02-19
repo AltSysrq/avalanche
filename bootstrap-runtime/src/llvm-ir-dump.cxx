@@ -21,7 +21,7 @@
 #include <llvm/Support/FileSystem.h>
 
 #include "runtime/avalanche.h"
-#include "bsd.h"
+#include "../../common/bsd.h"
 #define AVA__INTERNAL_INCLUDE 1
 #include "runtime/-llvm-support/translation.hxx"
 #include "runtime/-llvm-support/optimisation.hxx"

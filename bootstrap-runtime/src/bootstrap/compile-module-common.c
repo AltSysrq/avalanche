@@ -29,7 +29,7 @@
 #include "../runtime/avalanche/errors.h"
 #include "../runtime/avalanche/pcode.h"
 #include "../runtime/avalanche/compenv.h"
-#include "../bsd.h"
+#include "../../../common/bsd.h"
 
 #include "common.h"
 

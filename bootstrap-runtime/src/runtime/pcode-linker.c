@@ -32,7 +32,7 @@
 #include "avalanche/errors.h"
 #include "avalanche/name-mangle.h"
 #include "avalanche/pcode-linker.h"
-#include "../bsd.h"
+#include "../../../common/bsd.h"
 
 typedef enum {
   ava_pcles_unconsumed,

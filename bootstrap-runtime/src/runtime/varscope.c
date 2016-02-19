@@ -25,7 +25,7 @@
 #include "avalanche/alloc.h"
 #include "avalanche/symbol.h"
 #include "avalanche/varscope.h"
-#include "bsd.h"
+#include "../../../common/bsd.h"
 
 typedef struct ava_varscope_varref_s {
   const ava_symbol* var;

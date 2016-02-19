@@ -94,6 +94,7 @@ AS_IF([test "x$FOUND_ERR_H" = "x" ||
 may need to install libsd[[-dev]].])])
 AC_CHECK_HEADERS([sys/types.h sys/resource.h])
 AC_CHECK_HEADERS([nmmintrin.h])
+AC_CHECK_HEADERS([ucontext.h])
 
 # Checks for typedefs, structures, and compiler characteristics.
 AC_HEADER_STDBOOL
@@ -130,6 +131,10 @@ AC_CHECK_FUNCS([setrlimit arc4random_buf dlfunc dlsym])
 AC_CHECK_DECLS([FFI_THISCALL, FFI_STDCALL], [], [], [
 #include <ffi.h>
 ])
+# Standard UNIX ucontext
+AC_CHECK_FUNCS([makecontext swapcontext])
+# Faster DragonFly ucontext
+AC_CHECK_FUNCS([makecontext_quick swapcontext_quick])
 
 # Instead of using something standard, like pkg-config or well-known include
 # paths, llvm puts everything in versioned directories that Autoconf doesn't

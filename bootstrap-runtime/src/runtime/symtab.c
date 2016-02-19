@@ -26,7 +26,7 @@
 #include "avalanche/string.h"
 #include "avalanche/symbol.h"
 #include "avalanche/symtab.h"
-#include "bsd.h"
+#include "../../../common/bsd.h"
 
 /**
  * An entry in a symtab's name map. The proper key is the full_name of the

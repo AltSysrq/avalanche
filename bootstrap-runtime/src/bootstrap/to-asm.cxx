@@ -54,7 +54,7 @@ AVA_BEGIN_DECLS
 AVA_END_DECLS
 #include "../runtime/-llvm-support/translation.hxx"
 #include "../runtime/-llvm-support/optimisation.hxx"
-#include "../bsd.h"
+#include "../../../common/bsd.h"
 
 #include "common.h"
 

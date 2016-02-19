@@ -31,7 +31,7 @@
 #include "avalanche/symtab.h"
 #include "avalanche/varscope.h"
 #include "-intrinsics/fundamental.h"
-#include "../bsd.h"
+#include "../../../common/bsd.h"
 
 #define CONTROL_MACRO_PRECEDENCE -1
 #define FUNCTION_MACRO_PRECEDENCE (AVA_MAX_OPERATOR_MACRO_PRECEDENCE+1)

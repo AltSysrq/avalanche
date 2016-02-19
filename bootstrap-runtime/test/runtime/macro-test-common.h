@@ -25,7 +25,7 @@
 #include "runtime/avalanche/macsub.h"
 #include "runtime/avalanche/symbol.h"
 #include "runtime/avalanche/symtab.h"
-#include "bsd.h"
+#include "../../../common/bsd.h"
 
 static ava_compile_error_list errors;
 static ava_symtab* symbol_table;

@@ -47,7 +47,7 @@
 #include <stdlib.h>
 #include <stdio.h>
 
-#include "bsd.h"
+#include "../../../common/bsd.h"
 
 #define AVA__INTERNAL_INCLUDE 1
 #include "avalanche/alloc.h"

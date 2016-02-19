@@ -28,7 +28,7 @@
 #include "../runtime/avalanche/context.h"
 #include "../runtime/avalanche/pcode.h"
 #include "../runtime/avalanche/pcode-linker.h"
-#include "../bsd.h"
+#include "../../../common/bsd.h"
 
 #include "common.h"
 

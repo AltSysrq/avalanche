@@ -22,7 +22,7 @@
 #include "runtime/avalanche/alloc.h"
 #include "runtime/avalanche/string.h"
 #include "runtime/avalanche/parser.h"
-#include "bsd.h"
+#include "../../../common/bsd.h"
 
 defsuite(parser);
 

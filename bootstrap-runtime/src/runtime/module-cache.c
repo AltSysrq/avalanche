@@ -22,7 +22,7 @@
 #include "avalanche/alloc.h"
 #include "avalanche/string.h"
 #include "avalanche/module-cache.h"
-#include "bsd.h"
+#include "../../../common/bsd.h"
 
 typedef struct ava_pcode_global_list_s ava_pcode_global_list;
 

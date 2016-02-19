@@ -38,7 +38,7 @@
 #include "funcall.h"
 #include "defun.h"
 #include "variable.h"
-#include "../../bsd.h"
+#include "../../../../common/bsd.h"
 
 typedef struct ava_intr_seq_entry_s {
   ava_ast_node* node;

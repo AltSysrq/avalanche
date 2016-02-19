@@ -62,7 +62,7 @@ AVA_BEGIN_DECLS
 #include "../avalanche/struct.h"
 #include "../avalanche/exception.h"
 AVA_END_DECLS
-#include "../../bsd.h"
+#include "../../../../common/bsd.h"
 #include "../-internal-defs.h"
 
 #include "driver-iface.hxx"

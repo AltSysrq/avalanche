@@ -25,7 +25,7 @@
 #include <glob.h>
 
 #include "runtime/avalanche.h"
-#include "bsd.h"
+#include "../../../common/bsd.h"
 
 /*
   Runs tests defined via Avalanche source code, but which are compiled into
