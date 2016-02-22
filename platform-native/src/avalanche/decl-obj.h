@@ -132,7 +132,7 @@ extern int ava_do_error_int_type_is_not_32_or_64_bits_wide;
 #define AVADO_INT(type,name) (sizeof(type) == sizeof(ava_dword)?        \
                               ava_iptt_dword :                          \
                               sizeof(type) == sizeof(ava_qword)?        \
-                              ava_ipt_qword :                           \
+                              ava_iptt_qword :                          \
                               ava_do_error_int_type_is_not_32_or_64_bits_wide),
 #define AVADO_BLOB(field) ava_iptt_blob,
 #define AVADO_PTR(type,ctype,name) ava_iptt_ptr_##type,

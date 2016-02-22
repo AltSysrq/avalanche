@@ -35,14 +35,14 @@ AVA_BEGIN_DECLS
 
 static __thread ava_subprocess* ava_subprocess_for_thread = NULL;
 
-struct ava_subprocess_s {
-  AO_t refcount;
-  AO_t event_callback;
-
-  const char* argv0;
-  const char*const* argv;
-  unsigned argc;
-};
+#define AVADO_OBJECT_DECL AVADO_BEGIN(ava_subprocess)   \
+  AVADO_INT(AO_t, refcount)                             \
+  AVADO_INT(AO_t, event_callback)                       \
+  AVADO_INT(const char*, argv0)                         \
+  AVADO_INT(const char*const*, argv)                    \
+  AVADO_INT(unsigned, argc)                             \
+  AVADO_END;
+#include "../avalanche/decl-obj.h"
 
 static void ava_subprocess_default_event_callback(
   const ava_sp_event* evt, uintptr_t a, uintptr_t b, uintptr_t c
