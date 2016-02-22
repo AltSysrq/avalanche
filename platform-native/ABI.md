@@ -275,7 +275,9 @@ addresses, but are treated similarly to pointer-based standard values with
 respect to memory management. They come in two flavours: Precise raw pointers
 either point outside the managed heap or point to the base of an allocated
 object. Imprecise raw pointers are allowed to point anywhere within an
-allocation (but not one-past-the-end).
+allocation (but not one-past-the-end). A raw pointer type also includes the
+type of memory allocation it points to, ie, one of the three pointer-based
+standard value types.
 
 # Calling Convention
 
@@ -360,22 +362,17 @@ heap.
 The garbage collector needs to be informed of how certain regions of memory are
 interpreted, such as the stack, static storage, and allocated objects of a
 non-intrinsic type; this is accomplished with a _memory layout_ table, which is
-described under the `ava_memory_layout` structure in abi.h.
+described under the `ava_immediate_physical_type` enum in abi.h.
 
 ## Stack Maps and Safepoints
 
 Functions which could result in a call into the memory management system must
 mantain a _stack map_ which allows the garbage collector to manipulate live
 variables that live on the call stack. The format of a frame of the stack map
-is described in the `ava_static_map` structure in abi.h.
+is described in the `ava_stack_map` structure in abi.h.
 
-Functions do not normally initialise a `stack_map` directly. Rather, they pass
-the uninitialised `stack_map` along with `layout` and `callers_stack_map` to
-`ava_gc_push_local_heap` which takes care of initialising the header fields.
-This function returns the `stack_map` pointer itself. By using the return value
-instead of the declared `stack_map` itself, the call can be declared pure,
-allowing the optimiser to elide the call in functions or paths that do not need
-it.
+Upon entry, a function initialises its stack map itself as described on
+`ava_stack_map` in abi.h.
 
 The lower two bits of the `stack_map` pointer (a heap handle) passed into
 `ava_gc_push_local_heap` as the caller's stack map are used to tag what the

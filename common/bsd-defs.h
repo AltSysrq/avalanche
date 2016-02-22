@@ -65,24 +65,4 @@
 #define AVA_END_DECLS
 #endif
 
-#if defined(__GNUC__) || defined(__clang__)
-#define AVA_MALLOC __attribute__((__malloc__))
-#define AVA_PURE __attribute__((__pure__))
-#define AVA_CONSTFUN __attribute__((__const__))
-#define AVA_NORETURN __attribute__((__noreturn__))
-#define AVA_UNUSED __attribute__((__unused__))
-#define AVA_LIKELY(x) __builtin_expect(!!(x), 1)
-#define AVA_UNLIKELY(x) __builtin_expect((x), 0)
-#define AVA_ALIGN(n) __attribute__((__aligned__(n)))
-#else
-#define AVA_MALLOC
-#define AVA_PURE
-#define AVA_CONSTFUN
-#define AVA_NORETURN
-#define AVA_UNUSED
-#define AVA_LIKELY(x) (x)
-#define AVA_UNLIKELY(x) (x)
-#define AVA_ALIGN(n)
-#endif
-
 #endif /* AVA_COMMON_BSD_DEFS_H_ */

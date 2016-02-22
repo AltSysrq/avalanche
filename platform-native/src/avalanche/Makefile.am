@@ -4,6 +4,7 @@ AUTOMAKE_OPTIONS = subdir-objects
 include_HEADERS = \
 abi.h \
 ava-config.h \
+decl-obj.h \
 defs.h
 
 ava-config.h: $(top_srcdir)/config.h
