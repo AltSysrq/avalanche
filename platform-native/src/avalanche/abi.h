@@ -17,6 +17,7 @@
 #define AVA_PLATFORM_NATIVE_ABI_H_
 
 #include <stdint.h>
+#include <assert.h>
 
 #include "defs.h"
 

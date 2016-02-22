@@ -7,6 +7,7 @@ AM_CFLAGS = $(LIBFFI_CFLAGS) $(LIBUV_CFLAGS) $(EXTRA_CFLAGS)
 lib_LTLIBRARIES = libavart-native.la
 
 libavart_native_la_SOURCES = \
+memory/stub.c \
 threads/subprocess.cxx
 
 libavart_native_la_LIBADD = \

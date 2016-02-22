@@ -374,9 +374,9 @@ is described in the `ava_stack_map` structure in abi.h.
 Upon entry, a function initialises its stack map itself as described on
 `ava_stack_map` in abi.h.
 
-The lower two bits of the `stack_map` pointer (a heap handle) passed into
-`ava_gc_push_local_heap` as the caller's stack map are used to tag what the
-parent heap of the resulting heap handle should be:
+The lower two bits of the `stack_map` pointer (a heap handle) passed into a
+function as the caller's stack map are used to tag what the parent heap of the
+resulting heap handle should be:
 
 - 00: The parent heap is the local heap of the parent handle.
 - 01: The parent heap is the parent heap of the parent handle.
@@ -424,8 +424,8 @@ described in more detail with the `ava_static_map` structure in abi.h.
 Garbage-collecting the global heap requires stopping all threads of execution.
 In order to ensure that any thread can be stopped at a safepoint in a
 reasonably short amount of the time, the code generator should emit tests of
-the thread-local pointer-sized variable `ava_gc_stop_the_world` and make a call
-to `ava_gc_accept_world_stop`, a void function taking the stack map as its only
+the thread-local pointer-sized variable `ava_mem_stop_the_world` and make a call
+to `ava_mem_accept_world_stop`, a void function taking the stack map as its only
 argument, if it is non-zero. This is only necessary if no other memory manager
 functions would be called. The variable is thread-local to permit multiple
 Avalanche contexts to exist within one process; it is in fact mutated by other
@@ -433,7 +433,7 @@ threads.
 
 If a thread of execution makes a call to a non-trivial native function or does
 something else that could block it from responding to world-stops, it must call
-`ava_gc_suspend_strand` and `ava_gc_resume_strand` before and after that point.
+`ava_mem_suspend_strand` and `ava_mem_resume_strand` before and after that point.
 Both of these are void functions taking a pointer to the caller's stack map as
 their only argument. Between these calls, no allocations may be performed using
 the suspended stack map.
