@@ -18,6 +18,7 @@
 #endif
 
 #include <stdlib.h>
+#include <stdio.h>
 #include <assert.h>
 
 #include <atomic_ops.h>
@@ -38,15 +39,13 @@ static __thread ava_subprocess* ava_subprocess_for_thread = NULL;
 #define AVADO_OBJECT_DECL AVADO_BEGIN(ava_subprocess)   \
   AVADO_INT(AO_t, refcount)                             \
   AVADO_INT(AO_t, event_callback)                       \
+  AVADO_INT(AO_t, genid_high)                           \
+  AVADO_INT(AO_t, genid_low)                            \
   AVADO_INT(const char*, argv0)                         \
   AVADO_INT(const char*const*, argv)                    \
   AVADO_INT(unsigned, argc)                             \
   AVADO_END;
 #include "../avalanche/decl-obj.h"
-
-static void ava_subprocess_default_event_callback(
-  const ava_sp_event* evt, uintptr_t a, uintptr_t b, uintptr_t c
-) { }
 
 int ava_subprocess_run(ava_sp_error* noninteractive,
                        const char*const* argv, unsigned argc,
@@ -77,7 +76,9 @@ int ava_subprocess_run(ava_sp_error* noninteractive,
   }
 
   M.sp->refcount = 1;
-  M.sp->event_callback = (AO_t)ava_subprocess_default_event_callback;
+  M.sp->genid_high = 0;
+  M.sp->genid_low = 0;
+  M.sp->event_callback = 0;
   M.sp->argv0 = argv[0];
   /* TODO: Parse arguments */
   M.sp->argv = argv + 1;
@@ -103,18 +104,67 @@ void ava_subprocess_decref(ava_subprocess* sp) {
     free(sp);
 }
 
-ava_sp_event_callback_f ava_subprocess_get_event_callback(
+ava_qword ava_subprocess_genid(ava_subprocess* sp) {
+  ava_qword result;
+  ava_dword low, high;
+
+  if (sizeof(ava_qword) <= sizeof(AO_t)) {
+    result = AO_fetch_and_add1(&sp->genid_low);
+  } else {
+    /* We need to generate ids from two dwords, awkwardly. The low dword is
+     * simple: just atomically increment it. For the upper dword, we use the
+     * following rule: The high bit of the low dword equals the low bit of the
+     * high dword. If we read something not in this configuration, we
+     * atomically set the high dword to one plus the value we read.
+     *
+     * This means that there is a 2**31 increment window to actually apply the
+     * change before another increment could incorrectly see the unincremented
+     * high dword. However, every increment of the low dword during which the
+     * high dword hasn't been incremented corresponds to one platform thread
+     * executing this exact code. Therefore, to exhaust that window, we'd need
+     * 2**31 platform threads preempted here, which is impossible on a system
+     * with 32-bit words.
+     */
+    low = AO_fetch_and_add1_full(&sp->genid_low);
+    high = AO_load_acquire_read(&sp->genid_high);
+
+    if ((high & 1) != (low >> 31)) {
+      /* atomic_ops's documentation for compare_and_swap is worded in a way
+       * that would permit spurious failures, whereas fetch_compare_and_swap
+       * explicitly does not permit spurious failures, so use the latter to be
+       * conservative.
+       */
+      (void)AO_fetch_compare_and_swap_full(
+        &sp->genid_high, high, high + 1);
+    }
+
+    result = ((ava_qword)high << 32) | low;
+  }
+
+  /* Check for the incredibly unlikely case that we exhausted the id space */
+  if (AVA_UNLIKELY(!~result)) {
+    fprintf(stderr, "avalanche: identifier space exhausted\n");
+    abort();
+  }
+
+  return result;
+}
+
+ava_sp_event_callback ava_subprocess_get_event_callback(
   const ava_subprocess* sp
 ) {
-  return (ava_sp_event_callback_f)AO_load_acquire_read(&sp->event_callback);
+  ava_sp_event_callback cb;
+
+  cb.f = (ava_sp_event_callback_f)AO_load_acquire_read(&sp->event_callback);
+  return cb;
 }
 
 ava_bool ava_subprocess_cas_event_callback(
-  ava_subprocess* sp, ava_sp_event_callback_f old,
-  ava_sp_event_callback_f neu
+  ava_subprocess* sp, ava_sp_event_callback old,
+  ava_sp_event_callback neu
 ) {
   return !!AO_compare_and_swap_full(
-    &sp->event_callback, (AO_t)old, (AO_t)neu);
+    &sp->event_callback, (AO_t)old.f, (AO_t)neu.f);
 }
 
 AVA_END_DECLS

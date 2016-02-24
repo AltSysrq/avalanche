@@ -75,11 +75,44 @@ typedef struct ava_sp_event_s {
  * common case of having no event callback. Callbacks can use the current
  * subprocess as context when necessary.
  *
- * The arguments a, b, and c describe additional information about the event.
- * Depending on the type of the event, they may be integers or pointers.
+ * Callback functions return a pointer to the _next_ callback function, or NULL
+ * if that is the end of the chain. This is admittedly a somewhat bizarre
+ * construction, but the alternatives all have issues. (Keep in mind this is
+ * called from some relatively hot paths.)
+ *
+ * - Each event could have an associated struct type, and a pointer to that
+ *   passed in. Supporting event stringification would require extra code per
+ *   event type, and even then results in an awkward system. (E.g., the
+ *   stringifier would either need to print to a fixed buffer, allocate a new
+ *   string with malloc(), or call into another callback with varargs so it
+ *   could call vprintf()/vsprintf()/etc.) This system also requires spilling
+ *   everything onto the stack.
+ *
+ * - The argument list could be fixed. The issue here is with argument types;
+ *   using qwords is easy, but they can't be passed to %s in the format string,
+ *   and then we have the struct case above. uintptr_ts don't have that issue,
+ *   but 64-bit values would need to be awkwardly split.
+ *
+ * - The argument list is passed in as a va_list. This solves most of the
+ *   issues, but requires an extra layer of function call to move the varargs
+ *   into a va_list, and a va_list writes half the register file to the stack
+ *   on the System V AMD64 ABI.
+ *
+ * It is in fact possible to selectively handle events without needing to use
+ * va_list in this scheme. The entry function can inspect type. If it does not
+ * match anything the client code wishes to handle, it simply returns the next
+ * function in the chain. If it does want to handle it, it returns a function
+ * with the correct prototype, and that function then returns the next one in
+ * the chain.
  */
-typedef void (*ava_sp_event_callback_f)(
-  const ava_sp_event* type, uintptr_t a, uintptr_t b, uintptr_t c);
+typedef union ava_sp_event_callback_u {
+  union ava_sp_event_callback_u (*f)(const ava_sp_event* type, ...);
+} ava_sp_event_callback;
+/**
+ * Convenience for the type of ava_sp_event_callback.f
+ */
+typedef union ava_sp_event_callback_u (*ava_sp_event_callback_f)(
+  const ava_sp_event* type, ...);
 
 /**
  * "Main" function for a subprocess.
@@ -180,15 +213,35 @@ ava_subprocess* ava_subprocess_incref(ava_subprocess* sp) AVA_RTAPI;
 void ava_subprocess_decref(ava_subprocess* sp) AVA_RTAPI;
 
 /**
- * Returns the current event callback for the given subprocess.
+ * Generates a 63-bit integer identifier unique to the given subprocess.
  *
- * This is always non-NULL.
+ * Ids are in general predictable, but no algorithm is guaranteed to be used.
+ * In the absence of concurrent access, generated id sequences are the same for
+ * different subprocesses with the same library version.
+ *
+ * Provided there exists a happens-before relationship between two calls to
+ * this function, the later call will generate a qword which compares greater
+ * than the prior call.
+ *
+ * In the incredibly unlikely event that the id space is exhausted, the process
+ * aborts. Note that this will most likely never happen; exhausting the id
+ * space even on a 32-bit system (which only guarantees 63 useful bits of
+ * uniqueness) generating 1 billion ids per second, overflow would not happen
+ * for over 250 years.
+ *
+ * Realistically, even generating 1 million ids per second would be considered
+ * extremely unusual.
+ */
+ava_qword ava_subprocess_genid(ava_subprocess* sp) AVA_RTAPI;
+
+/**
+ * Returns the current event callback for the given subprocess.
  *
  * Obtaining the callback provides a load-acquire barrier.
  *
  * @see AVA_SP_EVENT()
  */
-ava_sp_event_callback_f ava_subprocess_get_event_callback(
+ava_sp_event_callback ava_subprocess_get_event_callback(
   const ava_subprocess* sp) AVA_RTAPI AVA_PURE;
 /**
  * Changes the event callback for the given subprocess.
@@ -209,8 +262,8 @@ ava_sp_event_callback_f ava_subprocess_get_event_callback(
  * callback is now neu. False if the expected value did not match.
  */
 ava_bool ava_subprocess_cas_event_callback(
-  ava_subprocess* sp, ava_sp_event_callback_f old,
-  ava_sp_event_callback_f neu) AVA_RTAPI;
+  ava_subprocess* sp, ava_sp_event_callback old,
+  ava_sp_event_callback neu) AVA_RTAPI;
 
 /**
  * Convenience for sending a subprocess event through the callback of the
@@ -218,9 +271,13 @@ ava_bool ava_subprocess_cas_event_callback(
  *
  * @param type The type of event. The leading & is added implicitly.
  */
-#define AVA_SP_EVENT(type, a, b, c)                                     \
-  (*ava_subprocess_get_event_callback(ava_subprocess_current()))(       \
-    &(type), (a), (b), (c))
+#define AVA_SP_EVENT(type, ...)                                         \
+  do {                                                                  \
+    for (ava_sp_event_callback _ava_spec_it =                           \
+           ava_subprocess_get_event_callback(ava_subprocess_current()); \
+         AVA_UNLIKELY(_ava_spec_it.f); )                                \
+      _ava_spec_it = (*_ava_spec_it.f)(&type, __VA_ARGS__);             \
+  } while (0)
 
 AVA_END_DECLS
 
