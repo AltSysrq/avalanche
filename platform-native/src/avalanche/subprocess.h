@@ -265,6 +265,13 @@ ava_bool ava_subprocess_cas_event_callback(
   ava_subprocess* sp, ava_sp_event_callback old,
   ava_sp_event_callback neu) AVA_RTAPI;
 
+struct ava_threadpool_s;
+/**
+ * Returns the first threadpool in the current subprocess.
+ */
+struct ava_threadpool_s*
+ava_subprocess_first_threadpool(AVA_DEF_ARGS0()) AVA_RTAPI;
+
 /**
  * Convenience for sending a subprocess event through the callback of the
  * current subprocess.

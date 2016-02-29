@@ -691,6 +691,10 @@ struct ava_object_type_s {
   ava_object_method_reference methods[];
 };
 
+struct ava_object_s {
+  const ava_object_type* type;
+};
+
 /**
  * Rotate left qword
  *

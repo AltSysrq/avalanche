@@ -8,6 +8,7 @@ lib_LTLIBRARIES = libavart-native.la
 
 libavart_native_la_SOURCES = \
 memory/stub.c \
+threads/thread.c \
 threads/subprocess.cxx
 
 libavart_native_la_LIBADD = \

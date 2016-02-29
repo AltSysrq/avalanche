@@ -40,6 +40,10 @@
  *     reflected in the memory layout; it is simply used to define structs
  *     which can be used as independently-allocated objects.
  *
+ *   AVADO_STATIC
+ *     Adds `ava_static_map header;` to the struct definiton. This is not
+ *     reflected in the memory layout.
+ *
  *   AVADO_STDVAL(NAME)
  *     Defines a field named NAME which is an ava_stdval.
  *
@@ -105,10 +109,11 @@
 
 #define AVADO_BEGIN(name) struct name##_s {
 #define AVADO_HEADER ava_object header;
+#define AVADO_STATIC ava_static_map header;
 #define AVADO_STDVAL(name) ava_stdval name;
 #define AVADO_INT(type,name) type name;
 #define AVADO_BLOB(field) field;
-#define AVADO_PTR(type,ctype,name) ctype field;
+#define AVADO_PTR(type,ctype,name) ctype name;
 #define AVADO_INCLUDE(type,name) struct type##_s name;
 #define AVADO_FLAG(flag)
 #define AVADO_END }
@@ -120,6 +125,7 @@ AVADO_OBJECT_DECL
 #undef AVADO_BLOB
 #undef AVADO_INT
 #undef AVADO_STDVAL
+#undef AVADO_STATIC
 #undef AVADO_HEADER
 #undef AVADO_BEGIN
 
@@ -128,6 +134,7 @@ extern int ava_do_error_int_type_is_not_32_or_64_bits_wide;
 #define AVADO_BEGIN(name) static const ava_immediate_physical_type      \
   name##_memory_layout[] = {
 #define AVADO_HEADER
+#define AVADO_STATIC
 #define AVADO_STDVAL(name) ava_iptt_stdval,
 #define AVADO_INT(type,name) (sizeof(type) == sizeof(ava_dword)?        \
                               ava_iptt_dword :                          \
@@ -147,6 +154,7 @@ AVADO_OBJECT_DECL
 #undef AVADO_BLOB
 #undef AVADO_INT
 #undef AVADO_STDVAL
+#undef AVADO_STATIC
 #undef AVADO_HEADER
 #undef AVADO_BEGIN
 

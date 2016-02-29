@@ -32,18 +32,25 @@
  * without needing to rely on a questionable C extension.
  */
 
+struct ava_threadpool_s;
+
 AVA_BEGIN_DECLS
 
 static __thread ava_subprocess* ava_subprocess_for_thread = NULL;
 
-#define AVADO_OBJECT_DECL AVADO_BEGIN(ava_subprocess)   \
-  AVADO_INT(AO_t, refcount)                             \
-  AVADO_INT(AO_t, event_callback)                       \
-  AVADO_INT(AO_t, genid_high)                           \
-  AVADO_INT(AO_t, genid_low)                            \
-  AVADO_INT(const char*, argv0)                         \
-  AVADO_INT(const char*const*, argv)                    \
-  AVADO_INT(unsigned, argc)                             \
+#define AVADO_OBJECT_DECL AVADO_BEGIN(ava_subprocess)           \
+  AVADO_STATIC                                                  \
+  AVADO_INT(AO_t, refcount)                                     \
+  AVADO_INT(AO_t, event_callback)                               \
+  AVADO_INT(AO_t, genid_high)                                   \
+  AVADO_INT(AO_t, genid_low)                                    \
+  AVADO_INT(const char*, argv0)                                 \
+  AVADO_INT(const char*const*, argv)                            \
+  AVADO_INT(unsigned, argc)                                     \
+  /* The first threadpool in the subprocess. This is not */     \
+  /* guarded by a lock; it is never mutated away from the */    \
+  /* initial threadpool containing the root strand. */          \
+  AVADO_PTR(obj, struct ava_threadpool_s*, first_threadpool)    \
   AVADO_END;
 #include "../avalanche/decl-obj.h"
 
@@ -165,6 +172,10 @@ ava_bool ava_subprocess_cas_event_callback(
 ) {
   return !!AO_compare_and_swap_full(
     &sp->event_callback, (AO_t)old.f, (AO_t)neu.f);
+}
+
+struct ava_threadpool_s* ava_subprocess_first_threadpool(AVA_DEF_ARGS0()) {
+  return ava_subprocess_for_thread->first_threadpool;
 }
 
 AVA_END_DECLS
